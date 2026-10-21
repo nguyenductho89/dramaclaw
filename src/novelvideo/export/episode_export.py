@@ -29,13 +29,31 @@ async def build_srt_content(project_dir: Path, episode: int, beats: list[dict]) 
         if not narration:
             continue
 
-        audio_path = audio_dir / f"beat_{beat_num:02d}.mp3"
-        duration = 5.0
-        if audio_path.exists():
+        # A beat grouped into a MiniMax H3 Multishot segment
+        # (`multishot_chain_id`, see `.claude/CLAUDE.md`'s "Segment
+        # multishot" section) never gets its own TTS mp3 — the segment's
+        # video carries H3's own muxed audio instead — so falling through
+        # to the hardcoded 5.0s default below would badly desync every
+        # subtitle after the first chain. Use the beat's own planned
+        # `duration_seconds` (written by `/segments/apply` from the
+        # segment plan's `shot_seconds`) instead. This is the PLANNED
+        # per-shot length, not necessarily the exact rendered one — every
+        # shot in a chain actually renders at the chain's shared, longest
+        # `frames_per_shot`, so a shot planned shorter than its chain-mates
+        # may run a little longer on screen than this estimate.
+        if beat.get("multishot_chain_id"):
             try:
-                duration = await get_audio_duration_async(str(audio_path))
-            except Exception:
+                duration = float(beat.get("duration_seconds") or 0.0) or 5.0
+            except (TypeError, ValueError):
                 duration = 5.0
+        else:
+            audio_path = audio_dir / f"beat_{beat_num:02d}.mp3"
+            duration = 5.0
+            if audio_path.exists():
+                try:
+                    duration = await get_audio_duration_async(str(audio_path))
+                except Exception:
+                    duration = 5.0
 
         start = current_time
         end = current_time + duration

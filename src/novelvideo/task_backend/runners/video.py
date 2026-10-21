@@ -644,26 +644,49 @@ def run_compose_episode(
         target_width, target_height = 720, 1280
 
     video_clips: list[str] = []
+    # Beats grouped into a MiniMax H3 Multishot segment (`multishot_chain_id`,
+    # see `.claude/CLAUDE.md`'s "Segment multishot" section) share ONE
+    # already-concatenated video at `videos_dir/multishot_{chain_id}.mp4` —
+    # add it once, at the position of the chain's first beat, and skip
+    # every other beat in that chain so it isn't duplicated or re-added as
+    # its own (nonexistent) `beat_NN.mp4`.
+    seen_chain_ids: set[str] = set()
     with tempfile.TemporaryDirectory() as tmp:
         tmp_dir = Path(tmp)
         for index, beat in enumerate(beats):
             check_cancel()
             beat_num = int(beat.get("beat_number") or index + 1)
-            video_path = paths.video(beat_num)
+            chain_id = str(beat.get("multishot_chain_id") or "")
+            is_chain_beat = bool(chain_id)
+            if is_chain_beat:
+                if chain_id in seen_chain_ids:
+                    continue
+                seen_chain_ids.add(chain_id)
+                video_path = paths.videos_dir() / f"multishot_{chain_id}.mp4"
+            else:
+                video_path = paths.video(beat_num)
+            # A multishot segment's video has its own muxed-in audio from
+            # MiniMax H3 (see `.claude/CLAUDE.md`) — there is never a
+            # separate TTS file for it, so it always goes through the
+            # "has_embedded_audio" probe below rather than the
+            # separate-TTS-file mux branch a single beat would use.
             audio_path = paths.audio(beat_num)
+            has_separate_audio_file = (not is_chain_beat) and audio_path.exists()
             if not video_path.exists():
                 continue
-            clip_path = tmp_dir / f"beat_{beat_num:04d}.mp4"
+            clip_path = tmp_dir / (f"chain_{chain_id}.mp4" if is_chain_beat else f"beat_{beat_num:04d}.mp4")
             manager.update_progress_for_project(
                 ctx,
                 "compose_episode",
                 episode,
                 progress=index / max(1, len(beats)),
-                current_task=f"合成 Beat {beat_num}...",
+                current_task=(
+                    f"合成 Multishot 链条 {chain_id}..." if is_chain_beat else f"合成 Beat {beat_num}..."
+                ),
             )
             cmd = ["ffmpeg", "-y", "-i", str(video_path)]
             has_embedded_audio = False
-            if audio_path.exists():
+            if has_separate_audio_file:
                 cmd.extend(["-i", str(audio_path)])
                 cmd.extend(
                     [

@@ -65,6 +65,7 @@ import {
 import { RenderGridGallery } from "@/components/episode/beat-workbench/render-grid-gallery";
 import { ViewToggles } from "@/components/episode/beat-workbench/view-toggles";
 import { MultishotReviewDialog } from "@/components/episode/beat-workbench/multishot-review-dialog";
+import { SegmentsWorkbenchDialog } from "@/components/episode/beat-workbench/segments-workbench-dialog";
 import { ActionPanel } from "@/components/episode/beat-workbench/action-panel";
 import { RenderPlanDialog } from "@/components/episode/beat-workbench/render-plan-dialog";
 import { useHideHeaderOnScroll } from "@/components/episode/header-collapse";
@@ -391,6 +392,7 @@ export function BeatsTabContent() {
   const updateBeat = useUpdateBeat(project, epNum);
   const [multishotReviewOpen, setMultishotReviewOpen] = useState(false);
   const [multishotReviewChainId, setMultishotReviewChainId] = useState("");
+  const [segmentsOpen, setSegmentsOpen] = useState(false);
 
   const handleGroupMultishot = useCallback(async () => {
     if (!checkedConsecutive) {
@@ -762,6 +764,7 @@ export function BeatsTabContent() {
                 onGroupMultishot={() => void handleGroupMultishot()}
                 onUngroupMultishot={() => void handleUngroupMultishot()}
                 onReviewMultishot={handleReviewMultishot}
+                onOpenSegments={() => setSegmentsOpen(true)}
                 legendSlot={
                   <SketchColorLegend project={project} episode={epNum} />
                 }
@@ -1000,6 +1003,12 @@ export function BeatsTabContent() {
         episode={epNum}
         chainId={multishotReviewChainId}
         onEnqueued={clearSelection}
+      />
+      <SegmentsWorkbenchDialog
+        open={segmentsOpen}
+        onOpenChange={setSegmentsOpen}
+        project={project}
+        episode={epNum}
       />
       <AlertDialog
         open={pendingAspect !== null}

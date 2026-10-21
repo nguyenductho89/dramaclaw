@@ -82,12 +82,15 @@ def test_shared_references_identical_across_beats(tmp_path):
     assert [r["name"] for r in shared] == ["Alice"]
 
 
-def test_shared_references_mismatch_rejected(tmp_path):
+def test_shared_references_union_of_different_beats(tmp_path):
+    # Since the 2026-10-21 segment-multishot rework, beats in a chain no
+    # longer need to list the exact same identities — the chain's
+    # reference list is the UNION across beats, in first-appearance order.
     cmap = _character_map(tmp_path, "Alice", "Bob")
     beats = [_beat(1, detected_identities=["Alice"]), _beat(2, detected_identities=["Bob"])]
     shared, error = _multishot_shared_references(cmap, beats)
-    assert shared == []
-    assert "不一致" in error
+    assert error == ""
+    assert [r["name"] for r in shared] == ["Alice", "Bob"]
 
 
 def test_shared_references_all_empty_is_fl2va_ok(tmp_path):
@@ -98,11 +101,34 @@ def test_shared_references_all_empty_is_fl2va_ok(tmp_path):
     assert shared == []
 
 
-def test_shared_references_order_matters(tmp_path):
+def test_shared_references_union_preserves_first_appearance_order(tmp_path):
     cmap = _character_map(tmp_path, "Alice", "Bob")
     beats = [
         _beat(1, detected_identities=["Alice", "Bob"]),
         _beat(2, detected_identities=["Bob", "Alice"]),
+    ]
+    shared, error = _multishot_shared_references(cmap, beats)
+    assert error == ""
+    assert [r["name"] for r in shared] == ["Alice", "Bob"]
+
+
+def test_shared_references_union_deduplicates_repeated_identity(tmp_path):
+    cmap = _character_map(tmp_path, "Alice")
+    beats = [
+        _beat(1, detected_identities=["Alice"]),
+        _beat(2, detected_identities=["Alice"]),
+        _beat(3, detected_identities=["Alice"]),
+    ]
+    shared, error = _multishot_shared_references(cmap, beats)
+    assert error == ""
+    assert [r["name"] for r in shared] == ["Alice"]
+
+
+def test_shared_references_union_over_cap_rejected(tmp_path):
+    cmap = _character_map(tmp_path, "Alice", "Bob", "Carl", "Dan")
+    beats = [
+        _beat(1, detected_identities=["Alice", "Bob"]),
+        _beat(2, detected_identities=["Carl", "Dan"]),
     ]
     shared, error = _multishot_shared_references(cmap, beats)
     assert shared == []

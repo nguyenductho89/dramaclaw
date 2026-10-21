@@ -216,6 +216,45 @@ class MultishotVideoRequest(BaseModel):
     review_fingerprint: Optional[str] = None
 
 
+class SegmentPlanApplyRequest(BaseModel):
+    """`POST .../segments/apply` body — the (possibly user-edited) output
+    of `POST .../segments/plan`. Applying replaces every existing
+    `multishot_chain_id` grouping for this episode with this set — see
+    `agents/segment_planner.py` and `generators/segment_store.py`."""
+
+    segments: list[dict] = Field(
+        default_factory=list,
+        description="[{chain_id, beat_numbers, shot_seconds, reason}], from /segments/plan",
+    )
+
+
+class SegmentFrameApproveRequest(BaseModel):
+    frame_fingerprint: str = ""
+
+
+class SegmentFramesGenerateRequest(BaseModel):
+    image_generation_selection: Optional[str] = None
+    force: bool = False
+    # When given, restricts this call to just these segments (the UI's
+    # per-segment "generate"/"regenerate this one" button) instead of
+    # every segment in the episode.
+    chain_ids: Optional[list[str]] = None
+
+
+class SegmentVideoEntry(BaseModel):
+    chain_id: str
+    review_fingerprint: Optional[str] = None
+
+
+class SegmentVideosGenerateRequest(BaseModel):
+    """`POST .../segments/videos/generate` body — one or more approved
+    segments to enqueue in one call. Each entry's `review_fingerprint`
+    must match what `/segments/videos/review` just returned for that
+    `chain_id`, same contract as `MultishotVideoRequest`."""
+
+    segments: list[SegmentVideoEntry] = Field(default_factory=list)
+
+
 class QwenEditPrompts(BaseModel):
     """Prompt override for a render-review-capable RunPod render path —
     `runpod_qwen_edit_render` / `_multi` (Qwen-Image-Edit-2511) and, since

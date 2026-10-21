@@ -1235,8 +1235,17 @@ NEWAPI_VIDEO_DURATION_BOUNDS = os.environ.get(
 ).strip()
 
 # 视频生成后端: newapi_seedance-1.0-pro-fast (默认), newapi_seedance-2.0-fast,
-# comfyui, seedance_fast, seedance_pro, seedance_pro_silent, grok_720
+# comfyui, seedance_fast, seedance_pro, seedance_pro_silent, grok_720,
+# runpod_minimax_h3 (dev, this machine's default since 2026-10-21 — see
+# .claude/CLAUDE.md "Segment multishot" section). New projects' prompts
+# should default to the MiniMax H3 format, not Seedance's.
 VIDEO_BACKEND = os.environ.get("VIDEO_BACKEND", f"newapi_{DEFAULT_VIDEO_MODEL}")
+if VIDEO_BACKEND == "runpod_minimax_h3" and not _runpod_h3_video_configured():
+    # A machine without the RunPod H3 endpoint/R2 configured falls back to
+    # the Seedance default rather than silently shipping a broken default —
+    # new projects would otherwise get a video_backend their /video-backends
+    # list doesn't even offer.
+    VIDEO_BACKEND = f"newapi_{DEFAULT_VIDEO_MODEL}"
 
 # Seedance 模型（火山方舟）
 SEEDANCE_FAST_MODEL = os.environ.get(

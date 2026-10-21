@@ -38,6 +38,10 @@ from novelvideo.api.schemas import (
     SingleVideoRequest,
     MiniMaxH3PromptGenerateRequest,
     MultishotVideoRequest,
+    SegmentFrameApproveRequest,
+    SegmentFramesGenerateRequest,
+    SegmentPlanApplyRequest,
+    SegmentVideosGenerateRequest,
     RenderReviewRequest,
     QwenEditPromptGenerateRequest,
     QwenEditPrompts,
@@ -1725,7 +1729,14 @@ def _api_video_backend_options() -> list[VideoBackendOption]:
     duration_bounds = NewApiVideoGenerator._parse_duration_bounds_config(
         NEWAPI_VIDEO_DURATION_BOUNDS
     )
-    default_backend = VideoGenerateRequest().video_backend
+    from novelvideo.config import VIDEO_BACKEND as _configured_video_backend
+
+    # `VideoGenerateRequest.video_backend`'s hardcoded field default is only
+    # a request-schema fallback — it does NOT track this machine's
+    # `config.VIDEO_BACKEND` (e.g. after it was switched to
+    # `runpod_minimax_h3`). Use the real configured default so `is_default`
+    # below actually reflects it.
+    default_backend = _configured_video_backend
     backend_options: list[VideoBackendOption] = []
     for value, label in options.items():
         model = parse_newapi_video_backend(value)
@@ -1782,6 +1793,7 @@ def _api_video_backend_options() -> list[VideoBackendOption]:
             VideoBackendOption(
                 value="runpod_minimax_h3",
                 label="MiniMax-H3 (RunPod, dev)",
+                is_default="runpod_minimax_h3" == default_backend,
                 is_runpod_h3=True,
                 min_duration=5,
                 max_duration=12,
@@ -5624,6 +5636,95 @@ async def review_single_video(
     }
 
 
+async def _generate_h3_prompt_result(
+    context: "MiniMaxH3BeatContext",
+    *,
+    reference_count: int,
+    duration_seconds: float,
+    expects_dialogue: bool,
+) -> tuple["MiniMaxH3PromptResult", list[dict[str, str]], bool]:
+    """Shared retry/fallback/lint dance for one H3 prompt call, factored
+    out of `generate_minimax_h3_prompt` so the segment (multishot) prompt
+    generator below can reuse it per-shot instead of duplicating it. See
+    that route's docstring for why only an outright failed call is
+    retried."""
+    from novelvideo.agents.minimax_h3_prompt_builder import (
+        build_fallback_minimax_h3_prompt,
+        build_minimax_h3_prompt,
+    )
+    from novelvideo.agents.minimax_h3_prompt_lint import lint_minimax_h3_prompt
+
+    max_llm_attempts = 2
+    result = None
+    last_exc: Exception | None = None
+    retry_context = context
+    for _attempt in range(max_llm_attempts):
+        try:
+            result = await build_minimax_h3_prompt(retry_context)
+            break
+        except Exception as exc:  # noqa: BLE001
+            last_exc = exc
+            retry_context = context.model_copy(
+                update={
+                    "retry_feedback": (
+                        "Your previous attempt failed to produce valid output "
+                        f"at all ({exc}). Follow the schema and every rule "
+                        "exactly this time."
+                    )
+                }
+            )
+            continue
+
+    fallback_used = result is None
+    if fallback_used:
+        result = build_fallback_minimax_h3_prompt(context)
+
+    lint = lint_minimax_h3_prompt(
+        result.final_prompt,
+        mode=context.mode,
+        reference_count=reference_count,
+        duration_seconds=duration_seconds,
+        expects_dialogue=expects_dialogue,
+    )
+    lint_issues = [
+        {"severity": i.severity, "code": i.code, "message": i.message} for i in lint.issues
+    ]
+    if fallback_used:
+        lint_issues.insert(
+            0,
+            {
+                "severity": "warning",
+                "code": "fallback_template",
+                "message": (
+                    f"AI 生成失败（{last_exc}），已用基础模板代替，建议检查后再确认或重试。"
+                ),
+            },
+        )
+    return result, lint_issues, fallback_used
+
+
+def _h3_resolve_dialogue(beat: dict, character_map: dict) -> tuple[str, str]:
+    """`(dialogue_line, dialogue_speaker)` for a beat, handling the
+    multi-speaker `{{identity}}`-per-line marker case and stripping a
+    redundant screenplay "SPEAKER (direction): " prefix for the
+    single-speaker case — factored out of `generate_minimax_h3_prompt` so
+    the segment prompt generator reuses the exact same resolution (real
+    bugs were found and fixed in this logic, see git history; duplicating
+    it risks un-fixing them for the chain path)."""
+    audio_type = str(beat.get("audio_type") or "silence")
+    if audio_type != "dialogue":
+        return "", str(beat.get("speaker") or "")
+    narration = str(beat.get("narration_segment") or "")
+    dialogue_speaker = str(beat.get("speaker") or "")
+    dialogue_line, multi_speaker_label = _h3_parse_dialogue_segment(narration, character_map)
+    if multi_speaker_label:
+        dialogue_speaker = multi_speaker_label
+    else:
+        clean_speaker_name = _h3_char_name_for_identity(dialogue_speaker, character_map)
+        dialogue_line = _h3_strip_redundant_speaker_label(dialogue_line, clean_speaker_name)
+    return dialogue_line, dialogue_speaker
+
+
 @router.post(
     "/projects/{project}/episodes/{episode_num}/beats/{beat_num}/minimax-h3-prompt/generate"
 )
@@ -5782,52 +5883,12 @@ async def generate_minimax_h3_prompt(
     # own text — still guaranteed to pass every structural check, just
     # plainer than a successful vision call. See the builder module's
     # docstring for the full rationale.
-    max_llm_attempts = 2
-    result = None
-    last_exc: Exception | None = None
-    retry_context = context
-    for attempt in range(max_llm_attempts):
-        try:
-            result = await build_minimax_h3_prompt(retry_context)
-            break
-        except Exception as exc:  # noqa: BLE001
-            last_exc = exc
-            retry_context = context.model_copy(
-                update={
-                    "retry_feedback": (
-                        "Your previous attempt failed to produce valid output "
-                        f"at all ({exc}). Follow the schema and every rule "
-                        "exactly this time."
-                    )
-                }
-            )
-            continue
-
-    fallback_used = result is None
-    if fallback_used:
-        result = build_fallback_minimax_h3_prompt(context)
-
-    lint = lint_minimax_h3_prompt(
-        result.final_prompt,
-        mode=context.mode,
+    result, lint_issues, fallback_used = await _generate_h3_prompt_result(
+        context,
         reference_count=len(references) + 1,
         duration_seconds=video_duration,
         expects_dialogue=audio_type == "dialogue",
     )
-    lint_issues = [
-        {"severity": i.severity, "code": i.code, "message": i.message} for i in lint.issues
-    ]
-    if fallback_used:
-        lint_issues.insert(
-            0,
-            {
-                "severity": "warning",
-                "code": "fallback_template",
-                "message": (
-                    f"AI 生成失败（{last_exc}），已用基础模板代替，建议检查后再确认或重试。"
-                ),
-            },
-        )
 
     h3_config = parse_seedance2_config(beat.get("seedance2_config_json"))
     h3_config.final_prompt = result.final_prompt
@@ -5886,30 +5947,46 @@ def _multishot_chain_beats(beats: list[dict], chain_id: str) -> tuple[list[dict]
     return [beats[i] for i in indices], ""
 
 
+#: `H3MultishotSampler` carries one `reference_images` batch for the whole
+#: chain — more entries means more R2 uploads/VRAM per job, and the
+#: segment planner (`agents/segment_planner.py`) is told to keep a
+#: segment's identity count at or below this so review never has to reject
+#: a plan it itself approved.
+MULTISHOT_MAX_UNION_REFERENCES = 3
+
+
 def _multishot_shared_references(
     character_map: dict, chain_beats: list[dict]
 ) -> tuple[list[dict[str, str]], str]:
-    """All beats in a chain must resolve to the EXACT same identity
-    reference list (same identities, same order). `H3MultishotSampler`
-    carries one `reference_images` batch for the WHOLE chain, numbered
-    `<Picture 2>`/`<Picture 3>`/... once — but each beat's own saved
-    `final_prompt` was numbered independently against ITS OWN reference
-    list. Reusing those prompts verbatim as this chain's `script` is only
-    safe (a tag can never silently refer to a different person in a
-    different shot) when every beat already agrees on that list. v1
-    enforces this rather than trying to renumber/reconcile per-shot
-    reference lists after the fact."""
-    per_beat_ids = [
-        [r["identity_id"] for r in _h3_identity_references(character_map, b)] for b in chain_beats
-    ]
-    first = per_beat_ids[0]
-    if any(ids != first for ids in per_beat_ids[1:]):
+    """The chain's reference list is the UNION of every beat's identity
+    references, in first-appearance order across the chain — NOT the
+    "every beat must list the exact same identities" rule this started
+    with (see git history for that v1 behavior). `H3MultishotSampler`
+    numbers one shared `reference_images` batch once per chain
+    (`<Picture 2>`/`<Picture 3>`/...), so each beat's own saved
+    `final_prompt` must be renumbered against THIS union before being
+    reused as that beat's shot in the chain's `script` — see
+    `_renumber_h3_prompt_references` in `agents/minimax_h3_prompt_builder.py`,
+    used by the segment prompt generator
+    (`generate_minimax_h3_segment_prompts`). A beat whose own identity list
+    isn't a subset of the union (shouldn't happen — the union IS built from
+    every beat) or a union exceeding `MULTISHOT_MAX_UNION_REFERENCES` fails
+    here rather than producing a job with too many reference images."""
+    union: list[dict[str, str]] = []
+    seen_ids: set[str] = set()
+    for b in chain_beats:
+        for ref in _h3_identity_references(character_map, b):
+            if ref["identity_id"] in seen_ids:
+                continue
+            seen_ids.add(ref["identity_id"])
+            union.append(ref)
+    if len(union) > MULTISHOT_MAX_UNION_REFERENCES:
+        names = ", ".join(r["name"] for r in union)
         return [], (
-            "链条内每个 beat 必须引用完全相同的角色参考图（相同身份、相同顺序）才能安全拼接成一条 "
-            "Multishot 脚本 — 当前各 beat 的角色引用不一致"
+            f"链条内角色参考图合计 {len(union)} 个（{names}），超过上限 "
+            f"{MULTISHOT_MAX_UNION_REFERENCES} — 请减少链条长度或角色数量"
         )
-    shared = _h3_identity_references(character_map, chain_beats[0]) if first else []
-    return shared, ""
+    return union, ""
 
 
 def _multishot_review_fingerprint(
@@ -6235,6 +6312,658 @@ async def generate_multishot_video(
         }
 
     return {"ok": False, "error": "Multishot 视频生成需要 project context"}
+
+
+# ── Segment multishot: auto-group beats, approve frames, batch-generate ───
+# Added 2026-10-21. See `.claude/CLAUDE.md`'s "Segment multishot" section,
+# `agents/segment_planner.py`, `generators/segment_store.py` and
+# `docs/adr/0005-segment-multishot-flow.md`. This layers a two-phase
+# workflow on top of the single-chain multishot plumbing above: (1) an
+# LLM groups the episode's beats into short segments and the user
+# approves each segment's ONE sketch-free compose first frame; (2) once
+# approved, every shot in a segment gets its own MiniMax H3 prompt
+# numbered against that segment's UNION reference list (not each beat's
+# own independently-numbered prompt — see `_multishot_shared_references`),
+# and video generation is batched across every approved segment.
+
+
+def _segment_prefix_for_episode(episode_num: int) -> str:
+    return f"seg_ep{episode_num:03d}_"
+
+
+def _frame_mtime_fingerprint(path: Path) -> str:
+    try:
+        return str(path.stat().st_mtime_ns)
+    except OSError:
+        return ""
+
+
+@router.get("/projects/{project}/episodes/{episode_num}/segments")
+async def list_episode_segments(
+    project: str,
+    episode_num: int,
+    user: dict = Depends(get_api_user),
+):
+    """Cheap, read-only: this episode's current segment groupings (from
+    beats' `multishot_chain_id`) plus each one's Phase 1/2 sidecar state —
+    no LLM call, no RunPod call, safe to poll. This is what the UI uses
+    to render the segments panel; `/segments/videos/review` (which DOES
+    call the LLM for every shot) is only for the Phase 2 confirm dialog."""
+    resolved = await _resolve_generation_project(project, user, required_role="viewer")
+    ctx = resolved.ctx
+    username = resolved.username
+    project_name = resolved.project_name
+    output_dir = resolved.output_dir
+    store = (
+        await make_sqlite_store_for_context(ctx)
+        if ctx
+        else await make_sqlite_store(username, project_name)
+    )
+    beats = await store.get_beats_as_dicts(episode_num)
+
+    from novelvideo.generators.segment_store import load_segment_states
+    from novelvideo.utils.path_resolver import PathResolver
+
+    states = load_segment_states(output_dir, episode_num)
+    paths = PathResolver(output_dir, episode_num)
+
+    chain_beat_numbers: dict[str, list[int]] = {}
+    for b in beats:
+        chain_id = str(b.get("multishot_chain_id") or "")
+        if not chain_id:
+            continue
+        chain_beat_numbers.setdefault(chain_id, []).append(int(b["beat_number"]))
+
+    segments_out = []
+    for chain_id in sorted(chain_beat_numbers):
+        beat_numbers = chain_beat_numbers[chain_id]
+        state = states.get(chain_id)
+        frame_path = paths.first_frame_for_video(beat_numbers[0])
+        frame_exists = frame_path.exists()
+        video_path = paths.videos_dir() / f"multishot_{chain_id}.mp4"
+        # The video file existing is the ground truth for "generated" —
+        # more reliable than the sidecar's `video_status`, which this
+        # route's caller (`generate_segment_videos`) only ever advances to
+        # "queued" (it returns before the GPU job finishes).
+        video_status = "generated" if video_path.exists() else (state.video_status if state else "pending")
+        segments_out.append(
+            {
+                "chain_id": chain_id,
+                "beat_numbers": beat_numbers,
+                "reason": state.reason if state else "",
+                "shot_seconds": state.shot_seconds if state else [],
+                "frame_status": state.frame_status if state else "pending",
+                "frame_url": _h3_display_url(
+                    ctx, output_dir, str(frame_path) if frame_exists else None
+                ),
+                "frame_missing": not frame_exists,
+                "video_status": video_status,
+            }
+        )
+
+    return {"ok": True, "segments": segments_out}
+
+
+@router.post("/projects/{project}/episodes/{episode_num}/segments/plan")
+async def plan_episode_segments(
+    project: str,
+    episode_num: int,
+    user: dict = Depends(get_api_user),
+):
+    """Dry-run: ask the LLM to group this episode's beats into short
+    (~10-15s) multishot segments. Writes nothing — call `/segments/apply`
+    with this (optionally user-edited) result to actually group the
+    beats via `multishot_chain_id`."""
+    resolved = await _resolve_generation_project(project, user, required_role="editor")
+    ctx = resolved.ctx
+    username = resolved.username
+    project_name = resolved.project_name
+    store = (
+        await make_sqlite_store_for_context(ctx)
+        if ctx
+        else await make_sqlite_store(username, project_name)
+    )
+    beats = await store.get_beats_as_dicts(episode_num)
+    if not beats:
+        return {"ok": False, "error": f"No beats found for episode {episode_num}"}
+
+    from novelvideo.agents.segment_planner import beat_inputs_from_dicts, plan_segments
+
+    beat_inputs = beat_inputs_from_dicts(beats)
+    plan = await plan_segments(beat_inputs)
+    prefix = _segment_prefix_for_episode(episode_num)
+
+    segments_out = [
+        {
+            "chain_id": f"{prefix}{i:02d}",
+            "beat_numbers": seg.beat_numbers,
+            "shot_seconds": seg.shot_seconds,
+            "total_seconds": seg.total_seconds,
+            "reason": seg.reason,
+            "warnings": seg.warnings,
+        }
+        for i, seg in enumerate(plan.segments, start=1)
+    ]
+
+    return {
+        "ok": True,
+        "source": plan.source,
+        "warnings": plan.warnings,
+        "segments": segments_out,
+    }
+
+
+@router.post("/projects/{project}/episodes/{episode_num}/segments/apply")
+async def apply_episode_segments(
+    project: str,
+    episode_num: int,
+    body: SegmentPlanApplyRequest,
+    user: dict = Depends(get_api_user),
+):
+    """Writes `multishot_chain_id` (and each beat's planned
+    `duration_seconds`, so the existing single-shot-duration resolution
+    `resolve_target_video_duration` already uses picks it up for free)
+    per `body.segments` — normally `/segments/plan`'s own output, possibly
+    hand-edited. Beats not covered by any segment have their
+    `multishot_chain_id` cleared (ungrouped, single-shot as before).
+    Replaces this episode's entire segment sidecar state."""
+    resolved = await _resolve_generation_project(project, user, required_role="editor")
+    ctx = resolved.ctx
+    username = resolved.username
+    project_name = resolved.project_name
+    output_dir = resolved.output_dir
+    store = (
+        await make_sqlite_store_for_context(ctx)
+        if ctx
+        else await make_sqlite_store(username, project_name)
+    )
+    beats = await store.get_beats_as_dicts(episode_num)
+    if not beats:
+        return {"ok": False, "error": f"No beats found for episode {episode_num}"}
+
+    all_beat_numbers = {int(b["beat_number"]) for b in beats}
+    chain_id_by_beat: dict[int, str] = {}
+    seconds_by_beat: dict[int, float] = {}
+    for seg in body.segments:
+        chain_id = str(seg.get("chain_id") or "").strip()
+        beat_numbers = [int(n) for n in seg.get("beat_numbers") or []]
+        shot_seconds = [float(s) for s in seg.get("shot_seconds") or []]
+        if not chain_id or not beat_numbers:
+            return {"ok": False, "error": "每个 segment 必须有 chain_id 和 beat_numbers"}
+        unknown = [n for n in beat_numbers if n not in all_beat_numbers]
+        if unknown:
+            return {"ok": False, "error": f"beat {unknown} 不存在于本集"}
+        for i, n in enumerate(beat_numbers):
+            if n in chain_id_by_beat:
+                return {"ok": False, "error": f"beat {n} 出现在多个 segment 中"}
+            chain_id_by_beat[n] = chain_id
+            if i < len(shot_seconds):
+                seconds_by_beat[n] = shot_seconds[i]
+
+    if not hasattr(store, "update_beat_asset"):
+        return {"ok": False, "error": "当前存储不支持写入 multishot_chain_id"}
+
+    for b in beats:
+        beat_num = int(b["beat_number"])
+        new_chain_id = chain_id_by_beat.get(beat_num, "")
+        update_kwargs: dict[str, Any] = {}
+        if str(b.get("multishot_chain_id") or "") != new_chain_id:
+            update_kwargs["multishot_chain_id"] = new_chain_id
+        if beat_num in seconds_by_beat:
+            update_kwargs["duration_seconds"] = seconds_by_beat[beat_num]
+        if update_kwargs:
+            await store.update_beat_asset(
+                episode_number=episode_num, beat_number=beat_num, **update_kwargs
+            )
+
+    from novelvideo.generators.segment_store import replace_all_segments
+
+    replace_all_segments(output_dir, episode_num, body.segments)
+
+    return {"ok": True, "segment_count": len(body.segments)}
+
+
+@router.post("/projects/{project}/episodes/{episode_num}/segments/frames/generate")
+async def generate_segment_frames(
+    project: str,
+    episode_num: int,
+    body: SegmentFramesGenerateRequest = SegmentFramesGenerateRequest(),
+    user: dict = Depends(get_api_user),
+):
+    """Phase 1: generates the ONE sketch-free compose first frame for
+    every segment not yet approved (`body.force=True` to regenerate an
+    already-approved one too) — one `regenerate_beats` call per segment's
+    first beat, reusing that route's existing compose-selection/enqueue
+    logic rather than duplicating it. `body.chain_ids`, when given,
+    restricts this to just those segments (e.g. the UI's per-segment
+    "regenerate this one" button) instead of every segment in the
+    episode."""
+    resolved = await _resolve_generation_project(project, user, required_role="editor")
+    username = resolved.username
+    project_name = resolved.project_name
+    output_dir = resolved.output_dir
+    store = (
+        await make_sqlite_store_for_context(resolved.ctx)
+        if resolved.ctx
+        else await make_sqlite_store(username, project_name)
+    )
+    beats = await store.get_beats_as_dicts(episode_num)
+
+    from novelvideo.config import DEFAULT_RENDER_IMAGE_SELECTION, SKETCH_FREE_COMPOSE_SELECTION_KEYS
+    from novelvideo.generators.segment_store import load_segment_states
+
+    proj_config = load_project_config(username, project_name)
+    selection = body.image_generation_selection or proj_config.get(
+        "render_image_selection", DEFAULT_RENDER_IMAGE_SELECTION
+    )
+    if selection not in SKETCH_FREE_COMPOSE_SELECTION_KEYS:
+        return {
+            "ok": False,
+            "error": (
+                f"{selection} 不是 sketch-free compose 选项，请改用 "
+                "gemini_webai_compose 或 runpod_qwen21_compose"
+            ),
+        }
+
+    states = load_segment_states(output_dir, episode_num)
+    all_chain_ids = sorted(
+        {str(b.get("multishot_chain_id") or "") for b in beats if b.get("multishot_chain_id")}
+    )
+    if not all_chain_ids:
+        return {"ok": False, "error": "本集还没有任何 segment（请先调用 /segments/plan + /segments/apply）"}
+    if body.chain_ids:
+        requested = {str(c) for c in body.chain_ids}
+        unknown = requested - set(all_chain_ids)
+        if unknown:
+            return {"ok": False, "error": f"segment {sorted(unknown)} 不存在于本集"}
+        chain_ids = [c for c in all_chain_ids if c in requested]
+    else:
+        chain_ids = all_chain_ids
+
+    results = []
+    for chain_id in chain_ids:
+        state = states.get(chain_id)
+        if state and state.frame_status == "approved" and not body.force:
+            results.append({"chain_id": chain_id, "skipped": True, "reason": "already approved"})
+            continue
+        chain_beats, chain_error = _multishot_chain_beats(beats, chain_id)
+        if chain_error or not chain_beats:
+            results.append({"chain_id": chain_id, "ok": False, "error": chain_error or "empty chain"})
+            continue
+        first_beat_num = int(chain_beats[0]["beat_number"])
+        regen_body = BeatsRegenerateRequest(
+            beat_indices=[first_beat_num],
+            image_generation_selection=selection,
+            mode_key="1x1_2-3",
+        )
+        try:
+            regen_result = await regenerate_beats(project, episode_num, regen_body, user)
+        except HTTPException as exc:
+            regen_result = {"ok": False, "error": str(exc.detail)}
+        results.append({"chain_id": chain_id, "beat_number": first_beat_num, **regen_result})
+
+    return {"ok": True, "results": results}
+
+
+@router.post("/projects/{project}/episodes/{episode_num}/segments/{chain_id}/frame/approve")
+async def approve_segment_frame(
+    project: str,
+    episode_num: int,
+    chain_id: str,
+    body: SegmentFrameApproveRequest = SegmentFrameApproveRequest(),
+    user: dict = Depends(get_api_user),
+):
+    """Phase 1 confirm: marks this segment's first frame approved,
+    recording its mtime fingerprint so a later regeneration is detected
+    (`reset_frame_approval_if_stale`, called from `/segments/videos/review`)
+    instead of silently reusing a stale, already-rejected frame."""
+    resolved = await _resolve_generation_project(project, user, required_role="editor")
+    username = resolved.username
+    project_name = resolved.project_name
+    output_dir = resolved.output_dir
+    store = (
+        await make_sqlite_store_for_context(resolved.ctx)
+        if resolved.ctx
+        else await make_sqlite_store(username, project_name)
+    )
+    beats = await store.get_beats_as_dicts(episode_num)
+    chain_beats, chain_error = _multishot_chain_beats(beats, chain_id)
+    if chain_error:
+        return {"ok": False, "error": chain_error}
+
+    from novelvideo.generators.segment_store import set_frame_approved
+    from novelvideo.utils.path_resolver import PathResolver
+
+    paths = PathResolver(output_dir, episode_num)
+    frame_path = paths.first_frame_for_video(int(chain_beats[0]["beat_number"]))
+    if not frame_path.exists():
+        return {"ok": False, "error": "首帧不存在，无法确认"}
+
+    fingerprint = body.frame_fingerprint or _frame_mtime_fingerprint(frame_path)
+    state = set_frame_approved(output_dir, episode_num, chain_id, fingerprint=fingerprint)
+    if state is None:
+        return {"ok": False, "error": f"segment {chain_id} 不存在（请先调用 /segments/apply）"}
+    return {
+        "ok": True,
+        "chain_id": chain_id,
+        "frame_status": state.frame_status,
+        "frame_fingerprint": state.frame_fingerprint,
+    }
+
+
+async def _build_segment_shot_prompts(
+    *,
+    store: Any,
+    output_dir: str,
+    episode_num: int,
+    beats: list[dict],
+    chain_beats: list[dict],
+    shared_refs: list[dict[str, str]],
+    character_map: dict,
+) -> list[dict[str, Any]]:
+    """Generates and saves a fresh MiniMax H3 prompt for every beat in
+    `chain_beats`, each numbered against the SAME `shared_refs` (the
+    chain's union reference list, fixed order) — never against that
+    beat's own independently-resolved identity list, which would
+    desync `<Picture N>` numbering once concatenated into the chain's
+    shared `H3MultishotSampler.reference_images` batch (see
+    `_multishot_shared_references`). Only the first beat gets the real
+    rendered first frame attached — later shots have no rendered image
+    yet (`H3MultishotSampler` continues internally from the previous
+    shot's last frame), so their `first_frame_description` is grounded by
+    that beat's own `visual_description` text instead, with a short
+    continuity note threaded in from the previous/next shot IN THE CHAIN
+    rather than the episode's actual neighboring beats. Returns one dict
+    per beat: `{beat_number, duration_seconds, prompt, lint,
+    fallback_used}`, in chain order."""
+    from novelvideo.agents.minimax_h3_prompt_builder import MiniMaxH3BeatContext, MiniMaxH3Reference
+    from novelvideo.manual_shots import resolve_target_video_duration
+    from novelvideo.seedance2_i2v.models import parse_seedance2_config
+    from novelvideo.utils.path_resolver import PathResolver
+    from novelvideo.video_duration import video_duration_bounds_for_backend
+
+    paths = PathResolver(output_dir, episode_num)
+    h3_min, h3_max = video_duration_bounds_for_backend("runpod_minimax_h3_multishot")
+
+    references = [
+        MiniMaxH3Reference(
+            tag=f"<Picture {i + 2}>",
+            kind="character",
+            name=r["name"],
+            appearance_details=r["appearance_details"],
+            image_path=r["path"],
+        )
+        for i, r in enumerate(shared_refs)
+    ]
+
+    first_beat_num = int(chain_beats[0]["beat_number"])
+    all_index_by_num = {int(b["beat_number"]): i for i, b in enumerate(beats)}
+
+    out: list[dict[str, Any]] = []
+    for k, beat in enumerate(chain_beats):
+        beat_num = int(beat["beat_number"])
+        audio_duration = await _api_audio_duration_seconds(output_dir, episode_num, beat_num)
+        duration = resolve_target_video_duration(beat, audio_duration)
+        if h3_min is not None:
+            duration = max(float(h3_min), min(float(h3_max), duration))
+
+        dialogue_line, dialogue_speaker = _h3_resolve_dialogue(beat, character_map)
+        audio_type = str(beat.get("audio_type") or "silence")
+        narration = str(beat.get("narration_segment") or "")
+
+        if k == 0:
+            first_frame_path = str(paths.first_frame_for_video(first_beat_num))
+            all_idx = all_index_by_num.get(beat_num, 0)
+            prev_beat = beats[all_idx - 1] if all_idx > 0 else None
+            prev_narration = str((prev_beat or {}).get("narration_segment") or "")
+        else:
+            first_frame_path = ""
+            prev_beat = chain_beats[k - 1]
+            prev_narration = (
+                "(continuing immediately from the previous shot, same scene and subjects) "
+                + str(prev_beat.get("visual_description") or prev_beat.get("narration_segment") or "")
+            )
+
+        if k == len(chain_beats) - 1:
+            all_idx = all_index_by_num.get(beat_num, len(beats) - 1)
+            next_beat = beats[all_idx + 1] if all_idx + 1 < len(beats) else None
+            next_narration = str((next_beat or {}).get("narration_segment") or "")
+        else:
+            next_beat = chain_beats[k + 1]
+            next_narration = str(
+                next_beat.get("visual_description") or next_beat.get("narration_segment") or ""
+            )
+
+        context = MiniMaxH3BeatContext(
+            mode="ref2va" if references else "fl2va",
+            visual_description=_h3_replace_identity_markers(
+                str(beat.get("visual_description") or ""), character_map
+            ),
+            narration_segment=(
+                _h3_replace_identity_markers(narration, character_map)
+                if audio_type != "dialogue"
+                else ""
+            ),
+            dialogue_line=dialogue_line,
+            dialogue_speaker=dialogue_speaker,
+            dialogue_language=_detect_h3_dialogue_language(dialogue_line),
+            dialogue_on_screen=True,
+            duration_seconds=float(duration),
+            aspect_ratio="9:16",
+            prev_beat_narration=_h3_replace_identity_markers(prev_narration, character_map),
+            next_beat_narration=_h3_replace_identity_markers(next_narration, character_map),
+            first_frame_path=first_frame_path,
+            references=references,
+        )
+
+        result, lint_issues, fallback_used = await _generate_h3_prompt_result(
+            context,
+            reference_count=len(references) + 1,
+            duration_seconds=duration,
+            expects_dialogue=audio_type == "dialogue",
+        )
+
+        if hasattr(store, "update_beat_asset"):
+            h3_config = parse_seedance2_config(beat.get("seedance2_config_json"))
+            h3_config.final_prompt = result.final_prompt
+            h3_config.prompt_source = "minimax_h3"
+            h3_config.reference_image_paths = [r["path"] for r in shared_refs]
+            h3_config.ratio = "9:16"
+            await store.update_beat_asset(
+                episode_number=episode_num,
+                beat_number=beat_num,
+                seedance2_config_json=h3_config.model_dump_json(),
+            )
+
+        out.append(
+            {
+                "beat_number": beat_num,
+                "duration_seconds": duration,
+                "prompt": result.final_prompt,
+                "lint": lint_issues,
+                "fallback_used": fallback_used,
+            }
+        )
+    return out
+
+
+@router.post("/projects/{project}/episodes/{episode_num}/segments/videos/review")
+async def review_segment_videos(
+    project: str,
+    episode_num: int,
+    user: dict = Depends(get_api_user),
+):
+    """Phase 2 dry-run, across EVERY segment in this episode at once:
+    (re)writes each shot's MiniMax H3 prompt numbered against its
+    segment's union reference list, lints it, and returns a
+    `input_fingerprint` per segment for `/segments/video/generate`. No
+    RunPod call, no enqueue — this does call the (cheap, text-only) H3
+    prompt LLM for every shot that doesn't have an up-to-date one yet, so
+    it is not free to call repeatedly, just far cheaper than the GPU job
+    it gates."""
+    resolved = await _resolve_generation_project(project, user, required_role="editor")
+    ctx = resolved.ctx
+    username = resolved.username
+    project_name = resolved.project_name
+    output_dir = resolved.output_dir
+    store = (
+        await make_sqlite_store_for_context(ctx)
+        if ctx
+        else await make_sqlite_store(username, project_name)
+    )
+    beats = await store.get_beats_as_dicts(episode_num)
+
+    from novelvideo.config import RUNPOD_H3_MULTISHOT_MAX_SHOTS, _runpod_h3_multishot_configured
+    from novelvideo.generators.runpod_minimax_h3_multishot_video import (
+        dims_for_multishot,
+        join_shots_script,
+        multishot_sampling_plan,
+    )
+    from novelvideo.generators.segment_store import load_segment_states, reset_frame_approval_if_stale
+    from novelvideo.utils.path_resolver import PathResolver
+
+    states = load_segment_states(output_dir, episode_num)
+    chain_ids = sorted(
+        {str(b.get("multishot_chain_id") or "") for b in beats if b.get("multishot_chain_id")}
+    )
+    if not chain_ids:
+        return {"ok": True, "segments": []}
+
+    character_map = await _build_character_map(
+        store, beats, username, project_name, episode_num=episode_num
+    )
+    paths = PathResolver(output_dir, episode_num)
+
+    worker_status: dict[str, Any] | None = None
+    if _runpod_h3_multishot_configured():
+        try:
+            from novelvideo.runpod_worker_control import get_status
+
+            worker_status = await get_status("multishot")
+        except Exception as exc:  # noqa: BLE001
+            worker_status = {"error": str(exc)}
+
+    segments_out: list[dict[str, Any]] = []
+    for chain_id in chain_ids:
+        chain_beats, chain_error = _multishot_chain_beats(beats, chain_id)
+        if chain_error or not chain_beats:
+            segments_out.append({"chain_id": chain_id, "ok": False, "error": chain_error or "empty"})
+            continue
+
+        frame_path = paths.first_frame_for_video(int(chain_beats[0]["beat_number"]))
+        frame_exists = frame_path.exists()
+        fp_now = _frame_mtime_fingerprint(frame_path) if frame_exists else ""
+        state = reset_frame_approval_if_stale(
+            output_dir, episode_num, chain_id, current_fingerprint=fp_now
+        )
+
+        issues: list[str] = []
+        if state is None or state.frame_status != "approved":
+            issues.append("首帧尚未确认（或确认后已变更），请先在 Phase 1 确认画面")
+        if not frame_exists:
+            issues.append("首帧不存在")
+        if len(chain_beats) > RUNPOD_H3_MULTISHOT_MAX_SHOTS:
+            issues.append(f"链条有 {len(chain_beats)} 个 beat，超过上限 {RUNPOD_H3_MULTISHOT_MAX_SHOTS}")
+        if not _runpod_h3_multishot_configured():
+            issues.append("RUNPOD_H3_MULTISHOT_ENDPOINT_ID / RUNPOD_API_KEY / R2_* 未配置")
+
+        shared_refs, ref_error = _multishot_shared_references(character_map, chain_beats)
+        if ref_error:
+            issues.append(ref_error)
+            segments_out.append(
+                {"chain_id": chain_id, "ok": False, "issues": issues, "can_enqueue": False}
+            )
+            continue
+
+        checkpoint = "ref2va" if shared_refs else "fl2va"
+        sampling = multishot_sampling_plan(checkpoint)
+
+        shots = await _build_segment_shot_prompts(
+            store=store,
+            output_dir=output_dir,
+            episode_num=episode_num,
+            beats=beats,
+            chain_beats=chain_beats,
+            shared_refs=shared_refs,
+            character_map=character_map,
+        )
+        for shot in shots:
+            for issue in shot["lint"]:
+                if issue["severity"] == "error":
+                    issues.append(f"beat {shot['beat_number']}: {issue['message']}")
+
+        max_frames, shots_meta = await _multishot_per_shot_frames(output_dir, episode_num, chain_beats)
+        width, height = dims_for_multishot("9:16", "formal")
+        script = join_shots_script([s["prompt"] for s in shots])
+
+        fingerprint = _multishot_review_fingerprint(
+            chain_id=chain_id,
+            script=script,
+            checkpoint=checkpoint,
+            frames_per_shot=max_frames,
+            frame_path=str(frame_path) if frame_exists else None,
+            reference_paths=[r["path"] for r in shared_refs],
+            sampling=sampling,
+        )
+
+        segments_out.append(
+            {
+                "chain_id": chain_id,
+                "ok": True,
+                "beat_numbers": [int(b["beat_number"]) for b in chain_beats],
+                "checkpoint": checkpoint,
+                "sampling": sampling,
+                "width": width,
+                "height": height,
+                "frames_per_shot": max_frames,
+                "total_duration_seconds": round(max_frames * len(chain_beats) / 24.0, 2),
+                "shots": [
+                    {**meta, "prompt_preview": shot["prompt"][:200], "lint": shot["lint"]}
+                    for meta, shot in zip(shots_meta, shots)
+                ],
+                "start_frame_path": _h3_display_url(
+                    ctx, output_dir, str(frame_path) if frame_exists else None
+                ),
+                "issues": issues,
+                "can_enqueue": not issues,
+                "input_fingerprint": fingerprint,
+            }
+        )
+
+    return {"ok": True, "worker_status": worker_status, "segments": segments_out}
+
+
+@router.post("/projects/{project}/episodes/{episode_num}/segments/video/generate")
+async def generate_segment_videos(
+    project: str,
+    episode_num: int,
+    body: SegmentVideosGenerateRequest,
+    user: dict = Depends(get_api_user),
+):
+    """Phase 2 batch enqueue: a thin loop over the EXISTING single-chain
+    `/multishot/{chain_id}/video` route (reused verbatim, not duplicated)
+    so each segment gets that route's exact fingerprint-check/enqueue
+    contract. The task queue (`queue_kind="video"`) runs jobs one at a
+    time, so this returns as soon as every segment is queued rather than
+    waiting for GPU time."""
+    if not body.segments:
+        return {"ok": False, "error": "segments 不能为空"}
+
+    resolved = await _resolve_generation_project(project, user, required_role="editor")
+    output_dir = resolved.output_dir
+
+    from novelvideo.generators.segment_store import set_video_status
+
+    results = []
+    for entry in body.segments:
+        video_body = MultishotVideoRequest(review_fingerprint=entry.review_fingerprint)
+        result = await generate_multishot_video(
+            project, episode_num, entry.chain_id, video_body, user
+        )
+        if result.get("ok"):
+            set_video_status(output_dir, episode_num, entry.chain_id, status="queued")
+        results.append({"chain_id": entry.chain_id, **result})
+    return {"ok": all(r.get("ok") for r in results), "results": results}
 
 
 # ── RunPod Qwen-Image-Edit-2511 render review (parallels the H3 video

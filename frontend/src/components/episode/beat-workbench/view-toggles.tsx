@@ -28,6 +28,10 @@ interface ViewTogglesProps {
   onGroupMultishot?: () => void;
   onUngroupMultishot?: () => void;
   onReviewMultishot?: () => void;
+  /** Opens the "Segment multishot" workbench dialog (AI planning +
+   * Phase 1/2 batch workflow) — always visible, independent of the
+   * current selection. See `segments-workbench-dialog.tsx`. */
+  onOpenSegments?: () => void;
   legendSlot?: React.ReactNode;
 }
 
@@ -43,6 +47,7 @@ export function ViewToggles({
   onGroupMultishot,
   onUngroupMultishot,
   onReviewMultishot,
+  onOpenSegments,
   legendSlot,
 }: ViewTogglesProps) {
   const { t } = useTranslation();
@@ -84,6 +89,15 @@ export function ViewToggles({
               );
             })}
           </div>
+          {onOpenSegments && (
+            <button
+              type="button"
+              onClick={onOpenSegments}
+              className="ml-2 inline-flex h-[22px] items-center rounded-[5px] border border-violet-400/35 bg-violet-400/[0.07] px-2 text-[11px] font-medium text-violet-300 transition-colors hover:border-violet-400/55 hover:bg-violet-400/[0.12] hover:text-violet-200"
+            >
+              {t("episode.workbench.segments.openButton", { defaultValue: "Segments" })}
+            </button>
+          )}
           {hasSelection ? (
             <div className="ml-5 flex items-center gap-2">
               <span className="tabular-nums text-[11px] text-foreground/70">

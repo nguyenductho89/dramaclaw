@@ -90,6 +90,8 @@ export const queryKeys = {
     ["projects", p, "episodes", ep, "script"] as const,
   beats: (p: string, ep: number) =>
     ["projects", p, "episodes", ep, "beats"] as const,
+  segments: (p: string, ep: number) =>
+    ["projects", p, "episodes", ep, "segments"] as const,
   grids: (p: string, ep: number) =>
     ["projects", p, "episodes", ep, "grids"] as const,
   sketchRegenQueue: (p: string, ep: number) =>

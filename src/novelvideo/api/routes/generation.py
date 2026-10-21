@@ -5314,7 +5314,9 @@ def _h3_strip_redundant_speaker_label(text: str, speaker_name: str) -> str:
     if pattern is None:
         escaped = re.escape(name)
         pattern = re.compile(
-            rf"^{escaped}\s*(?:\([^)]{{0,120}}\)|（[^）]{{0,120}}）)?\s*[:：]\s*",
+            # Matches both ASCII and full-width (Chinese) parens/colon —
+            # real narration content can be in Chinese, not UI text.
+            rf"^{escaped}\s*(?:\([^)]{{0,120}}\)|（[^）]{{0,120}}）)?\s*[:：]\s*",  # no-cjk-exempt
             re.IGNORECASE,
         )
         _H3_SPEAKER_LABEL_RE_CACHE[name] = pattern
@@ -5931,14 +5933,14 @@ def _multishot_chain_beats(beats: list[dict], chain_id: str) -> tuple[list[dict]
     error)`; `error` is "" on success."""
     chain_id = str(chain_id or "").strip()
     if not chain_id:
-        return [], "chain_id 不能为空"
+        return [], "chain_id cannot be empty"
     indices = [
         i for i, b in enumerate(beats) if str(b.get("multishot_chain_id") or "") == chain_id
     ]
     if not indices:
-        return [], f"没有 beat 标记了 multishot_chain_id={chain_id!r}"
+        return [], f"no beat has multishot_chain_id={chain_id!r}"
     if indices != list(range(indices[0], indices[0] + len(indices))):
-        return [], "链条中的 beat 必须在叙事顺序上连续（中间不能插入其他未标记的 beat）"
+        return [], "beats in a chain must be consecutive in narrative order (no unmarked beat may sit between them)"
     return [beats[i] for i in indices], ""
 
 
@@ -5978,8 +5980,8 @@ def _multishot_shared_references(
     if len(union) > MULTISHOT_MAX_UNION_REFERENCES:
         names = ", ".join(r["name"] for r in union)
         return [], (
-            f"链条内角色参考图合计 {len(union)} 个（{names}），超过上限 "
-            f"{MULTISHOT_MAX_UNION_REFERENCES} — 请减少链条长度或角色数量"
+            f"the chain has {len(union)} character reference(s) in total ({names}), exceeding the limit of "
+            f"{MULTISHOT_MAX_UNION_REFERENCES} — reduce the chain length or number of characters"
         )
     return union, ""
 
@@ -6122,20 +6124,20 @@ async def review_multishot_video(
     issues: list[str] = []
     if len(chain_beats) > RUNPOD_H3_MULTISHOT_MAX_SHOTS:
         issues.append(
-            f"链条有 {len(chain_beats)} 个 beat，超过当前上限 "
+            f"the chain has {len(chain_beats)} beats, exceeding the current limit "
             f"RUNPOD_H3_MULTISHOT_MAX_SHOTS={RUNPOD_H3_MULTISHOT_MAX_SHOTS}"
         )
     if missing_prompt_beats:
         issues.append(
-            f"beat {missing_prompt_beats} 还没有生成 MiniMax H3 提示词 — "
-            "请先对每个 beat 调用 minimax-h3-prompt/generate"
+            f"beat {missing_prompt_beats} has no MiniMax H3 prompt yet — "
+            "call minimax-h3-prompt/generate for each beat first"
         )
     if ref_error:
         issues.append(ref_error)
     if not frame_exists:
-        issues.append(f"beat {chain_beats[0]['beat_number']} 的首帧不存在，请先生成预览")
+        issues.append(f"beat {chain_beats[0]['beat_number']}'s first frame does not exist — generate a preview first")
     if not _runpod_h3_multishot_configured():
-        issues.append("RUNPOD_H3_MULTISHOT_ENDPOINT_ID / RUNPOD_API_KEY / R2_* 未配置")
+        issues.append("RUNPOD_H3_MULTISHOT_ENDPOINT_ID / RUNPOD_API_KEY / R2_* are not configured")
 
     fingerprint = _multishot_review_fingerprint(
         chain_id=chain_id,
@@ -6217,13 +6219,13 @@ async def generate_multishot_video(
     if not _runpod_h3_multishot_configured():
         return {
             "ok": False,
-            "error": "RUNPOD_H3_MULTISHOT_ENDPOINT_ID / RUNPOD_API_KEY / R2_* 未配置",
+            "error": "RUNPOD_H3_MULTISHOT_ENDPOINT_ID / RUNPOD_API_KEY / R2_* are not configured",
         }
     if len(chain_beats) > RUNPOD_H3_MULTISHOT_MAX_SHOTS:
         return {
             "ok": False,
             "error": (
-                f"链条有 {len(chain_beats)} 个 beat，超过当前上限 "
+                f"the chain has {len(chain_beats)} beats, exceeding the current limit "
                 f"{RUNPOD_H3_MULTISHOT_MAX_SHOTS}"
             ),
         }
@@ -6242,7 +6244,7 @@ async def generate_multishot_video(
     if not frame_path.exists():
         return {
             "ok": False,
-            "error": f"beat {chain_beats[0]['beat_number']} 的首帧不存在，请先生成预览",
+            "error": f"beat {chain_beats[0]['beat_number']}'s first frame does not exist — generate a preview first",
         }
 
     max_frames, _shots = await _multishot_per_shot_frames(output_dir, episode_num, chain_beats)
@@ -6252,7 +6254,7 @@ async def generate_multishot_video(
         beat_num = int(b["beat_number"])
         h3_config = parse_seedance2_config(b.get("seedance2_config_json"))
         if h3_config.prompt_source != "minimax_h3" or not h3_config.final_prompt.strip():
-            return {"ok": False, "error": f"beat {beat_num} 还没有生成 MiniMax H3 提示词"}
+            return {"ok": False, "error": f"beat {beat_num} has no MiniMax H3 prompt yet"}
         prompts.append(h3_config.final_prompt)
 
     width, height = dims_for_multishot("9:16", "formal")
@@ -6484,19 +6486,19 @@ async def apply_episode_segments(
         beat_numbers = [int(n) for n in seg.get("beat_numbers") or []]
         shot_seconds = [float(s) for s in seg.get("shot_seconds") or []]
         if not chain_id or not beat_numbers:
-            return {"ok": False, "error": "每个 segment 必须有 chain_id 和 beat_numbers"}
+            return {"ok": False, "error": "each segment must have a chain_id and beat_numbers"}
         unknown = [n for n in beat_numbers if n not in all_beat_numbers]
         if unknown:
-            return {"ok": False, "error": f"beat {unknown} 不存在于本集"}
+            return {"ok": False, "error": f"beat {unknown} does not exist in this episode"}
         for i, n in enumerate(beat_numbers):
             if n in chain_id_by_beat:
-                return {"ok": False, "error": f"beat {n} 出现在多个 segment 中"}
+                return {"ok": False, "error": f"beat {n} appears in more than one segment"}
             chain_id_by_beat[n] = chain_id
             if i < len(shot_seconds):
                 seconds_by_beat[n] = shot_seconds[i]
 
     if not hasattr(store, "update_beat_asset"):
-        return {"ok": False, "error": "当前存储不支持写入 multishot_chain_id"}
+        return {"ok": False, "error": "the current store does not support writing multishot_chain_id"}
 
     for b in beats:
         beat_num = int(b["beat_number"])
@@ -6555,8 +6557,8 @@ async def generate_segment_frames(
         return {
             "ok": False,
             "error": (
-                f"{selection} 不是 sketch-free compose 选项，请改用 "
-                "gemini_webai_compose 或 runpod_qwen21_compose"
+                f"{selection} is not a sketch-free compose selection — use "
+                "gemini_webai_compose or runpod_qwen21_compose instead"
             ),
         }
 
@@ -6565,12 +6567,12 @@ async def generate_segment_frames(
         {str(b.get("multishot_chain_id") or "") for b in beats if b.get("multishot_chain_id")}
     )
     if not all_chain_ids:
-        return {"ok": False, "error": "本集还没有任何 segment（请先调用 /segments/plan + /segments/apply）"}
+        return {"ok": False, "error": "this episode has no segments yet (call /segments/plan + /segments/apply first)"}
     if body.chain_ids:
         requested = {str(c) for c in body.chain_ids}
         unknown = requested - set(all_chain_ids)
         if unknown:
-            return {"ok": False, "error": f"segment {sorted(unknown)} 不存在于本集"}
+            return {"ok": False, "error": f"segment {sorted(unknown)} does not exist in this episode"}
         chain_ids = [c for c in all_chain_ids if c in requested]
     else:
         chain_ids = all_chain_ids
@@ -6632,12 +6634,12 @@ async def approve_segment_frame(
     paths = PathResolver(output_dir, episode_num)
     frame_path = paths.first_frame_for_video(int(chain_beats[0]["beat_number"]))
     if not frame_path.exists():
-        return {"ok": False, "error": "首帧不存在，无法确认"}
+        return {"ok": False, "error": "first frame does not exist, cannot approve"}
 
     fingerprint = body.frame_fingerprint or _frame_mtime_fingerprint(frame_path)
     state = set_frame_approved(output_dir, episode_num, chain_id, fingerprint=fingerprint)
     if state is None:
-        return {"ok": False, "error": f"segment {chain_id} 不存在（请先调用 /segments/apply）"}
+        return {"ok": False, "error": f"segment {chain_id} does not exist (call /segments/apply first)"}
     return {
         "ok": True,
         "chain_id": chain_id,
@@ -6854,13 +6856,13 @@ async def review_segment_videos(
 
         issues: list[str] = []
         if state is None or state.frame_status != "approved":
-            issues.append("首帧尚未确认（或确认后已变更），请先在 Phase 1 确认画面")
+            issues.append("first frame not yet approved (or changed since approval) — approve it in Phase 1 first")
         if not frame_exists:
-            issues.append("首帧不存在")
+            issues.append("first frame does not exist")
         if len(chain_beats) > RUNPOD_H3_MULTISHOT_MAX_SHOTS:
-            issues.append(f"链条有 {len(chain_beats)} 个 beat，超过上限 {RUNPOD_H3_MULTISHOT_MAX_SHOTS}")
+            issues.append(f"the chain has {len(chain_beats)} beats, exceeding the limit {RUNPOD_H3_MULTISHOT_MAX_SHOTS}")
         if not _runpod_h3_multishot_configured():
-            issues.append("RUNPOD_H3_MULTISHOT_ENDPOINT_ID / RUNPOD_API_KEY / R2_* 未配置")
+            issues.append("RUNPOD_H3_MULTISHOT_ENDPOINT_ID / RUNPOD_API_KEY / R2_* are not configured")
 
         shared_refs, ref_error = _multishot_shared_references(character_map, chain_beats)
         if ref_error:
@@ -6942,7 +6944,7 @@ async def generate_segment_videos(
     time, so this returns as soon as every segment is queued rather than
     waiting for GPU time."""
     if not body.segments:
-        return {"ok": False, "error": "segments 不能为空"}
+        return {"ok": False, "error": "segments cannot be empty"}
 
     resolved = await _resolve_generation_project(project, user, required_role="editor")
     output_dir = resolved.output_dir

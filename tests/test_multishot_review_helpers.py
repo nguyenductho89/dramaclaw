@@ -26,7 +26,7 @@ def test_empty_chain_id_rejected():
     beats = [_beat(1, "c1")]
     chain, error = _multishot_chain_beats(beats, "")
     assert chain == []
-    assert "空" in error
+    assert "empty" in error
 
 
 def test_unknown_chain_id_rejected():
@@ -48,7 +48,7 @@ def test_non_contiguous_chain_rejected():
     beats = [_beat(1, "c1"), _beat(2, "other"), _beat(3, "c1")]
     chain, error = _multishot_chain_beats(beats, "c1")
     assert chain == []
-    assert "连续" in error
+    assert "consecutive" in error
 
 
 def test_single_beat_chain_is_valid():

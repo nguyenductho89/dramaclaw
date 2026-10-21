@@ -324,7 +324,7 @@ async def _run_multishot_video_async(
         )
 
     beat_numbers = [int(n) for n in (config.get("beat_numbers") or [])]
-    on_log(f"开始生成 Multishot 链条 {chain_id} ({len(beat_numbers)} 个 beat)")
+    on_log(f"starting Multishot chain {chain_id} generation ({len(beat_numbers)} beats)")
 
     from novelvideo.config import (
         RUNPOD_API_KEY,
@@ -381,14 +381,14 @@ async def _run_multishot_video_async(
         on_log=on_log,
     )
     if data is None:
-        raise RuntimeError(error or "Multishot 任务失败，原因未知")
+        raise RuntimeError(error or "Multishot task failed for an unknown reason")
 
     paths = PathResolver(output_dir, episode)
     videos_dir = paths.videos_dir()
     videos_dir.mkdir(parents=True, exist_ok=True)
     video_path = videos_dir / f"multishot_{chain_id}.mp4"
     video_path.write_bytes(data)
-    on_log(f"完成，已保存到 {video_path}")
+    on_log(f"done, saved to {video_path}")
 
     return {
         "video_path": video_path.as_posix(),

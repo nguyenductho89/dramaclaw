@@ -51,9 +51,11 @@ def test_case_insensitive_name_match():
 
 
 def test_strips_full_width_chinese_label():
+    # Real Chinese narration content (not UI text) exercising the
+    # regex's full-width paren/colon branch -- kept in Chinese on purpose.
     assert (
-        _h3_strip_redundant_speaker_label("小金（平淡，礼貌）：一堵墙。真迷人。", "小金")
-        == "一堵墙。真迷人。"
+        _h3_strip_redundant_speaker_label("小金（平淡，礼貌）：一堵墙。真迷人。", "小金")  # no-cjk-exempt
+        == "一堵墙。真迷人。"  # no-cjk-exempt
     )
 
 

@@ -171,7 +171,7 @@ def greedy_fallback_segments(beats: list[SegmentPlannerBeatInput]) -> list[Valid
             ValidatedSegment(
                 beat_numbers=[b.beat_number for b in current],
                 shot_seconds=[_clamp_seconds(b.estimated_duration) for b in current],
-                reason="自动分组（按场景/角色/时长贪心打包）",
+                reason="automatic grouping (greedy pack by scene/character/duration)",
             )
         )
         current = []
@@ -243,14 +243,14 @@ def validate_and_repair_segment_plan(
                         ValidatedSegment(
                             beat_numbers=[b.beat_number for b in sub],
                             shot_seconds=shot_seconds,
-                            reason=seg.reason if len(sub_groups) == 1 else f"{seg.reason} (已拆分)",
+                            reason=seg.reason if len(sub_groups) == 1 else f"{seg.reason} (split)",
                         )
                     )
             source = "llm_repaired" if did_repair else "llm"
             if did_repair:
-                warnings.append("部分 AI 分段超过单组上限，已自动拆分")
+                warnings.append("some AI-proposed segments exceeded the per-group limit and were auto-split")
             return ValidatedSegmentPlan(segments=repaired, source=source, warnings=warnings)
-        warnings.append("AI 分段结果不是有效的顺序划分（缺漏/重复/乱序），已改用自动分组")
+        warnings.append("the AI grouping was not a valid ordered partition (missing/duplicate/reordered beats) — used automatic grouping instead")
 
     return ValidatedSegmentPlan(
         segments=greedy_fallback_segments(beats), source="fallback", warnings=warnings

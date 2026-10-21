@@ -36,7 +36,7 @@ async def project(tmp_path):
     state_dir = tmp_path / "user" / "project"
     _write_config(state_dir, {KNOWLEDGE_PIPELINE_KEY: KNOWLEDGE_PIPELINE_STRUCTURED})
     store = await _open_store(state_dir)
-    await store.add_episodes([NovelEpisode(number=1, title="第一集")])
+    await store.add_episodes([NovelEpisode(number=1, title="Episode 1")])
     await store.add_visual_beats(
         [
             NovelVisualBeat(beat_number=1, episode_number=1, narration="a", visual_description="d1"),

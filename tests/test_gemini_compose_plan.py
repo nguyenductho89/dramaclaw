@@ -31,7 +31,7 @@ def _make_png(path, size=(64, 64), color=(10, 20, 30)):
     return str(path)
 
 
-def _scene_ref(path: str, base_id: str = "公园") -> ResolvedAssetRef:
+def _scene_ref(path: str, base_id: str = "park") -> ResolvedAssetRef:
     return ResolvedAssetRef(
         asset_type="scene",
         base_id=base_id,

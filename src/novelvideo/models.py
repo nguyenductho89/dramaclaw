@@ -1472,7 +1472,7 @@ class NovelVisualBeat(BaseModel):
     # `_group_beats_by_location`), which is not a safe proxy for "these
     # beats form one continuous take".
     multishot_chain_id: str = Field(
-        default="", description="同一条连续多镜头(H3 Multishot)序列的分组 ID，空表示不属于任何序列"
+        default="", description="Grouping ID for one continuous multi-shot (H3 Multishot) sequence; empty means it does not belong to any sequence"
     )
 
     @model_validator(mode="after")

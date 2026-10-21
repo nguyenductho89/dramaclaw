@@ -7194,11 +7194,11 @@ class NanoBananaGridGenerator:
                 # just above for why this must be its own chain branch,
                 # not only in the dispatch switch further down. See
                 # `_build_gemini_compose_plan()`'s docstring.
-                print("[NanoBananaPro] 进入 Gemini WebAI Compose 模式（无草图）")
+                print("[NanoBananaPro] entering Gemini WebAI Compose mode (no sketch)")
                 if len(beats[:grid_capacity]) != 1 or grid_capacity != 1:
                     return GridGenerationResult(
                         success=False,
-                        error="Gemini WebAI compose 仅支持单 beat 1x1 渲染",
+                        error="Gemini WebAI compose only supports single-beat 1x1 render",
                         generation_time=time.time() - start_time,
                     )
                 compose_plan, compose_err = _build_gemini_compose_plan(
@@ -7723,10 +7723,10 @@ class NanoBananaGridGenerator:
                 # that call has no "canvas" concept, so a background photo
                 # works exactly like any other reference image here).
                 if sketch or compose_plan is None:
-                    return _usage_fail("Gemini WebAI compose selection 只能用于 Render 阶段")
+                    return _usage_fail("Gemini WebAI compose selection can only be used in the Render stage")
                 print(
-                    f"[NanoBananaPro] 调用 Gemini WebAI ({self.model}) (compose, 无草图) 生成图像 "
-                    f"({len(compose_plan.reference_images)} 张参考图)..."
+                    f"[NanoBananaPro] calling Gemini WebAI ({self.model}) (compose, no sketch) to generate image "
+                    f"({len(compose_plan.reference_images)} reference image(s))..."
                 )
                 image_bytes, _text, webai_error = await _call_webai_chat_image_api(
                     api_key=self.api_key,
@@ -7752,7 +7752,7 @@ class NanoBananaGridGenerator:
                     except NameError:
                         pass
                 if not image_bytes:
-                    message = "Gemini WebAI compose 未返回图像数据"
+                    message = "Gemini WebAI compose did not return image data"
                     if webai_error:
                         message = f"{message}: {webai_error}"
                     return _usage_fail(message)

@@ -213,3 +213,23 @@ Khi làm: cần 1 pod tạm gắn cả network volume cũ + global volume mới,
 10. Thu hẹp GPU pool multishot endpoint về `AMPERE_48` — RunPod infra mutation nhỏ, cần xác nhận.
 11. UI cho multishot (đánh dấu chain trên beat, nút review/enqueue) + UI toggle two-stage/audio-refine — chưa làm, cần xác nhận UX trước (ví dụ: chọn nhiều beat rồi "Group into Multishot chain" ở đâu trong giao diện hiện tại).
 12. Global Volume migration (mục 6) — để sau, không nằm trong phạm vi lần này.
+
+---
+
+## 7. Điều tra "giọng hơi máy/méo" của H3 (2026-10-21)
+
+Dùng crest factor (`ffmpeg astats`) + spectrogram (`showspectrumpic`) để chẩn đoán thay vì chỉ nghe cảm tính — giọng người thật crest factor thường 10-20dB (tỉ lệ 3-10 lần đỉnh/RMS), các mẫu H3 dưới đây chỉ 4.5-7.5dB (tỉ lệ ~1.7-2.4 lần) và phổ tần trải rộng đồng đều tới 15kHz thay vì giảm dần theo tần số như giọng thật — dấu hiệu "buzzy"/kim loại kinh điển của vocoder tổng hợp.
+
+**5 lần thử GPU thật, tất cả cùng 1 beat/prompt (first frame + nhân vật Hương, thoại tiếng Việt)**:
+
+| Thử nghiệm | Crest factor | Kết quả |
+|---|---|---|
+| fl2va, PDD 8 | 2.03 (~6.1dB) | buzzy |
+| ref2va, PDD 8 (không voice ref) | 2.36 (~7.5dB) | buzzy |
+| fl2va, base 20 bước (không PDD) | 2.30 (~7.3dB) | buzzy — **loại bỏ giả thuyết "PDD gây lỗi"** |
+| fl2va, PDD 8 + `audio_refine=True` (4 bước riêng, `MiniMaxH3ChainAudioRefineSampler`, pack `Context-Loop` xác nhận có sẵn trên image) | 2.29 | buzzy — **refine không đổi gì** |
+| ref2va, PDD 8 + voice reference thật (`ShotReference(type="audio")`, 6s giọng mẫu trim bằng `trim_voice_sample_content`, `AudioVAE` xác nhận nạp) | **1.69 (~4.5dB)** | buzzy + **nặng hơn**, thêm 2 đợt nhiễu lạ trước đoạn thoại, âm lượng nhỏ hơn hẳn |
+
+**Kết luận**: không phải do số bước sampling, không phải do thiếu audio-refine pass, không phải do model tự bịa giọng không có mẫu — cả 4 hướng sửa trong phạm vi code/cấu hình DramaClaw đều không cải thiện, 1 hướng còn làm tệ hơn. Tính chất buzzy nhiều khả năng là giới hạn vốn có của nhánh audio trong trọng số DiT int8-quantized hiện có trên volume (`minimax_h3_*_pruned_int8_convrot.safetensors`), dùng chung cho cả video lẫn audio.
+
+**Hướng còn lại, chưa thử**: `RUNPOD_H3_AUDIO_REFINE_DENOISE=1.0` (refine toàn bộ thay vì 0.5 — khả năng thấp vì 0.5 đã không đổi gì); trọng số UNET không quantize (nếu có, tốn VRAM/chậm hơn nhiều); hoặc **chuyển hẳn sang TTS riêng + ghép audio vào video** thay vì để H3 tự sinh giọng — khuyến nghị cho các beat cần giọng rõ.

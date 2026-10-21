@@ -6303,10 +6303,10 @@ async def generate_multishot_video(
             ),
             "backend": queued.backend,
             "queue": queued.queue,
-            "message": f"第 {episode_num} 集 Multishot 链条 {chain_id} 视频生成已入队",
+            "message": f"Episode {episode_num} Multishot chain {chain_id} video generation queued",
         }
 
-    return {"ok": False, "error": "Multishot 视频生成需要 project context"}
+    return {"ok": False, "error": "Multishot video generation requires a project context"}
 
 
 # ── Segment multishot: auto-group beats, approve frames, batch-generate ───

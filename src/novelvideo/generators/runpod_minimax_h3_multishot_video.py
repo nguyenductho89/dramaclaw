@@ -383,7 +383,7 @@ async def run_h3_multishot_job(
                     f"{base}/{endpoint_id}/run", headers=headers, json={"input": job_input}
                 )
                 if resp.status_code == 409 and attempt < 5:
-                    log("RunPod endpoint 刚启动 (409 ENDPOINT_PAUSED)，10秒后重试提交...")
+                    log("RunPod endpoint just started (409 ENDPOINT_PAUSED), retrying submit in 10s...")
                     await asyncio.sleep(10)
                     continue
                 resp.raise_for_status()
@@ -396,7 +396,7 @@ async def run_h3_multishot_job(
     if not job_id:
         return None, {}, "submit failed: unknown reason"
 
-    log(f"RunPod job {job_id} 已提交，轮询中 (最长 {timeout_seconds:.0f}s，从 IN_PROGRESS 起算)...")
+    log(f"RunPod job {job_id} submitted, polling (up to {timeout_seconds:.0f}s, counted from IN_PROGRESS)...")
 
     # Fix for the real "cancelled near completion" bug: the deadline starts
     # counting from submit time but gets PUSHED BACK once (not reset
@@ -420,7 +420,7 @@ async def run_h3_multishot_job(
             if current_status == "IN_PROGRESS" and not seen_in_progress:
                 seen_in_progress = True
                 deadline = time.monotonic() + timeout_seconds
-                log(f"job {job_id} 进入 IN_PROGRESS，重新计时 {timeout_seconds:.0f}s")
+                log(f"job {job_id} entered IN_PROGRESS, restarting the {timeout_seconds:.0f}s timer")
             if current_status not in ("IN_QUEUE", "IN_PROGRESS"):
                 break
         else:

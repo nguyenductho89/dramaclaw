@@ -5729,8 +5729,17 @@ async def generate_minimax_h3_prompt(
             # narration verbatim (no {{identity}} markers to strip), so a
             # screenplay-style "SPEAKER (direction): " prefix embedded
             # directly in narration_segment is still there — strip it now
-            # that we know the speaker (beat.speaker, unchanged above).
-            dialogue_line = _h3_strip_redundant_speaker_label(dialogue_line, dialogue_speaker)
+            # that we know the speaker. `beat.speaker` is usually the full
+            # identity id (e.g. "Little Kim_Preschool Period"), not the
+            # clean display name the screenplay label actually uses
+            # ("LITTLE KIM") — resolve it through
+            # `_h3_char_name_for_identity` first (same helper the
+            # {{identity}}-marker path above already uses), or the exact
+            # prefix match silently never fires. Real bug, 2026-10-21: the
+            # first attempt at this fix used the raw identity id and the
+            # label never got stripped.
+            clean_speaker_name = _h3_char_name_for_identity(dialogue_speaker, character_map)
+            dialogue_line = _h3_strip_redundant_speaker_label(dialogue_line, clean_speaker_name)
 
     context = MiniMaxH3BeatContext(
         mode="ref2va" if references else "fl2va",

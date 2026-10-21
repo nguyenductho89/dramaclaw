@@ -24,6 +24,7 @@ touched unless they actually repeat the known speaker's own name.
 from __future__ import annotations
 
 from novelvideo.api.routes.generation import (
+    _h3_char_name_for_identity,
     _h3_parse_dialogue_segment,
     _h3_strip_redundant_speaker_label,
 )
@@ -90,6 +91,35 @@ def test_multi_turn_identity_marker_path_strips_each_speakers_own_label():
     dialogue_line, speaker_label = _h3_parse_dialogue_segment(raw, character_map)
     assert dialogue_line == "Little Kim: A wall. Charming.\nMom: Oh honey."
     assert speaker_label == "Little Kim / Mom"
+
+
+def test_period_suffixed_identity_id_must_be_resolved_before_stripping():
+    """Regression for the real "Kim" project beat (2026-10-21, second
+    report — the first fix pass stripped nothing on this exact beat):
+    `beat.speaker` is the full identity id with its period suffix
+    ("Little Kim_Preschool Period"), never the clean display name the
+    screenplay label in narration_segment actually uses ("LITTLE KIM").
+    Passing the raw identity id straight to
+    `_h3_strip_redundant_speaker_label` silently matches nothing (exact
+    prefix match, no error) — the caller in `generate_minimax_h3_prompt`
+    must resolve it through `_h3_char_name_for_identity` first, same as
+    the {{identity}}-marker path already does."""
+    character_map = {"Little Kim": {}, "Little Trump": {}}
+    narration = (
+        "LITTLE KIM (flat, polite): A wall. Charming. I brought a rocket, "
+        "just in case."
+    )
+    raw_speaker = "Little Kim_Preschool Period"
+
+    # The bug: stripping against the unresolved identity id is a no-op.
+    assert _h3_strip_redundant_speaker_label(narration, raw_speaker) == narration
+
+    # The fix: resolve to the display name first.
+    clean_speaker = _h3_char_name_for_identity(raw_speaker, character_map)
+    assert clean_speaker == "Little Kim"
+    assert _h3_strip_redundant_speaker_label(narration, clean_speaker) == (
+        "A wall. Charming. I brought a rocket, just in case."
+    )
 
 
 def test_single_speaker_beat_with_no_marker_returns_raw_unstripped():

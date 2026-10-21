@@ -72,6 +72,14 @@ Test graph-shape: `tests/test_h3_two_stage_audio_refine.py` (9 test, pure Python
 
 Vẫn opt-in qua `RUNPOD_H3_SAGE_ATTENTION`, chỉ áp dụng cho graph H3 (`apply_sage_patch` đã bị **xoá khỏi mọi graph Qwen** — xem mục 3/4, vì Qwen giờ chạy trên worker riêng không có KJNodes).
 
+### Verify GPU ref2va + PDD 8 (2026-10-21)
+
+- Job `c9dbbf1e…`: ref2va, 1 ảnh tham chiếu chân dung nhân vật (`<Picture 1>`, turnaround sheet 7 góc) + 1 first frame, 768×1344, 124 khung, PDD 8 bước. Log worker xác nhận `partition check ok: ref2va file on ref2va model`.
+- **`executionTime` 613.7s (~10.2 phút)** — chậm hơn fl2va cùng cấu hình (525.4s) khoảng **88.3 giây (~17%)**. Hợp lý: ref2va có thêm bước mã hoá ảnh tham chiếu + `MiniMaxH3AddGuide` pin frame mà fl2va không có.
+- Cold start lần này bất thường chậm: `delayTime` 416.8s (~7 phút, so với gần 0s ở 2 lần chạy trước đó cùng ngày) — worker đã tắt khoảng 8 tiếng trước đó (từ job `34474b7e` lúc ~17:16 UTC tới job này lúc ~01:54 UTC hôm sau), nghi do cache image/model trên host bị đẩy ra sau thời gian rảnh dài, không phải lỗi graph/code.
+- Video đúng: giữ nguyên khuôn mặt/trang phục/bối cảnh khớp ảnh tham chiếu, đúng diễn biến prompt (đọc điện thoại → nhíu mày → nói), có audio AAC.
+- **Multishot ref2va + PDD vẫn CHƯA được verify GPU thật** — chỉ mới verify 1-shot.
+
 ### Dockerfile — việc cần làm
 
 Image hiện tại (`photoreal-h3-worker:0.37.2`) còn đủ cả Qwen+H3. Cần (chưa làm):

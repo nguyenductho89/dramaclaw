@@ -42,6 +42,7 @@ from novelvideo.api.schemas import (
     SegmentFramesGenerateRequest,
     SegmentPlanApplyRequest,
     SegmentVideosGenerateRequest,
+    StagingUpdateRequest,
     RenderReviewRequest,
     QwenEditPromptGenerateRequest,
     PoolSelectRequest,
@@ -6529,6 +6530,233 @@ async def apply_episode_segments(
     replace_all_segments(output_dir, episode_num, body.segments)
 
     return {"ok": True, "segment_count": len(body.segments)}
+
+
+def _staging_scene_inputs_for_episode(
+    beats: list[dict[str, Any]], character_map: dict, props: list, project_dir: Path
+) -> list:
+    """Groups an episode's beats by `scene_id` and resolves each scene's
+    own cast/props into `StagingSceneInput`s for
+    `agents/scene_staging_planner.py` — shared by `/staging/plan` and
+    anywhere else that needs the same grouping. `props` is
+    `store.list_props()`'s own objects (has `.name`/`.visual_prompt`).
+    `project_dir` locates each scene's own master reference prompt, if
+    any (`{scene_dir}/master.prompt.txt`, written alongside
+    `compute_scene_master_path()`'s own `master.png` by the scene
+    reference generator — same stem, best-effort, missing is fine).
+    Beats with no resolvable scene id are skipped (nothing to stage)."""
+    from novelvideo.agents.scene_staging_planner import (
+        StagingBeatInput,
+        StagingCharacterInput,
+        StagingPropInput,
+        StagingSceneInput,
+    )
+    from novelvideo.models import real_detected_identities, real_detected_props
+    from novelvideo.utils.path_resolver import compute_scene_master_path
+
+    prop_by_name = {p.name: p for p in props}
+
+    beats_by_scene: dict[str, list[dict[str, Any]]] = {}
+    for b in beats:
+        scene_id = _beat_scene_name(b)
+        if not scene_id:
+            continue
+        beats_by_scene.setdefault(scene_id, []).append(b)
+
+    out = []
+    for scene_id, scene_beats in beats_by_scene.items():
+        identity_ids_seen: dict[str, None] = {}
+        prop_ids_seen: dict[str, None] = {}
+        beat_inputs = []
+        for b in scene_beats:
+            identities = [str(i) for i in real_detected_identities(b.get("detected_identities"))]
+            prop_ids = [str(p) for p in real_detected_props(b.get("detected_props"))]
+            for i in identities:
+                identity_ids_seen.setdefault(i, None)
+            for p in prop_ids:
+                prop_ids_seen.setdefault(p, None)
+            beat_inputs.append(
+                StagingBeatInput(
+                    beat_number=int(b["beat_number"]),
+                    visual_description=str(b.get("visual_description") or ""),
+                    identities=identities,
+                    props=prop_ids,
+                )
+            )
+
+        characters = []
+        for identity_id in identity_ids_seen:
+            char_name = _h3_char_name_for_identity(identity_id, character_map)
+            info = character_map.get(char_name)
+            if not info:
+                continue
+            identity_name = (
+                identity_id[len(char_name) + 1 :]
+                if identity_id.startswith(f"{char_name}_")
+                else ""
+            )
+            match = next(
+                (
+                    ident
+                    for ident in info.get("identities") or []
+                    if ident.get("identity_name") == identity_name
+                ),
+                None,
+            )
+            body_type = (match or {}).get("body_type") or info.get("body_type", "")
+            characters.append(
+                StagingCharacterInput(
+                    identity_id=identity_id, name=char_name, body_type=str(body_type or "")
+                )
+            )
+
+        scene_props = []
+        for prop_id in prop_ids_seen:
+            prop_obj = prop_by_name.get(prop_id)
+            visual_prompt = str(getattr(prop_obj, "visual_prompt", "") or "") if prop_obj else ""
+            scene_props.append(StagingPropInput(prop_id=prop_id, visual_prompt=visual_prompt))
+
+        scene_prompt = ""
+        try:
+            master_path = Path(compute_scene_master_path(project_dir, scene_id))
+            prompt_path = master_path.with_suffix(".prompt.txt")
+            if prompt_path.exists():
+                scene_prompt = prompt_path.read_text(encoding="utf-8")[:2000]
+        except OSError:
+            pass
+
+        out.append(
+            StagingSceneInput(
+                scene_id=scene_id,
+                scene_prompt=scene_prompt,
+                beats=beat_inputs,
+                characters=characters,
+                props=scene_props,
+            )
+        )
+    return out
+
+
+@router.post("/projects/{project}/episodes/{episode_num}/staging/plan")
+async def plan_episode_staging(
+    project: str,
+    episode_num: int,
+    user: dict = Depends(get_api_user),
+):
+    """Dry-run: ask the LLM to write a staging bible (camera framing,
+    blocking, persistent set-dressing) for every scene that appears in
+    this episode. Writes the sidecar directly (unlike `/segments/plan`,
+    there's no separate confirm step — a scene's own staging only shapes
+    render *prompts*, it doesn't change what gets rendered until the next
+    render, so there's nothing destructive to gate behind an extra
+    apply). Call `PUT .../staging` afterward to hand-edit any scene."""
+    resolved = await _resolve_generation_project(project, user, required_role="editor")
+    ctx = resolved.ctx
+    username = resolved.username
+    project_name = resolved.project_name
+    output_dir = resolved.output_dir
+    store = (
+        await make_sqlite_store_for_context(ctx)
+        if ctx
+        else await make_sqlite_store(username, project_name)
+    )
+    beats = await store.get_beats_as_dicts(episode_num)
+    if not beats:
+        return {"ok": False, "error": f"No beats found for episode {episode_num}"}
+
+    character_map = await _build_character_map(
+        store, beats, username, project, episode_num=episode_num
+    )
+    props = await store.list_props()
+    scenes = _staging_scene_inputs_for_episode(
+        beats, character_map, props, Path(resolved.project_dir)
+    )
+    if not scenes:
+        return {"ok": False, "error": "No scenes with a resolvable scene_id found in this episode"}
+
+    from novelvideo.agents.scene_staging_planner import plan_scene_staging
+    from novelvideo.generators.staging_store import load_episode_staging, save_episode_staging
+
+    planned = await plan_scene_staging(scenes)
+    existing = load_episode_staging(output_dir, episode_num)
+    existing.update(planned)
+    save_episode_staging(output_dir, episode_num, existing)
+
+    return {
+        "ok": True,
+        "scenes": {scene_id: staging.to_dict() for scene_id, staging in planned.items()},
+    }
+
+
+@router.get("/projects/{project}/episodes/{episode_num}/staging")
+async def get_episode_staging(
+    project: str,
+    episode_num: int,
+    user: dict = Depends(get_api_user),
+):
+    """Cheap, read-only: this episode's current staging sidecar (empty if
+    `/staging/plan` was never run)."""
+    resolved = await _resolve_generation_project(project, user, required_role="viewer")
+    output_dir = resolved.output_dir
+
+    from novelvideo.generators.staging_store import load_episode_staging
+
+    staging = load_episode_staging(output_dir, episode_num)
+    return {
+        "ok": True,
+        "scenes": {scene_id: s.to_dict() for scene_id, s in staging.items()},
+    }
+
+
+@router.put("/projects/{project}/episodes/{episode_num}/staging")
+async def update_episode_staging(
+    project: str,
+    episode_num: int,
+    body: StagingUpdateRequest,
+    user: dict = Depends(get_api_user),
+):
+    """Hand-edit one or more scenes' staging bible — e.g. after reviewing
+    `/staging/plan`'s AI-proposed result. Scenes not included in `body`
+    are left unchanged; a scene included replaces that scene's entry
+    wholesale. No identity/prop-id validation here (unlike the AI path's
+    `validate_and_repair_staging_plan`) — a human editing this already
+    knows the project's real ids, and over-validating would make this
+    route reject a deliberate edit for a character/prop that hasn't
+    rendered into `detected_identities`/`detected_props` on any beat yet."""
+    resolved = await _resolve_generation_project(project, user, required_role="editor")
+    output_dir = resolved.output_dir
+
+    from novelvideo.generators.staging_store import (
+        SceneStaging,
+        SetDressingItem,
+        load_episode_staging,
+        save_episode_staging,
+    )
+
+    existing = load_episode_staging(output_dir, episode_num)
+    for scene_id, update in body.scenes.items():
+        existing[scene_id] = SceneStaging(
+            scene_id=scene_id,
+            camera=update.camera,
+            blocking=dict(update.blocking),
+            set_dressing=[
+                SetDressingItem(
+                    prop_id=item.prop_id,
+                    placement_note=item.placement_note,
+                    persistent=item.persistent,
+                    from_beat=item.from_beat,
+                )
+                for item in update.set_dressing
+            ],
+            scale_note=update.scale_note,
+            source="manual",
+        )
+    save_episode_staging(output_dir, episode_num, existing)
+
+    return {
+        "ok": True,
+        "scenes": {scene_id: s.to_dict() for scene_id, s in existing.items()},
+    }
 
 
 @router.post("/projects/{project}/episodes/{episode_num}/segments/frames/generate")

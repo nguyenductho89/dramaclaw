@@ -9214,20 +9214,26 @@ async def _ee_media_model_catalog(media_type: str) -> list[dict[str, Any]] | Non
         if is_ce_effective():
             mode = get_effective_newapi_config().mode
             if mode == MODE_CUSTOM:
-                return _merge_media_model_catalog_defaults(
-                    _static_media_model_catalog(media_type),
-                    get_ce_media_model_catalog(media_type, include_disabled=True),
-                )
+                return [
+                    *_merge_media_model_catalog_defaults(
+                        _static_media_model_catalog(media_type),
+                        get_ce_media_model_catalog(media_type, include_disabled=True),
+                    ),
+                    *_freezone_dev_media_model_catalog_entries(media_type),
+                ]
             if mode == MODE_HYBRID:
                 local = get_ce_media_model_catalog(
                     media_type,
                     provider="comfyui",
                     include_disabled=True,
                 )
-                return _merge_media_model_catalog_defaults(
-                    _static_media_model_catalog(media_type),
-                    local,
-                )
+                return [
+                    *_merge_media_model_catalog_defaults(
+                        _static_media_model_catalog(media_type),
+                        local,
+                    ),
+                    *_freezone_dev_media_model_catalog_entries(media_type),
+                ]
             return get_official_media_model_catalog(media_type)
         return None
     return await catalog.list_models(media_type)
@@ -9354,6 +9360,112 @@ def _static_media_model_catalog(media_type: str) -> list[dict[str, Any]]:
     return get_official_media_model_catalog(media_type)
 
 
+def _freezone_dev_media_model_catalog_entries(media_type: str) -> list[dict[str, Any]]:
+    """Dev-only catalog rows not present in the CE/official media model
+    list at all — currently just RunPod Qwen-Image 2.1, same visibility
+    gate as the main render/sketch pipeline's own dev-only RunPod image
+    selections (`config.py`'s `_runpod_qwen_image_configured()`,
+    `RUNPOD_QWEN_IMAGE_SELECTION_KEYS`).
+
+    Why this is needed at all: `/freezone/gen` (`_resolve_catalog_request`)
+    hard-rejects any `model`/`model_id` that is not a real catalog entry
+    once ANY catalog exists for this media type — unlike the main
+    pipeline's own `IMAGE_GENERATION_SELECTIONS` dict, which has no such
+    gate (every key is always a valid selection). Fixing only the
+    provider allowlist (`freezone/route_helpers.py`'s
+    `SUPPORTED_FREEZONE_IMAGE_PROVIDERS`) is not enough on its own; a
+    catalog row is required too, both for `/freezone/image/models`'
+    listing and for `_resolve_catalog_request`'s match. The round trip
+    back to a real `image_generation_selection` string happens via
+    `providerId`+`apiModel` → `infer_image_generation_selection()`
+    (`config.py`) → `"runpod_qwen_image"` (the "auto" size variant —
+    every `runpod_qwen_image*` size variant shares the identical
+    `(provider, model)` pair in `IMAGE_GENERATION_SELECTIONS`, so only
+    one can ever be disambiguated this way; the others are a
+    render/sketch-only concept with no Freezone equivalent).
+
+    Also covers `media_type == "video"` — RunPod H3 (`freezone/video_node
+    .py`'s `_freezone_runpod_video_options()`) was added there under the
+    assumption that `/freezone/video/models` reads it directly; a live
+    check against this project proved that wrong — that route ALSO
+    checks the scoped media catalog first (same pattern as images,
+    `freezone_video_models()`'s own `catalog is None` branch), and this
+    project's catalog is non-empty (10 real NewAPI video models,
+    including an unrelated, differently-routed "MiniMax-H3" catalog
+    entry that goes through the NewAPI gateway, not RunPod), so
+    `get_freezone_video_model_options()`'s RunPod entry never actually
+    reached the dropdown. Unlike images, video's own
+    `_resolve_catalog_video_backend()` has a PERMISSIVE fallback to
+    `resolve_freezone_video_backend()` when no catalog entry matches (no
+    hard reject) — so a client that already knows the literal string
+    `"runpod_minimax_h3"` could submit it even without this row; this row
+    is what makes it actually show up as a choice. See
+    `.claude/CLAUDE.md`."""
+    from novelvideo.config import _runpod_qwen_image_configured
+
+    if media_type == "image":
+        if not _runpod_qwen_image_configured():
+            return []
+        return [
+            {
+                "catalogId": "runpod_qwen_image",
+                "catalog_id": "runpod_qwen_image",
+                "id": "runpod_qwen_image",
+                "providerId": "runpod_qwen",
+                "provider": "runpod_qwen",
+                "apiModel": "qwen-image-2.1",
+                "api_model": "qwen-image-2.1",
+                "gatewayModel": "qwen-image-2.1",
+                "gateway_model": "qwen-image-2.1",
+                "aliases": ["runpod_qwen_image"],
+                "label": "Qwen Image 2.1 RunPod (dev)",
+                "sortOrder": 500,
+                "request": {"endpoint": "images/generations", "parameters": []},
+                "ratioOptions": ["1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3"],
+                "resolutionOptions": ["1k", "2k"],
+            }
+        ]
+    if media_type == "video":
+        from novelvideo.config import _runpod_h3_video_configured
+        from novelvideo.freezone.video_node import FREEZONE_RUNPOD_H3_BACKEND
+        from novelvideo.video_duration import video_duration_bounds_for_backend
+
+        if not _runpod_h3_video_configured():
+            return []
+        min_duration, max_duration = video_duration_bounds_for_backend(
+            FREEZONE_RUNPOD_H3_BACKEND
+        )
+        return [
+            {
+                "catalogId": FREEZONE_RUNPOD_H3_BACKEND,
+                "catalog_id": FREEZONE_RUNPOD_H3_BACKEND,
+                "id": FREEZONE_RUNPOD_H3_BACKEND,
+                "providerId": "runpod",
+                "provider": "runpod",
+                "apiModel": FREEZONE_RUNPOD_H3_BACKEND,
+                "api_model": FREEZONE_RUNPOD_H3_BACKEND,
+                "gatewayModel": FREEZONE_RUNPOD_H3_BACKEND,
+                "gateway_model": FREEZONE_RUNPOD_H3_BACKEND,
+                "aliases": [FREEZONE_RUNPOD_H3_BACKEND],
+                "label": "MiniMax-H3 (RunPod, dev)",
+                "sortOrder": 500,
+                "request": {"endpoint": "video/generations", "parameters": []},
+                "supportedModes": ["text_to_video"],
+                "ratioOptions": ["16:9", "9:16"],
+                # H3 ignores the `resolution` parameter entirely (fixed
+                # output size) — see `video_node.py`'s
+                # `freezone_video_resolution_options()`.
+                "resolutionOptions": ["auto"],
+                "minDuration": min_duration,
+                "maxDuration": max_duration,
+                "referenceImageMax": 9,
+                "referenceVideoMax": 0,
+                "referenceAudioMax": 3,
+            }
+        ]
+    return []
+
+
 def _merge_media_model_catalog_defaults(
     defaults: list[dict[str, Any]], configured: list[dict[str, Any]]
 ) -> list[dict[str, Any]]:
@@ -9416,7 +9528,30 @@ def _catalog_image_execution_selection(
     requested_provider: str | None,
     requested_model: str | None,
 ) -> tuple[str | None, str | None]:
-    """Derive both execution and billing identity from one catalog row."""
+    """Derive both execution and billing identity from one catalog row.
+
+    `entry` is only ever non-None here because `_resolve_catalog_request()`
+    already found it via an AUTHORITATIVE identifier match (`model_id` or
+    `model` against `_catalog_entry_identifiers(entry)`) — that match is
+    strictly more specific/reliable than `requested_provider`, a looser
+    hint the frontend sends from a separately-derived piece of state (see
+    `useImageGenerationForm.ts`'s `selectedModel.providerId`) that can go
+    stale independently of `model`/`model_id` (real bug caught live,
+    2026-10-23: `freezoneAiGateway.ts`'s `submitJob` re-derives `provider`
+    by splitting `payload.model` on "/" and DISCARDS the form's own
+    `payload.provider` whenever the model string has no slash — which is
+    true for every Qwen-Image-2.1-family `apiModel`, "qwen-image-2.1" —
+    so a capability/fallback code path's own hardcoded provider guess can
+    reach here paired with a correct, unrelated `model_id`). A provider
+    mismatch here used to hard-reject the request even though the model
+    was already unambiguously resolved; now the catalog entry's own
+    `providerId` is always authoritative once `entry` is non-None, and
+    `requested_provider` is accepted as a hint only — never grounds for
+    rejection. The `model` check below is unaffected (still the strict
+    match, since it mirrors the SAME identifier `_resolve_catalog_request`
+    already used to find `entry` — not independently-derived state) and
+    still catches a real a genuinely contradictory caller.
+    See `.claude/CLAUDE.md`."""
     if entry is None:
         return requested_provider, requested_model
 
@@ -9432,10 +9567,6 @@ def _catalog_image_execution_selection(
         raise HTTPException(
             400, "configured media model is missing provider or gateway model"
         )
-
-    clean_provider = str(requested_provider or "").strip()
-    if clean_provider and clean_provider.casefold() != provider.casefold():
-        raise HTTPException(400, "model provider does not match configured media model")
 
     clean_model = str(requested_model or "").strip()
     if clean_model and clean_model not in _catalog_entry_identifiers(entry):

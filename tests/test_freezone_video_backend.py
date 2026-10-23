@@ -397,7 +397,11 @@ def test_video_model_options_and_resolution_work() -> None:
     assert "newapi_grok-video-channel" not in names
     assert ids == set(names)
     assert api_models == set(names)
-    assert all(item["providerId"] == "newapi" for item in options)
+    # Every option is either a NewAPI backend or (dev-only, only visible
+    # when RunPod H3 env vars are configured — may or may not be true in
+    # this test environment) the RunPod H3 backend added 2026-10-22, see
+    # `.claude/CLAUDE.md`.
+    assert all(item["providerId"] in {"newapi", "runpod"} for item in options)
     assert "Seedance1.0 Pro Fast" in labels
     assert "Seedance1.5 Pro" in labels
     assert "Seedance2.0 Fast" in labels

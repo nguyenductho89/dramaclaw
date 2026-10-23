@@ -4025,6 +4025,133 @@ _COMPOSE_IDENTITY_MARKER_RE = re.compile(r"\{\{([^}]*)\}\}")
 _COMPOSE_PROP_MARKER_RE = re.compile(r"\[\[([^\]]*)\]\]")
 
 
+def _compose_identity_sheet_note(tag: str, name: str) -> str:
+    """One sentence clarifying that an identity's reference image may be a
+    multi-panel turnaround sheet (close-up + front/side/back views of the
+    SAME person, as the real identity assets on disk actually look —
+    verified 2026-10-22 against `Parkun`'s own
+    `assets/characters/*/identities/*.png`), not a collage of different
+    people and not something to copy panel-for-panel. Added after a real
+    render (`Parkun` beat 1) picked a close but not exact outfit variant
+    off a 4-panel sheet (a short suit jacket instead of the ankle-length
+    overcoat shown in 3 of the 4 panels) — see `.claude/CLAUDE.md`.
+    Deliberately worded to also be correct for a single-image portrait
+    (not every identity reference is a multi-panel sheet; the "composite"/
+    "portrait_only" reference modes in `services/character_ref_service.py`
+    can produce just one view), so it never claims a layout that might not
+    be there.
+    """
+    return (
+        f"{tag} is one or more reference views of {name} (the same single "
+        f"person, not different people); match {name}'s face, hair, outfit "
+        f"and accessories exactly as shown, and render {name} as one "
+        f"person in the scene, not a copy of the reference sheet itself."
+    )
+
+
+def _compose_scale_and_bounds_note() -> str:
+    """One sentence keeping people and props at their real-world scale
+    relative to the background's own architecture, and standing clear of
+    foreground obstructions (fences/railings) instead of overlapping them.
+    Added after a real render (`Parkun` beats 1/3/5/7) placed toddler-sized
+    children with their legs disappearing into a chain-link fence in the
+    foreground of the cropped scene master, and with heights that read as
+    close to adult relative to the building's windows/benches — see
+    `.claude/CLAUDE.md`."""
+    return (
+        "Keep true real-world scale between every person, every prop and "
+        "the location's own architecture (doors, benches, windows, "
+        "railings): a person's reference images give their actual size "
+        "relative to ordinary adult-scale objects, so a small child must "
+        "render clearly smaller than an adult-height door or fence. "
+        "Everyone stands fully on the ground, in front of any fence, "
+        "railing or other foreground obstruction in the background photo, "
+        "never cut off or overlapped by it."
+    )
+
+
+def _compose_no_extra_objects_note(image1_label: str) -> str:
+    """One sentence forbidding objects not already present in the
+    background photo or named in the prompt. Added after a real render
+    (`Parkun` beat 3) invented an unrelated concrete block in the scene —
+    see `.claude/CLAUDE.md`."""
+    return (
+        f"Do not add any object, furniture or prop that is not already "
+        f"visible in {image1_label} or explicitly named above."
+    )
+
+
+def _compose_prop_description_sentence(name: str, description: str) -> str:
+    return f"The {name} is {description.strip().rstrip('.')}."
+
+
+def _compose_missing_prop_lines(
+    prop_names: Dict[str, str],
+    prop_images: List[Tuple[str, str]],
+    prop_descriptions: Optional[Dict[str, str]],
+) -> List[str]:
+    """Sentences describing props that are named/detected in this beat but
+    have no resolvable reference image. Without this, the model has
+    nothing but the prop's bare name to go on and will invent a shape
+    that may not match the prop's real established design — e.g. a "toy
+    wall" (really a low multicolor plastic-brick wall, per its
+    `visual_prompt`) rendered as a real adult-height brick wall, a
+    concrete block, or a pile of loose bricks across different beats of
+    the same project (`Parkun`, real renders, 2026-10-22 — see
+    `.claude/CLAUDE.md`). Props that DO have a reference image are
+    described inline where their `<imageN>`/`Image N` tag is introduced,
+    not here. Iterates in a stable (name-sorted) order so the prompt text
+    doesn't vary run-to-run based on dict/set iteration order."""
+    if not prop_descriptions:
+        return []
+    imaged_ids = {prop_id for prop_id, _name in prop_images}
+    lines: List[str] = []
+    for prop_id, name in sorted(prop_names.items(), key=lambda kv: kv[1]):
+        if prop_id in imaged_ids:
+            continue
+        description = (prop_descriptions.get(prop_id) or "").strip()
+        if not description:
+            continue
+        lines.append(_compose_prop_description_sentence(name, description))
+    return lines
+
+
+def _compose_staging_lines(staging: Optional[dict]) -> List[str]:
+    """Sentences from a scene's "staging bible" (see
+    `agents/scene_staging_planner.py`) — camera framing, who stands where,
+    and where persistent set-dressing (props that stay in frame across
+    many beats, like a toy wall being built up over a whole scene) sits —
+    kept identical across every beat of the same scene so independently
+    rendered first frames don't drift in blocking/camera from one beat to
+    the next. `staging` is one scene's entry from the sidecar
+    (`generators/staging_store.py`); `None`/empty is a silent no-op so a
+    project with no staging plan yet renders exactly as before."""
+    if not staging:
+        return []
+    lines: List[str] = []
+    camera = str(staging.get("camera") or "").strip()
+    if camera:
+        lines.append(f"Camera: {camera}.")
+    blocking = staging.get("blocking") or {}
+    if isinstance(blocking, dict):
+        for _identity_id, placement in sorted(blocking.items()):
+            placement = str(placement or "").strip()
+            if placement:
+                lines.append(placement if placement.endswith(".") else f"{placement}.")
+    set_dressing = staging.get("set_dressing") or []
+    if isinstance(set_dressing, list):
+        for item in set_dressing:
+            if not isinstance(item, dict):
+                continue
+            sentence = str(item.get("placement_note") or "").strip()
+            if sentence:
+                lines.append(sentence if sentence.endswith(".") else f"{sentence}.")
+    scale_note = str(staging.get("scale_note") or "").strip()
+    if scale_note:
+        lines.append(scale_note if scale_note.endswith(".") else f"{scale_note}.")
+    return lines
+
+
 def build_qwen21_compose_prompt(
     beat: dict,
     *,
@@ -4032,6 +4159,9 @@ def build_qwen21_compose_prompt(
     prop_images: List[Tuple[str, str]],
     identity_names: Optional[Dict[str, str]] = None,
     prop_names: Optional[Dict[str, str]] = None,
+    prop_descriptions: Optional[Dict[str, str]] = None,
+    subject_scale: Optional[List[Tuple[str, str]]] = None,
+    staging: Optional[dict] = None,
 ) -> str:
     """Qwen-Image 2.1 "compose" render prompt — sketch-FREE (added
     2026-10-18): no mannequin sketch, no mask, no 2-pass inpaint at all.
@@ -4072,9 +4202,29 @@ def build_qwen21_compose_prompt(
     Qwen's own rule says rendering medium survives an edit unless
     explicitly targeted, and with no sketch canvas there is nothing else
     anchoring the output to "photograph."
+
+    Added 2026-10-22 (real `Parkun` project, see `.claude/CLAUDE.md`), all
+    optional/backward-compatible so existing callers without this data
+    keep producing the exact same prompt:
+    - `prop_descriptions`: `{prop_id: text}` — a prop's own `visual_prompt`
+      (e.g. `ResolvedAssetRef.text_description`), used for any prop named
+      in this beat that has NO reference image yet. Without it the model
+      only has the prop's bare name to go on and will invent a shape (a
+      "toy wall" rendered as a real brick wall, a concrete block, or a
+      loose pile of bricks across different beats of the same project —
+      the real failure this fixes).
+    - `subject_scale`: `[(identity_id, hint), ...]` — a short body-type/age
+      hint per identity (e.g. "a small toddler build"), looked up by
+      `identity_id` against `identity_images`' own ids.
+    - `staging`: one scene's entry from the "staging bible" sidecar
+      (`generators/staging_store.py`) — camera framing + who stands where
+      + persistent set-dressing placement, kept identical across every
+      beat of the same scene so independently rendered first frames don't
+      drift in blocking from one beat to the next.
     """
     identity_names = identity_names or {}
     prop_names = prop_names or {}
+    subject_scale_map: Dict[str, str] = dict(subject_scale or [])
 
     identity_tag: Dict[str, str] = {}
     prop_tag: Dict[str, str] = {}
@@ -4100,6 +4250,10 @@ def build_qwen21_compose_prompt(
             "shown in the image, matching its lighting and background "
             "elements."
         )
+        parts.extend(_compose_missing_prop_lines(prop_names, prop_images, prop_descriptions))
+        parts.extend(_compose_staging_lines(staging))
+        parts.append(_compose_scale_and_bounds_note())
+        parts.append(_compose_no_extra_objects_note("the reference image"))
     else:
         parts.append(
             "<image1> is a reference photo of the location; use it only "
@@ -4112,16 +4266,27 @@ def build_qwen21_compose_prompt(
                 f"{tag} shows {name}; take {name}'s face, hairstyle, age, "
                 f"body proportions and outfit exactly from {tag}."
             )
+            parts.append(_compose_identity_sheet_note(tag, name))
+            scale_hint = subject_scale_map.get(identity_id, "").strip()
+            if scale_hint:
+                parts.append(f"{name} has {scale_hint}.")
         for prop_id, name in prop_images:
             tag = prop_tag[prop_id]
             parts.append(
                 f"{tag} shows the {name}; take its exact shape, material, "
                 f"color and surface details from {tag}."
             )
+            prop_desc = (prop_descriptions or {}).get(prop_id, "").strip()
+            if prop_desc:
+                parts.append(f"It is {prop_desc.rstrip('.')}.")
         parts.append(
             "Compose a new photorealistic photograph set in the location "
             "from <image1>, matching its lighting and background elements."
         )
+        parts.extend(_compose_missing_prop_lines(prop_names, prop_images, prop_descriptions))
+        parts.extend(_compose_staging_lines(staging))
+        parts.append(_compose_scale_and_bounds_note())
+        parts.append(_compose_no_extra_objects_note("<image1>"))
 
     seen_identities: set = set()
     seen_props: set = set()
@@ -4199,6 +4364,9 @@ def build_gemini_compose_prompt(
     prop_images: List[Tuple[str, str]],
     identity_names: Optional[Dict[str, str]] = None,
     prop_names: Optional[Dict[str, str]] = None,
+    prop_descriptions: Optional[Dict[str, str]] = None,
+    subject_scale: Optional[List[Tuple[str, str]]] = None,
+    staging: Optional[dict] = None,
 ) -> str:
     """Gemini WebAI's own sketch-free "compose" render prompt (added
     2026-10-21) — same job as `build_qwen21_compose_prompt` just above
@@ -4238,9 +4406,14 @@ def build_gemini_compose_prompt(
     superset covering every `{{id}}`/`[[prop]]` marker that might appear
     in `visual_description`, including ones with no resolvable reference
     image.
+
+    `prop_descriptions`/`subject_scale`/`staging`: same contract and same
+    reasoning as `build_qwen21_compose_prompt`'s own docstring (added
+    2026-10-22, real `Parkun` project) — all optional/backward-compatible.
     """
     identity_names = identity_names or {}
     prop_names = prop_names or {}
+    subject_scale_map: Dict[str, str] = dict(subject_scale or [])
 
     identity_tag: Dict[str, str] = {}
     prop_tag: Dict[str, str] = {}
@@ -4266,6 +4439,10 @@ def build_gemini_compose_prompt(
             "shown in the image, matching its lighting and background "
             "elements."
         )
+        parts.extend(_compose_missing_prop_lines(prop_names, prop_images, prop_descriptions))
+        parts.extend(_compose_staging_lines(staging))
+        parts.append(_compose_scale_and_bounds_note())
+        parts.append(_compose_no_extra_objects_note("the reference image"))
     else:
         parts.append(
             "Image 1 is a reference photo of the location; use it only "
@@ -4278,16 +4455,27 @@ def build_gemini_compose_prompt(
                 f"{tag} shows {name}; take {name}'s face, hairstyle, age, "
                 f"body proportions and outfit exactly from {tag}."
             )
+            parts.append(_compose_identity_sheet_note(tag, name))
+            scale_hint = subject_scale_map.get(identity_id, "").strip()
+            if scale_hint:
+                parts.append(f"{name} has {scale_hint}.")
         for prop_id, name in prop_images:
             tag = prop_tag[prop_id]
             parts.append(
                 f"{tag} shows the {name}; take its exact shape, material, "
                 f"color and surface details from {tag}."
             )
+            prop_desc = (prop_descriptions or {}).get(prop_id, "").strip()
+            if prop_desc:
+                parts.append(f"It is {prop_desc.rstrip('.')}.")
         parts.append(
             "Compose a new photorealistic photograph set in the location "
             "from Image 1, matching its lighting and background elements."
         )
+        parts.extend(_compose_missing_prop_lines(prop_names, prop_images, prop_descriptions))
+        parts.extend(_compose_staging_lines(staging))
+        parts.append(_compose_scale_and_bounds_note())
+        parts.append(_compose_no_extra_objects_note("Image 1"))
 
     seen_identities: set = set()
     seen_props: set = set()

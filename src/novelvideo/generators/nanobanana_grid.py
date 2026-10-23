@@ -3100,6 +3100,37 @@ async def _generate_image(
             raise ValueError(
                 f"DramaClawAPI image generation failed: {error_detail or 'empty image'}"
             )
+    elif generator.provider == "runpod_qwen":
+        # Added for Freezone's plain text-to-image/reference-edit path
+        # (`generate_text_to_image`/`generate_reference_edit_image`,
+        # called from `freezone/jobs.py`'s `run_freezone_gen`) — this
+        # function previously only implemented openrouter/huimeng/openai/
+        # newapi (plus "google" as the bare `else:` below); `runpod_qwen`
+        # fell through to that `else:` and would have wrongly tried the
+        # Google genai SDK with a RunPod API key. Mirrors the identical
+        # branch in `NanoBananaGridGenerator.generate_grid()`'s own
+        # `elif self.provider == "runpod_qwen":` dispatch — same helper,
+        # same reference-image naming convention. See `.claude/CLAUDE.md`.
+        reference_images = [
+            (
+                _webai_ref_filename(i, mimetypes.guess_type(path)[0] or "image/png"),
+                Path(path).read_bytes(),
+                mimetypes.guess_type(path)[0] or "image/png",
+            )
+            for i, path in enumerate(ref_paths)
+        ]
+        image_bytes, _text, runpod_qwen_error = await _call_runpod_qwen_image_api(
+            api_key=generator.api_key,
+            model=generator.model,
+            prompt=prompt,
+            reference_images=reference_images or None,
+            image_config={"aspect_ratio": aspect_ratio, "image_size": image_size},
+            base_url=generator.base_url,
+        )
+        if not image_bytes:
+            raise ValueError(
+                f"RunPod Qwen Image generation failed: {runpod_qwen_error or 'empty image'}"
+            )
     else:
         from google import genai
         from google.genai import types
@@ -6052,6 +6083,75 @@ def _qwen21_compose_prop_name_map(beat: dict, prop_refs: list) -> Dict[str, str]
     return names
 
 
+def _qwen21_compose_prop_descriptions(beat: dict, prop_refs: list) -> Dict[str, str]:
+    """ALL `[[prop_id]]`/detected prop markers in this beat -> the prop's
+    own text description (`ResolvedAssetRef.text_description`, already
+    resolved from `visual_prompt`/`description`/base-id fallback by
+    `AssetResolver.resolve_props_for_beat()` — crucially, that method
+    returns one entry per CANDIDATE prop regardless of whether it has a
+    reference image, so this works even for unimaged props). Keyed the
+    SAME way `_qwen21_compose_prop_name_map()` keys its own dict (by the
+    marker/detected id as written in the beat, normalized-matched against
+    `ResolvedAssetRef.base_id`), so a caller can look both dicts up by the
+    same key. Feeds `build_qwen21_compose_prompt()`'s `prop_descriptions`
+    param — see that function's docstring for why this exists: a prop
+    named only by its bare id (no reference image) had its real shape
+    invented by the model (real failure, `Parkun` project 2026-10-22 — a
+    "toy wall", really a low multicolor plastic-brick wall per its
+    `visual_prompt`, rendered as a real brick wall / concrete block / pile
+    of bricks depending on the beat — see `.claude/CLAUDE.md`)."""
+    ids: set = set(real_detected_props(beat.get("detected_props")))
+    ids.update(collect_prop_marker_ids_from_beat(beat))
+    desc_by_normalized = {
+        _qwen21_compose_normalize_prop_name(ref.base_id): (ref.text_description or "").strip()
+        for ref in (prop_refs or [])
+        if getattr(ref, "asset_type", "") == "prop"
+    }
+    out: Dict[str, str] = {}
+    for prop_id in ids:
+        if not prop_id:
+            continue
+        desc = desc_by_normalized.get(_qwen21_compose_normalize_prop_name(prop_id), "")
+        if desc:
+            out[prop_id] = desc
+    return out
+
+
+def _qwen21_compose_subject_scale_hints(character_map: Dict[str, dict], beat: dict) -> Dict[str, str]:
+    """`{identity_id: body-type/age hint}` for every identity detected in
+    this beat, for `build_qwen21_compose_prompt()`'s `subject_scale` param
+    — the same `info["identities"]` lookup-by-`identity_name` as
+    `qwen_edit_subject_body_hints()` above (identity-level first, falling
+    back to the character-level `body_type`), but keyed by identity_id
+    (not deduplicated into one flat list) since the compose prompt
+    attaches each hint to its OWN identity's own sentence, not one shared
+    identity-blind `scene_only` note the way the sketch+mask path does.
+    See `qwen_edit_subject_body_hints()`'s docstring for the real shape of
+    `character_map` this must match against."""
+    hints: Dict[str, str] = {}
+    for identity_id in real_detected_identities(beat.get("detected_identities")):
+        char_name = _qwen_edit_char_name_for_identity(identity_id, character_map)
+        info = character_map.get(char_name)
+        if not info:
+            continue
+        identity_name = (
+            identity_id[len(char_name) + 1 :] if identity_id.startswith(f"{char_name}_") else ""
+        )
+        match = next(
+            (
+                ident
+                for ident in info.get("identities") or []
+                if ident.get("identity_name") == identity_name
+            ),
+            None,
+        )
+        body_type = (match or {}).get("body_type") or info.get("body_type", "")
+        body_type = str(body_type or "").strip()
+        if body_type:
+            hints[identity_id] = body_type
+    return hints
+
+
 def _qwen21_compose_parse_aspect_ratio(value: str) -> Optional[float]:
     try:
         w_str, h_str = str(value or "").split(":")
@@ -6252,6 +6352,113 @@ def _resolve_compose_references(
     return reference_images, audit_refs, identity_images, prop_images, ""
 
 
+def _compose_absent_character_names(character_map: Dict[str, dict], beat: dict) -> set:
+    """Display names of every known character in the PROJECT who is NOT
+    one of THIS beat's own tagged identities — the single source of
+    truth for "who must never be named in this beat's compose prompt",
+    used to scrub every text source that can carry a cross-character
+    reference (staging `blocking`/`set_dressing`, and a prop's own
+    narrative `description` field from the database).
+
+    Why this needs to exist at all: a beat's compose prompt only ever
+    includes reference images for the identities IT tags (one person's
+    portrait for a single-character beat), with a "Show exactly N
+    people" guard — but any of the several free-text sources that feed
+    the prompt can still have been written with the WHOLE cast or
+    project in view, and the guard sentence alone did not stop the model
+    from drawing an extra, unreferenced person once the text implied one
+    should be there. Three distinct real leaks were caught on real GPU
+    renders of `Parkun` (all same underlying class of bug, each via a
+    different field): a scene-wide staging `blocking` sentence naming
+    the other character; a persistent prop's `set_dressing` note naming
+    the character holding it; and — the one THIS function's broader
+    character_map-based (not just staging-based) name set exists to
+    additionally catch — a prop's own `description` row in the database
+    being a narrative blurb ("Little Trump's prized construction...")
+    picked up by `_qwen21_compose_prop_descriptions()`, unrelated to
+    staging entirely. See `.claude/CLAUDE.md`."""
+    this_beat_identities = set(real_detected_identities(beat.get("detected_identities")))
+    present_names = {
+        _qwen_edit_char_name_for_identity(identity_id, character_map)
+        for identity_id in this_beat_identities
+    }
+    return {name for name in character_map if name not in present_names}
+
+
+def _compose_scrub_absent_names(text: str, absent_names: set, fallback: str = "") -> str:
+    if not text or not absent_names:
+        return text
+    if any(name and name in text for name in absent_names):
+        return fallback
+    return text
+
+
+def _compose_prompt_extras(
+    *,
+    character_map: Dict[str, dict],
+    beat: dict,
+    beat_prop_refs: list,
+    project_dir: Optional[Path],
+    episode_number: Optional[int],
+) -> tuple:
+    """Shared by `_build_qwen21_compose_plan`/`_build_gemini_compose_plan`
+    — resolves the three optional prompt-shaping inputs added 2026-10-22
+    (see `generators/prompt_builder.py`'s `build_qwen21_compose_prompt`
+    docstring): each beat's prop text descriptions (for any prop with no
+    reference image), each identity's body-scale hint, and this beat's
+    scene's "staging bible" (camera/blocking/persistent set-dressing), if
+    one has been planned (`agents/scene_staging_planner.py`). All three
+    are best-effort/silently empty when the data isn't there — none of
+    this is required for a compose render to work, only to make it more
+    consistent. Every text source is scrubbed against
+    `_compose_absent_character_names()` before being handed back — see
+    that function's docstring for why. Returns `(prop_descriptions,
+    subject_scale, staging_dict)`."""
+    absent_names = _compose_absent_character_names(character_map, beat)
+
+    prop_descriptions = {
+        prop_id: _compose_scrub_absent_names(desc, absent_names)
+        for prop_id, desc in _qwen21_compose_prop_descriptions(beat, beat_prop_refs).items()
+    }
+    prop_descriptions = {k: v for k, v in prop_descriptions.items() if v}
+    subject_scale = list(_qwen21_compose_subject_scale_hints(character_map, beat).items())
+
+    staging_dict: Optional[dict] = None
+    if project_dir and episode_number:
+        scene_id = str(beat_scene_id(beat) or "").strip()
+        if scene_id:
+            from novelvideo.generators.staging_store import get_scene_staging
+
+            scene_staging = get_scene_staging(project_dir, episode_number, scene_id)
+            if scene_staging is not None:
+                beat_number = int(beat.get("beat_number") or 0)
+                persistent = scene_staging.persistent_props_as_of(beat_number)
+                this_beat_identities = set(real_detected_identities(beat.get("detected_identities")))
+                blocking = {
+                    identity_id: placement
+                    for identity_id, placement in scene_staging.blocking.items()
+                    if identity_id in this_beat_identities
+                }
+                set_dressing_notes = [
+                    {
+                        "placement_note": _compose_scrub_absent_names(
+                            item.placement_note,
+                            absent_names,
+                            fallback=f"The {item.prop_id} is present in the scene.",
+                        )
+                    }
+                    for item in persistent
+                ]
+                if scene_staging.camera or blocking or set_dressing_notes or scene_staging.scale_note:
+                    staging_dict = {
+                        "camera": scene_staging.camera,
+                        "blocking": blocking,
+                        "set_dressing": set_dressing_notes,
+                        "scale_note": scene_staging.scale_note,
+                    }
+    return prop_descriptions, subject_scale, staging_dict
+
+
 def _build_qwen21_compose_plan(
     *,
     beat: dict,
@@ -6259,6 +6466,8 @@ def _build_qwen21_compose_plan(
     scene_refs: Dict[int, list],
     prop_refs: Dict[int, list],
     mode_key: Optional[str],
+    project_dir: Optional[Path] = None,
+    episode_number: Optional[int] = None,
 ) -> tuple:
     """Build the full RunPod-ready plan (prompt + ordered unique-named
     reference images) for the sketch-free "compose" render mode
@@ -6290,6 +6499,13 @@ def _build_qwen21_compose_plan(
     beat_prop_refs = (prop_refs or {}).get(1) or []
     identity_names = _qwen21_compose_identity_name_map(character_map, beat)
     prop_names = _qwen21_compose_prop_name_map(beat, beat_prop_refs)
+    prop_descriptions, subject_scale, staging_dict = _compose_prompt_extras(
+        character_map=character_map,
+        beat=beat,
+        beat_prop_refs=beat_prop_refs,
+        project_dir=project_dir,
+        episode_number=episode_number,
+    )
 
     prompt = build_qwen21_compose_prompt(
         beat,
@@ -6297,6 +6513,9 @@ def _build_qwen21_compose_plan(
         prop_images=prop_images,
         identity_names=identity_names,
         prop_names=prop_names,
+        prop_descriptions=prop_descriptions,
+        subject_scale=subject_scale,
+        staging=staging_dict,
     )
 
     from novelvideo.agents.qwen21_compose_prompt_lint import lint_qwen21_compose_prompt
@@ -6318,6 +6537,8 @@ def _build_gemini_compose_plan(
     scene_refs: Dict[int, list],
     prop_refs: Dict[int, list],
     mode_key: Optional[str],
+    project_dir: Optional[Path] = None,
+    episode_number: Optional[int] = None,
 ) -> tuple:
     """Gemini WebAI's own sketch-free "compose" render mode
     (`gemini_webai_compose`, added 2026-10-21) — same reference-gathering
@@ -6359,6 +6580,13 @@ def _build_gemini_compose_plan(
     beat_prop_refs = (prop_refs or {}).get(1) or []
     identity_names = _qwen21_compose_identity_name_map(character_map, beat)
     prop_names = _qwen21_compose_prop_name_map(beat, beat_prop_refs)
+    prop_descriptions, subject_scale, staging_dict = _compose_prompt_extras(
+        character_map=character_map,
+        beat=beat,
+        beat_prop_refs=beat_prop_refs,
+        project_dir=project_dir,
+        episode_number=episode_number,
+    )
 
     prompt = build_gemini_compose_prompt(
         beat,
@@ -6366,6 +6594,9 @@ def _build_gemini_compose_plan(
         prop_images=prop_images,
         identity_names=identity_names,
         prop_names=prop_names,
+        prop_descriptions=prop_descriptions,
+        subject_scale=subject_scale,
+        staging=staging_dict,
     )
 
     return (
@@ -7178,6 +7409,8 @@ class NanoBananaGridGenerator:
                     scene_refs=scene_refs,
                     prop_refs=prop_asset_refs,
                     mode_key=mode_key,
+                    project_dir=project_dir,
+                    episode_number=episode_number,
                 )
                 if compose_plan is None:
                     return GridGenerationResult(
@@ -7207,6 +7440,8 @@ class NanoBananaGridGenerator:
                     scene_refs=scene_refs,
                     prop_refs=prop_asset_refs,
                     mode_key=mode_key,
+                    project_dir=project_dir,
+                    episode_number=episode_number,
                 )
                 if compose_plan is None:
                     return GridGenerationResult(

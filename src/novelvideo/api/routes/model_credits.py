@@ -415,6 +415,23 @@ def _video_backend_feature_billing_params(params: dict) -> dict:
 
 def freezone_video_generate_billing_params(params: dict) -> dict:
     """Resolve Freezone video generation metadata for quotes and task reservations."""
+    from novelvideo.freezone.video_node import is_freezone_runpod_h3_backend
+
+    if is_freezone_runpod_h3_backend(params.get("video_backend")):
+        # Dev-only backend: runs on the user's own RunPod account, billed
+        # directly by RunPod, never through DramaClaw credits — same
+        # short-circuit (and the same real crash it fixes: routing this
+        # through `_video_backend_feature_billing_params` raises "invalid
+        # video backend", since `_video_backend_cost_model` only knows
+        # `newapi_*`/`huimeng_*`/`VideoBackend` enum strings) already
+        # applied to the main pipeline's own RunPod H3 submission — see
+        # `generation.py`'s `_single_video_billing_metadata()` and
+        # `.claude/CLAUDE.md`. An empty billing dict is the same "nothing
+        # to meter here" shape `run_core.py`'s settlement resolver treats
+        # as `not_applicable` for every other no-charge task; Freezone's
+        # own settlement path has not been verified to treat it the same
+        # way yet.
+        return {}
     return _video_backend_feature_billing_params(params)
 
 

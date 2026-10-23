@@ -21,7 +21,10 @@ from novelvideo.api.schemas import (
     FreezoneRelightRequest,
     FreezoneTemplateEditRequest,
 )
-from novelvideo.config import IMAGE_GENERATION_SELECTIONS
+from novelvideo.config import (
+    IMAGE_GENERATION_SELECTIONS,
+    _runpod_qwen_image_configured,
+)
 from novelvideo.freezone.paths import resolve_static_url_to_path, safe_upload_filename, uploads_dir
 from novelvideo.freezone.style_templates import (
     get_style_manifest_version,
@@ -35,6 +38,16 @@ logger = logging.getLogger(__name__)
 FREEZONE_DEFAULT_IMAGE_SELECTION = "newapi_gpt_image2"
 FREEZONE_DEFAULT_IMAGE_MODEL = FREEZONE_DEFAULT_IMAGE_SELECTION
 SUPPORTED_FREEZONE_IMAGE_PROVIDERS = {"huimeng", "newapi", "openrouter", "openai"}
+# Dev-only, same visibility gate as the main render/sketch pipeline's own
+# RunPod Qwen-Image 2.1 selections (`config.py`'s `_runpod_qwen_image_configured()`,
+# `RUNPOD_QWEN_IMAGE_SELECTION_KEYS`) — Freezone previously had no RunPod
+# image provider reachable at all, independent of whether env vars were
+# configured: this allowlist rejected the provider string before any
+# selection/catalog logic even ran. See `.claude/CLAUDE.md`.
+if _runpod_qwen_image_configured():
+    SUPPORTED_FREEZONE_IMAGE_PROVIDERS = SUPPORTED_FREEZONE_IMAGE_PROVIDERS | {
+        "runpod_qwen"
+    }
 FREEZONE_IMAGE_CAMERA_OPTIONS = {
     "camera_bodies": [
         {"id": "panavision_dxl2", "label": "Panavision DXL2"},

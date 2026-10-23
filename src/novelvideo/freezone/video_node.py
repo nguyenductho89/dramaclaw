@@ -203,6 +203,11 @@ def _freezone_video_model_from_backend(backend: str | None) -> str:
 
 
 def freezone_video_resolution_options(backend: str | None) -> tuple[str, ...]:
+    if is_freezone_runpod_h3_backend(backend):
+        # H3 ignores the `resolution` parameter entirely (fixed output
+        # size) — see `get_freezone_video_model_options()`'s comment on
+        # the same backend.
+        return ("auto",)
     model = _freezone_video_model_from_backend(backend)
     if model == "grok-video-channel":
         return FREEZONE_GROK_VIDEO_CHANNEL_RESOLUTION_OPTIONS
@@ -295,6 +300,33 @@ def _freezone_newapi_video_options() -> dict[str, str]:
     return ordered
 
 
+FREEZONE_RUNPOD_H3_BACKEND = "runpod_minimax_h3"
+
+
+def _freezone_runpod_video_options() -> dict[str, str]:
+    """RunPod-backed video options for Freezone, dev-only — same visibility
+    gate as the main pipeline's own RunPod H3 option (`generation.py`'s
+    `/video-backends` route, `_runpod_h3_video_configured()`). Kept
+    separate from `_freezone_newapi_video_options()` since these aren't
+    `newapi_*` strings and don't come from `newapi_video_backend_options()`
+    at all — see `.claude/CLAUDE.md`: Freezone video previously had NO
+    RunPod option wired in anywhere, unlike the main pipeline."""
+    from novelvideo.config import _runpod_h3_video_configured
+
+    if not _runpod_h3_video_configured():
+        return {}
+    return {FREEZONE_RUNPOD_H3_BACKEND: "MiniMax-H3 (RunPod, dev)"}
+
+
+def _freezone_video_options() -> dict[str, str]:
+    """All Freezone video options, NewAPI + RunPod, in that order."""
+    return {**_freezone_newapi_video_options(), **_freezone_runpod_video_options()}
+
+
+def is_freezone_runpod_h3_backend(backend: str | None) -> bool:
+    return str(backend or "").strip() == FREEZONE_RUNPOD_H3_BACKEND
+
+
 def get_freezone_video_model_options() -> list[dict[str, Any]]:
     data: list[dict[str, Any]] = []
     for backend, label in _freezone_newapi_video_options().items():
@@ -328,16 +360,41 @@ def get_freezone_video_model_options() -> list[dict[str, Any]]:
                 }
             )
         data.append(item)
+    for backend, label in _freezone_runpod_video_options().items():
+        duration_bounds = freezone_video_duration_bounds(backend)
+        data.append(
+            {
+                "id": backend,
+                "providerId": "runpod",
+                "provider": "runpod",
+                "apiModel": backend,
+                "api_model": backend,
+                "label": label,
+                "backend": backend,
+                # H3 ignores the `resolution` parameter entirely (fixed
+                # output size — see `generators/runpod_minimax_h3_video.py`);
+                # a single placeholder option keeps the picker from
+                # offering a 480p/720p/1080p choice that does nothing,
+                # same as the main pipeline leaving `resolution_options`
+                # unset for this backend (`generation.py`'s `/video-backends`).
+                "resolutionOptions": ["auto"],
+                "resolution_options": ["auto"],
+                "minDuration": duration_bounds[0],
+                "min_duration": duration_bounds[0],
+                "maxDuration": duration_bounds[1],
+                "max_duration": duration_bounds[1],
+            }
+        )
     return data
 
 
 def get_freezone_video_model_names() -> list[str]:
-    return list(_freezone_newapi_video_options().keys())
+    return list(_freezone_video_options().keys())
 
 
 def resolve_freezone_video_backend(model: str | None) -> str:
     text = str(model or "").strip()
-    options = _freezone_newapi_video_options()
+    options = _freezone_video_options()
     if not text:
         return (
             FREEZONE_DEFAULT_VIDEO_BACKEND

@@ -255,6 +255,36 @@ class SegmentVideosGenerateRequest(BaseModel):
     segments: list[SegmentVideoEntry] = Field(default_factory=list)
 
 
+class StagingSetDressingEntry(BaseModel):
+    """One persistent/semi-persistent prop placement within a scene's
+    staging bible — see `generators/staging_store.SetDressingItem`."""
+
+    prop_id: str
+    placement_note: str = ""
+    persistent: bool = False
+    from_beat: int = 0
+
+
+class StagingSceneUpdate(BaseModel):
+    """One scene's staging bible, as written by `PUT .../staging` (manual
+    edit) or returned by `POST .../staging/plan` (AI-proposed) — see
+    `generators/staging_store.SceneStaging`."""
+
+    camera: str = ""
+    blocking: dict[str, str] = Field(default_factory=dict)
+    set_dressing: list[StagingSetDressingEntry] = Field(default_factory=list)
+    scale_note: str = ""
+
+
+class StagingUpdateRequest(BaseModel):
+    """Body for `PUT .../episodes/{episode_num}/staging` — a full or
+    partial hand edit of the episode's staging sidecar
+    (`generators/staging_store.py`). Scenes not included are left
+    unchanged; a scene included replaces that scene's entry wholesale."""
+
+    scenes: dict[str, StagingSceneUpdate] = Field(default_factory=dict)
+
+
 class QwenEditPrompts(BaseModel):
     """Prompt override for a render-review-capable RunPod render path —
     `runpod_qwen_edit_render` / `_multi` (Qwen-Image-Edit-2511) and, since

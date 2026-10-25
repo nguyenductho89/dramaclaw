@@ -1688,6 +1688,21 @@ SKETCH_FREE_COMPOSE_SELECTION_KEYS = (
 # alone, so a new render-review-capable provider only needs adding here.
 RENDER_REVIEW_SELECTION_KEYS = RUNPOD_QWEN_EDIT_SELECTION_KEYS + RUNPOD_QWEN21_RENDER_SELECTION_KEYS
 
+# Every selection whose generator exists ONLY in the beat/render pipeline
+# (generators/nanobanana_grid.py) and needs a beat + character_map context
+# that scene-master/prop-reference/character-portrait generation never has.
+# scene_reference_images.py / nanobanana_prop.py / nanobanana_character.py
+# have no branch for any of these — picking one for "scene"/"prop"/
+# "character" falls through to the OpenRouter fallback with no key
+# configured, crashing with a confusing
+# LocalProtocolError("Illegal header value b'Bearer '") instead of a clear
+# error. Keep these out of the asset-level selectors entirely (2026-10-25).
+RENDER_ONLY_SELECTION_KEYS = (
+    RUNPOD_QWEN_EDIT_SELECTION_KEYS
+    + RUNPOD_QWEN21_RENDER_SELECTION_KEYS
+    + SKETCH_FREE_COMPOSE_SELECTION_KEYS
+)
+
 VISIBLE_IMAGE_GENERATION_SELECTION_KEYS = (
     "newapi_gpt_image2",
     "newapi_nanobanana2",
@@ -1746,8 +1761,16 @@ else:
 GRID_TOTAL_PANELS = 25  # maximum number of panels for dynamic optimization
 
 
-def image_generation_selection_options() -> dict[str, str]:
-    """Return UI labels for configured image-generation selections."""
+def image_generation_selection_options(
+    *, include_render_only_selections: bool = True
+) -> dict[str, str]:
+    """Return UI labels for configured image-generation selections.
+
+    ``include_render_only_selections=False`` drops every key in
+    ``RENDER_ONLY_SELECTION_KEYS`` — pass this for the scene/prop/character
+    asset selectors, which lack the beat + character_map context those
+    providers require (see ``RENDER_ONLY_SELECTION_KEYS`` for why).
+    """
     options = {
         key: IMAGE_GENERATION_SELECTIONS[key]["label"]
         for key in VISIBLE_IMAGE_GENERATION_SELECTION_KEYS
@@ -1780,12 +1803,18 @@ def image_generation_selection_options() -> dict[str, str]:
             options[key] = IMAGE_GENERATION_SELECTIONS[key]["label"]
         for key in RUNPOD_QWEN21_COMPOSE_SELECTION_KEYS:
             options[key] = IMAGE_GENERATION_SELECTIONS[key]["label"]
+    if not include_render_only_selections:
+        options = {
+            key: label
+            for key, label in options.items()
+            if key not in RENDER_ONLY_SELECTION_KEYS
+        }
     return options
 
 
 def character_image_selection_options() -> dict[str, str]:
     """Return UI labels for character/identity image generation."""
-    return image_generation_selection_options()
+    return image_generation_selection_options(include_render_only_selections=False)
 
 
 def _visible_image_generation_selection(value: str | None) -> str:

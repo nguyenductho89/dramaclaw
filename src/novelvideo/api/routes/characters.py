@@ -193,13 +193,23 @@ def _character_image_selection_payload(username: str, project: str) -> dict:
 
 
 def _asset_image_source_selection_payload(username: str, project: str, asset_kind: str) -> dict:
-    options = image_generation_selection_options()
+    options = image_generation_selection_options(include_render_only_selections=False)
     config_key = ASSET_IMAGE_SELECTION_CONFIG_KEYS[asset_kind]
     if asset_kind == "character":
         selection = _character_image_selection_payload(username, project)["character_image_selection"]
     else:
         saved_selection = str(load_project_config_file(username, project).get(config_key) or "")
-        selection = normalize_image_generation_selection(saved_selection)
+        if saved_selection in options:
+            selection = saved_selection
+        else:
+            # A selection saved before this asset kind excluded render-only
+            # providers (or a legacy alias) — re-resolve, then fall back to
+            # the default rather than surface something still outside
+            # `options` (e.g. a render-only key like `runpod_qwen21_compose`,
+            # which has no scene/prop generator branch and would crash with
+            # a confusing OpenRouter "Bearer " error).
+            normalized = normalize_image_generation_selection(saved_selection)
+            selection = normalized if normalized in options else normalize_image_generation_selection("")
     return {
         "asset_kind": asset_kind,
         "image_source_selection": selection,
@@ -1013,7 +1023,7 @@ async def update_project_asset_image_source_selection(
         await _resolve_character_project(project, user)
     )
     selection = str(body.image_source_selection or "").strip()
-    options = image_generation_selection_options()
+    options = image_generation_selection_options(include_render_only_selections=False)
     if selection not in options:
         return JSONResponse(
             status_code=400,

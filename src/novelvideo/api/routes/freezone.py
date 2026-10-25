@@ -9450,7 +9450,24 @@ def _freezone_dev_media_model_catalog_entries(media_type: str) -> list[dict[str,
                 "label": "MiniMax-H3 (RunPod, dev)",
                 "sortOrder": 500,
                 "request": {"endpoint": "video/generations", "parameters": []},
-                "supportedModes": ["text_to_video"],
+                # The generator (generators/runpod_minimax_h3_video.py)
+                # always requires a first-frame image but accepts it as
+                # "the first of N images" rather than a hard lock — a
+                # single image is fl2va (first_frame/image_to_video), 2+
+                # images or an audio reference switch to ref2va
+                # (image_reference), and a 2nd image explicitly flagged
+                # "last frame" is also accepted (first_last_frame). What it
+                # cannot do is take a SOURCE VIDEO to edit or extend — no
+                # video_edit/video_extend/all_reference here, and
+                # referenceVideoMax stays 0 below (2026-10-25, see
+                # .claude/CLAUDE.md).
+                "supportedModes": [
+                    "text_to_video",
+                    "first_frame",
+                    "first_last_frame",
+                    "image_to_video",
+                    "image_reference",
+                ],
                 "ratioOptions": ["16:9", "9:16"],
                 # H3 ignores the `resolution` parameter entirely (fixed
                 # output size) — see `video_node.py`'s

@@ -13,6 +13,7 @@ import {
   GEN_MODE_TO_CATALOG_MODE,
   isGrokVideoChannelModel,
   isHappyHorseVideoModel,
+  isMultishotOnlyModel,
   isSeedance1xVideoModel,
   isSeedance2VideoModel,
   isVideoModeSupportedByModel,
@@ -22,7 +23,9 @@ import {
   videoModeForcesAutomaticAspectRatio,
   videoModeRequiresMedia,
   videoModeRequiresPrompt,
+  videoModelAcceptsMultipleImages,
   videoModelDefaultGenerateAudio,
+  videoModelDefaultMode,
   videoModelSupportsGenerateAudio,
   videoModelReferenceDisabledReason,
   videoMultiImageAutoSwitchMode,
@@ -1339,5 +1342,145 @@ describe("node-specific video modes", () => {
       { images: 1, videos: 0, audios: 0 })).toBe("node.videoModel.reason.imageUnsupported");
     expect(videoSubmitMediaRejectionReason("textToVideo", textOnly,
       { images: 0, videos: 0, audios: 0 })).toBeNull();
+  });
+});
+
+// MiniMax H3 Multishot (2026-10-25) — runpod_minimax_h3_multishot's catalog
+// entry declares supportedModes: ["multishot"] only (api/routes/freezone.py's
+// _freezone_dev_media_model_catalog_entries), so it is a multishot-ONLY
+// model: no text_to_video, no image modes a 1-shot model would have.
+describe("MiniMax H3 Multishot", () => {
+  const multishotOnly = {
+    apiModel: "runpod_minimax_h3_multishot",
+    supportedModes: ["multishot"],
+    referenceImageMax: 3,
+    maxShots: 2,
+  };
+  const multishot1Shot = {
+    apiModel: "runpod_minimax_h3",
+    supportedModes: ["text_to_video", "first_frame", "image_reference"],
+  };
+
+  it("the frontend mode -> catalog capability mapping is identity", () => {
+    expect(GEN_MODE_TO_CATALOG_MODE.multishot).toBe("multishot");
+  });
+
+  it("is supported ONLY via an explicit catalog declaration, never by heuristics", () => {
+    expect(isVideoModeSupportedByModel("multishot", multishotOnly)).toBe(true);
+    // No supportedModes at all (a legacy/heuristic model id) must never be
+    // treated as multishot-capable — there is no legacy model this applies to.
+    expect(isVideoModeSupportedByModel("multishot", "some-legacy-model-id")).toBe(false);
+    expect(isVideoModeSupportedByModel("multishot", null)).toBe(false);
+  });
+
+  it("a multishot-only model does not support any 1-shot mode", () => {
+    for (const mode of [
+      "textToVideo",
+      "firstFrame",
+      "imageToVideo",
+      "firstLastFrame",
+      "imageReference",
+      "allReference",
+      "videoEdit",
+      "videoExtend",
+    ] as const) {
+      expect(isVideoModeSupportedByModel(mode, multishotOnly)).toBe(false);
+    }
+  });
+
+  it("isMultishotOnlyModel distinguishes the multishot backend from the 1-shot H3 backend", () => {
+    expect(isMultishotOnlyModel(multishotOnly)).toBe(true);
+    expect(isMultishotOnlyModel(multishot1Shot)).toBe(false);
+    expect(isMultishotOnlyModel("runpod_minimax_h3_multishot")).toBe(false); // bare string: no supportedModes to read
+  });
+
+  it("videoModelDefaultMode lands a multishot-only model on multishot, not textToVideo", () => {
+    expect(videoModelDefaultMode(multishotOnly)).toBe("multishot");
+    expect(videoModelDefaultMode(multishot1Shot)).toBe("textToVideo");
+  });
+
+  it("the empty-state CTA and upstream-image default both include multishot for a multishot-only model", () => {
+    expect(videoEmptyStateCtaModes(multishotOnly)).toEqual(["multishot"]);
+    expect(videoUpstreamImageDefaultMode(multishotOnly)).toBe("multishot");
+  });
+
+  it("accepts multiple images (start frame + shared references), unlike a single-image-only model", () => {
+    expect(videoModelAcceptsMultipleImages(multishotOnly)).toBe(true);
+  });
+
+  it("does not reset to textToVideo when upstream assets are cleared (textToVideo is unsupported)", () => {
+    expect(
+      videoNoUpstreamResetMode("multishot", { images: 0, videos: 0, audios: 0 }),
+    ).toBeNull();
+    expect(
+      videoNoUpstreamResetMode("multishot", { images: 1, videos: 0, audios: 0 }),
+    ).toBeNull();
+  });
+
+  it("an attached image is never flagged imageUnsupported for a multishot-only model", () => {
+    // Before adding "multishot" to videoEmptyStateCtaModes' order list, this
+    // model's CTA list was empty for every mode, so ANY attached image on a
+    // multishot node incorrectly read as imageUnsupported.
+    expect(
+      videoSubmitMediaRejectionReason("multishot", multishotOnly, {
+        images: 1,
+        videos: 0,
+        audios: 0,
+      }),
+    ).toBeNull();
+  });
+
+  it("flags too many images past 1 start frame + referenceImageMax shared references", () => {
+    // 1 start frame + 3 shared refs = 4 is the cap for this model.
+    expect(
+      videoSubmitMediaRejectionReason("multishot", multishotOnly, {
+        images: 4,
+        videos: 0,
+        audios: 0,
+      }),
+    ).toBeNull();
+    expect(
+      videoSubmitMediaRejectionReason("multishot", multishotOnly, {
+        images: 5,
+        videos: 0,
+        audios: 0,
+      }),
+    ).toBe("node.videoModel.reason.multishotTooManyImages");
+  });
+
+  it("video and audio assets are rejected (multishot takes images only)", () => {
+    expect(
+      videoSubmitMediaRejectionReason("multishot", multishotOnly, {
+        images: 1,
+        videos: 1,
+        audios: 0,
+      }),
+    ).toBe("node.videoModel.reason.videoUnsupported");
+    expect(
+      videoSubmitMediaRejectionReason("multishot", multishotOnly, {
+        images: 1,
+        videos: 0,
+        audios: 1,
+      }),
+    ).toBe("node.videoModel.reason.audioUnsupported");
+  });
+
+  it("the model-selector disabled reason matches the submit guard for the image cap", () => {
+    expect(
+      videoModelReferenceDisabledReason(multishotOnly, { images: 4, videos: 0, audios: 0 }),
+    ).toBeNull();
+    expect(
+      videoModelReferenceDisabledReason(multishotOnly, { images: 5, videos: 0, audios: 0 }),
+    ).toBe("node.videoModel.reason.multishotTooManyImages");
+  });
+
+  it("falls back to a 3-image shared-reference cap when the model has no referenceImageMax yet", () => {
+    const noMaxYet = { apiModel: "runpod_minimax_h3_multishot", supportedModes: ["multishot"] };
+    expect(
+      videoSubmitMediaRejectionReason("multishot", noMaxYet, { images: 4, videos: 0, audios: 0 }),
+    ).toBeNull();
+    expect(
+      videoSubmitMediaRejectionReason("multishot", noMaxYet, { images: 5, videos: 0, audios: 0 }),
+    ).toBe("node.videoModel.reason.multishotTooManyImages");
   });
 });

@@ -6767,7 +6767,8 @@
         "firstLastFrame": "First/Last Frame",
         "imageReference": "Image Reference",
         "videoEdit": "Video Edit",
-        "videoExtend": "Video Extend"
+        "videoExtend": "Video Extend",
+        "multishot": "Multishot"
       },
       "placeholder": "Describe the video to generate.",
       "submit": "Submit",
@@ -6861,7 +6862,8 @@
         "imageReference": "Image reference",
         "firstFrame": "Video from first frame",
         "imageToVideo": "Image to video",
-        "firstLastFrame": "Video from first & last frame"
+        "firstLastFrame": "Video from first & last frame",
+        "multishot": "Multishot video"
       },
       "spawn": {
         "firstFrame": "First frame",
@@ -6871,7 +6873,8 @@
         "firstFrameGroup": "First-frame video group",
         "imageToVideoGroup": "Image-to-video group",
         "allReferenceGroup": "Omni reference group",
-        "firstLastFrameGroup": "First & last frame video group"
+        "firstLastFrameGroup": "First & last frame video group",
+        "multishotGroup": "Multishot group"
       },
       "clip": {
         "displayName": "Clip",
@@ -6996,7 +6999,8 @@
         "maxImages": "This model supports at most {{count}} image assets",
         "maxVideos": "This model supports at most {{count}} video assets",
         "maxAudios": "This model supports at most {{count}} audio assets",
-        "videoExtendSourceOnly": "Video extend accepts exactly one source video and no image or audio assets"
+        "videoExtendSourceOnly": "Video extend accepts exactly one source video and no image or audio assets",
+        "multishotTooManyImages": "Too many images for multishot: 1 start frame plus a limited number of shared reference images are allowed"
       }
     },
     "scriptNode": {
@@ -7248,6 +7252,7 @@
         "videoEdit": "Video editing",
         "videoExtend": "Video extend",
         "allReference": "All-purpose reference",
+        "multishot": "Multishot",
         "current": "the current mode"
       },
       "refKind": {
@@ -7291,7 +7296,36 @@
         "videoUpstreamAllRefOrEdit": "With video upstream, only “All reference” or “Video edit” are available",
         "videoUpstreamAllRefOnly": "With video upstream, only “All reference” is available",
         "hasImageOrAudioRefs": "Unavailable while image/audio assets are referenced",
-        "moreThanTwoImages": "Unavailable with more than 2 upstream images"
+        "moreThanTwoImages": "Unavailable with more than 2 upstream images",
+        "multishotCanvasOnly": "Multishot is only available from the canvas video node, not this panel"
+      },
+      "multishot": {
+        "startFrameLabel": "Start frame",
+        "shotLabel": "Shot {{n}}",
+        "addShot": "Add shot",
+        "removeShot": "Remove shot",
+        "moveUp": "Move up",
+        "moveDown": "Move down",
+        "emptyShot": "Describe what happens in this shot…",
+        "overallDirection": "Overall direction (optional) — style/mood notes applied to every shot",
+        "minShots": "At least {{min}} shots with text are required",
+        "maxShotsReached": "At most {{max}} shots are supported on this server",
+        "totalDuration": "{{count}} shots × {{seconds}}s",
+        "reviewTitle": "Review MiniMax H3 Multishot",
+        "reviewLoading": "Resolving references and writing prompts for every shot…",
+        "cancel": "Cancel",
+        "confirmGenerate": "Confirm & Generate",
+        "costWarning": "{{shots}} shots, ~{{seconds}}s total — a long-running paid RunPod job. Review each prompt before confirming.",
+        "backendLabel": "Checkpoint",
+        "shotsLabel": "Shots",
+        "shotSecondsLabel": "Seconds/shot",
+        "totalSecondsLabel": "Total seconds",
+        "referencesHeader": "Shared references",
+        "promptsHeader": "Shot prompts",
+        "fallbackUsed": "AI rewrite failed — basic template used",
+        "workerOff": "The RunPod Multishot worker is off — start it before generating.",
+        "startWorker": "Start worker",
+        "inputStale": "Something changed since the review — please review again before generating."
       }
     },
     "threeDWorld": {

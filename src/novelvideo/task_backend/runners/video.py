@@ -55,6 +55,7 @@ def _append_freezone_video_node_history(
     job_id: str,
     result: dict[str, Any] | None = None,
     error: str | None = None,
+    task_type: str = "freezone_video_gen",
 ) -> dict[str, Any] | None:
     node_id = str(payload.get("node_id") or "").strip()
     if not node_id:
@@ -76,10 +77,10 @@ def _append_freezone_video_node_history(
             extra[key] = str(payload[key])
 
     record = build_node_history_record(
-        task_type="freezone_video_gen",
+        task_type=task_type,
         job_id=job_id,
         task_key=project_task_state_key(
-            "freezone_video_gen", ctx.project_id, 0, scope=job_id
+            task_type, ctx.project_id, 0, scope=job_id
         ),
         status="failed" if error else "completed",
         media_type="video",
@@ -326,14 +327,8 @@ async def _run_multishot_video_async(
     beat_numbers = [int(n) for n in (config.get("beat_numbers") or [])]
     on_log(f"starting Multishot chain {chain_id} generation ({len(beat_numbers)} beats)")
 
-    from novelvideo.config import (
-        RUNPOD_API_KEY,
-        RUNPOD_H3_MULTISHOT_ENDPOINT_ID,
-        RUNPOD_H3_MULTISHOT_TIMEOUT_SECONDS,
-    )
     from novelvideo.generators.runpod_minimax_h3_multishot_video import (
-        build_h3_multishot_graph,
-        run_h3_multishot_job,
+        run_multishot_from_files,
     )
     from novelvideo.utils.path_resolver import PathResolver
 
@@ -344,41 +339,23 @@ async def _run_multishot_video_async(
     # original base-20-step behaviour rather than re-resolving from config.
     sampling = dict(config.get("sampling") or {})
 
-    start_bytes = Path(start_image_path).read_bytes()
-    start_name = "ms_start" + (Path(start_image_path).suffix or ".png")
-    upload_payloads: list[tuple[str, bytes, str]] = [
-        (start_name, start_bytes, _mime_for(start_name))
-    ]
-
-    reference_names: list[str] = []
-    for i, ref_path in enumerate(reference_image_paths):
-        name = f"ms_ref_{i}" + (Path(ref_path).suffix or ".png")
-        upload_payloads.append((name, Path(ref_path).read_bytes(), _mime_for(name)))
-        reference_names.append(name)
-
-    graph = build_h3_multishot_graph(
+    data, status_info, error = await run_multishot_from_files(
         script=str(config.get("script") or ""),
         shot_count=len(beat_numbers),
         width=int(config.get("width") or 768),
         height=int(config.get("height") or 1344),
         frames_per_shot=int(config.get("frames_per_shot") or 124),
         seed=int(config.get("seed") or 0),
-        steps=int(sampling.get("steps") or 20),
         checkpoint=checkpoint,
-        start_image_name=start_name,
-        reference_image_names=reference_names if checkpoint == "ref2va" else None,
-        pdd_nfe=str(sampling.get("pdd_nfe") or ""),
-        pdd_file=str(sampling.get("pdd_file") or ""),
-        output_scale=float(sampling.get("output_scale") or 1.0),
-    )
-
-    data, status_info, error = await run_h3_multishot_job(
-        api_key=RUNPOD_API_KEY,
-        endpoint_id=RUNPOD_H3_MULTISHOT_ENDPOINT_ID,
-        timeout_seconds=RUNPOD_H3_MULTISHOT_TIMEOUT_SECONDS,
-        graph=graph,
-        upload_payloads=upload_payloads,
+        sampling=sampling,
+        start_image_path=start_image_path,
+        reference_image_paths=reference_image_paths,
         on_log=on_log,
+        # Beat first frames are already rendered at exactly width x height —
+        # unlike Freezone's canvas start images, no scale/crop is needed
+        # here. Keep this False to preserve this runner's existing
+        # behavior exactly (see generators/runpod_minimax_h3_multishot_video.py).
+        fit_start_image=False,
     )
     if data is None:
         raise RuntimeError(error or "Multishot task failed for an unknown reason")
@@ -1155,4 +1132,125 @@ def run_freezone_video_gen(
 
 register_project_task_runner(
     "freezone_video_gen", run_freezone_video_gen, requires_home_node=False
+)
+
+
+async def _run_freezone_video_multishot_async(
+    envelope: dict[str, Any], ctx: ProjectContext
+) -> dict[str, Any]:
+    """MiniMax H3 Multishot for Freezone — one RunPod job rendering a
+    user-authored shot list (built on the canvas, not from beats) into one
+    continuous video. Mirrors `_run_multishot_video_async` above, but
+    follows Freezone's own output convention
+    (`outputs_dir(project_dir, task_type)/{job_id}.mp4`, NOT the beat
+    `PathResolver` layout) and records node history, since this runs from
+    a canvas node rather than a beat. `api/routes/freezone.py`'s
+    `_prepare_freezone_multishot()`/the enqueue route already validated
+    the chain and built `config` below; this runner just submits it."""
+    from novelvideo.api.deps import make_static_url_for_context
+    from novelvideo.freezone.jobs import ensure_freezone_dirs
+    from novelvideo.freezone.paths import outputs_dir
+    from novelvideo.generators.runpod_minimax_h3_multishot_video import (
+        run_multishot_from_files,
+    )
+
+    task_type = "freezone_video_multishot"
+    payload = envelope.get("payload") or {}
+    job_id = str(payload["job_id"])
+    project_dir = Path(str(payload.get("project_dir") or ctx.output_dir))
+    config = dict(payload.get("config") or {})
+    ensure_freezone_dirs(project_dir)
+
+    manager = get_task_manager()
+
+    def on_log(msg: str) -> None:
+        manager.update_progress_for_project(
+            ctx,
+            task_type,
+            0,
+            scope=job_id,
+            current_task=msg,
+            logs=[msg],
+        )
+
+    on_log(
+        f"starting Freezone Multishot generation "
+        f"({int(config.get('shot_count') or 0)} shots)"
+    )
+
+    try:
+        data, _status_info, error = await run_multishot_from_files(
+            script=str(config.get("script") or ""),
+            shot_count=int(config.get("shot_count") or 0),
+            width=int(config.get("width") or 768),
+            height=int(config.get("height") or 1344),
+            frames_per_shot=int(config.get("frames_per_shot") or 124),
+            seed=int(config.get("seed") or 0),
+            checkpoint=str(config.get("checkpoint") or "fl2va"),
+            sampling=dict(config.get("sampling") or {}),
+            start_image_path=str(config.get("start_image_path") or ""),
+            reference_image_paths=[
+                str(p) for p in (config.get("reference_image_paths") or [])
+            ],
+            on_log=on_log,
+            # Canvas start images can be any aspect ratio — unlike beat
+            # first frames, which are already rendered at exactly the
+            # target size (see `_run_multishot_video_async`'s own
+            # `fit_start_image=False`).
+            fit_start_image=True,
+        )
+        if data is None:
+            raise RuntimeError(error or "Multishot task failed for an unknown reason")
+    except Exception as exc:
+        _append_freezone_video_node_history(
+            ctx=ctx,
+            project_dir=project_dir,
+            payload=payload,
+            job_id=job_id,
+            error=str(exc),
+            task_type=task_type,
+        )
+        raise
+
+    out = outputs_dir(project_dir, task_type) / f"{job_id}.mp4"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_bytes(data)
+    on_log(f"done, saved to {out}")
+
+    rel = out.relative_to(project_dir).as_posix()
+    result = {
+        "job_id": job_id,
+        "output_path": str(out),
+        "output_url": make_static_url_for_context(ctx, rel),
+        "shot_count": int(config.get("shot_count") or 0),
+        "checkpoint": str(config.get("checkpoint") or "fl2va"),
+        "sampling": dict(config.get("sampling") or {}),
+    }
+    history_record = _append_freezone_video_node_history(
+        ctx=ctx,
+        project_dir=project_dir,
+        payload=payload,
+        job_id=job_id,
+        result=result,
+        task_type=task_type,
+    )
+    if history_record:
+        result["generation_history_record"] = history_record
+    return result
+
+
+def run_freezone_video_multishot(
+    envelope: dict[str, Any], ctx: ProjectContext
+) -> dict[str, Any]:
+    return asyncio.run(
+        await_envelope_with_cancel_watch(
+            _run_freezone_video_multishot_async(envelope, ctx),
+            envelope,
+            task_type="freezone_video_multishot",
+        )
+    )
+
+
+register_project_task_runner(
+    "freezone_video_multishot", run_freezone_video_multishot, requires_home_node=False
 )

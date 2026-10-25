@@ -327,6 +327,23 @@ def is_freezone_runpod_h3_backend(backend: str | None) -> bool:
     return str(backend or "").strip() == FREEZONE_RUNPOD_H3_BACKEND
 
 
+# MiniMax H3 Multishot (long continuous video, 2026-10-25) — a SEPARATE
+# backend id from the 1-shot one above, on a separate RunPod endpoint
+# (`RUNPOD_H3_MULTISHOT_ENDPOINT_ID`, gated by
+# `config._runpod_h3_multishot_configured()`). Deliberately NOT added to
+# `_freezone_runpod_video_options()` (the no-catalog fallback list, which
+# emits no `supportedModes` and would make frontend heuristics treat it as
+# supporting every mode) — it's only ever exposed via the dev media-model
+# catalog entry in `api/routes/freezone.py`'s
+# `_freezone_dev_media_model_catalog_entries()`, which DOES declare
+# `supportedModes: ["multishot"]`. See `freezone/multishot.py`.
+FREEZONE_RUNPOD_H3_MULTISHOT_BACKEND = "runpod_minimax_h3_multishot"
+
+
+def is_freezone_runpod_h3_multishot_backend(backend: str | None) -> bool:
+    return str(backend or "").strip() == FREEZONE_RUNPOD_H3_MULTISHOT_BACKEND
+
+
 def get_freezone_video_model_options() -> list[dict[str, Any]]:
     data: list[dict[str, Any]] = []
     for backend, label in _freezone_newapi_video_options().items():

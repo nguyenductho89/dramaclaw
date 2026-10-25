@@ -72,6 +72,7 @@ _TASK_TYPE_LABELS = {
     "audio_generation_indextts2": "Generate audio",
     "system_voice_setup": "Prepare system voice",
     "freezone_video_gen": "Freezone video",
+    "freezone_video_multishot": "Freezone multishot video",
     "stage_asset": "Scene assets",
     "freezone_gen": "Freezone generation",
     "freezone_edit": "Freezone edit",

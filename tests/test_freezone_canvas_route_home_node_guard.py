@@ -289,7 +289,11 @@ def test_only_placement_free_canvas_routes_opt_out_of_the_home_node_guard() -> N
 
     # After the merge, three non-canvas routes were added: video-extend, upscale/quote and upscale/probe.
     # The number of canvas routes stays at staging's 31, and the home-node opt-out allowlist is still checked item by item.
-    assert router_decorators == 113
+    # 2026-10-25: +2 non-canvas routes for MiniMax H3 Multishot
+    # (/freezone/video/multishot/review, /freezone/video/multishot) — both
+    # stay guarded (no require_home_node=False), same as every other
+    # Freezone video route that reads/writes local project files.
+    assert router_decorators == 115
     assert len(canvas_routes) == 31
 
     assert set(canvas_routes) >= PLACEMENT_FREE_CANVAS_ROUTES

@@ -64,6 +64,14 @@ _FPS = 24.0
 _BASE_STEPS = 20
 _PDD_NFE_CHOICES = ("4", "6", "8")
 
+# One shared reference-image batch per chain (`H3MultishotSampler.reference_images`,
+# `ref2va` only — see `build_h3_multishot_graph`'s docstring). Lives here, not in
+# `api/routes/generation.py`, because it's a property of the sampler/worker itself,
+# not of the beat pipeline — both the main-pipeline multishot route and the Freezone
+# multishot route (`freezone/multishot.py`) import it from here so there is exactly
+# one place that can change it (2026-10-25).
+MULTISHOT_MAX_UNION_REFERENCES = 3
+
 
 def _round32(value: float) -> int:
     return max(32, round(value / 32.0) * 32)
@@ -406,36 +414,51 @@ async def run_h3_multishot_job(
     seen_in_progress = False
     status_resp: dict[str, Any] = {}
     last_poll_error = ""
-    async with httpx.AsyncClient(timeout=60.0) as client:
-        while time.monotonic() < deadline:
-            await asyncio.sleep(5)
-            try:
-                status_response = await client.get(f"{base}/{endpoint_id}/status/{job_id}", headers=headers)
-                status_response.raise_for_status()
-                status_resp = status_response.json()
-            except httpx.HTTPError as exc:
-                last_poll_error = str(exc)
-                continue
-            current_status = status_resp.get("status")
-            if current_status == "IN_PROGRESS" and not seen_in_progress:
-                seen_in_progress = True
-                deadline = time.monotonic() + timeout_seconds
-                log(f"job {job_id} entered IN_PROGRESS, restarting the {timeout_seconds:.0f}s timer")
-            if current_status not in ("IN_QUEUE", "IN_PROGRESS"):
-                break
-        else:
-            try:
-                await client.post(f"{base}/{endpoint_id}/cancel/{job_id}", headers=headers)
-            except httpx.HTTPError:
-                pass
-            status_note = status_resp.get("status", "IN_QUEUE")
-            poll_note = f"; last poll error: {last_poll_error}" if last_poll_error else ""
-            return (
-                None,
-                status_resp,
-                f"job {job_id} timed out after {timeout_seconds:.0f}s "
-                f"(still {status_note} — endpoint workers.max may be 0){poll_note}",
-            )
+    try:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            while time.monotonic() < deadline:
+                await asyncio.sleep(5)
+                try:
+                    status_response = await client.get(f"{base}/{endpoint_id}/status/{job_id}", headers=headers)
+                    status_response.raise_for_status()
+                    status_resp = status_response.json()
+                except httpx.HTTPError as exc:
+                    last_poll_error = str(exc)
+                    continue
+                current_status = status_resp.get("status")
+                if current_status == "IN_PROGRESS" and not seen_in_progress:
+                    seen_in_progress = True
+                    deadline = time.monotonic() + timeout_seconds
+                    log(f"job {job_id} entered IN_PROGRESS, restarting the {timeout_seconds:.0f}s timer")
+                if current_status not in ("IN_QUEUE", "IN_PROGRESS"):
+                    break
+            else:
+                try:
+                    await client.post(f"{base}/{endpoint_id}/cancel/{job_id}", headers=headers)
+                except httpx.HTTPError:
+                    pass
+                status_note = status_resp.get("status", "IN_QUEUE")
+                poll_note = f"; last poll error: {last_poll_error}" if last_poll_error else ""
+                return (
+                    None,
+                    status_resp,
+                    f"job {job_id} timed out after {timeout_seconds:.0f}s "
+                    f"(still {status_note} — endpoint workers.max may be 0){poll_note}",
+                )
+    except asyncio.CancelledError:
+        # A user-initiated cancel (task stop) would otherwise leave this
+        # job running and billing on RunPod for up to `timeout_seconds`
+        # (hours, for a multishot chain) — only OUR OWN timeout above
+        # cancelled the remote job before this fix. Best-effort: the
+        # process may be shutting down, so give the cancel POST its own
+        # short-lived client/timeout rather than reusing `client`.
+        log(f"job {job_id} polling cancelled by caller, requesting RunPod cancel...")
+        try:
+            async with httpx.AsyncClient(timeout=15.0) as cancel_client:
+                await cancel_client.post(f"{base}/{endpoint_id}/cancel/{job_id}", headers=headers)
+        except httpx.HTTPError as exc:
+            log(f"RunPod cancel request for job {job_id} failed: {exc}")
+        raise
 
     status = status_resp.get("status")
     output = status_resp.get("output") or {}
@@ -477,3 +500,97 @@ async def run_h3_multishot_job(
 
 def new_seed() -> int:
     return uuid.uuid4().int & 0xFFFFFFFF
+
+
+async def run_multishot_from_files(
+    *,
+    script: str,
+    shot_count: int,
+    width: int,
+    height: int,
+    frames_per_shot: int,
+    seed: int,
+    checkpoint: Checkpoint,
+    sampling: dict[str, Any],
+    start_image_path: str,
+    reference_image_paths: list[str],
+    on_log: Any = None,
+    fit_start_image: bool = False,
+) -> tuple[bytes | None, dict[str, Any], str]:
+    """Shared "read local files, build the H3MultishotSampler graph, run the
+    RunPod job" core, used by BOTH callers of this module's graph:
+
+    - the main-pipeline beat-chain runner
+      (`task_backend/runners/video.py`'s `_run_multishot_video_async`),
+      `fit_start_image=False` — beat first frames are already rendered at
+      exactly the target `width`x`height` (768x1344/416x736), so this
+      preserves that runner's existing behavior unchanged;
+    - the Freezone multishot runner (`freezone/multishot.py`),
+      `fit_start_image=True` — a canvas start image can be any aspect
+      ratio and needs the same scale+crop treatment the 1-shot H3 path
+      (`runpod_minimax_h3_video.py`'s `_fit_canvas_bytes`) already applies,
+      which this module never needed before Freezone had no start-image
+      source of its own.
+
+    `sampling` is the dict `multishot_sampling_plan()` returns — this
+    function does not call that itself so the caller can log/display the
+    exact plan it resolved before spending the RunPod call.
+    """
+    import mimetypes
+    from pathlib import Path
+
+    from novelvideo.config import (
+        RUNPOD_API_KEY,
+        RUNPOD_H3_MULTISHOT_ENDPOINT_ID,
+        RUNPOD_H3_MULTISHOT_TIMEOUT_SECONDS,
+    )
+
+    def _mime_for(filename: str) -> str:
+        return mimetypes.guess_type(filename)[0] or "application/octet-stream"
+
+    def _read(path: str) -> bytes:
+        return Path(path).read_bytes()
+
+    start_bytes = await asyncio.to_thread(_read, start_image_path)
+    if fit_start_image:
+        from novelvideo.generators.runpod_minimax_h3_video import _fit_canvas_bytes
+
+        start_bytes = await asyncio.to_thread(_fit_canvas_bytes, start_bytes, width, height)
+        start_name = "ms_start.png"
+    else:
+        start_name = "ms_start" + (Path(start_image_path).suffix or ".png")
+
+    upload_payloads: list[tuple[str, bytes, str]] = [
+        (start_name, start_bytes, _mime_for(start_name))
+    ]
+
+    reference_names: list[str] = []
+    for i, ref_path in enumerate(reference_image_paths):
+        name = f"ms_ref_{i}" + (Path(ref_path).suffix or ".png")
+        upload_payloads.append((name, await asyncio.to_thread(_read, ref_path), _mime_for(name)))
+        reference_names.append(name)
+
+    graph = build_h3_multishot_graph(
+        script=script,
+        shot_count=shot_count,
+        width=width,
+        height=height,
+        frames_per_shot=frames_per_shot,
+        seed=seed,
+        steps=int(sampling.get("steps") or _BASE_STEPS),
+        checkpoint=checkpoint,
+        start_image_name=start_name,
+        reference_image_names=reference_names if checkpoint == "ref2va" else None,
+        pdd_nfe=str(sampling.get("pdd_nfe") or ""),
+        pdd_file=str(sampling.get("pdd_file") or ""),
+        output_scale=float(sampling.get("output_scale") or 1.0),
+    )
+
+    return await run_h3_multishot_job(
+        api_key=RUNPOD_API_KEY,
+        endpoint_id=RUNPOD_H3_MULTISHOT_ENDPOINT_ID,
+        timeout_seconds=RUNPOD_H3_MULTISHOT_TIMEOUT_SECONDS,
+        graph=graph,
+        upload_payloads=upload_payloads,
+        on_log=on_log,
+    )

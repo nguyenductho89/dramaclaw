@@ -1314,6 +1314,17 @@ export function useVideoGenerationForm(
       // The backend no longer supports producing several at once; instead it calls the endpoint N times concurrently by "generation count". First
       // assemble a "call the endpoint once" closure doSubmit by genMode; if validation fails it is set to empty and returns early.
       let doSubmit: ((targetId: string) => Promise<FreezoneJobRef>) | null = null;
+      if (genMode === "multishot") {
+        // MiniMax H3 Multishot (long continuous video) is canvas-only in
+        // v1 — its ordered shot list, review dialog and reference-source
+        // UI (canvas images + Character Library) only exist in
+        // VideoOperationsPanel.tsx. This form's own MODE_TABS never offers
+        // "multishot" as a tab, so this only fires for a node whose saved
+        // data already has genMode:"multishot" from the canvas.
+        toast.error(t("node.videoOps.modeDisabled.multishotCanvasOnly"));
+        updateNodeData(id, { isGenerating: false, generationStartedAt: null });
+        return {};
+      }
       if (genMode === "firstFrame" || genMode === "firstLastFrame") {
         const keyframes = collectUpstreamKeyframeUrls();
         const firstFrameUrl = keyframes.firstFrameUrl;

@@ -729,3 +729,78 @@ async def build_minimax_h3_prompt(context: MiniMaxH3BeatContext) -> MiniMaxH3Pro
     output: MiniMaxH3LLMOutput = response.output
     final_prompt = assemble_minimax_h3_prompt(context, output.content)
     return MiniMaxH3PromptResult(plan=output.plan, final_prompt=final_prompt)
+
+
+async def generate_minimax_h3_prompt_with_fallback(
+    context: MiniMaxH3BeatContext,
+    *,
+    reference_count: int,
+    duration_seconds: float,
+    expects_dialogue: bool,
+) -> tuple[MiniMaxH3PromptResult, list[dict[str, str]], bool]:
+    """Shared retry/fallback/lint dance for one H3 prompt call.
+
+    Moved here (2026-10-25, formerly `api/routes/generation.py`'s private
+    `_generate_h3_prompt_result`) so BOTH `generation.py` (the main-pipeline
+    beat/segment review routes) and `freezone/multishot.py` (the Freezone
+    multishot review route) can call it per-shot without one route module
+    importing a private helper from another — this module already declares
+    itself store-free, which is exactly what a second caller with its own,
+    non-beat shot data needs. `generation.py` keeps its own
+    `_generate_h3_prompt_result` name as a thin alias to this function so
+    its existing call sites are unchanged.
+
+    Only an outright failed call is retried (2 attempts total); a call that
+    succeeds but fails lint is NOT retried — lint issues are surfaced to the
+    caller instead, same as the original behavior this was copied from
+    verbatim."""
+    from novelvideo.agents.minimax_h3_prompt_lint import lint_minimax_h3_prompt
+
+    max_llm_attempts = 2
+    result = None
+    last_exc: Exception | None = None
+    retry_context = context
+    for _attempt in range(max_llm_attempts):
+        try:
+            result = await build_minimax_h3_prompt(retry_context)
+            break
+        except Exception as exc:  # noqa: BLE001
+            last_exc = exc
+            retry_context = context.model_copy(
+                update={
+                    "retry_feedback": (
+                        "Your previous attempt failed to produce valid output "
+                        f"at all ({exc}). Follow the schema and every rule "
+                        "exactly this time."
+                    )
+                }
+            )
+            continue
+
+    fallback_used = result is None
+    if fallback_used:
+        result = build_fallback_minimax_h3_prompt(context)
+
+    lint = lint_minimax_h3_prompt(
+        result.final_prompt,
+        mode=context.mode,
+        reference_count=reference_count,
+        duration_seconds=duration_seconds,
+        expects_dialogue=expects_dialogue,
+    )
+    lint_issues = [
+        {"severity": i.severity, "code": i.code, "message": i.message} for i in lint.issues
+    ]
+    if fallback_used:
+        lint_issues.insert(
+            0,
+            {
+                "severity": "warning",
+                "code": "fallback_template",
+                "message": (
+                    f"AI generation failed ({last_exc}); the basic template was used instead. "
+                    "Please review and confirm or retry."
+                ),
+            },
+        )
+    return result, lint_issues, fallback_used

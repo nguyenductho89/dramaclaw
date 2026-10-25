@@ -63,6 +63,10 @@ export const GEN_MODE_TO_CATALOG_MODE: Record<VideoGenMode, string> = {
   allReference: "all_reference",
   videoEdit: "video_edit",
   videoExtend: "video_extend",
+  // MiniMax H3 Multishot (2026-10-25) — the frontend genMode and the
+  // backend catalog mode string are the same literal on purpose (see
+  // api/routes/freezone.py's _freezone_dev_media_model_catalog_entries).
+  multishot: "multishot",
 };
 
 /**
@@ -126,7 +130,10 @@ export type VideoModelRef =
       apiModel?: string;
       supportedModes?: string[];
       referenceAudioMax?: number | null;
+      referenceImageMax?: number | null;
       supportsGenerateAudio?: boolean;
+      /** Multishot only — shot-list add/remove bound, see FreezoneVideoModelInfo in api/ops.ts. */
+      maxShots?: number | null;
     }
   | null
   | undefined;
@@ -172,10 +179,51 @@ export function isVideoModeSupportedByModel(
     return mode === "textToVideo" || mode === "firstFrame";
   }
   if (mode === "videoEdit" || mode === "videoExtend") return false;
+  // Multishot is a dedicated backend (runpod_minimax_h3_multishot) that
+  // ONLY ever declares support via a real catalog entry (the `object`
+  // branch above) — there is no legacy/heuristic model this should ever
+  // apply to.
+  if (mode === "multishot") return false;
   if (mode === "allReference" || mode === "firstLastFrame") {
     return isSeedance2VideoModel(modelId);
   }
   return true;
+}
+
+/** True when a model's catalog entry declares ONLY multishot support (e.g. runpod_minimax_h3_multishot) — it has no plain text-to-video of its own. */
+export function isMultishotOnlyModel(model: VideoModelRef): boolean {
+  return (
+    typeof model === "object" &&
+    model !== null &&
+    (model.supportedModes?.length ?? 0) > 0 &&
+    (model.supportedModes ?? []).every((mode) => mode === "multishot")
+  );
+}
+
+/**
+ * The mode a video node should land on right after the user picks `model` —
+ * `"textToVideo"` when the model supports it (every non-multishot model
+ * today), otherwise the first mode the model's own catalog entry declares
+ * (in `MODE_TABS` order). Used by the model-switch handler in
+ * `VideoOperationsPanel.tsx`/`VideoGenerationForm.tsx`, which previously
+ * hardcoded a reset to `"textToVideo"` regardless of what the newly
+ * selected model actually supports — harmless for every model before
+ * multishot (all of them support text-to-video), but would silently land
+ * a multishot-only model on an unsupported mode.
+ */
+export function videoModelDefaultMode(model: VideoModelRef): VideoGenMode {
+  if (isVideoModeSupportedByModel("textToVideo", model)) return "textToVideo";
+  const order: VideoGenMode[] = [
+    "firstFrame",
+    "firstLastFrame",
+    "imageToVideo",
+    "imageReference",
+    "allReference",
+    "videoEdit",
+    "videoExtend",
+    "multishot",
+  ];
+  return order.find((mode) => isVideoModeSupportedByModel(mode, model)) ?? "textToVideo";
 }
 
 /**
@@ -187,7 +235,8 @@ export type VideoEmptyStateCtaMode =
   | "imageReference"
   | "firstFrame"
   | "imageToVideo"
-  | "firstLastFrame";
+  | "firstLastFrame"
+  | "multishot";
 
 /**
  * Mode order of the video node "empty state" CTA — lists only the image / first-last-frame modes the model can **truly start with**:
@@ -206,6 +255,12 @@ export function videoEmptyStateCtaModes(
       "firstFrame",
       "imageReference",
       "firstLastFrame",
+      // Last: a multishot-only model (supportedModes === ["multishot"])
+      // falls through every mode above and would otherwise return [],
+      // which makes videoSubmitMediaRejectionReason/
+      // videoModelReferenceDisabledReason wrongly treat ANY attached
+      // image as unsupported (see their own "imageUnsupported" checks).
+      "multishot",
     ];
     return order.filter((mode) => isVideoModeSupportedByModel(mode, model));
   }
@@ -233,6 +288,11 @@ export function videoUpstreamImageDefaultMode(
       "imageToVideo",
       "firstFrame",
       "imageReference",
+      // Last resort: a multishot-only model has none of the modes above,
+      // but connecting its one required start-frame image should still
+      // land it in the one mode it actually supports, not null (which
+      // would leave the node stuck on an unsupported default).
+      "multishot",
     ] as const) {
       if (isVideoModeSupportedByModel(mode, model)) return mode;
     }
@@ -285,6 +345,11 @@ export function videoNoUpstreamResetMode(
   counts: { images: number; videos: number; audios: number },
 ): VideoGenMode | null {
   if (counts.images > 0 || counts.videos > 0 || counts.audios > 0) return null;
+  // A multishot-only model cannot run text-to-video at all (see
+  // isVideoModeSupportedByModel) — falling back there on an emptied start
+  // frame would strand the node on a mode its own model doesn't support.
+  // Leave it on multishot; the submit guard already requires >=1 image.
+  if (mode === "multishot") return null;
   return mode === "textToVideo" ? null : "textToVideo";
 }
 
@@ -299,7 +364,10 @@ export function videoModelAcceptsMultipleImages(
   if (typeof model === "object" && model !== null && (model.supportedModes?.length ?? 0) > 0) {
     return (
       isVideoModeSupportedByModel("allReference", model) ||
-      isVideoModeSupportedByModel("imageReference", model)
+      isVideoModeSupportedByModel("imageReference", model) ||
+      // Multishot takes one start frame plus up to `referenceImageMax`
+      // shared reference images — a second+ image is always legitimate.
+      isVideoModeSupportedByModel("multishot", model)
     );
   }
   const modelId = videoModelIdOf(model);
@@ -665,6 +733,21 @@ export function videoSubmitMediaRejectionReason(
   if (counts.images > 1 && !videoModelAcceptsMultipleImages(model)) {
     return "node.videoModel.reason.singleImageOnly";
   }
+  if (
+    mode === "multishot" &&
+    counts.images >
+      1 +
+        (typeof model === "object" && model !== null && typeof model.referenceImageMax === "number"
+          ? model.referenceImageMax
+          : 3)
+  ) {
+    // Multishot's "accepts multiple images" (videoModelAcceptsMultipleImages
+    // above) is unconditionally true for this mode — the real cap is 1
+    // start frame + up to referenceImageMax shared references, which the
+    // generic singleImageOnly check (>1 images, model can't do multi) can
+    // never catch here.
+    return "node.videoModel.reason.multishotTooManyImages";
+  }
   return null;
 }
 
@@ -719,6 +802,12 @@ export function videoModelReferenceDisabledReason(
     }
     if (counts.images > 1 && !videoModelAcceptsMultipleImages(model)) {
       return "node.videoModel.reason.singleImageOnly";
+    }
+    if (
+      isVideoModeSupportedByModel("multishot", model) &&
+      counts.images > 1 + (typeof model.referenceImageMax === "number" ? model.referenceImageMax : 3)
+    ) {
+      return "node.videoModel.reason.multishotTooManyImages";
     }
     return null;
   }

@@ -269,6 +269,11 @@ function GenModeSelect({
         allReference: "all_reference",
         videoEdit: "video_edit",
         videoExtend: "video_extend",
+        // Multishot has no tab in this (asset-board) form's own MODE_TABS —
+        // only the canvas VideoOperationsPanel supports it — so this entry
+        // exists purely to satisfy Record<VideoGenMode, string>; it is
+        // never looked up.
+        multishot: "multishot",
       };
       return MODE_TABS.filter((tab) => supportedModes.includes(keyMap[tab.key]));
     }
@@ -970,6 +975,9 @@ function ReferenceMediaRow({
             videoEdit: t("node.videoOps.modes.videoEdit"),
             videoExtend: t("node.videoNode.tabs.videoExtend"),
             allReference: t("node.videoOps.modes.allReference"),
+            // Not reachable from this (asset-board) form — see the
+            // keyMap comment above — kept only to satisfy the lookup type.
+            multishot: t("node.videoNode.tabs.multishot"),
           }[genMode] ?? t("node.videoOps.modes.current");
         const overCapTitle = overCap
           ? t("node.videoOps.overCap", {

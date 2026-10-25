@@ -100,6 +100,8 @@ from novelvideo.api.schemas import (
     FreezoneVideoExtendRequest,
     FreezoneVideoEraseRequest,
     FreezoneVideoGenRequest,
+    FreezoneVideoMultishotRequest,
+    FreezoneVideoMultishotReviewRequest,
     FreezoneVideoOmniGenRequest,
     FreezoneVideoUpscaleRequest,
     ImpactRequest,
@@ -9426,60 +9428,121 @@ def _freezone_dev_media_model_catalog_entries(media_type: str) -> list[dict[str,
             }
         ]
     if media_type == "video":
-        from novelvideo.config import _runpod_h3_video_configured
-        from novelvideo.freezone.video_node import FREEZONE_RUNPOD_H3_BACKEND
+        from novelvideo.config import (
+            RUNPOD_H3_MULTISHOT_MAX_SHOTS,
+            _runpod_h3_multishot_configured,
+            _runpod_h3_video_configured,
+        )
+        from novelvideo.freezone.video_node import (
+            FREEZONE_RUNPOD_H3_BACKEND,
+            FREEZONE_RUNPOD_H3_MULTISHOT_BACKEND,
+        )
+        from novelvideo.generators.runpod_minimax_h3_multishot_video import (
+            MULTISHOT_MAX_UNION_REFERENCES,
+        )
         from novelvideo.video_duration import video_duration_bounds_for_backend
 
-        if not _runpod_h3_video_configured():
-            return []
-        min_duration, max_duration = video_duration_bounds_for_backend(
-            FREEZONE_RUNPOD_H3_BACKEND
-        )
-        return [
-            {
-                "catalogId": FREEZONE_RUNPOD_H3_BACKEND,
-                "catalog_id": FREEZONE_RUNPOD_H3_BACKEND,
-                "id": FREEZONE_RUNPOD_H3_BACKEND,
-                "providerId": "runpod",
-                "provider": "runpod",
-                "apiModel": FREEZONE_RUNPOD_H3_BACKEND,
-                "api_model": FREEZONE_RUNPOD_H3_BACKEND,
-                "gatewayModel": FREEZONE_RUNPOD_H3_BACKEND,
-                "gateway_model": FREEZONE_RUNPOD_H3_BACKEND,
-                "aliases": [FREEZONE_RUNPOD_H3_BACKEND],
-                "label": "MiniMax-H3 (RunPod, dev)",
-                "sortOrder": 500,
-                "request": {"endpoint": "video/generations", "parameters": []},
-                # The generator (generators/runpod_minimax_h3_video.py)
-                # always requires a first-frame image but accepts it as
-                # "the first of N images" rather than a hard lock — a
-                # single image is fl2va (first_frame/image_to_video), 2+
-                # images or an audio reference switch to ref2va
-                # (image_reference), and a 2nd image explicitly flagged
-                # "last frame" is also accepted (first_last_frame). What it
-                # cannot do is take a SOURCE VIDEO to edit or extend — no
-                # video_edit/video_extend/all_reference here, and
-                # referenceVideoMax stays 0 below (2026-10-25, see
-                # .claude/CLAUDE.md).
-                "supportedModes": [
-                    "text_to_video",
-                    "first_frame",
-                    "first_last_frame",
-                    "image_to_video",
-                    "image_reference",
-                ],
-                "ratioOptions": ["16:9", "9:16"],
-                # H3 ignores the `resolution` parameter entirely (fixed
-                # output size) — see `video_node.py`'s
-                # `freezone_video_resolution_options()`.
-                "resolutionOptions": ["auto"],
-                "minDuration": min_duration,
-                "maxDuration": max_duration,
-                "referenceImageMax": 9,
-                "referenceVideoMax": 0,
-                "referenceAudioMax": 3,
-            }
-        ]
+        entries: list[dict[str, Any]] = []
+
+        if _runpod_h3_video_configured():
+            min_duration, max_duration = video_duration_bounds_for_backend(
+                FREEZONE_RUNPOD_H3_BACKEND
+            )
+            entries.append(
+                {
+                    "catalogId": FREEZONE_RUNPOD_H3_BACKEND,
+                    "catalog_id": FREEZONE_RUNPOD_H3_BACKEND,
+                    "id": FREEZONE_RUNPOD_H3_BACKEND,
+                    "providerId": "runpod",
+                    "provider": "runpod",
+                    "apiModel": FREEZONE_RUNPOD_H3_BACKEND,
+                    "api_model": FREEZONE_RUNPOD_H3_BACKEND,
+                    "gatewayModel": FREEZONE_RUNPOD_H3_BACKEND,
+                    "gateway_model": FREEZONE_RUNPOD_H3_BACKEND,
+                    "aliases": [FREEZONE_RUNPOD_H3_BACKEND],
+                    "label": "MiniMax-H3 (RunPod, dev)",
+                    "sortOrder": 500,
+                    "request": {"endpoint": "video/generations", "parameters": []},
+                    # The generator (generators/runpod_minimax_h3_video.py)
+                    # always requires a first-frame image but accepts it as
+                    # "the first of N images" rather than a hard lock — a
+                    # single image is fl2va (first_frame/image_to_video), 2+
+                    # images or an audio reference switch to ref2va
+                    # (image_reference), and a 2nd image explicitly flagged
+                    # "last frame" is also accepted (first_last_frame). What it
+                    # cannot do is take a SOURCE VIDEO to edit or extend — no
+                    # video_edit/video_extend/all_reference here, and
+                    # referenceVideoMax stays 0 below (2026-10-25, see
+                    # .claude/CLAUDE.md).
+                    "supportedModes": [
+                        "text_to_video",
+                        "first_frame",
+                        "first_last_frame",
+                        "image_to_video",
+                        "image_reference",
+                    ],
+                    "ratioOptions": ["16:9", "9:16"],
+                    # H3 ignores the `resolution` parameter entirely (fixed
+                    # output size) — see `video_node.py`'s
+                    # `freezone_video_resolution_options()`.
+                    "resolutionOptions": ["auto"],
+                    "minDuration": min_duration,
+                    "maxDuration": max_duration,
+                    "referenceImageMax": 9,
+                    "referenceVideoMax": 0,
+                    "referenceAudioMax": 3,
+                }
+            )
+
+        if _runpod_h3_multishot_configured():
+            # SEPARATE backend/endpoint from the 1-shot entry above — gated
+            # independently, so either can be present without the other.
+            # `supportedModes` is ONLY "multishot": this backend has no
+            # text_to_video/first_frame/etc of its own (a plain 1-shot
+            # generation belongs on the entry above), and no
+            # video_edit/video_extend/all_reference — the chain takes
+            # exactly one start image total (shot 1), later shots continue
+            # internally; there is no source-video-editing capability at
+            # all (2026-10-25, see `.claude/CLAUDE.md`).
+            min_duration, max_duration = video_duration_bounds_for_backend(
+                FREEZONE_RUNPOD_H3_MULTISHOT_BACKEND
+            )
+            entries.append(
+                {
+                    "catalogId": FREEZONE_RUNPOD_H3_MULTISHOT_BACKEND,
+                    "catalog_id": FREEZONE_RUNPOD_H3_MULTISHOT_BACKEND,
+                    "id": FREEZONE_RUNPOD_H3_MULTISHOT_BACKEND,
+                    "providerId": "runpod",
+                    "provider": "runpod",
+                    "apiModel": FREEZONE_RUNPOD_H3_MULTISHOT_BACKEND,
+                    "api_model": FREEZONE_RUNPOD_H3_MULTISHOT_BACKEND,
+                    "gatewayModel": FREEZONE_RUNPOD_H3_MULTISHOT_BACKEND,
+                    "gateway_model": FREEZONE_RUNPOD_H3_MULTISHOT_BACKEND,
+                    "aliases": [FREEZONE_RUNPOD_H3_MULTISHOT_BACKEND],
+                    "label": "MiniMax-H3 Multishot (RunPod, dev)",
+                    "sortOrder": 501,
+                    "request": {"endpoint": "video/generations", "parameters": []},
+                    "supportedModes": ["multishot"],
+                    "ratioOptions": ["16:9", "9:16"],
+                    "resolutionOptions": ["auto"],
+                    "minDuration": min_duration,
+                    "maxDuration": max_duration,
+                    # Shared references only — the start frame is counted
+                    # separately (not a "reference" in this count).
+                    "referenceImageMax": MULTISHOT_MAX_UNION_REFERENCES,
+                    "referenceVideoMax": 0,
+                    "referenceAudioMax": 0,
+                    # Frontend-only field (not a standard catalog key) —
+                    # `_public_media_model_catalog` passes unknown keys
+                    # through unchanged, so this reaches the shot-list
+                    # editor's add/remove bound directly. Read at request
+                    # time (not baked into the schema's max_length=8) so an
+                    # `.env` change never needs a schema change.
+                    "maxShots": RUNPOD_H3_MULTISHOT_MAX_SHOTS,
+                }
+            )
+
+        return entries
     return []
 
 
@@ -11509,6 +11572,400 @@ async def freezone_video_extend(
         ) from exc
 
 
+async def _prepare_freezone_multishot(
+    body: "FreezoneVideoMultishotReviewRequest",
+    *,
+    ctx: ProjectContext,
+    project_dir: Path,
+) -> tuple["FreezoneMultishotPlan", dict[str, Any] | None]:
+    """Shared resolve/validate logic for both the multishot review and
+    enqueue routes — everything that determines WHAT would be rendered,
+    with none of the "spend an LLM call" (review) or "spend a RunPod job"
+    (enqueue) side effects those routes layer on top. Returns the plan plus
+    the matched catalog entry (for `_catalog_entry_id`)."""
+    from novelvideo.config import RUNPOD_H3_MULTISHOT_MAX_SHOTS
+    from novelvideo.freezone.multishot import (
+        FreezoneMultishotPlan,
+        MultishotShotInput,
+        ResolvedReference,
+        TooManyReferencesError,
+        library_category_to_h3_kind,
+        resolve_shared_references,
+    )
+    from novelvideo.freezone.video_node import (
+        FREEZONE_RUNPOD_H3_MULTISHOT_BACKEND,
+        is_freezone_runpod_h3_multishot_backend,
+    )
+    from novelvideo.generators.runpod_minimax_h3_multishot_video import (
+        dims_for_multishot,
+        frames_for_shot,
+        multishot_sampling_plan,
+    )
+    from novelvideo.video_duration import video_duration_bounds_for_backend
+
+    if not is_freezone_runpod_h3_multishot_backend(body.model):
+        raise HTTPException(
+            400,
+            f"model must be {FREEZONE_RUNPOD_H3_MULTISHOT_BACKEND!r} for multishot generation",
+        )
+
+    try:
+        backend = await _resolve_catalog_video_backend(
+            body.model,
+            requester_user_id=ctx.requester_user_id,
+        )
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    _request_schema, _model_params, capabilities = await _resolve_catalog_request(
+        "video",
+        body.model,
+        body.model_params,
+        mode="multishot",
+        requester_user_id=ctx.requester_user_id,
+    )
+    if _catalog_mode_enabled(capabilities, "multishot") is not True:
+        raise HTTPException(400, "this model does not support multishot mode")
+
+    # The real enforced cap — never baked into the request schema's
+    # max_length=8 (that's only the ComfyUI graph's structural bound) — so
+    # an `.env` change never needs a schema change.
+    if len(body.shots) > RUNPOD_H3_MULTISHOT_MAX_SHOTS:
+        raise HTTPException(
+            400,
+            f"at most {RUNPOD_H3_MULTISHOT_MAX_SHOTS} shots are supported "
+            f"(RUNPOD_H3_MULTISHOT_MAX_SHOTS), got {len(body.shots)}",
+        )
+
+    director_guidance = body.director_guidance.strip()
+    if body.camera_template_id:
+        template = get_video_camera_template(body.camera_template_id)
+        if template is None:
+            raise HTTPException(400, f"unknown camera_template_id: {body.camera_template_id}")
+        fragment = str(template.get("prompt") or "").strip()
+        if fragment:
+            director_guidance = f"{director_guidance} {fragment}".strip()
+
+    start_paths = _resolve_url_list(project_dir, [body.start_image_url])
+    if not start_paths or not Path(start_paths[0]).is_file():
+        raise HTTPException(400, "start_image_url could not be resolved")
+    start_image_path = start_paths[0]
+
+    canvas_refs: list[ResolvedReference] = []
+    for ref in body.reference_images:
+        paths = _resolve_url_list(project_dir, [ref.url])
+        if not paths or not Path(paths[0]).is_file():
+            raise HTTPException(400, f"reference_images url could not be resolved: {ref.url}")
+        canvas_refs.append(
+            ResolvedReference(path=paths[0], url=ref.url, name=ref.name, kind=ref.kind, source="canvas")
+        )
+
+    library_refs: list[ResolvedReference] = []
+    if body.character_ids:
+        library_items = _load_video_character_items_by_ids(project_dir, body.character_ids)
+        for item in library_items:
+            urls = item.get("image_urls") or []
+            if not urls:
+                continue
+            paths = _resolve_url_list(project_dir, [str(urls[0])])
+            if not paths or not Path(paths[0]).is_file():
+                continue
+            library_refs.append(
+                ResolvedReference(
+                    path=paths[0],
+                    url=str(urls[0]),
+                    name=str(item.get("name") or ""),
+                    kind=library_category_to_h3_kind(item.get("category")),
+                    source="library",
+                )
+            )
+
+    try:
+        references = resolve_shared_references(
+            canvas_refs=canvas_refs,
+            library_refs=library_refs,
+            start_image_path=start_image_path,
+        )
+    except TooManyReferencesError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+    from novelvideo.freezone.reference_validation import validate_reference_media
+
+    reference_items = [
+        {"type": "image", "path": start_image_path, "role": "multishot start frame"}
+    ] + [
+        {"type": "image", "path": ref.path, "role": f"multishot reference ({ref.kind})"}
+        for ref in references
+    ]
+    reference_errors = await asyncio.to_thread(
+        validate_reference_media, reference_items, capabilities or {}, project_dir
+    )
+    if reference_errors:
+        raise HTTPException(
+            400, detail={"code": "REFERENCE_MEDIA_INVALID", "errors": reference_errors}
+        )
+
+    checkpoint = "ref2va" if references else "fl2va"
+    sampling = multishot_sampling_plan(checkpoint)
+    width, height = dims_for_multishot(body.aspect_ratio, "formal")
+    shot_min, shot_max = video_duration_bounds_for_backend(FREEZONE_RUNPOD_H3_MULTISHOT_BACKEND)
+    requested_seconds = float(body.shot_duration_seconds)
+    if shot_min is not None:
+        requested_seconds = max(float(shot_min), requested_seconds)
+    if shot_max is not None:
+        requested_seconds = min(float(shot_max), requested_seconds)
+    frames_per_shot = frames_for_shot(requested_seconds, is_dialogue=False)
+    shot_seconds = frames_per_shot / 24.0
+
+    shots = [MultishotShotInput(id=s.id, description=s.description.strip()) for s in body.shots]
+
+    plan = FreezoneMultishotPlan(
+        backend=backend,
+        checkpoint=checkpoint,
+        sampling=sampling,
+        width=width,
+        height=height,
+        frames_per_shot=frames_per_shot,
+        shot_seconds=shot_seconds,
+        start_image_path=start_image_path,
+        start_image_url=body.start_image_url,
+        references=references,
+        shots=shots,
+        director_guidance=director_guidance,
+        aspect_ratio=body.aspect_ratio,
+    )
+    return plan, capabilities
+
+
+@router.post("/projects/{project}/freezone/video/multishot/review", tags=[TAG_FREEZONE_VIDEO])
+async def freezone_video_multishot_review(
+    project: str,
+    body: FreezoneVideoMultishotReviewRequest,
+    user: dict = Depends(get_api_user),
+):
+    """MiniMax H3 Multishot (long continuous video) dry run.
+
+    Resolves the start frame and shared references (canvas-connected
+    images + Character Library picks), computes the chain's sampling plan,
+    and writes a fresh AI-rewritten H3 prompt for EVERY shot — all without
+    enqueuing anything or calling RunPod. Not free (one LLM call per shot)
+    but cheap compared with the GPU job it gates. Call this first, then
+    pass its `input_fingerprint` back as `review_fingerprint` to
+    `/freezone/video/multishot`, along with each shot's (possibly
+    hand-edited) `final_prompt` as `shot_prompts`.
+    """
+    from novelvideo.agents.minimax_h3_prompt_builder import (
+        generate_minimax_h3_prompt_with_fallback,
+    )
+    from novelvideo.config import RUNPOD_H3_MULTISHOT_MAX_SHOTS, _runpod_h3_multishot_configured
+    from novelvideo.freezone.multishot import build_shot_contexts, multishot_input_fingerprint
+
+    ctx, username, project_name, project_dir, output_dir = (
+        await _resolve_freezone_project(project, user, required_role="viewer")
+    )
+
+    plan, _capabilities = await _prepare_freezone_multishot(body, ctx=ctx, project_dir=project_dir)
+    contexts = build_shot_contexts(plan)
+    results = await asyncio.gather(
+        *(
+            generate_minimax_h3_prompt_with_fallback(
+                shot_context,
+                reference_count=len(plan.references) + 1,
+                duration_seconds=plan.shot_seconds,
+                expects_dialogue=False,
+            )
+            for shot_context in contexts
+        )
+    )
+
+    shots_out: list[dict[str, Any]] = []
+    for shot, (result, lint_issues, fallback_used) in zip(plan.shots, results):
+        shots_out.append(
+            {
+                "id": shot.id,
+                "description": shot.description,
+                "prompt": result.final_prompt,
+                "lint": lint_issues,
+                "fallback_used": fallback_used,
+            }
+        )
+
+    worker_status: dict[str, Any] | None = None
+    if _runpod_h3_multishot_configured():
+        try:
+            from novelvideo.runpod_worker_control import get_status
+
+            worker_status = await get_status("multishot")
+        except Exception as exc:  # noqa: BLE001
+            worker_status = {"error": str(exc)}
+
+    issues: list[str] = []
+    if not _runpod_h3_multishot_configured():
+        issues.append("RUNPOD_H3_MULTISHOT_ENDPOINT_ID / RUNPOD_API_KEY / R2_* are not configured")
+    for shot in shots_out:
+        if any(i.get("severity") == "error" for i in shot["lint"]):
+            issues.append(f"shot {shot['id'] or shot['description'][:40]!r} has a prompt lint error")
+
+    fingerprint = multishot_input_fingerprint(plan)
+
+    # Wrapped under "data" (not a flat dict) to match the standard
+    # `{ok, data}` envelope `api/ops.ts`'s `apiCall<T>` unwraps — every
+    # other Freezone video endpoint in ops.ts (including this route's own
+    # enqueue sibling, via `_project_job_response`) follows this
+    # convention. The main-pipeline's analogous review routes
+    # (api/routes/generation.py) return a flat dict instead, but those are
+    # consumed by `lib/queries/*.ts` hooks reading the raw envelope
+    # directly — a different frontend layer this route doesn't use.
+    return {
+        "ok": True,
+        "data": {
+            "backend": plan.backend,
+            "checkpoint": plan.checkpoint,
+            "sampling": plan.sampling,
+            "width": plan.width,
+            "height": plan.height,
+            "frames_per_shot": plan.frames_per_shot,
+            "shot_seconds": round(plan.shot_seconds, 2),
+            "total_duration_seconds": round(plan.shot_seconds * len(plan.shots), 2),
+            "max_shots": RUNPOD_H3_MULTISHOT_MAX_SHOTS,
+            "start_image_url": plan.start_image_url,
+            "references": [
+                {
+                    "tag": f"<Picture {i + 2}>",
+                    "name": r.name,
+                    "kind": r.kind,
+                    "url": r.url,
+                    "source": r.source,
+                }
+                for i, r in enumerate(plan.references)
+            ],
+            "shots": shots_out,
+            "worker_status": worker_status,
+            "issues": issues,
+            "can_enqueue": not issues,
+            "input_fingerprint": fingerprint,
+        },
+    }
+
+
+@router.post("/projects/{project}/freezone/video/multishot", tags=[TAG_FREEZONE_VIDEO])
+async def freezone_video_multishot(
+    project: str,
+    body: FreezoneVideoMultishotRequest,
+    user: dict = Depends(get_api_user),
+):
+    """Enqueue a MiniMax H3 Multishot (long continuous video) job.
+
+    Call `/freezone/video/multishot/review` first and pass its
+    `input_fingerprint` back as `review_fingerprint`, plus each shot's
+    (possibly hand-edited) `final_prompt` as `shot_prompts` — a mismatch
+    means something the review looked at (a shot's description, the start
+    frame, a reference image) changed since, and this returns 409
+    `INPUT_STALE` instead of enqueuing a job that no longer matches what
+    was reviewed (same contract as every other review→enqueue pair in this
+    file / in the main pipeline's own H3 review flows)."""
+    from novelvideo.agents.minimax_h3_prompt_lint import lint_minimax_h3_prompt
+    from novelvideo.config import _runpod_h3_multishot_configured
+    from novelvideo.freezone.multishot import multishot_input_fingerprint
+    from novelvideo.generators.runpod_minimax_h3_multishot_video import (
+        join_shots_script,
+        new_seed,
+    )
+
+    ctx, username, project_name, project_dir, output_dir = (
+        await _resolve_freezone_project(project, user, required_role="editor")
+    )
+    if not _runpod_h3_multishot_configured():
+        raise HTTPException(
+            503, "RUNPOD_H3_MULTISHOT_ENDPOINT_ID / RUNPOD_API_KEY / R2_* are not configured"
+        )
+
+    plan, capabilities = await _prepare_freezone_multishot(body, ctx=ctx, project_dir=project_dir)
+
+    fingerprint = multishot_input_fingerprint(plan)
+    if fingerprint != body.review_fingerprint:
+        raise HTTPException(409, detail={"code": "INPUT_STALE", "input_fingerprint": fingerprint})
+
+    prompts_by_id = {p.id: p.final_prompt for p in body.shot_prompts}
+    if len(body.shot_prompts) != len(plan.shots) or any(
+        shot.id not in prompts_by_id for shot in plan.shots
+    ):
+        raise HTTPException(400, "shot_prompts must line up with shots by id and count")
+
+    lint_errors: list[dict[str, Any]] = []
+    final_prompts: list[str] = []
+    for shot in plan.shots:
+        prompt = prompts_by_id[shot.id]
+        lint = lint_minimax_h3_prompt(
+            prompt,
+            mode=plan.checkpoint,
+            reference_count=len(plan.references) + 1,
+            duration_seconds=plan.shot_seconds,
+            expects_dialogue=False,
+        )
+        lint_errors.extend(
+            {"shot_id": shot.id, "severity": i.severity, "code": i.code, "message": i.message}
+            for i in lint.issues
+            if i.severity == "error"
+        )
+        final_prompts.append(prompt)
+    if lint_errors:
+        raise HTTPException(400, detail={"code": "PROMPT_LINT_FAILED", "issues": lint_errors})
+
+    script = join_shots_script(final_prompts)
+    config = {
+        "script": script,
+        "shot_count": len(plan.shots),
+        "checkpoint": plan.checkpoint,
+        "width": plan.width,
+        "height": plan.height,
+        "frames_per_shot": plan.frames_per_shot,
+        "seed": new_seed(),
+        "start_image_path": plan.start_image_path,
+        "reference_image_paths": [ref.path for ref in plan.references],
+        "sampling": plan.sampling,
+    }
+
+    job_id = _new_job_id()
+    workflow_link = _verified_workflow_media_link(
+        ctx=ctx,
+        project_dir=project_dir,
+        canvas_id=body.canvas_id,
+        node_id=body.node_id,
+        operation_id=body.product_operation_id,
+        attempt_id=body.generation_attempt_id,
+    )
+    payload = {
+        "job_id": job_id,
+        "canvas_id": body.canvas_id or "",
+        "node_id": body.node_id or "",
+        **workflow_link,
+        "model_id": body.model,
+        "catalog_id": _catalog_entry_id(capabilities) or "",
+        "gen_mode": "multishot",
+        "requested_gen_mode": "multishot",
+        "prompt": script,
+        "config": config,
+        "project_dir": str(project_dir),
+        "billing": {},
+    }
+    try:
+        return await _enqueue_claimed_workflow_media(
+            ctx=ctx,
+            project_dir=project_dir,
+            task_type="freezone_video_multishot",
+            queue_kind="video",
+            payload=payload,
+            job_id=job_id,
+        )
+    except RuntimeError as exc:
+        _handle_task_start_runtime_error(
+            "failed to start freezone multishot video task", exc
+        )
+        raise HTTPException(
+            503, f"failed to start freezone multishot video task: {exc}"
+        ) from exc
+
+
 @router.post(
     "/projects/{project}/freezone/video/erase",
     response_model=FreezoneJobAcceptedResponse,
@@ -12259,6 +12716,7 @@ async def freezone_job_result(
         "freezone_analyze",
         "freezone_video_story",
         "freezone_video_gen",
+        "freezone_video_multishot",
         "freezone_mask_edit",
         "freezone_video_erase",
         "freezone_video_upscale",

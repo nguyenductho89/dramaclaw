@@ -124,3 +124,79 @@ def test_video_generate_task_billing_still_sets_feature_key_when_short_circuited
         {"video_backend": "runpod_minimax_h3", "pricing_quantity": 8}
     )
     assert result == {"feature_key": "freezone.video_generate"}
+
+
+# ── MiniMax H3 Multishot (2026-10-25) — SEPARATE backend/endpoint/gate ──────
+# from the 1-shot entry above; see freezone/multishot.py and
+# api/routes/freezone.py's _prepare_freezone_multishot.
+
+
+def _set_runpod_h3_multishot_configured(monkeypatch: "pytest.MonkeyPatch", value: bool) -> None:
+    monkeypatch.setattr(config_module, "_runpod_h3_multishot_configured", lambda: value)
+
+
+def test_multishot_absent_from_options_when_not_configured(monkeypatch):
+    _set_runpod_h3_multishot_configured(monkeypatch, False)
+    names = video_node.get_freezone_video_model_names()
+    assert video_node.FREEZONE_RUNPOD_H3_MULTISHOT_BACKEND not in names
+
+
+def test_multishot_catalog_entry_absent_when_not_configured(monkeypatch):
+    from novelvideo.api.routes import freezone as freezone_routes
+
+    _set_runpod_h3_configured(monkeypatch, False)
+    _set_runpod_h3_multishot_configured(monkeypatch, False)
+    entries = freezone_routes._freezone_dev_media_model_catalog_entries("video")
+    assert entries == []
+
+
+def test_multishot_catalog_entry_present_and_independent_of_1shot_gate(monkeypatch):
+    from novelvideo.api.routes import freezone as freezone_routes
+
+    # 1-shot entry's own gate stays OFF — the multishot entry must still
+    # appear; the two are gated independently.
+    _set_runpod_h3_configured(monkeypatch, False)
+    _set_runpod_h3_multishot_configured(monkeypatch, True)
+    monkeypatch.setattr(config_module, "RUNPOD_H3_MULTISHOT_MAX_SHOTS", 2)
+    entries = freezone_routes._freezone_dev_media_model_catalog_entries("video")
+    assert len(entries) == 1
+    entry = entries[0]
+    assert entry["catalogId"] == video_node.FREEZONE_RUNPOD_H3_MULTISHOT_BACKEND
+    assert entry["providerId"] == "runpod"
+    assert entry["apiModel"] == "runpod_minimax_h3_multishot"
+    assert entry["supportedModes"] == ["multishot"]
+    assert entry["referenceVideoMax"] == 0
+    assert entry["maxShots"] == 2
+
+
+def test_multishot_catalog_entry_reference_image_max_matches_sampler_cap(monkeypatch):
+    from novelvideo.api.routes import freezone as freezone_routes
+    from novelvideo.generators.runpod_minimax_h3_multishot_video import (
+        MULTISHOT_MAX_UNION_REFERENCES,
+    )
+
+    _set_runpod_h3_configured(monkeypatch, False)
+    _set_runpod_h3_multishot_configured(monkeypatch, True)
+    entries = freezone_routes._freezone_dev_media_model_catalog_entries("video")
+    entry = next(e for e in entries if e["catalogId"] == video_node.FREEZONE_RUNPOD_H3_MULTISHOT_BACKEND)
+    assert entry["referenceImageMax"] == MULTISHOT_MAX_UNION_REFERENCES
+
+
+def test_is_freezone_runpod_h3_multishot_backend_predicate():
+    assert video_node.is_freezone_runpod_h3_multishot_backend("runpod_minimax_h3_multishot")
+    assert not video_node.is_freezone_runpod_h3_multishot_backend("runpod_minimax_h3")
+    assert not video_node.is_freezone_runpod_h3_multishot_backend(None)
+    assert not video_node.is_freezone_runpod_h3_multishot_backend("")
+
+
+def test_multishot_video_generate_billing_short_circuits():
+    from novelvideo.api.routes.model_credits import freezone_video_generate_billing_params
+
+    result = freezone_video_generate_billing_params(
+        {
+            "video_backend": "runpod_minimax_h3_multishot",
+            "resolution": "auto",
+            "pricing_quantity": 10,
+        }
+    )
+    assert result == {}

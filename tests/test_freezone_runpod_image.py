@@ -54,6 +54,10 @@ def test_dev_catalog_entry_absent_for_unknown_media_type(monkeypatch):
 
 def test_video_catalog_entry_absent_when_not_configured(monkeypatch):
     monkeypatch.setattr(config_module, "_runpod_h3_video_configured", lambda: False)
+    # Isolate the 1-shot gate from the (separately-gated) Multishot entry
+    # added 2026-10-25 — see test_freezone_runpod_video.py for its own
+    # independent gating tests.
+    monkeypatch.setattr(config_module, "_runpod_h3_multishot_configured", lambda: False)
     entries = freezone_routes._freezone_dev_media_model_catalog_entries("video")
     assert entries == []
 
@@ -65,6 +69,7 @@ def test_video_catalog_entry_present_when_configured(monkeypatch):
     # never actually reached the dropdown on a project with a non-empty
     # video catalog — confirmed via a live API call. See `.claude/CLAUDE.md`.
     monkeypatch.setattr(config_module, "_runpod_h3_video_configured", lambda: True)
+    monkeypatch.setattr(config_module, "_runpod_h3_multishot_configured", lambda: False)
     entries = freezone_routes._freezone_dev_media_model_catalog_entries("video")
     assert len(entries) == 1
     entry = entries[0]

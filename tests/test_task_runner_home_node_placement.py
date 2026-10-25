@@ -41,6 +41,7 @@ PLACEMENT_FREE_TASKS = {
     "freezone_video_compose",
     "freezone_video_erase",
     "freezone_video_gen",
+    "freezone_video_multishot",
     "freezone_video_story",
     "freezone_video_upscale",
     "mainline_director_control_sketch",

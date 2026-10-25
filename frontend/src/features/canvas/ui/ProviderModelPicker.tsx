@@ -65,6 +65,8 @@ export interface ModelOption {
   referenceFileMax?: number | null;
   referenceLinkMax?: number | null;
   referenceFileTypes?: string[];
+  /** Multishot only — shot-list add/remove bound (RUNPOD_H3_MULTISHOT_MAX_SHOTS server-side, read at request time). */
+  maxShots?: number | null;
   referenceAudioMinSeconds?: number | null;
   referenceAudioMaxSeconds?: number | null;
   referenceAudioTotalMinSeconds?: number | null;

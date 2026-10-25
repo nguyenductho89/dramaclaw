@@ -6644,7 +6644,8 @@
         "firstLastFrame": "Khung đầu/cuối",
         "imageReference": "Ảnh tham chiếu",
         "videoEdit": "Sửa video",
-        "videoExtend": "Kéo dài video"
+        "videoExtend": "Kéo dài video",
+        "multishot": "Multishot"
       },
       "placeholder": "Mô tả video bạn muốn tạo.",
       "referenceDocument": {
@@ -6738,7 +6739,8 @@
         "imageReference": "Tham chiếu ảnh",
         "firstFrame": "Video từ khung đầu",
         "imageToVideo": "Ảnh sang video",
-        "firstLastFrame": "Video từ khung đầu & khung cuối"
+        "firstLastFrame": "Video từ khung đầu & khung cuối",
+        "multishot": "Video multishot"
       },
       "spawn": {
         "firstFrame": "Khung đầu",
@@ -6748,7 +6750,8 @@
         "firstFrameGroup": "Nhóm video từ khung đầu",
         "imageToVideoGroup": "Nhóm ảnh sang video",
         "allReferenceGroup": "Nhóm tham chiếu đa năng",
-        "firstLastFrameGroup": "Nhóm video từ khung đầu & khung cuối"
+        "firstLastFrameGroup": "Nhóm video từ khung đầu & khung cuối",
+        "multishotGroup": "Nhóm multishot"
       },
       "clip": {
         "displayName": "Cắt đoạn",
@@ -6873,7 +6876,8 @@
         "maxAudios": "Model này hỗ trợ tối đa {{count}} asset âm thanh",
         "imageUnsupported": "Mô hình này không hỗ trợ ảnh đầu vào. Hãy xoá ảnh hoặc chọn mô hình có hỗ trợ.",
         "modeUnsupported": "Mô hình này không hỗ trợ chế độ tạo đã chọn. Hãy chọn chế độ được hỗ trợ cho node này.",
-        "videoExtendSourceOnly": "Kéo dài video chỉ nhận đúng một video nguồn, không nhận ảnh hoặc âm thanh"
+        "videoExtendSourceOnly": "Kéo dài video chỉ nhận đúng một video nguồn, không nhận ảnh hoặc âm thanh",
+        "multishotTooManyImages": "Quá nhiều ảnh cho multishot: chỉ cho phép 1 khung đầu cộng một số lượng giới hạn ảnh tham chiếu dùng chung"
       }
     },
     "scriptNode": {
@@ -7125,6 +7129,7 @@
         "videoEdit": "Sửa video",
         "videoExtend": "Kéo dài video",
         "allReference": "Tham chiếu đa năng",
+        "multishot": "Multishot",
         "current": "chế độ hiện tại"
       },
       "refKind": {
@@ -7168,7 +7173,36 @@
         "videoUpstreamAllRefOrEdit": "Khi phía trên là video, chỉ dùng được “Tham chiếu đa năng” hoặc “Sửa video”",
         "videoUpstreamAllRefOnly": "Khi phía trên là video, chỉ dùng được “Tham chiếu đa năng”",
         "hasImageOrAudioRefs": "Không dùng được khi đang tham chiếu asset ảnh/âm thanh",
-        "moreThanTwoImages": "Không dùng được khi phía trên có hơn 2 ảnh"
+        "moreThanTwoImages": "Không dùng được khi phía trên có hơn 2 ảnh",
+        "multishotCanvasOnly": "Multishot chỉ dùng được từ video node trên canvas, không phải bảng này"
+      },
+      "multishot": {
+        "startFrameLabel": "Khung đầu",
+        "shotLabel": "Shot {{n}}",
+        "addShot": "Thêm shot",
+        "removeShot": "Xoá shot",
+        "moveUp": "Di chuyển lên",
+        "moveDown": "Di chuyển xuống",
+        "emptyShot": "Mô tả điều xảy ra trong shot này…",
+        "overallDirection": "Định hướng chung (tuỳ chọn) — ghi chú phong cách/không khí áp dụng cho mọi shot",
+        "minShots": "Cần ít nhất {{min}} shot có nội dung",
+        "maxShotsReached": "Server chỉ hỗ trợ tối đa {{max}} shot",
+        "totalDuration": "{{count}} shot × {{seconds}}s",
+        "reviewTitle": "Duyệt MiniMax H3 Multishot",
+        "reviewLoading": "Đang phân giải tham chiếu và viết prompt cho từng shot…",
+        "cancel": "Huỷ",
+        "confirmGenerate": "Xác nhận & Tạo",
+        "costWarning": "{{shots}} shot, ~{{seconds}}s tổng cộng — job RunPod trả phí chạy lâu. Hãy duyệt từng prompt trước khi xác nhận.",
+        "backendLabel": "Checkpoint",
+        "shotsLabel": "Số shot",
+        "shotSecondsLabel": "Giây/shot",
+        "totalSecondsLabel": "Tổng giây",
+        "referencesHeader": "Ảnh tham chiếu dùng chung",
+        "promptsHeader": "Prompt từng shot",
+        "fallbackUsed": "AI viết lại thất bại — đã dùng mẫu cơ bản",
+        "workerOff": "Worker RunPod Multishot đang tắt — hãy bật trước khi tạo.",
+        "startWorker": "Bật worker",
+        "inputStale": "Có thay đổi kể từ lần duyệt trước — hãy duyệt lại trước khi tạo."
       }
     },
     "threeDWorld": {

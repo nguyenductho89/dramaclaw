@@ -415,9 +415,14 @@ def _video_backend_feature_billing_params(params: dict) -> dict:
 
 def freezone_video_generate_billing_params(params: dict) -> dict:
     """Resolve Freezone video generation metadata for quotes and task reservations."""
-    from novelvideo.freezone.video_node import is_freezone_runpod_h3_backend
+    from novelvideo.freezone.video_node import (
+        is_freezone_runpod_h3_backend,
+        is_freezone_runpod_h3_multishot_backend,
+    )
 
-    if is_freezone_runpod_h3_backend(params.get("video_backend")):
+    if is_freezone_runpod_h3_backend(
+        params.get("video_backend")
+    ) or is_freezone_runpod_h3_multishot_backend(params.get("video_backend")):
         # Dev-only backend: runs on the user's own RunPod account, billed
         # directly by RunPod, never through DramaClaw credits — same
         # short-circuit (and the same real crash it fixes: routing this

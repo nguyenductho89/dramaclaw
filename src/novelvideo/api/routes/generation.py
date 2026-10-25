@@ -5640,65 +5640,22 @@ async def _generate_h3_prompt_result(
     duration_seconds: float,
     expects_dialogue: bool,
 ) -> tuple["MiniMaxH3PromptResult", list[dict[str, str]], bool]:
-    """Shared retry/fallback/lint dance for one H3 prompt call, factored
-    out of `generate_minimax_h3_prompt` so the segment (multishot) prompt
-    generator below can reuse it per-shot instead of duplicating it. See
-    that route's docstring for why only an outright failed call is
-    retried."""
+    """Thin alias — the implementation moved to
+    `agents.minimax_h3_prompt_builder.generate_minimax_h3_prompt_with_fallback`
+    (2026-10-25) so `freezone/multishot.py` can reuse the exact same
+    retry/fallback/lint dance per-shot without importing a private helper
+    from this (route) module. Kept as a module-level name here so this
+    module's existing call sites are unchanged."""
     from novelvideo.agents.minimax_h3_prompt_builder import (
-        build_fallback_minimax_h3_prompt,
-        build_minimax_h3_prompt,
+        generate_minimax_h3_prompt_with_fallback,
     )
-    from novelvideo.agents.minimax_h3_prompt_lint import lint_minimax_h3_prompt
 
-    max_llm_attempts = 2
-    result = None
-    last_exc: Exception | None = None
-    retry_context = context
-    for _attempt in range(max_llm_attempts):
-        try:
-            result = await build_minimax_h3_prompt(retry_context)
-            break
-        except Exception as exc:  # noqa: BLE001
-            last_exc = exc
-            retry_context = context.model_copy(
-                update={
-                    "retry_feedback": (
-                        "Your previous attempt failed to produce valid output "
-                        f"at all ({exc}). Follow the schema and every rule "
-                        "exactly this time."
-                    )
-                }
-            )
-            continue
-
-    fallback_used = result is None
-    if fallback_used:
-        result = build_fallback_minimax_h3_prompt(context)
-
-    lint = lint_minimax_h3_prompt(
-        result.final_prompt,
-        mode=context.mode,
+    return await generate_minimax_h3_prompt_with_fallback(
+        context,
         reference_count=reference_count,
         duration_seconds=duration_seconds,
         expects_dialogue=expects_dialogue,
     )
-    lint_issues = [
-        {"severity": i.severity, "code": i.code, "message": i.message} for i in lint.issues
-    ]
-    if fallback_used:
-        lint_issues.insert(
-            0,
-            {
-                "severity": "warning",
-                "code": "fallback_template",
-                "message": (
-                    f"AI generation failed ({last_exc}); the basic template was used instead. "
-                    "Please review and confirm or retry."
-                ),
-            },
-        )
-    return result, lint_issues, fallback_used
 
 
 def _h3_resolve_dialogue(beat: dict, character_map: dict) -> tuple[str, str]:
@@ -5949,8 +5906,15 @@ def _multishot_chain_beats(beats: list[dict], chain_id: str) -> tuple[list[dict]
 #: chain — more entries means more R2 uploads/VRAM per job, and the
 #: segment planner (`agents/segment_planner.py`) is told to keep a
 #: segment's identity count at or below this so review never has to reject
-#: a plan it itself approved.
-MULTISHOT_MAX_UNION_REFERENCES = 3
+#: a plan it itself approved. Defined in `generators.runpod_minimax_h3_
+#: multishot_video` (2026-10-25, it's a property of the sampler/worker, not
+#: of the beat pipeline) — re-exported here so this module's existing
+#: references to the bare name keep working, and so `freezone/multishot.py`
+#: imports the SAME constant from the generator module rather than a
+#: second copy.
+from novelvideo.generators.runpod_minimax_h3_multishot_video import (
+    MULTISHOT_MAX_UNION_REFERENCES,
+)
 
 
 def _multishot_shared_references(

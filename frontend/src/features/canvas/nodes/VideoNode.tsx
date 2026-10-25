@@ -30,6 +30,7 @@ import {
   ArrowUp,
   Camera,
   ChevronDown,
+  Clapperboard,
   Download,
   Film,
   Images,
@@ -200,15 +201,20 @@ import {
   submitFreezoneVideoGen,
   submitFreezoneVideoI2v,
   submitFreezoneVideoKeyframes,
+  submitFreezoneVideoMultishot,
   submitFreezoneVideoOmniGen,
   uploadFreezoneImage,
   uploadFreezoneVideo,
   type FreezoneJobRef,
+  type FreezoneMultishotShotPromptInput,
   type FreezoneVideoAspectRatio,
+  type FreezoneVideoMultishotPayload,
   type FreezoneVideoReferenceItem,
   type FreezoneVideoResolution,
   type FreezoneVideoUpscaleResolution,
 } from "@/api/ops";
+import { ApiError } from "@/api/client";
+import { MultishotReviewDialog } from "@/features/canvas/nodes/multishot/MultishotReviewDialog";
 import {
   awaitTaskCompletion,
   isTaskCancelledError,
@@ -269,6 +275,7 @@ const VIDEO_EMPTY_STATE_CTA_META: Record<
   firstFrame: { Icon: Film, labelKey: "node.videoNode.cta.firstFrame" },
   imageToVideo: { Icon: Film, labelKey: "node.videoNode.cta.imageToVideo" },
   firstLastFrame: { Icon: Layers, labelKey: "node.videoNode.cta.firstLastFrame" },
+  multishot: { Icon: Clapperboard, labelKey: "node.videoNode.cta.multishot" },
 };
 
 // Hard upper limit of upstream reference counts per genMode. The UI uses this table to express the backend field constraints (multi-image / multimodal
@@ -297,6 +304,10 @@ const REFERENCE_CAPS_BY_MODE: Partial<
   videoExtend: { image: 0, video: 1, audio: 0 },
   allReference: { image: 9, video: 3, audio: 3 },
   firstLastFrame: { image: 2, video: 0, audio: 0 },
+  // 1 (structural start frame) + 3 (default shared-reference cap) when the
+  // model's own referenceImageMax isn't loaded yet — referenceCapsForMode
+  // below special-cases the real model-driven total.
+  multishot: { image: 4, video: 0, audio: 0 },
 };
 
 // Fallback tiers used when the admin "Media models" config gives the model no ratio / resolution. On the normal path both
@@ -439,6 +450,19 @@ function referenceCapsForMode(
   const defaults = REFERENCE_CAPS_BY_MODE[mode];
   if (!defaults) return null;
   if (mode === "videoExtend") return defaults;
+  if (mode === "multishot") {
+    // Neither "fully fixed" (FIXED_IMAGE_CAP_BY_MODE) nor "fully
+    // model-driven" (model.referenceImageMax alone) fits: the cap is 1
+    // STRUCTURAL start frame plus the model's own shared-reference max —
+    // referenceImageMax on the multishot catalog entry is the shared-ref
+    // count alone (MULTISHOT_MAX_UNION_REFERENCES server-side), not
+    // counting the start frame.
+    return {
+      image: 1 + (model?.referenceImageMax ?? defaults.image - 1),
+      video: model?.referenceVideoMax ?? defaults.video,
+      audio: model?.referenceAudioMax ?? defaults.audio,
+    };
+  }
   return {
     image: FIXED_IMAGE_CAP_BY_MODE[mode] ?? model?.referenceImageMax ?? defaults.image,
     video: model?.referenceVideoMax ?? defaults.video,
@@ -608,6 +632,16 @@ export const VideoNode = memo(
     const setSelectedNode = useCanvasStore((state) => state.setSelectedNode);
     const [referenceErrors, setReferenceErrors] = useState<ReferenceIssue[]>([]);
     const [referenceErrorsOpen, setReferenceErrorsOpen] = useState(false);
+    // MiniMax H3 Multishot (2026-10-25) — review dialog state. The dialog
+    // owns its own review fetch (modeled on
+    // components/episode/beat-workbench/video-review-dialog.tsx); this node
+    // only supplies the payload to review and consumes the confirmed
+    // result (handleSubmit's "multishot" branch distinguishes "please
+    // review" from "already confirmed" by whether it was called with the
+    // confirmed-data argument — see handleMultishotConfirm below).
+    const [multishotReviewOpen, setMultishotReviewOpen] = useState(false);
+    const [multishotReviewPayload, setMultishotReviewPayload] =
+      useState<FreezoneVideoMultishotPayload | null>(null);
     const isBoxSelecting = useIsBoxSelecting();
     const updateNodeData = useCanvasStore((state) => state.updateNodeData);
     const addDerivedUploadNode = useCanvasStore(
@@ -1310,7 +1344,8 @@ export const VideoNode = memo(
           | "imageReference"
           | "firstFrame"
           | "imageToVideo"
-          | "firstLastFrame",
+          | "firstLastFrame"
+          | "multishot",
       ) => {
         const state = useCanvasStore.getState();
         const self = state.nodes.find((n) => n.id === id);
@@ -1325,7 +1360,11 @@ export const VideoNode = memo(
           mode === "allReference" ||
           mode === "imageReference" ||
           mode === "firstFrame" ||
-          mode === "imageToVideo";
+          mode === "imageToVideo" ||
+          // Multishot's start frame is a single image, same shape as
+          // firstFrame — it's just not locked the same way (later shots
+          // continue from the previous shot's own last frame server-side).
+          mode === "multishot";
         // The two source node kinds have different default sizes (image node 580×360 / upload node 320×350),
         // and the left column's positioning and avoidance must use the actual sizes, otherwise the image node would overlap the video node.
         const FRAME_WIDTH = isSingleImage ? IMAGE_GEN_NODE_WIDTH : 320;
@@ -1410,13 +1449,13 @@ export const VideoNode = memo(
             { x: baseX, y: baseY },
             {
               displayName: t(
-                mode === "firstFrame"
+                mode === "firstFrame" || mode === "multishot"
                   ? "node.videoNode.spawn.firstFrame"
                   : "node.videoNode.spawn.referenceImage",
               ),
             },
           );
-          if (mode === "firstFrame") {
+          if (mode === "firstFrame" || mode === "multishot") {
             addEdgeWithData(newId, id, { keyframeSlot: "first" });
           } else {
             addEdge(newId, id);
@@ -1428,7 +1467,9 @@ export const VideoNode = memo(
                 ? "node.videoNode.spawn.firstFrameGroup"
                 : mode === "imageToVideo"
                   ? "node.videoNode.spawn.imageToVideoGroup"
-                  : "node.videoNode.spawn.allReferenceGroup",
+                  : mode === "multishot"
+                    ? "node.videoNode.spawn.multishotGroup"
+                    : "node.videoNode.spawn.allReferenceGroup",
           );
           state.autoGroupSpawn(id, [newId], { label: groupLabel });
           // Upstream images feed the matching endpoint directly as assets; the mode switches to the one the user clicked, with no prompt prefilled
@@ -2069,6 +2110,21 @@ export const VideoNode = memo(
     const videoBillingRuleMissing =
       retryBillingProbe.error instanceof BillingRuleNotConfiguredError;
     const modelTaskAccess = useModelTaskAccess();
+    // Multishot's own requirement, parallel to (not instead of) the generic
+    // media/prompt checks above: at least 2 non-empty shots, capped at the
+    // model's own maxShots (RUNPOD_H3_MULTISHOT_MAX_SHOTS server-side).
+    const multishotShotCountInvalid =
+      genMode === "multishot" &&
+      (() => {
+        const filled = (data.multishotShots ?? []).filter(
+          (shot) => shot.description.trim().length > 0,
+        );
+        const maxShots =
+          typeof selectedVideoModel === "object" && selectedVideoModel !== null
+            ? (selectedVideoModel.maxShots ?? 8)
+            : 8;
+        return filled.length < 2 || filled.length > maxShots;
+      })();
     const submitDisabled =
       isGenerating ||
       videoBillingRuleMissing ||
@@ -2076,13 +2132,24 @@ export const VideoNode = memo(
       !selectedVideoModel ||
       selectedModelReferenceError !== null ||
       mediaRejectionReason != null ||
+      multishotShotCountInvalid ||
       // Prompt and assets are **two parallel** requirements, not either-or: all reference needs both (the backend strongly validates
       // the prompt, and the omni endpoint has no assets to send). When written as a ternary, all reference looked only at the prompt, and once assets were emptied the
       // button stayed clickable, and clicking it was silently blocked by handleSubmit's references.length === 0.
       (videoModeRequiresPrompt(genMode) && !hasPromptText) ||
       (videoModeRequiresMedia(genMode) && !hasRequiredMediaForMode);
 
-    const handleSubmit = useCallback(async () => {
+    const handleSubmit = useCallback(async (
+      // Only ever passed by handleMultishotConfirm, right after it writes
+      // the dialog's confirmed prompts/fingerprint — passed as a direct
+      // argument (not read back from `data`) because updateNodeData's
+      // write is not guaranteed visible in THIS render's `data` closure by
+      // the time this function runs again synchronously afterward.
+      multishotConfirmed?: {
+        shotPrompts: FreezoneMultishotShotPromptInput[];
+        reviewFingerprint: string;
+      },
+    ) => {
       if (submitDisabled) return;
       // In-flight guard (consistent with ImageGenNode): the first completion clears isGenerating,
       // and submitDisabled cannot stop "resubmitting while N-1 tasks of the old batch are still running" — the old closure
@@ -2567,6 +2634,112 @@ export const VideoNode = memo(
               canvasId,
               nodeId: targetId,
             });
+        } else if (genMode === "multishot") {
+          // MiniMax H3 Multishot — first upstream image (by reference
+          // order, promoted if explicitly slotted "first") is the start
+          // frame; the rest are shared references, capped at the model's
+          // own referenceImageMax. Names come from each upstream node's
+          // displayName (library-spawned reference nodes already carry
+          // the item's name) — this directly becomes each reference's
+          // <Picture N> label server-side.
+          const upstream = collectUpstream();
+          const state = useCanvasStore.getState();
+          type MultishotImageCandidate = { url: string; name: string; isFirstSlot: boolean };
+          const images: MultishotImageCandidate[] = [];
+          for (const node of upstream) {
+            const url = submittableImageUrl(node);
+            if (!url) continue;
+            const edge = state.edges.find(
+              (candidate) => candidate.source === node.id && candidate.target === id,
+            );
+            images.push({
+              url,
+              name:
+                typeof (node.data as { displayName?: unknown }).displayName === "string"
+                  ? ((node.data as { displayName?: string }).displayName ?? "")
+                  : "",
+              isFirstSlot: edge?.data?.keyframeSlot === "first",
+            });
+          }
+          const firstSlotIndex = images.findIndex((img) => img.isFirstSlot);
+          if (firstSlotIndex > 0) {
+            const [promoted] = images.splice(firstSlotIndex, 1);
+            images.unshift(promoted);
+          }
+          const [startImage, ...referenceImages] = images;
+          if (!startImage) {
+            console.warn("[video-node] multishot submit without a start frame");
+            updateNodeData(id, { isGenerating: false, generationStartedAt: null });
+            return;
+          }
+          const filledShots = (data.multishotShots ?? []).filter(
+            (shot) => shot.description.trim().length > 0,
+          );
+          if (filledShots.length < 2) {
+            console.warn("[video-node] multishot submit with fewer than 2 shots");
+            updateNodeData(id, { isGenerating: false, generationStartedAt: null });
+            return;
+          }
+          const maxRefs =
+            typeof selectedVideoModel === "object" && selectedVideoModel !== null
+              ? (selectedVideoModel.referenceImageMax ?? 3)
+              : 3;
+          const normalizedAspectRatio: "16:9" | "9:16" =
+            aspectRatio === "16:9" ? "16:9" : "9:16";
+          const multishotPayload: FreezoneVideoMultishotPayload = {
+            model: selectedVideoModel?.catalogId ?? modelId,
+            startImageUrl: startImage.url,
+            referenceImages: referenceImages.slice(0, maxRefs).map((ref) => ({
+              url: ref.url,
+              name: ref.name,
+            })),
+            shots: filledShots.map((shot) => ({ id: shot.id, description: shot.description })),
+            // The node's own prompt box doubles as "overall direction" in
+            // this mode (see the shared tabs panel) — the camera-movement
+            // fragment is folded in the same way other modes do.
+            directorGuidance: [cameraMovementPreset?.promptFragment, trimmedPrompt]
+              .filter((part): part is string => Boolean(part && part.length > 0))
+              .join(", "),
+            cameraTemplateId,
+            aspectRatio: normalizedAspectRatio,
+            shotDurationSeconds: durationSec,
+            canvasId,
+            nodeId: id,
+            modelParams: data.modelParams,
+          };
+
+          if (!multishotConfirmed) {
+            // First pass: open the review dialog, which does its own
+            // review fetch and hands back the confirmed fingerprint +
+            // (possibly edited) prompts via onConfirm below — this call
+            // ends here without ever assembling doSubmit.
+            setMultishotReviewPayload(multishotPayload);
+            setMultishotReviewOpen(true);
+            updateNodeData(id, { isGenerating: false, generationStartedAt: null });
+            return;
+          }
+          const { shotPrompts, reviewFingerprint } = multishotConfirmed;
+          doSubmit = async (targetId) => {
+            try {
+              return await submitFreezoneVideoMultishot(projectId, {
+                ...multishotPayload,
+                nodeId: targetId,
+                reviewFingerprint,
+                shotPrompts,
+              });
+            } catch (error) {
+              if (error instanceof ApiError && error.status === 409) {
+                // Something the review looked at changed since (a shot
+                // description, the start frame, a reference) — clear the
+                // stale fingerprint so the next Generate click reviews
+                // fresh instead of retrying with inputs the backend
+                // already rejected.
+                updateNodeData(id, { multishotReviewFingerprint: null });
+                toast.error(t("node.videoOps.multishot.inputStale"));
+              }
+              throw error;
+            }
+          };
         } else {
           // textToVideo (default).
           doSubmit = (targetId) =>
@@ -2597,7 +2770,10 @@ export const VideoNode = memo(
         // Multiple generations no longer clone sibling nodes: N tasks run concurrently and all backfill the current node's
         // generationBatch (stacked-card album, consistent with the image node). The first one to finish is set as the main video,
         // and the rest are appended one by one.
-        const total = Math.min(Math.max(count, 1), 4);
+        // Multishot is always exactly 1 job — a long-running paid RunPod
+        // chain, never a "generate N variants" candidate like every other
+        // mode — regardless of whatever `count` the node happens to carry.
+        const total = genMode === "multishot" ? 1 : Math.min(Math.max(count, 1), 4);
         // Concurrent tasks finish in no fixed order, so accumulate the completed URLs locally and write back the whole group (avoiding read-modify-write races).
         const completedUrls: string[] = [];
         // Collect each sub-task's failure and leave it until the whole batch settles to decide uniformly whether to show an error dialog — avoiding
@@ -2804,6 +2980,7 @@ export const VideoNode = memo(
       data.referenceFileUrl,
       data.referenceLink,
       data.referenceOrder,
+      data.multishotShots,
       durationBounds,
       durationSec,
       generateAudio,
@@ -2824,6 +3001,35 @@ export const VideoNode = memo(
       upstreamTextJoined,
       upstreamContents,
     ]);
+
+    // MiniMax H3 Multishot — fired by the review dialog's Confirm button.
+    // Persists the (possibly edited) prompts on the node (for history/
+    // redisplay only) and re-invokes handleSubmit, passing the confirmed
+    // data as a direct argument rather than relying on the just-written
+    // `data` prop being visible yet — that second pass assembles the real
+    // doSubmit and falls through to the SAME job-tracking logic every
+    // other mode already uses.
+    const handleMultishotConfirm = useCallback(
+      (confirmed: {
+        shotPrompts: FreezoneMultishotShotPromptInput[];
+        reviewFingerprint: string;
+      }) => {
+        setMultishotReviewOpen(false);
+        const promptById = new Map(
+          confirmed.shotPrompts.map((p) => [p.id, p.finalPrompt] as const),
+        );
+        updateNodeData(id, {
+          multishotShots: (data.multishotShots ?? []).map((shot) =>
+            promptById.has(shot.id)
+              ? { ...shot, finalPrompt: promptById.get(shot.id) ?? null }
+              : shot,
+          ),
+          multishotReviewFingerprint: confirmed.reviewFingerprint,
+        });
+        void handleSubmit(confirmed);
+      },
+      [data.multishotShots, handleSubmit, id, updateNodeData],
+    );
 
     useEffect(() => {
       return subscribeNodeAction(({ nodeId, action, executionMode, requestId }) => {
@@ -2999,6 +3205,15 @@ export const VideoNode = memo(
         onDragOver={handleDragOver}
       >
         <ReferenceValidationDialog issues={referenceErrors} open={referenceErrorsOpen} onClose={() => setReferenceErrorsOpen(false)} />
+        {multishotReviewPayload && (
+          <MultishotReviewDialog
+            open={multishotReviewOpen}
+            onOpenChange={setMultishotReviewOpen}
+            project={readUrl().project ?? ""}
+            reviewPayload={multishotReviewPayload}
+            onConfirm={handleMultishotConfirm}
+          />
+        )}
         {referenceErrors.length > 0 && <button type="button" className="tap-button nodrag absolute -top-10 left-0" onClick={(event) => {
           event.stopPropagation(); setReferenceErrorsOpen(true);
         }}>{t("referenceValidation.title")}</button>}

@@ -281,9 +281,24 @@ const SHORT_TASK_TYPES = new Set([
   "freezone_image_reverse_prompt",
 ]);
 
+/**
+ * MiniMax H3 Multishot (`freezone_video_multishot`) can legitimately run up
+ * to `RUNPOD_H3_MULTISHOT_TIMEOUT_SECONDS` (~3.9h server-side) with NO
+ * progress update in between — `run_h3_multishot_job`
+ * (generators/runpod_minimax_h3_multishot_video.py) only calls its log
+ * callback at submit, on entering IN_PROGRESS, and at completion/error, not
+ * on every 5s status poll. `LONG_JOB_MAX_POLL_MS` (35min "silence" budget)
+ * would make the frontend give up and report a still-running job as failed
+ * well before it could possibly finish.
+ */
+export const MULTISHOT_MAX_POLL_MS = 4.5 * 60 * 60 * 1000;
+
 export function pollTimeoutForTaskType(taskType: string | null | undefined): number {
   if (taskType && SHORT_TASK_TYPES.has(taskType)) {
     return DEFAULT_MAX_POLL_MS;
+  }
+  if (taskType === "freezone_video_multishot") {
+    return MULTISHOT_MAX_POLL_MS;
   }
   return LONG_JOB_MAX_POLL_MS;
 }

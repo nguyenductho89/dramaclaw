@@ -394,6 +394,7 @@ export interface FreezoneJobRef {
     | "freezone_video_gen"
     | "freezone_video_omni_gen"
     | "freezone_video_i2v"
+    | "freezone_video_multishot"
     | "freezone_video_erase"
     | "freezone_video_compose"
     | "freezone_video_upscale"
@@ -787,6 +788,148 @@ export async function submitFreezoneVideoExtend(
         gen_mode: payload.genMode,
         human_review: payload.humanReview ?? false,
         ...nodeContextBody(payload),
+      },
+    },
+  );
+}
+
+// /freezone/video/multishot ------------------------------------------------ //
+// MiniMax H3 Multishot (long continuous video, 2026-10-25): a dedicated
+// pair of endpoints (review → enqueue), not routed through
+// `_start_or_enqueue_freezone_video_gen`/`create_video_generator` like
+// every other video mode above — the backend needs a whole chain's worth
+// of shots in one call, not one prompt/one call. See freezone/multishot.py.
+
+export interface FreezoneMultishotShotInput {
+  id: string;
+  /** User's own freeform visual description — becomes `visual_description` server-side. */
+  description: string;
+}
+
+export interface FreezoneMultishotReferenceImageInput {
+  url: string;
+  name?: string;
+  kind?: "character" | "scene" | "prop";
+}
+
+export interface FreezoneMultishotShotReviewResult {
+  id: string;
+  description: string;
+  /** AI-rewritten (or no-LLM-fallback) H3 prompt for this shot. */
+  prompt: string;
+  lint: Array<{ severity: "error" | "warning"; code: string; message: string }>;
+  fallback_used: boolean;
+}
+
+export interface FreezoneMultishotReferenceReview {
+  tag: string;
+  name: string;
+  kind: string;
+  url: string;
+  source: "canvas" | "library";
+}
+
+export interface FreezoneVideoMultishotReviewResult {
+  backend: string;
+  checkpoint: "fl2va" | "ref2va";
+  sampling: Record<string, unknown>;
+  width: number;
+  height: number;
+  frames_per_shot: number;
+  shot_seconds: number;
+  total_duration_seconds: number;
+  max_shots: number;
+  start_image_url: string;
+  references: FreezoneMultishotReferenceReview[];
+  shots: FreezoneMultishotShotReviewResult[];
+  worker_status: Record<string, unknown> | null;
+  issues: string[];
+  can_enqueue: boolean;
+  input_fingerprint: string;
+}
+
+/** Common fields shared by the review request and the enqueue request. */
+export interface FreezoneVideoMultishotPayload extends FreezoneNodeContext {
+  /** Must be the Freezone MiniMax H3 Multishot backend id, from /freezone/video/models. */
+  model: string;
+  /** Static URL of the chain's single start frame (shot 1 only). */
+  startImageUrl: string;
+  /** Canvas-connected shared reference images (0-3, capped server-side). */
+  referenceImages?: FreezoneMultishotReferenceImageInput[];
+  /** Video character library entry ids, used as additional shared reference images. */
+  characterIds?: string[];
+  /** Ordered shot list, 2-8 entries (see FreezoneMultishotShotInput). */
+  shots: FreezoneMultishotShotInput[];
+  /** Optional overall direction applied to every shot (style/mood notes). */
+  directorGuidance?: string;
+  cameraTemplateId?: string | null;
+  aspectRatio: "16:9" | "9:16";
+  /** Seconds per shot before snapping to H3's frame grid; applies to every shot. */
+  shotDurationSeconds?: number;
+}
+
+function multishotRequestBody(payload: FreezoneVideoMultishotPayload): Record<string, unknown> {
+  return {
+    model: payload.model,
+    gen_mode: "multishot",
+    start_image_url: payload.startImageUrl,
+    reference_images: (payload.referenceImages ?? []).map((ref) => ({
+      url: ref.url,
+      name: ref.name ?? "",
+      kind: ref.kind ?? "character",
+    })),
+    character_ids: payload.characterIds ?? [],
+    shots: payload.shots.map((shot) => ({ id: shot.id, description: shot.description })),
+    director_guidance: payload.directorGuidance ?? "",
+    camera_template_id: payload.cameraTemplateId ?? null,
+    aspect_ratio: payload.aspectRatio,
+    shot_duration_seconds: payload.shotDurationSeconds ?? 6,
+    ...nodeContextBody(payload),
+  };
+}
+
+/**
+ * Dry-run review: resolves the start frame + shared references, computes
+ * the chain's sampling plan, and writes a fresh AI-rewritten H3 prompt for
+ * every shot — no enqueue, no RunPod call (but not free: one LLM call per
+ * shot). Call this first; pass its `input_fingerprint` back as
+ * `reviewFingerprint` to {@link submitFreezoneVideoMultishot}, along with
+ * each shot's (possibly hand-edited) prompt as `shotPrompts`.
+ */
+export async function reviewFreezoneVideoMultishot(
+  project: string,
+  payload: FreezoneVideoMultishotPayload,
+): Promise<FreezoneVideoMultishotReviewResult> {
+  return await apiCall<FreezoneVideoMultishotReviewResult>(
+    `projects/${encodeURIComponent(project)}/freezone/video/multishot/review`,
+    { method: "POST", json: multishotRequestBody(payload) },
+  );
+}
+
+export interface FreezoneMultishotShotPromptInput {
+  id: string;
+  finalPrompt: string;
+}
+
+export interface FreezoneVideoMultishotSubmitPayload extends FreezoneVideoMultishotPayload {
+  /** From the matching review call's `input_fingerprint` — a mismatch returns HTTP 409 `INPUT_STALE`. */
+  reviewFingerprint: string;
+  /** One entry per shot, by id — normally the review's own `prompt` verbatim; may be hand-edited (re-linted server-side). */
+  shotPrompts: FreezoneMultishotShotPromptInput[];
+}
+
+export async function submitFreezoneVideoMultishot(
+  project: string,
+  payload: FreezoneVideoMultishotSubmitPayload,
+): Promise<FreezoneJobRef> {
+  return await apiCall<FreezoneJobRef>(
+    `projects/${encodeURIComponent(project)}/freezone/video/multishot`,
+    {
+      method: "POST",
+      json: {
+        ...multishotRequestBody(payload),
+        review_fingerprint: payload.reviewFingerprint,
+        shot_prompts: payload.shotPrompts.map((p) => ({ id: p.id, final_prompt: p.finalPrompt })),
       },
     },
   );
@@ -1476,6 +1619,8 @@ export interface FreezoneVideoModelInfo extends ReferenceMediaLimits {
   referenceFileMax?: number | null;
   referenceLinkMax?: number | null;
   referenceFileTypes?: string[];
+  /** Multishot only — shot-list add/remove bound (RUNPOD_H3_MULTISHOT_MAX_SHOTS server-side, read at request time). */
+  maxShots?: number | null;
   referenceAudioMinSeconds?: number | null;
   referenceAudioMaxSeconds?: number | null;
   referenceAudioTotalMinSeconds?: number | null;
@@ -1566,6 +1711,7 @@ function videoModelEntryFromObject(
     referenceFileMax: pickNumber(entry, "referenceFileMax", "reference_file_max"),
     referenceLinkMax: pickNumber(entry, "referenceLinkMax", "reference_link_max"),
     referenceFileTypes: pickStringArray(entry, "referenceFileTypes", "reference_file_types"),
+    maxShots: pickNumber(entry, "maxShots", "max_shots"),
     referenceAudioMinSeconds: pickNumber(
       entry,
       "referenceAudioMinSeconds",
@@ -2381,6 +2527,7 @@ export async function fetchFreezoneJobResult(
     | "freezone_video_gen"
     | "freezone_video_omni_gen"
     | "freezone_video_i2v"
+    | "freezone_video_multishot"
     | "freezone_video_erase"
     | "freezone_video_compose"
     | "freezone_video_upscale"

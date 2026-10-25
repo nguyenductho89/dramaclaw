@@ -34,6 +34,12 @@ MODE_ALIASES = {
     "videoExtend": "video_extend",
     "videoUpscale": "video_upscale",
     "videoFrameRate": "video_frame_rate",
+    # MiniMax H3 Multishot (long continuous video, 2026-10-25) — Freezone's
+    # catalog entry for `runpod_minimax_h3_multishot` declares this as its
+    # only `supportedModes` entry; the UI genMode and the catalog mode
+    # string are the same name on purpose, so the alias is identity but
+    # still listed for discoverability alongside the others here.
+    "multishot": "multishot",
 }
 MEDIA_MODEL_MODES = {
     "text_to_video",
@@ -46,6 +52,7 @@ MEDIA_MODEL_MODES = {
     "video_extend",
     "video_upscale",
     "video_frame_rate",
+    "multishot",
 }
 PARAMETER_MODES = MEDIA_MODEL_MODES | {
     "text_to_image",

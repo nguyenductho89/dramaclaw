@@ -1441,6 +1441,95 @@ class FreezoneVideoEditRequest(FreezoneWorkflowMediaLink):
     model_params: dict[str, Any] = Field(default_factory=dict)
 
 
+class FreezoneMultishotShot(BaseModel):
+    """One shot's raw, user-authored visual description — before any AI
+    rewriting. `id` is a client-generated id, echoed back in the review
+    response so the frontend can line up prompts/lint per row without
+    relying on array order alone."""
+
+    id: str = Field(default="", max_length=64)
+    description: str = Field(min_length=1, max_length=2000)
+
+
+class FreezoneMultishotReferenceImage(BaseModel):
+    """One canvas-connected shared reference image. `kind` mirrors
+    `MiniMaxH3Reference.kind` (agents/minimax_h3_prompt_builder.py) minus
+    "first_frame"/"voice" (not applicable to a shared reference)."""
+
+    url: str = Field(min_length=1, max_length=2048)
+    name: str = Field(default="", max_length=80)
+    kind: Literal["character", "scene", "prop"] = "character"
+
+
+class FreezoneVideoMultishotReviewRequest(FreezoneWorkflowMediaLink):
+    """MiniMax H3 Multishot (long continuous video) dry-run review.
+
+    No enqueue, no RunPod call — but DOES call the H3 prompt rewriter LLM
+    once per shot, so it is cheap but not free (see the route docstring).
+    Shared references come from BOTH canvas-connected image nodes
+    (`reference_images`) and the Character Library (`character_ids`),
+    unioned and capped at `MULTISHOT_MAX_UNION_REFERENCES` by
+    `freezone.multishot.resolve_shared_references`.
+    """
+
+    model: str = Field(
+        default="runpod_minimax_h3_multishot",
+        description="Must be the Freezone MiniMax H3 Multishot backend id, from /freezone/video/models",
+    )
+    gen_mode: Literal["multishot"] = Field(default="multishot")
+    start_image_url: str = Field(
+        min_length=1, max_length=2048, description="Static URL of the chain's single start frame (shot 1 only)"
+    )
+    reference_images: list[FreezoneMultishotReferenceImage] = Field(
+        default_factory=list,
+        max_length=3,
+        description="Canvas-connected shared reference images (identity/scene/prop)",
+    )
+    character_ids: list[str] = Field(
+        default_factory=list,
+        max_length=3,
+        description="Video character library entry ids, used as additional shared reference images",
+    )
+    shots: list[FreezoneMultishotShot] = Field(
+        min_length=2,
+        max_length=8,
+        description=(
+            "Ordered shot list, 2-8 entries (8 is the ComfyUI graph's structural bound; the real "
+            "enforced cap is RUNPOD_H3_MULTISHOT_MAX_SHOTS, read at request time — a single-shot "
+            "chain is pointless, use the plain MiniMax H3 1-shot mode instead)"
+        ),
+    )
+    director_guidance: str = Field(
+        default="", max_length=2000, description="Optional overall direction applied to every shot (style/mood notes)"
+    )
+    camera_template_id: Optional[str] = Field(default=None, description="Camera-move template id")
+    aspect_ratio: Literal["16:9", "9:16"] = Field(default="9:16")
+    shot_duration_seconds: int = Field(
+        default=6, ge=5, le=12, description="Seconds per shot before snapping to H3's frame grid; applies to every shot"
+    )
+    canvas_id: str = Field(default="", description="Optional: source canvas id, used to record node generation history")
+    node_id: str = Field(default="", description="Optional: source node id, used to record node generation history")
+    model_params: dict[str, Any] = Field(default_factory=dict)
+
+
+class FreezoneMultishotShotPrompt(BaseModel):
+    """One shot's AI-rewritten (or hand-edited) final H3 prompt, as
+    returned by the review route and sent back to the enqueue route."""
+
+    id: str = Field(default="", max_length=64)
+    final_prompt: str = Field(min_length=1, max_length=20000)
+
+
+class FreezoneVideoMultishotRequest(FreezoneVideoMultishotReviewRequest):
+    """MiniMax H3 Multishot enqueue — same inputs as the review request,
+    plus the review's fingerprint (must match exactly, or this is rejected
+    as stale) and the final prompt per shot (normally the review's own
+    output, verbatim; may be hand-edited)."""
+
+    review_fingerprint: str = Field(min_length=8, max_length=64)
+    shot_prompts: list[FreezoneMultishotShotPrompt] = Field(min_length=2, max_length=8)
+
+
 class FreezoneVideoExtendRequest(BaseModel):
     """Video extension request. Takes one source video and continues generating the specified duration from its end."""
 

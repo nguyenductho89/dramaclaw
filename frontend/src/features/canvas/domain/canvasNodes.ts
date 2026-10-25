@@ -123,11 +123,39 @@ export type VideoGenMode =
   | 'firstLastFrame'
   | 'imageReference'
   | 'videoEdit'
-  | 'videoExtend';
+  | 'videoExtend'
+  /**
+   * MiniMax H3 Multishot (long continuous video, 2026-10-25) — chains an
+   * ordered list of shots (text only; no per-shot image, see
+   * {@link VideoMultishotShot}) into ONE continuous output video, starting
+   * from a single upstream "start frame" image plus up to N shared
+   * reference images. Only shown for a model whose catalog entry declares
+   * `supportedModes: ["multishot"]` — see videoModelCapabilities.ts.
+   */
+  | 'multishot';
 
 export type VideoGenQuality = string;
 export type VideoGenCount = 1 | 2 | 4;
 export type Seedance2SceneOptimize = 'anime' | 'realistic';
+
+/**
+ * One shot in a {@link VideoNodeData.multishotShots} list — raw,
+ * user-authored visual text before any AI rewriting, plus the result of
+ * the last `/freezone/video/multishot/review` call for that shot (if any).
+ * `id` is client-generated (see `generateFrameId` in StoryboardGenNode.tsx
+ * for the established pattern) and is how shot rows line up with the
+ * review response and the final `shot_prompts` sent to the enqueue route —
+ * never array order alone, since rows can be reordered/removed.
+ */
+export interface VideoMultishotShot {
+  id: string;
+  /** User's own freeform visual description — becomes `visual_description` server-side (see freezone/multishot.py). */
+  description: string;
+  /** AI-rewritten (or hand-edited) H3 prompt from the last review call. Null until reviewed. */
+  finalPrompt?: string | null;
+  lint?: Array<{ severity: 'error' | 'warning'; code: string; message: string }>;
+  fallbackUsed?: boolean;
+}
 
 export interface VideoNodeData extends NodeDisplayData {
   videoUrl: string | null;
@@ -182,6 +210,12 @@ export interface VideoNodeData extends NodeDisplayData {
   count?: VideoGenCount;
   /** id of a [[cameraMovementPresets]] entry — libtv-style camera movement preset. */
   cameraMovement?: string | null;
+  // MiniMax H3 Multishot (2026-10-25) ----------------------------------------
+  /** Ordered shot list for `genMode === 'multishot'`. `prompt` above doubles as the node's overall "director guidance" in this mode. */
+  multishotShots?: VideoMultishotShot[];
+  /** Fingerprint from the last `/freezone/video/multishot/review` call — must match at submit time or the backend returns 409 `INPUT_STALE`. */
+  multishotReviewFingerprint?: string | null;
+  multishotReviewedAt?: string | null;
   /**
    * Upstream reference order manually adjusted by dragging (list of upstream node ids). Decides the display order of reference chips,
    * the "Image N / Audio N" numbering, and the reference / first-last-frame order submitted to the backend. Upstream nodes not listed

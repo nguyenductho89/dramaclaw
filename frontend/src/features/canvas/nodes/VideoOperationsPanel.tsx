@@ -37,6 +37,7 @@ import {
   type VideoGenCount,
   type VideoGenMode,
   type VideoGenQuality,
+  type VideoMultishotShot,
   type VideoNodeData,
 } from "@/features/canvas/domain/canvasNodes";
 import { formatResolutionLabel } from "@/features/canvas/domain/mediaModelOptions";
@@ -45,6 +46,7 @@ import {
   isVideoModeSupportedByModel,
   videoModeForcesAutomaticAspectRatio,
   videoModelDefaultGenerateAudio,
+  videoModelDefaultMode,
   videoModelReferenceDisabledReason,
 } from "@/features/canvas/nodes/shared/videoModelCapabilities";
 import { resolveImageDisplayUrl } from "@/features/canvas/application/imageData";
@@ -71,6 +73,7 @@ import {
 } from "@/features/canvas/nodes/contextPromptPalette";
 import { PanelExpandButton } from "@/features/canvas/ui/PanelExpandButton";
 import { OperationPanelShell } from "@/features/canvas/ui/OperationPanelShell";
+import { MultishotShotListEditor } from "@/features/canvas/nodes/multishot/MultishotShotListEditor";
 import {
   CANVAS_NODE_INPUT_PLACEHOLDER_CLASS,
   CANVAS_NODE_OPS_PANEL_CLASS,
@@ -149,6 +152,15 @@ const MODE_TABS: ReadonlyArray<{ key: VideoGenMode; labelKey: string }> = [
   { key: "imageReference", labelKey: "node.videoNode.tabs.imageReference" },
   { key: "videoEdit", labelKey: "node.videoNode.tabs.videoEdit" },
   { key: "videoExtend", labelKey: "node.videoNode.tabs.videoExtend" },
+  { key: "multishot", labelKey: "node.videoNode.tabs.multishot" },
+];
+
+// Seeded once a node first enters multishot mode with no shots saved yet
+// (module-level so the ids stay stable across re-renders until the user's
+// first real edit persists a real `multishotShots` array onto the node).
+const DEFAULT_MULTISHOT_SHOTS: VideoMultishotShot[] = [
+  { id: "shot-default-1", description: "" },
+  { id: "shot-default-2", description: "" },
 ];
 
 // HappyHorse entry order: text-to-video → first frame → image-to-video → image reference → video edit.
@@ -958,12 +970,39 @@ export function VideoOperationsPanel({
                 getMaterials={getMentionMaterials}
                 onAttachMaterial={handleAttachMaterial}
                 placeholder={
-                  upstreamTextJoined.length > 0
-                    ? t("node.videoOps.upstreamPlaceholder")
-                    : t("node.videoNode.placeholder")
+                  genMode === "multishot"
+                    ? t("node.videoOps.multishot.overallDirection")
+                    : upstreamTextJoined.length > 0
+                      ? t("node.videoOps.upstreamPlaceholder")
+                      : t("node.videoNode.placeholder")
                 }
-                className={`nodrag nowheel min-h-0 w-full flex-1 overflow-y-auto whitespace-pre-wrap break-words border-none bg-transparent px-3 py-2 text-sm leading-6 text-text-dark outline-none ${CANVAS_NODE_INPUT_PLACEHOLDER_CLASS}`}
+                className={
+                  genMode === "multishot"
+                    // Multishot's own shot list (below) needs most of the
+                    // panel's height — the prompt box here only ever holds
+                    // a short "overall direction" line (see VideoNode.tsx's
+                    // "multishot" submit branch: `prompt` becomes
+                    // `director_guidance` server-side, not per-shot text).
+                    ? `nodrag nowheel h-12 w-full shrink-0 overflow-y-auto whitespace-pre-wrap break-words border-none bg-transparent px-3 py-2 text-sm leading-6 text-text-dark outline-none ${CANVAS_NODE_INPUT_PLACEHOLDER_CLASS}`
+                    : `nodrag nowheel min-h-0 w-full flex-1 overflow-y-auto whitespace-pre-wrap break-words border-none bg-transparent px-3 py-2 text-sm leading-6 text-text-dark outline-none ${CANVAS_NODE_INPUT_PLACEHOLDER_CLASS}`
+                }
               />
+
+              {genMode === "multishot" && (
+                <div className="shrink-0 border-t border-white/[0.06] px-3 py-2">
+                  <MultishotShotListEditor
+                    shots={
+                      data.multishotShots && data.multishotShots.length > 0
+                        ? data.multishotShots
+                        : DEFAULT_MULTISHOT_SHOTS
+                    }
+                    maxShots={selectedVideoModel?.maxShots}
+                    shotSeconds={durationSec}
+                    onChange={(shots) => updateNodeData(id, { multishotShots: shots })}
+                    disabled={data.isGenerating}
+                  />
+                </div>
+              )}
 
               <div className="flex shrink-0 items-center justify-between gap-2 px-3 py-2">
                 <div className="flex min-w-0 items-center gap-2">
@@ -974,9 +1013,12 @@ export function VideoOperationsPanel({
                         (item) => item.id === nextModelId,
                       );
                       // After switching models, if the current genMode is not supported by the new model (such as HappyHorse-only
-                      // videoEdit switching to a regular model), reset to the generic safe value textToVideo,
+                      // videoEdit switching to a regular model), reset to a mode the NEW model actually supports —
                       // letting the state machine re-derive by the new model + upstream; otherwise a leftover mode would hit
                       // an unsupported endpoint on submit and be rejected with a backend 400 (while the UI is still on the wrong tab).
+                      // Previously this always reset to the hardcoded "textToVideo" — harmless for every model before
+                      // multishot (all of them support text-to-video), but would silently land a multishot-only model
+                      // (supportedModes === ["multishot"]) on a mode it cannot run at all.
                       const resetGenMode =
                         data.genMode != null &&
                         !isVideoModeSupportedByModel(
@@ -988,7 +1030,7 @@ export function VideoOperationsPanel({
                         modelParams: {},
                         generateAudio: videoModelDefaultGenerateAudio(nextModel),
                         ...(resetGenMode
-                          ? { genMode: "textToVideo" as VideoGenMode }
+                          ? { genMode: videoModelDefaultMode(nextModel) }
                           : {}),
                       });
                       // Remember this choice; video nodes created later will inherit it.
@@ -1065,12 +1107,17 @@ export function VideoOperationsPanel({
                       </span>
                     </button>
                   )}
-                  <CountPicker
-                    value={count}
-                    onChange={(nextCount) =>
-                      updateNodeData(id, { count: nextCount })
-                    }
-                  />
+                  {genMode !== "multishot" && (
+                    // Multishot is always exactly 1 long-running paid job —
+                    // "generate N variants" doesn't apply (see VideoNode.tsx:
+                    // total is forced to 1 for this mode).
+                    <CountPicker
+                      value={count}
+                      onChange={(nextCount) =>
+                        updateNodeData(id, { count: nextCount })
+                      }
+                    />
+                  )}
                   <button
                     type="button"
                     title={t("node.videoOps.translateTitle")}
@@ -2021,7 +2068,14 @@ function ReferenceMediaRow({
               : typeIndex === 2
                 ? t("node.videoOps.slot.lastFrame")
                 : undefined
-            : undefined;
+            : // Multishot: the first image (by reference order) is always
+              // the chain's single start frame (<Picture 1> server-side);
+              // the rest are shared references (<Picture 2..N+1>) — no
+              // special badge needed for those, the numeric index already
+              // shows their order.
+              genMode === "multishot" && item.kind === "image" && typeIndex === 1
+              ? t("node.videoOps.multishot.startFrameLabel")
+              : undefined;
         let chip: ReactNode;
         if (item.kind === "image") {
           chip = (

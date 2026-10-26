@@ -95,6 +95,7 @@ from novelvideo.api.schemas import (
     FreezoneThreeDViewerScreenshotRequest,
     FreezoneUpscaleRequest,
     FreezoneVideoCharacterLibraryItemRequest,
+    FreezoneVideoBreakdownRequest,
     FreezoneVideoComposeRequest,
     FreezoneVideoEditRequest,
     FreezoneVideoExtendRequest,
@@ -3082,19 +3083,25 @@ async def _enqueue_or_start_freezone_video_analysis(
     project: str,
     project_dir: Path,
     output_dir: str,
-    task_type: Literal["freezone_extract", "freezone_analyze", "freezone_video_story"],
+    task_type: Literal[
+        "freezone_extract",
+        "freezone_analyze",
+        "freezone_video_story",
+        "freezone_video_breakdown",
+    ],
     job_id: str,
     payload: dict,
 ) -> dict:
     if ctx is not None:
+        # freezone_extract is local ffmpeg frame extraction only, no model call, not billed.
+        billing_operation = {
+            "freezone_analyze": "shots",
+            "freezone_video_story": "video_story",
+            "freezone_video_breakdown": "video_breakdown",
+        }.get(task_type)
         billing = (
-            {
-                "feature_key": "freezone.video_analyze",
-                "operation": (
-                    "video_story" if task_type == "freezone_video_story" else "shots"
-                ),
-            }
-            if task_type in {"freezone_analyze", "freezone_video_story"}
+            {"feature_key": "freezone.video_analyze", "operation": billing_operation}
+            if billing_operation
             else {}
         )
         queued = await get_task_backend().enqueue_project_task(
@@ -6962,7 +6969,13 @@ async def freezone_multi_view(
         prompt=_build_multi_view_prompt(body),
         base_url=body.source_url,
         extra_reference_urls=[],
-        aspect_ratio="16:9",
+        # Was hardcoded "16:9" — any 9:16 (or other non-16:9) source image
+        # came back stretched/cropped to the wrong ratio. "original" makes
+        # `_start_or_enqueue_freezone_edit_job` resolve the real ratio off
+        # `base_url` itself via `_resolve_outpaint_aspect_ratio()` (already
+        # used by the outpaint route for the same purpose). See
+        # `.claude/CLAUDE.md`.
+        aspect_ratio="original",
         image_size=body.image_size or "2K",
         camera=body.camera,
         style=body.style,
@@ -6999,7 +7012,10 @@ async def freezone_relight(
         extra_reference_urls=(
             [body.lighting_reference_url] if body.lighting_reference_url else []
         ),
-        aspect_ratio="16:9",
+        # Same fix as `freezone_multi_view` above — was hardcoded "16:9",
+        # which silently reshaped every 9:16 (or other) source still being
+        # relit. See `.claude/CLAUDE.md`.
+        aspect_ratio="original",
         image_size=body.image_size or "2K",
         camera=None,
         style=None,
@@ -7531,6 +7547,48 @@ async def freezone_analyze_video_story(
             "max_frames": body.max_frames,
             "scene_threshold": body.scene_threshold,
             "duration_sec": body.duration_sec,
+        },
+    )
+
+
+@router.post("/projects/{project}/freezone/video-breakdown", tags=[TAG_FREEZONE_VIDEO])
+async def freezone_video_breakdown(
+    project: str,
+    body: FreezoneVideoBreakdownRequest,
+    user: dict = Depends(get_api_user),
+):
+    """Video processing: shot-by-shot breakdown, splitting a video into storyboard / motion / music reference assets, returning a task `task_key`."""
+    ctx, username, project_name, project_dir, output_dir = (
+        await _resolve_freezone_project(project, user)
+    )
+
+    try:
+        video_path = resolve_static_url_to_path(body.video_url, project_dir)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    if not video_path.exists():
+        raise HTTPException(404, f"video not found: {video_path}")
+
+    job_id = _new_job_id()
+    return await _enqueue_or_start_freezone_video_analysis(
+        ctx=ctx,
+        username=username,
+        project=project_name,
+        project_dir=project_dir,
+        output_dir=output_dir,
+        task_type="freezone_video_breakdown",
+        job_id=job_id,
+        payload={
+            "video_path": video_path.as_posix(),
+            "video_url": body.video_url,
+            "dimensions": list(body.dimensions),
+            "max_frames": body.max_frames,
+            "scene_threshold": body.scene_threshold,
+            "duration_sec": body.duration_sec,
+            "storyboard_group_size": body.storyboard_group_size,
+            "max_motion_clips": body.max_motion_clips,
+            "motion_clip_max_sec": body.motion_clip_max_sec,
+            "music_clip_sec": body.music_clip_sec,
         },
     )
 
@@ -9403,30 +9461,103 @@ def _freezone_dev_media_model_catalog_entries(media_type: str) -> list[dict[str,
     `"runpod_minimax_h3"` could submit it even without this row; this row
     is what makes it actually show up as a choice. See
     `.claude/CLAUDE.md`."""
-    from novelvideo.config import _runpod_qwen_image_configured
+    from novelvideo.config import (
+        _runpod_qwen21_render_configured,
+        _runpod_qwen_edit_configured,
+        _runpod_qwen_image_configured,
+    )
 
     if media_type == "image":
-        if not _runpod_qwen_image_configured():
-            return []
-        return [
-            {
-                "catalogId": "runpod_qwen_image",
-                "catalog_id": "runpod_qwen_image",
-                "id": "runpod_qwen_image",
-                "providerId": "runpod_qwen",
-                "provider": "runpod_qwen",
-                "apiModel": "qwen-image-2.1",
-                "api_model": "qwen-image-2.1",
-                "gatewayModel": "qwen-image-2.1",
-                "gateway_model": "qwen-image-2.1",
-                "aliases": ["runpod_qwen_image"],
-                "label": "Qwen Image 2.1 RunPod (dev)",
-                "sortOrder": 500,
-                "request": {"endpoint": "images/generations", "parameters": []},
-                "ratioOptions": ["1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3"],
-                "resolutionOptions": ["1k", "2k"],
-            }
-        ]
+        entries: list[dict[str, Any]] = []
+        if _runpod_qwen_image_configured():
+            entries.append(
+                {
+                    "catalogId": "runpod_qwen_image",
+                    "catalog_id": "runpod_qwen_image",
+                    "id": "runpod_qwen_image",
+                    "providerId": "runpod_qwen",
+                    "provider": "runpod_qwen",
+                    "apiModel": "qwen-image-2.1",
+                    "api_model": "qwen-image-2.1",
+                    "gatewayModel": "qwen-image-2.1",
+                    "gateway_model": "qwen-image-2.1",
+                    "aliases": ["runpod_qwen_image"],
+                    "label": "Qwen Image 2.1 RunPod (dev)",
+                    "sortOrder": 500,
+                    "request": {"endpoint": "images/generations", "parameters": []},
+                    "ratioOptions": ["1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3"],
+                    "resolutionOptions": ["1k", "2k"],
+                }
+            )
+        if _runpod_qwen_edit_configured():
+            # Same RunPod/R2 shape as the entry above, separate endpoint
+            # (`RUNPOD_QWEN_EDIT_ENDPOINT_ID`) and genuinely different model
+            # family (Edit-2511, not Qwen-Image-2.1) — see
+            # `_runpod_qwen_edit_configured()` in config.py and the
+            # `runpod_qwen_edit` dispatch branch in `nanobanana_grid.py`'s
+            # `_generate_image()`. No `resolutionOptions`/forced size: the
+            # worker always sizes its output off the edit canvas
+            # (`reference_images[0]`), never a requested size. Intended for
+            # `/freezone/edit` and `/freezone/relight` (an edit/relight
+            # model, not a T2I one) — see `.claude/CLAUDE.md`.
+            entries.append(
+                {
+                    "catalogId": "runpod_qwen_edit",
+                    "catalog_id": "runpod_qwen_edit",
+                    "id": "runpod_qwen_edit",
+                    "providerId": "runpod_qwen_edit",
+                    "provider": "runpod_qwen_edit",
+                    "apiModel": "qwen-image-edit-2511",
+                    "api_model": "qwen-image-edit-2511",
+                    "gatewayModel": "qwen-image-edit-2511",
+                    "gateway_model": "qwen-image-edit-2511",
+                    "aliases": ["runpod_qwen_edit", "runpod_qwen_edit_render"],
+                    "label": "Qwen Image Edit 2511 RunPod (dev, relight/edit)",
+                    "sortOrder": 501,
+                    "request": {"endpoint": "images/generations", "parameters": []},
+                    "ratioOptions": ["original"],
+                }
+            )
+        if _runpod_qwen21_render_configured():
+            # SAME checkpoint/endpoint as `runpod_qwen_image` above (same
+            # gate — `_runpod_qwen21_render_configured()` is just an alias
+            # for `_runpod_qwen_image_configured()`), DIFFERENT ComfyUI
+            # graph: `_runpod_qwen21_render_image_graph()` wires the
+            # KSampler latent to `TextEncodeQwenImage21`'s own latent
+            # output (sized off the first reference image) instead of an
+            # independently-sized `EmptyLatentImage` — the fix the main
+            # render pipeline already applied on 2026-10-18 for
+            # composition-preserving edits, never wired into Freezone
+            # until now. Intended for `/freezone/edit` (compositing a
+            # character/prop into an existing still, where the existing
+            # composition/scale must be preserved) — a `/freezone/gen`
+            # pure-T2I call still reaches this provider string (no
+            # mode-gate for images) but gets a clear error from
+            # `_call_runpod_qwen21_render_image_api` rather than a silently
+            # wrong result, same tradeoff already accepted for
+            # `runpod_qwen_edit` above. No `resolutionOptions`: the worker
+            # auto-resizes every reference (canvas + extras) to match via
+            # `_qwen21_prepare_render_image`, so there is nothing to pick.
+            # See `.claude/CLAUDE.md` 2026-10-26 entry.
+            entries.append(
+                {
+                    "catalogId": "runpod_qwen21_render",
+                    "catalog_id": "runpod_qwen21_render",
+                    "id": "runpod_qwen21_render",
+                    "providerId": "runpod_qwen21_render",
+                    "provider": "runpod_qwen21_render",
+                    "apiModel": "qwen-image-2.1",
+                    "api_model": "qwen-image-2.1",
+                    "gatewayModel": "qwen-image-2.1",
+                    "gateway_model": "qwen-image-2.1",
+                    "aliases": ["runpod_qwen21_render"],
+                    "label": "Qwen Image 2.1 RunPod — composite/edit fix (dev)",
+                    "sortOrder": 502,
+                    "request": {"endpoint": "images/generations", "parameters": []},
+                    "ratioOptions": ["original"],
+                }
+            )
+        return entries
     if media_type == "video":
         from novelvideo.config import (
             RUNPOD_H3_MULTISHOT_MAX_SHOTS,
@@ -12715,6 +12846,7 @@ async def freezone_job_result(
         "freezone_extract",
         "freezone_analyze",
         "freezone_video_story",
+        "freezone_video_breakdown",
         "freezone_video_gen",
         "freezone_video_multishot",
         "freezone_mask_edit",
@@ -12906,6 +13038,30 @@ async def freezone_job_result(
         out = _text_generate_output_path(project_dir, job_id)
     if task_type == "freezone_story_script":
         out = _story_script_output_path(project_dir, job_id)
+    if task_type == "freezone_video_breakdown":
+        # No disk fallback here: breakdown.json stores absolute paths (the runner
+        # converts them to static URLs after the fact), so handing them back as-is
+        # would be useless and would leak the server's directory layout. Only the
+        # task result is trusted; if the task isn't done yet, say so honestly.
+        if task is not None:
+            if task.status == "failed":
+                return {
+                    "ok": False,
+                    "error": task.error or "job failed",
+                    "status": task.status,
+                    "logs": log_lines_text(task.logs[-10:]),
+                }
+            if task.status != "completed":
+                return {
+                    "ok": False,
+                    "info": "job result not yet available",
+                    "status": task.status,
+                    "current_task": task.current_task,
+                }
+        task_result = getattr(task, "result", None) if task is not None else None
+        if isinstance(task_result, dict):
+            return {"ok": True, "data": task_result}
+        return {"ok": False, "info": "job result not yet available", "status": "unknown"}
     if task_type in {"freezone_analyze", "freezone_video_story"}:
         if task is not None:
             if task.status == "failed":

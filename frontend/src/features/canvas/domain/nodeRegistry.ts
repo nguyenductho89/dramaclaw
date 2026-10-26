@@ -4,6 +4,7 @@ import {
   AUTO_REQUEST_ASPECT_RATIO,
   CANVAS_NODE_TYPES,
   DEFAULT_ASPECT_RATIO,
+  VIDEO_BREAKDOWN_DIMENSIONS,
   type BeatContextNodeData,
   type AudioNodeData,
   type ImageSize,
@@ -23,6 +24,7 @@ import {
   type ThreeDWorldNodeData,
   type UploadImageNodeData,
   type VideoComposeNodeData,
+  type VideoBreakdownNodeData,
   type VideoNodeData,
   type VideoStoryNodeData,
 } from './canvasNodes';
@@ -35,7 +37,7 @@ import {
 } from '../ui/ProviderModelPicker';
 import { readLastVideoModel } from './lastVideoModel';
 
-export type MenuIconKey = 'upload' | 'sparkles' | 'layout' | 'text' | 'video' | 'audio' | 'script' | 'pano360' | 'threeDWorld' | 'videoCompose';
+export type MenuIconKey = 'upload' | 'sparkles' | 'layout' | 'text' | 'video' | 'audio' | 'script' | 'pano360' | 'threeDWorld' | 'videoCompose' | 'videoBreakdown';
 
 export interface CanvasNodeCapabilities {
   toolbar: boolean;
@@ -471,6 +473,42 @@ const videoStoryNodeDefinition: CanvasNodeDefinition<VideoStoryNodeData> = {
   }),
 };
 
+const videoBreakdownNodeDefinition: CanvasNodeDefinition<VideoBreakdownNodeData> = {
+  type: CANVAS_NODE_TYPES.videoBreakdown,
+  menuLabelKey: 'node.menu.videoBreakdown',
+  menuIcon: 'videoBreakdown',
+  visibleInMenu: true,
+  capabilities: {
+    toolbar: false,
+    promptInput: false,
+  },
+  connectivity: {
+    // Upstream connects a video (local upload has no upstream edge, the node stores the URL itself); downstream hangs the storyboard /
+    // motion / music result groups produced by the breakdown.
+    sourceHandle: true,
+    targetHandle: true,
+    connectMenu: {
+      // Only appears as a downstream candidate of video (video -> frame-by-frame breakdown); the reverse - "create an upstream from its
+      // left side" - makes no sense, the source material is either a local upload or picked from the canvas.
+      fromSource: true,
+      fromTarget: false,
+    },
+  },
+  createDefaultData: () => ({
+    displayName: DEFAULT_NODE_DISPLAY_NAME[CANVAS_NODE_TYPES.videoBreakdown],
+    sourceVideoUrl: null,
+    previewImageUrl: null,
+    sourceFileName: null,
+    sourceNodeId: null,
+    // All three dimensions default on - even from the empty state, clicking "start breakdown" directly gives a full breakdown.
+    dimensions: [...VIDEO_BREAKDOWN_DIMENSIONS],
+    isUploading: false,
+    isBreakingDown: false,
+    breakdownStartedAt: null,
+    breakdownError: null,
+  }),
+};
+
 const videoComposeNodeDefinition: CanvasNodeDefinition<VideoComposeNodeData> = {
   type: CANVAS_NODE_TYPES.videoCompose,
   menuLabelKey: 'node.menu.videoCompose',
@@ -674,6 +712,7 @@ export const canvasNodeDefinitions: Record<CanvasNodeType, CanvasNodeDefinition>
   [CANVAS_NODE_TYPES.audio]: audioNodeDefinition,
   [CANVAS_NODE_TYPES.videoStory]: videoStoryNodeDefinition,
   [CANVAS_NODE_TYPES.videoCompose]: videoComposeNodeDefinition,
+  [CANVAS_NODE_TYPES.videoBreakdown]: videoBreakdownNodeDefinition,
   [CANVAS_NODE_TYPES.script]: scriptNodeDefinition,
   [CANVAS_NODE_TYPES.pano360Viewer]: pano360ViewerNodeDefinition,
   [CANVAS_NODE_TYPES.threeDWorld]: threeDWorldNodeDefinition,
@@ -708,7 +747,16 @@ const UPSTREAM_SOURCE_WHITELIST: Partial<Record<CanvasNodeType, readonly CanvasN
   // separation" action: that action produces both a "background audio" audio node and a
   // "silent" video node from one video node, with both edges drawn back to the source video. Without the video entry, the audio edge would be silently dropped by the edge
   // gate, leaving one side connected to the silent video and the background audio hanging alone on the canvas.
-  [CANVAS_NODE_TYPES.audio]: [CANVAS_NODE_TYPES.textAnnotation, CANVAS_NODE_TYPES.video],
+  // Frame-by-frame breakdown likewise: the audio node inside its "music | BGM reference clip" group is a breakdown output, that edge
+  // is a provenance edge, and without the videoBreakdown entry it would be silently dropped by the edge gate.
+  [CANVAS_NODE_TYPES.audio]: [
+    CANVAS_NODE_TYPES.textAnnotation,
+    CANVAS_NODE_TYPES.video,
+    CANVAS_NODE_TYPES.videoBreakdown,
+  ],
+  // Frame-by-frame breakdown only eats video: the whole node is "split one video into storyboard/motion/music"; connecting an
+  // image or text in does nothing, just a misleading line on the canvas.
+  [CANVAS_NODE_TYPES.videoBreakdown]: [CANVAS_NODE_TYPES.video],
 };
 
 // "Source node type" -> whitelist of allowed downstream (target) node types. Symmetric with the table above: that one
@@ -769,6 +817,9 @@ const SYSTEM_ONLY_CONNECTIONS: readonly (readonly [CanvasNodeType, CanvasNodeTyp
   // If manual dragging were opened, one style node could attach to a second image node, and the reconciliation on both sides would each think
   // "the style carried by the node differs from mine", rewriting it back and forth into the other's style, never converging.
   [CANVAS_NODE_TYPES.style, CANVAS_NODE_TYPES.imageGen],
+  // Frame-by-frame breakdown -> audio, same reasoning: that is the provenance edge of the "music | BGM reference clip" group,
+  // established by the breakdown's own output routine.
+  [CANVAS_NODE_TYPES.videoBreakdown, CANVAS_NODE_TYPES.audio],
 ];
 
 // Determine whether a user can **manually** establish this edge: the edge rules allow it and it is not a system-only edge. Menu candidates and
@@ -817,11 +868,12 @@ const IMAGE_DOWNSTREAM_SPAWN_TYPES: readonly CanvasNodeType[] = [
 export const DOWNSTREAM_SPAWN_WHITELIST: Partial<
   Record<CanvasNodeType, readonly CanvasNodeType[]>
 > = {
-  // Video: only text / video / video compose / script are allowed - image, audio, multi-version should not be downstream.
+  // Video: only text / video / video compose / frame-by-frame breakdown / script are allowed - image, audio, multi-version should not be downstream.
   [CANVAS_NODE_TYPES.video]: [
     CANVAS_NODE_TYPES.textAnnotation,
     CANVAS_NODE_TYPES.video,
     CANVAS_NODE_TYPES.videoCompose,
+    CANVAS_NODE_TYPES.videoBreakdown,
     CANVAS_NODE_TYPES.script,
   ],
   // Audio: only video (audio track material) and video compose (audio track) downstream can understand it.

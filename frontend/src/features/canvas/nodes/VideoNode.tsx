@@ -191,6 +191,8 @@ import {
 import { useFreezoneVideoCameraTemplates } from "@/features/canvas/hooks/useFreezoneVideoCameraTemplates";
 import { useFreezoneVideoModels } from "@/features/canvas/hooks/useFreezoneVideoModels";
 import { useCanvasStore, useIsBoxSelecting } from "@/stores/canvasStore";
+import { useCanvasPickStore } from "@/stores/canvasPickStore";
+import { commitVideoPickToNode } from "@/features/canvas/application/videoBreakdownLanding";
 import { ReferenceValidationDialog, referenceDurationIssues, referenceIssues, matchesReference, referenceIssueName, type ReferenceIssue } from "./shared/ReferenceValidationDialog";
 import {
   fetchFreezoneJobResult,
@@ -1131,6 +1133,39 @@ export const VideoNode = memo(
       () => localizeNodeDisplayName(CANVAS_NODE_TYPES.video, data, t),
       [data, t],
     );
+
+    // "Pick from canvas" picking mode: when some node (frame-by-frame breakdown) is waiting for a video clip, this
+    // node floats a clickable overlay; clicking it backfills itself to the requester and draws an edge.
+    const pickRequest = useCanvasPickStore((state) => state.request);
+    const cancelPick = useCanvasPickStore((state) => state.cancelPick);
+    const isPickTarget =
+      pickRequest?.kind === "video" &&
+      pickRequest.requesterNodeId !== id &&
+      Boolean(data.videoUrl);
+
+    const handlePickSelect = useCallback(() => {
+      const requesterId = pickRequest?.requesterNodeId;
+      if (!requesterId || !data.videoUrl) return;
+      // Connecting the edge is the single source of truth, so we no longer copy a URL into the other node - copying
+      // one would break "disconnecting the edge reverts to the empty state".
+      commitVideoPickToNode({
+        sourceNodeId: id,
+        requesterNodeId: requesterId,
+        videoUrl: data.videoUrl,
+        label: resolvedTitle,
+      });
+      const store = useCanvasStore.getState();
+      store.setSelectedNode(requesterId);
+      store.requestFocusNode(requesterId);
+      cancelPick();
+    }, [
+      cancelPick,
+      data.videoUrl,
+      id,
+      pickRequest?.requesterNodeId,
+      resolvedTitle,
+    ]);
+
     const resolvedWidth = Math.max(
       MIN_WIDTH,
       Math.round(width ?? DEFAULT_WIDTH),
@@ -3259,6 +3294,21 @@ export const VideoNode = memo(
           id="source"
           className="!h-2 !w-2 !border-0 !bg-[rgb(148,163,184)]"
         />
+
+        {isPickTarget && (
+          <div
+            className="group/pick absolute inset-0 z-[46] flex cursor-pointer items-center justify-center rounded-[var(--node-radius)] ring-2 ring-inset ring-cyan-300/60 transition-colors hover:bg-black/45"
+            onClick={(event) => {
+              event.stopPropagation();
+              handlePickSelect();
+            }}
+            onPointerDown={(event) => event.stopPropagation()}
+          >
+            <span className="rounded-full border border-white/20 bg-black/75 px-3 py-1.5 text-[13px] font-medium text-white opacity-0 shadow-[0_8px_20px_rgba(0,0,0,0.45)] transition-opacity group-hover/pick:opacity-100">
+              {t("canvasPick.selectNode", { name: resolvedTitle })}
+            </span>
+          </div>
+        )}
 
         {/* Hide the floating title and resolution badge when the album expands — the album container has its own header (consistent with the image node). */}
         {!albumExpanded && (

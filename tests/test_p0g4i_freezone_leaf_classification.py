@@ -440,7 +440,7 @@ def test_classification_matches_the_real_leaf_signatures() -> None:
 
 
 def test_every_dispatch_site_names_a_classified_leaf() -> None:
-    """The 20 call sites are matched into the table one by one; a new unclassified call site turns it red.
+    """The 21 call sites are matched into the table one by one; a new unclassified call site turns it red.
 
     `leaf_name` is a required positional argument, not optional -- omitting it is a `TypeError`, not a silent pass.
     """
@@ -468,7 +468,9 @@ def test_every_dispatch_site_names_a_classified_leaf() -> None:
 
     # 19 -> 20: `generate_freezone_text`, brought in by f33ac189 (#279) of `origin/staging`,
     # is exactly the shape the previous case named in its prediction.
-    assert len(named) == 20
+    # 20 -> 21: `run_freezone_video_breakdown` (shot-by-shot breakdown), a new NETWORK leaf
+    # ported from upstream, same egress point (EG-18b) as `run_freezone_analyze_shots`.
+    assert len(named) == 21
     assert set(named) <= set(FREEZONE_LEAF_EGRESS)
 
 

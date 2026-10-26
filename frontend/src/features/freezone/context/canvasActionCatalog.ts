@@ -606,6 +606,9 @@ export const BASE_CANVAS_ACTION_CAPABILITIES: CanvasActionCapability[] = [
   }),
   videoUiCapability("ui.open_video_subtitle_erase_smart", "Smart subtitle removal", "open_video_subtitle_erase_smart"),
   videoUiCapability("ui.open_video_subtitle_erase_box", "Box-select subtitle removal", "open_video_subtitle_erase_box"),
+  videoUiCapability("ui.run_video_breakdown", "Frame-by-frame breakdown", "run_video_breakdown", {
+    execution: "frontend_node",
+  }),
 ];
 
 export function buildCanvasActionCatalog(nodes: CanvasNode[], edges: CanvasEdge[] = []): CanvasActionCatalog {

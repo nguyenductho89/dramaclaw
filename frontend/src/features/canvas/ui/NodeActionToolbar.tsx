@@ -84,6 +84,7 @@ import { deriveNodeDropInfo } from "@/stores/assetDropStore";
 import {
   NODE_TOOL_TYPES,
   CANVAS_NODE_TYPES,
+  VIDEO_BREAKDOWN_DIMENSIONS,
   DEFAULT_NODE_WIDTH,
   isAudioNode,
   isExportImageNode,
@@ -105,6 +106,7 @@ import { GROUP_COLOR_PRESETS } from "@/features/canvas/domain/groupColors";
 import { StoryboardGroupToolbar } from "@/features/canvas/ui/StoryboardGroupToolbar";
 import { canvasEventBus } from "@/features/canvas/application/canvasServices";
 import {
+  dispatchNodeAction,
   publishNodeActionAccepted,
   publishNodeActionError,
   publishNodeActionSuccess,
@@ -536,6 +538,7 @@ export const NodeActionToolbar = memo(
     );
     const deleteNode = useCanvasStore((state) => state.deleteNode);
     const addNode = useCanvasStore((state) => state.addNode);
+    const findNodePosition = useCanvasStore((state) => state.findNodePosition);
     const addEdge = useCanvasStore((state) => state.addEdge);
     const setSelectedNode = useCanvasStore((state) => state.setSelectedNode);
     const onNodesChange = useCanvasStore((state) => state.onNodesChange);
@@ -1096,6 +1099,45 @@ export const NodeActionToolbar = memo(
       [node.id, requireVideoUrl, setSelectedNode, updateNodeData],
     );
 
+    // Frame-by-frame breakdown: land an empty breakdown node downstream and connect an edge - that's it. The node
+    // itself follows that upstream edge to find its source material (VideoBreakdownNode's upstreamVideo takes
+    // priority over data.sourceVideoUrl), so there is no need to copy the URL in here too - copying it would break
+    // "disconnecting the edge reverts to the empty state". The toolbar entry only creates the node; which dimensions
+    // to break down and when to start are left to the user on that node. The agent entry can carry
+    // dimensions / auto_start, and starting still goes through the breakdown node's own start_video_breakdown action.
+    const handleCreateVideoBreakdown = useCallback(
+      (parameters?: Record<string, unknown>) => {
+        requireVideoUrl();
+        const requested = Array.isArray(parameters?.dimensions)
+          ? VIDEO_BREAKDOWN_DIMENSIONS.filter((dimension) =>
+              (parameters.dimensions as unknown[]).includes(dimension),
+            )
+          : [];
+        const position = findNodePosition(node.id, 300, 292);
+        const breakdownNodeId = addNode(
+          CANVAS_NODE_TYPES.videoBreakdown,
+          position,
+          {
+            sourceNodeId: node.id,
+            ...(requested.length > 0 ? { dimensions: requested } : {}),
+          },
+        );
+        addEdge(node.id, breakdownNodeId);
+        const autoStart = parameters?.auto_start === true;
+        if (autoStart) {
+          // The new node hasn't mounted yet this tick; dispatching with a requestId lands in the pending table and is
+          // redelivered once the node mounts and subscribes.
+          dispatchNodeAction({
+            nodeId: breakdownNodeId,
+            action: "start_video_breakdown",
+            requestId: `video-breakdown-autostart:${breakdownNodeId}`,
+          });
+        }
+        return { nodeId: breakdownNodeId, started: autoStart };
+      },
+      [addEdge, addNode, findNodePosition, node.id, requireVideoUrl],
+    );
+
     // The following symbols are used by temporarily hidden toolbar buttons; the code is kept, not deleted:
     // - the Sparkles icon is used by the AI image edit button
     // - the Copy icon is used by the copy button
@@ -1300,6 +1342,16 @@ export const NodeActionToolbar = memo(
             .catch((error) => publishNodeActionError(requestId, node.id, action, error));
           return;
         }
+        if (action === "run_video_breakdown") {
+          try {
+            publishNodeActionAccepted(requestId, node.id, action);
+            const output = handleCreateVideoBreakdown(parameters);
+            publishNodeActionSuccess(requestId, node.id, action, output);
+          } catch (error) {
+            publishNodeActionError(requestId, node.id, action, error);
+          }
+          return;
+        }
         if (action === "open_video_subtitle_erase_smart" || action === "open_video_subtitle_erase_box") {
           try {
             publishNodeActionAccepted(requestId, node.id, action);
@@ -1312,6 +1364,7 @@ export const NodeActionToolbar = memo(
       });
     }, [
       handleAnalyzeVideo,
+      handleCreateVideoBreakdown,
       handleDownloadAudioNode,
       handleDownloadSaveAs,
       handleDownloadVideo,

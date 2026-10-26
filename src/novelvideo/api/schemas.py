@@ -1017,6 +1017,77 @@ class FreezoneAnalyzeVideoStoryRequest(BaseModel):
     )
 
 
+class FreezoneVideoBreakdownRequest(BaseModel):
+    """Shot-by-shot video breakdown request: split a video into storyboard / motion / music reference assets.
+
+    Different from `analyze-video-story`: that one only produces a text table, while breakdown actually
+    cuts out real files -- storyboard is extracted frames, motion is video clips cut by camera movement,
+    music is a separated BGM clip.
+    """
+
+    video_url: str = Field(
+        description="Static video URL. Must be an existing /static/... video URL under the current project",
+        examples=["/static/admin/58/freezone/_uploads/example.mp4"],
+    )
+    dimensions: list[Literal["storyboard", "motion", "music"]] = Field(
+        default_factory=lambda: ["storyboard", "motion", "music"],
+        description=(
+            "Which dimensions to break down. storyboard=extracted-frame groups, "
+            "motion=camera-movement reference clips, music=BGM reference clip. "
+            "Empty is equivalent to all three enabled"
+        ),
+    )
+    max_frames: int = Field(
+        default=40,
+        ge=3,
+        le=80,
+        description=(
+            "Keyframe extraction cap. The actual frame count is derived from video "
+            "duration (about one frame per second); this is only the ceiling. More "
+            "frames give finer-grained shots but also cost more on the vision call"
+        ),
+    )
+    scene_threshold: float = Field(
+        default=0.3,
+        ge=0.0,
+        le=1.0,
+        description="ffmpeg scene-change threshold, range 0-1. 0.2-0.3 for long takes, 0.4-0.5 for fast-cut videos",
+    )
+    duration_sec: Optional[float] = Field(
+        default=None,
+        gt=0,
+        description="Total video duration in seconds. Optional; when provided, the shot timeline is more accurate",
+        examples=[15],
+    )
+    storyboard_group_size: int = Field(
+        default=4,
+        ge=1,
+        le=12,
+        description=(
+            "Max shots per storyboard group. Shots are grouped by the model's narrative "
+            "segments when given; otherwise this size is used as an even-split fallback"
+        ),
+    )
+    max_motion_clips: int = Field(
+        default=3,
+        ge=1,
+        le=8,
+        description="Max number of camera-movement reference clips to cut for the motion dimension",
+    )
+    motion_clip_max_sec: float = Field(
+        default=6.0,
+        gt=0,
+        le=30,
+        description="Max duration (seconds) of a single motion reference clip; longer shots get truncated",
+    )
+    music_clip_sec: float = Field(
+        default=15.0,
+        gt=0,
+        le=120,
+        description="BGM reference clip duration (seconds). Shorter videos use their full length",
+    )
+
+
 class FreezoneUpscaleRequest(BaseModel):
     """Upscale request.
 

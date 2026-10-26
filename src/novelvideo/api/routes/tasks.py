@@ -80,6 +80,7 @@ _TASK_TYPE_LABELS = {
     "freezone_extract": "Video frame extraction",
     "freezone_analyze": "Video analysis",
     "freezone_video_story": "Video interpretation",
+    "freezone_video_breakdown": "Video breakdown",
     "freezone_video_erase": "Video erase",
     "freezone_video_upscale": "Video upscale",
     "freezone_audio_separate": "Audio separation",

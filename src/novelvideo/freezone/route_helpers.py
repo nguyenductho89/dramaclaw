@@ -23,6 +23,8 @@ from novelvideo.api.schemas import (
 )
 from novelvideo.config import (
     IMAGE_GENERATION_SELECTIONS,
+    _runpod_qwen21_render_configured,
+    _runpod_qwen_edit_configured,
     _runpod_qwen_image_configured,
 )
 from novelvideo.freezone.paths import resolve_static_url_to_path, safe_upload_filename, uploads_dir
@@ -47,6 +49,39 @@ SUPPORTED_FREEZONE_IMAGE_PROVIDERS = {"huimeng", "newapi", "openrouter", "openai
 if _runpod_qwen_image_configured():
     SUPPORTED_FREEZONE_IMAGE_PROVIDERS = SUPPORTED_FREEZONE_IMAGE_PROVIDERS | {
         "runpod_qwen"
+    }
+# Same reasoning, separate gate: Qwen-Image-Edit-2511 on its own RunPod
+# endpoint (`_runpod_qwen_edit_configured()`, `RUNPOD_QWEN_EDIT_ENDPOINT_ID`)
+# — previously only reachable from the beat-render pipeline, never from
+# Freezone's `/freezone/edit` or `/freezone/relight`. Not added to
+# `/freezone/gen`'s pure text-to-image path on purpose: Edit-2511 always
+# needs a canvas image (`reference_images[0]`), see
+# `_call_runpod_qwen_edit_image_api` in `nanobanana_grid.py` — a T2I
+# attempt still reaches this provider string (no mode gate exists for
+# images, unlike video's `supportedModes`) but fails with a clear error
+# rather than silently producing a wrong result. See `.claude/CLAUDE.md`.
+if _runpod_qwen_edit_configured():
+    SUPPORTED_FREEZONE_IMAGE_PROVIDERS = SUPPORTED_FREEZONE_IMAGE_PROVIDERS | {
+        "runpod_qwen_edit"
+    }
+# Same reasoning again, for the OTHER Qwen-Image 2.1 graph: `runpod_qwen`
+# above wires KSampler to an `EmptyLatentImage` sized independently of any
+# reference image (`_runpod_qwen_image_graph`/`_runpod_qwen_image_dims`) —
+# correct for brand-new T2I, but exactly the "sample at a different size"
+# case the official `TextEncodeQwenImage21` node's own latent-output
+# tooltip warns "shifts the edit" for composition-preserving edits (e.g.
+# compositing a character into an existing location still). The project
+# already fixed this for the main render pipeline on 2026-10-18
+# (`_runpod_qwen21_render_image_graph`/`_call_runpod_qwen21_render_image_api`,
+# which wires the KSampler latent to `TextEncodeQwenImage21`'s own latent
+# output and auto-resizes every reference to match) but never wired it
+# into Freezone. Gate reuses the same env check as `runpod_qwen`
+# (`_runpod_qwen21_render_configured()` is just an alias for
+# `_runpod_qwen_image_configured()` — same endpoint/checkpoint, different
+# graph). See `.claude/CLAUDE.md` 2026-10-26 entry.
+if _runpod_qwen21_render_configured():
+    SUPPORTED_FREEZONE_IMAGE_PROVIDERS = SUPPORTED_FREEZONE_IMAGE_PROVIDERS | {
+        "runpod_qwen21_render"
     }
 FREEZONE_IMAGE_CAMERA_OPTIONS = {
     "camera_bodies": [

@@ -6353,6 +6353,7 @@
       "video": "Video",
       "audio": "Âm thanh",
       "videoStory": "Video Story",
+      "videoBreakdown": "Phân tích từng khung hình",
       "script": "Kịch bản",
       "pano360Viewer": "Góc nhìn 360°",
       "threeDWorld": "Thế giới 3D",
@@ -8472,6 +8473,38 @@
     "openRouterConfigMessage": "Model này cần OpenRouter, nhưng API key phía backend chưa được cấu hình. Vui lòng liên hệ quản trị viên.",
     "stillRunningTitle": "Vẫn đang tạo",
     "stillRunningMessage": "Lần tạo này lâu hơn bình thường. Trang đã ngừng chờ, nhưng tác vụ vẫn chạy ngầm — hãy tải lại sau để lấy kết quả, hoặc xem tiến độ trong Trung tâm tác vụ."
+  },
+  "canvasPick": {
+    "title": "Chọn tham chiếu từ canvas",
+    "hint": "Bấm vào một node video trên canvas",
+    "backToNode": "Quay lại node",
+    "cancel": "Hủy chọn",
+    "selectNode": "Chọn “{{name}}”"
+  },
+  "videoBreakdown": {
+    "sourceLabel": "Video nguồn",
+    "emptyHint": "Thêm video để bắt đầu",
+    "uploading": "Đang tải lên…",
+    "uploadFailed": "Tải video lên thất bại",
+    "uploadVideo": "Tải video lên",
+    "pickFromCanvas": "Chọn từ canvas",
+    "replace": "Thay",
+    "attached": "Đoạn đã chọn",
+    "dimensionsLabel": "Chiều phân tích",
+    "dimension": {
+      "storyboard": "Phân cảnh",
+      "motion": "Chuyển động",
+      "music": "Âm nhạc"
+    },
+    "start": "Bắt đầu phân tích",
+    "running": "Đang phân tích…",
+    "failed": "Phân tích thất bại",
+    "emptyResult": "Không tách được nội dung nào dùng được từ video này",
+    "groups": {
+      "storyboard": "Nhóm storyboard {{index}}",
+      "motion": "Chuyển động | tham chiếu chuyển động máy quay",
+      "music": "Âm nhạc | đoạn tham chiếu BGM"
+    }
   },
   "videoCompose": {
     "title": "Dựng video",

@@ -129,6 +129,7 @@ import {
 } from './ui/MultiSelectionConnectButton';
 import { NodeSpawnPlusOverlay } from './ui/NodeSpawnPlusOverlay';
 import { ReferencePickBanner } from './ui/ReferencePickBanner';
+import { CanvasPickBanner } from './ui/CanvasPickBanner';
 import { ViewportReturnHint } from './ui/ViewportReturnHint';
 import { CanvasContextMenu } from './ui/CanvasContextMenu';
 import { CanvasFileDropOverlay } from './ui/CanvasFileDropOverlay';
@@ -5186,6 +5187,8 @@ export function Canvas({
           />
         </svg>
       )}
+
+      <CanvasPickBanner />
 
       {showNodeMenu && (
         <NodeSelectionMenu

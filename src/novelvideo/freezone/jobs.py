@@ -15,6 +15,7 @@ Provider selection (since v1.1):
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import math
 import os
@@ -2074,6 +2075,849 @@ async def run_freezone_analyze_shots(
     out_file.write_text(
         json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8"
     )
+    payload["output_path"] = str(out_file)
+    return payload
+
+
+# ============================================================
+# Video breakdown (shot-by-shot) -- extract + Vision shot split +
+# real storyboard/motion/music asset cutting
+# ============================================================
+
+
+VIDEO_BREAKDOWN_DIMENSIONS: tuple[str, ...] = ("storyboard", "motion", "music")
+
+# These words mean "no camera movement on this shot" -- skip them when picking
+# motion reference clips: a perfectly static clip is useless as a movement reference.
+_STATIC_CAMERA_MOVEMENTS = {
+    "static",
+    "fixed",
+    "none",
+    "still",
+}
+
+# How fine the breakdown can get is capped by how dense the keyframes fed to the
+# model are: a flat 20 frames on a 40s clip means a look every two seconds, so the
+# model can only infer three or four big chunks. Frame count is instead derived
+# from duration.
+_BREAKDOWN_FRAME_INTERVAL_SEC = 1.0
+_BREAKDOWN_MIN_FRAMES = 8
+# Safety cap while scanning the whole clip for scene cuts: fast-cut footage can
+# have a cut every second, and without a cap that would write out thousands of images.
+_BREAKDOWN_SCENE_SCAN_LIMIT = 240
+# Target average shot length for the breakdown. Too short and reviewing it is more
+# tiring than the source clip; too long and it collapses back into a handful of
+# vague chunks. 2.5s is the middle ground -- a 45s clip breaks into ~18 shots / 4-5 groups.
+_BREAKDOWN_SHOT_TARGET_SEC = 2.5
+# Max width of frames sent to the vision model. Frames go out as base64 full
+# images, so doubling the frame count means each frame has to be shrunk to compensate.
+_BREAKDOWN_FRAME_WIDTH = 768
+
+_MAX_JSON_REPAIRS = 32
+_MERGED_JSON_KEY_RE = re.compile(
+    r'^(?P<name>[A-Za-z_][A-Za-z0-9_]*?)(?P<value>-?\d+(?:\.\d+)?),?$'
+)
+
+
+def _strip_json_fence(text: str) -> str:
+    cleaned = text.strip()
+    if cleaned.startswith("```"):
+        cleaned = "\n".join(
+            line for line in cleaned.splitlines() if not line.strip().startswith("```")
+        ).strip()
+    return cleaned
+
+
+def _split_merged_json_key(text: str, pos: int) -> Optional[str]:
+    """``{"shot25,"segment"...`` -> ``{"shot":25,"segment"...``
+
+    Vision models occasionally mash a key, its value and the following comma into
+    one string (dropping the ``":``). This typo tends to repeat several times in the
+    same response, so patching it in place is far cheaper than discarding the whole output.
+    """
+
+    end_quote = text.rfind('"', 0, pos)
+    if end_quote <= 0:
+        return None
+    start_quote = text.rfind('"', 0, end_quote)
+    if start_quote == -1:
+        return None
+    match = _MERGED_JSON_KEY_RE.match(text[start_quote + 1 : end_quote])
+    if not match:
+        return None
+    fixed = f'"{match.group("name")}":{match.group("value")},'
+    return text[:start_quote] + fixed + text[end_quote:]
+
+
+def _drop_broken_json_element(text: str, pos: int) -> Optional[str]:
+    """Drop the whole array element that failed to parse and return the new text; None if it can't be done."""
+
+    start = text.rfind("{", 0, pos + 1)
+    if start <= 0:  # 0 is the start of the whole document -- dropping it would leave nothing
+        return None
+    end = text.find("}", pos)
+    if end == -1:
+        return None
+
+    head = text[:start].rstrip()
+    tail = text[end + 1 :].lstrip()
+    if head.endswith("["):  # first element of the array
+        return head + (tail[1:] if tail.startswith(",") else tail)
+    if head.endswith(","):  # a middle or last element
+        return head[:-1] + tail
+    return None
+
+
+def loads_model_json(text: str) -> Any:
+    """Parse JSON returned by a model, patching broken spots in place instead of discarding the whole response.
+
+    Vision models occasionally write ``"shot":25`` as ``"shot25``; one dropped
+    token can invalidate a whole 20KB breakdown table. Try the known typo patterns
+    first, and only drop the element that still can't be repaired.
+    """
+
+    cleaned = _strip_json_fence(text)
+    try:
+        return json.loads(cleaned)
+    except json.JSONDecodeError as exc:
+        first_error = exc  # kept because `exc` is unbound once the except block ends
+
+    repaired = cleaned
+    for _ in range(_MAX_JSON_REPAIRS):
+        try:
+            parsed = json.loads(repaired)
+        except json.JSONDecodeError as exc:
+            candidate = _split_merged_json_key(repaired, exc.pos) or _drop_broken_json_element(
+                repaired, exc.pos
+            )
+            if candidate is None or candidate == repaired:
+                break
+            repaired = candidate
+            continue
+        logger.warning(
+            "model JSON was malformed at char %s; repaired and recovered", first_error.pos
+        )
+        return parsed
+    raise first_error
+
+
+def _bd_text(value: Any, default: str = "") -> str:
+    if value is None:
+        return default
+    text = str(value).strip()
+    return text or default
+
+
+def _bd_float(value: Any, default: Optional[float] = None) -> Optional[float]:
+    if isinstance(value, bool) or value is None:
+        return default
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return default
+    if parsed != parsed or parsed in (float("inf"), float("-inf")):  # NaN / inf
+        return default
+    return parsed
+
+
+def _bd_int(value: Any, default: Optional[int] = None) -> Optional[int]:
+    parsed = _bd_float(value, None)
+    return default if parsed is None else int(parsed)
+
+
+def plan_breakdown_frame_count(*, duration_sec: Optional[float], max_frames: int) -> int:
+    """Pick a frame count from video duration: roughly one frame per second, floored and capped.
+
+    Duration is unknown only rarely; when it is, fall back to the caller's cap --
+    better to use the whole budget than to guess at a density.
+    """
+
+    cap = max(1, int(max_frames))
+    floor = min(_BREAKDOWN_MIN_FRAMES, cap)
+    duration = _bd_float(duration_sec, None)
+    if duration is None or duration <= 0:
+        return cap
+    target = int(round(duration / _BREAKDOWN_FRAME_INTERVAL_SEC))
+    return max(floor, min(cap, target))
+
+
+def plan_breakdown_shot_range(
+    *,
+    frame_count: int,
+    duration_sec: Optional[float] = None,
+) -> tuple[int, int]:
+    """Shot-count range: targets a medium grain of ~2-3s per shot, capped by frame count.
+
+    Using the frame count directly as the shot count (one frame a second means one
+    shot a second) would chop a 45s clip into 40 shots / 11 groups -- more tiring
+    to review than the source. Duration decides the grain; frame count only caps it,
+    since a frame nobody saw can't be turned into a shot.
+    """
+
+    frames = max(1, int(frame_count))
+    duration = _bd_float(duration_sec, None)
+    # Extraction is already one frame per second, so fall back to frame count as an
+    # approximation of duration when probing it failed.
+    span = duration if duration is not None and duration > 0 else float(frames)
+    target = int(round(span / _BREAKDOWN_SHOT_TARGET_SEC))
+    upper = max(3, min(frames, target))
+    lower = max(3, min(upper, int(round(upper * 0.7))))
+    return lower, upper
+
+
+def build_video_breakdown_prompt(
+    *, frame_count: int, duration_sec: Optional[float] = None, group_size: int = 4
+) -> str:
+    """Vision prompt dedicated to the shot-by-shot breakdown.
+
+    Deliberately kept separate from :func:`build_video_story_analysis_prompt`: that
+    one is a narrative table for "video interpretation". Breakdown has three extra
+    hard requirements -- ``segment`` for grouping (the frontend groups shots into
+    storyboard groups 01/02/03), ``lighting`` is mandatory (the card label is
+    "shot size · lighting"), plus a whole-clip ``music`` block (the BGM reference
+    needs a description and a start point). Mixing both into one prompt would just
+    make each one worse to satisfy the other.
+    """
+
+    duration_hint = (
+        f"The total video duration is about {duration_sec:.2f} seconds. "
+        f"All start_time/end_time must fall between 0 and {duration_sec:.2f} seconds."
+        if duration_sec and duration_sec > 0
+        else "The total video duration is unknown. Give reasonably plausible times based on the keyframe order, with the first shot starting at 0."
+    )
+    shot_min, shot_max = plan_breakdown_shot_range(
+        frame_count=frame_count, duration_sec=duration_sec
+    )
+    return f"""You are a professional film editor doing a shot-by-shot breakdown. Below are {frame_count} video keyframes
+extracted in chronological order. Break this video down into reusable reference material.
+
+{duration_hint}
+
+Requirements:
+- Split into {shot_min}-{shot_max} shots, medium grain: only start a new shot when the camera position,
+  shot size or scene clearly changes; keep continuous action within the same scene in one shot,
+  do not split frame by frame.
+- A shot can span multiple keyframes; start_time/end_time must cover the whole duration of that shot.
+- segment is the storyboard group number, starting at 1 and increasing continuously; each group
+  has at most {group_size} shots, and shots in the same segment must belong to the same narrative
+  beat. If a beat exceeds {group_size} shots, split it into adjacent segments.
+- description is the storyboard card title, at most 20 words, stating the subject and action clearly.
+- narrative states this shot's role in the story; do not repeat description.
+- shot_size and lighting are both required; they are displayed side by side as "shot size · lighting".
+- camera_movement must be accurate; if there truly is no movement write "static" -- do not invent movement to sound more cinematic.
+- image_prompt / motion_prompt are in English, suitable to feed directly into an image-to-video model.
+- music describes the whole clip's background music; start_time should point at the most representative
+  BGM segment. If no music can be heard (or the clip has none), set music to null.
+- Output strictly a JSON object, no markdown wrapper, no explanation.
+
+JSON schema:
+{{
+  "title": "short title",
+  "summary": "one-sentence summary",
+  "segments": [
+    {{"segment": 1, "label": "short group label, <= 10 words"}}
+  ],
+  "shots": [
+    {{
+      "shot": 1,
+      "segment": 1,
+      "keyframe": 1,
+      "start_time": 0.0,
+      "end_time": 1.2,
+      "shot_size": "close-up/medium close-up/medium shot/full shot/long shot/extreme long shot",
+      "lighting": "lighting description, <= 8 words",
+      "camera_angle": "eye level/high angle/low angle/dutch tilt",
+      "camera_movement": "static/push in/pull out/pan/tracking/follow/handheld/crane",
+      "description": "visual description, <= 20 words",
+      "narrative": "narrative role",
+      "image_prompt": "English image prompt",
+      "motion_prompt": "English motion prompt"
+    }}
+  ],
+  "music": {{
+    "description": "BGM description",
+    "mood": "mood, <= 6 words",
+    "instruments": ["instrument name"],
+    "bpm": 96,
+    "start_time": 0.0
+  }}
+}}
+"""
+
+
+async def _try_run_cmd(cmd: list[str]) -> bool:
+    """Run a command, returning only ``False`` on failure.
+
+    For probing calls where "no output" is itself a normal result -- e.g. scene
+    detection on a single unbroken take, which legitimately has zero cut points;
+    that should not be raised as an error.
+    """
+
+    proc = await asyncio.to_thread(
+        subprocess.run, cmd, capture_output=True, text=True, timeout=1800
+    )
+    return proc.returncode == 0
+
+
+async def _extract_frame_at(*, source_path: str, output_path: Path, at_sec: float) -> None:
+    """Grab one frame at the given second. ``-ss`` before ``-i`` seeks by keyframe, much faster than decoding frame by frame."""
+
+    await _run_cmd(
+        [
+            "ffmpeg",
+            "-y",
+            "-ss",
+            f"{max(at_sec, 0.0):.3f}",
+            "-i",
+            source_path,
+            "-frames:v",
+            "1",
+            "-q:v",
+            "2",
+            str(output_path),
+        ]
+    )
+
+
+def _pick_evenly(items: list[Path], count: int) -> list[Path]:
+    """Pick ``count`` items evenly spaced from an ordered list, always including the first and last."""
+
+    if count <= 0:
+        return []
+    if count >= len(items):
+        return list(items)
+    if count == 1:
+        return [items[0]]
+    step = (len(items) - 1) / (count - 1)
+    return [items[round(index * step)] for index in range(count)]
+
+
+async def _extract_breakdown_frames(
+    *,
+    video_path: Path,
+    out_dir: Path,
+    target_frames: int,
+    scene_threshold: float,
+    duration_sec: Optional[float],
+) -> list[Path]:
+    """Breakdown-specific frame extraction: scan the whole clip for cuts first, then top up with evenly spaced frames if cuts are too sparse.
+
+    Two deliberate differences from :func:`run_freezone_extract_frames`, both in service of a finer split:
+
+    1. Scene detection here does not pass the target frame count as ``-frames:v``. Doing
+       that stops decoding as soon as the Nth cut is found, so a long clip would only
+       show its opening section and the model would have to guess the rest of the
+       timeline. Here the whole clip is scanned first, then the target count is picked
+       evenly, covering all the way to the end. ``_BREAKDOWN_SCENE_SCAN_LIMIT`` is a
+       safety cap that can also stop decoding early, so frames from a run that hit the
+       cap aren't trustworthy and fall back to even sampling instead.
+    2. Frames are uniformly downscaled to ``_BREAKDOWN_FRAME_WIDTH``-wide JPEGs. Vision
+       requests send the whole frame as base64; dozens of 1080p PNGs can overwhelm the
+       gateway, and shrinking them more than pays for doubling the frame count.
+    """
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+    # format=yuvj420p can't be dropped: the mjpeg encoder rejects limited-range yuv420p
+    # (ffmpeg 8+ raises "Non full-range YUV is non-standard" and refuses to open the
+    # encoder), and most source video is limited range.
+    scale = f"scale='min({_BREAKDOWN_FRAME_WIDTH},iw)':-2,format=yuvj420p"
+
+    # Zero cut points is a legitimate result (a long unbroken take), so this pass
+    # doesn't raise on failure -- it falls through to the even-sampling fallback below.
+    await _try_run_cmd(
+        [
+            "ffmpeg",
+            "-y",
+            "-i",
+            str(video_path),
+            "-vf",
+            f"select='gt(scene,{scene_threshold})',{scale}",
+            "-fps_mode",
+            "vfr",
+            "-frames:v",
+            str(_BREAKDOWN_SCENE_SCAN_LIMIT),
+            "-frame_pts",
+            "true",
+            "-q:v",
+            "3",
+            str(out_dir / "scene_%05d.jpg"),
+        ]
+    )
+    scene_files = sort_extracted_frames_by_pts(out_dir.glob("scene_*.jpg"))
+    # Hitting the cap exactly means ffmpeg was stopped by -frames:v, so the rest of the
+    # clip was never decoded; picking from this batch would only cover the opening section.
+    scan_truncated = len(scene_files) >= _BREAKDOWN_SCENE_SCAN_LIMIT
+
+    if len(scene_files) >= target_frames and not scan_truncated:
+        picked = _pick_evenly(scene_files, target_frames)
+        keep = {path.name for path in picked}
+        for path in scene_files:
+            if path.name not in keep:
+                path.unlink(missing_ok=True)
+        return picked
+
+    # Too few cuts: long takes and one-shot AI-generated clips land here. Even sampling's
+    # density only depends on duration, not editing rhythm, and is the only way to get a
+    # finer split on this kind of footage. Footage with too many cuts to finish scanning
+    # also lands here, for the same reason: even sampling always reaches the end.
+    for path in scene_files:
+        path.unlink(missing_ok=True)
+
+    duration = _bd_float(duration_sec, None)
+    if duration is None or duration <= 0:
+        duration = await _probe_video_duration(str(video_path))
+    # Pass fps as a plain decimal, not a "n/duration" fraction: when the denominator has
+    # a fractional part, different ffmpeg versions parse it inconsistently.
+    fps_expr = f"{target_frames / duration:.6f}" if duration > 0 else "1"
+    await _run_cmd(
+        [
+            "ffmpeg",
+            "-y",
+            "-i",
+            str(video_path),
+            "-vf",
+            f"fps={fps_expr},{scale}",
+            "-frames:v",
+            str(target_frames),
+            "-q:v",
+            "3",
+            str(out_dir / "even_%05d.jpg"),
+        ]
+    )
+    return sort_extracted_frames_by_pts(out_dir.glob("even_*.jpg"))
+
+
+def _normalize_breakdown_shots(
+    raw_shots: list[Any],
+    *,
+    duration_sec: float,
+    frame_count: int,
+    group_size: int,
+) -> list[dict[str, Any]]:
+    """Clean up the model's shots into a time-monotonic list with every field filled in.
+
+    The model is often sloppy about time (missing fields, reversed order, past the
+    clip's length); fill in defaults by splitting the duration evenly across shots
+    and clamp anything out of range, so the ffmpeg parameters downstream are always valid.
+    """
+
+    total = len(raw_shots)
+    slot = duration_sec / total if total and duration_sec > 0 else 0.0
+    shots: list[dict[str, Any]] = []
+    cursor = 0.0
+
+    for index, item in enumerate(raw_shots):
+        entry = item if isinstance(item, dict) else {}
+        default_start = index * slot
+        default_end = (index + 1) * slot if slot else 0.0
+
+        start = _bd_float(entry.get("start_time"), None)
+        end = _bd_float(entry.get("end_time"), None)
+        if start is None or start < 0:
+            start = default_start
+        if end is None or end <= start:
+            end = max(default_end, start + max(slot, 0.5))
+        if duration_sec > 0:
+            start = min(max(start, 0.0), duration_sec)
+            end = min(max(end, start), duration_sec)
+        # Monotonically increasing: the model occasionally writes a shot's start time
+        # back into the middle of the previous shot.
+        start = max(start, cursor)
+        end = max(end, start)
+        cursor = end
+
+        segment = _bd_int(entry.get("segment"), None)
+        if segment is None or segment < 1:
+            segment = index // max(group_size, 1) + 1
+
+        keyframe = _bd_int(entry.get("keyframe"), None)
+        if keyframe is None or not (1 <= keyframe <= max(frame_count, 1)):
+            keyframe = min(index + 1, max(frame_count, 1))
+
+        shots.append(
+            {
+                "shot": _bd_int(entry.get("shot"), index + 1) or index + 1,
+                "segment": segment,
+                "keyframe": keyframe,
+                "start_time": round(start, 3),
+                "end_time": round(end, 3),
+                "duration": round(max(end - start, 0.0), 3),
+                "shot_size": _bd_text(entry.get("shot_size"), "medium shot"),
+                "lighting": _bd_text(entry.get("lighting"), "natural light"),
+                "camera_angle": _bd_text(entry.get("camera_angle"), "eye level"),
+                "camera_movement": _bd_text(entry.get("camera_movement"), "static"),
+                "description": _bd_text(entry.get("description"))
+                or _bd_text(entry.get("visual_description"), f"shot {index + 1}"),
+                "narrative": _bd_text(entry.get("narrative")),
+                "image_prompt": _bd_text(entry.get("image_prompt")),
+                "motion_prompt": _bd_text(entry.get("motion_prompt")),
+            }
+        )
+
+    return shots
+
+
+def _group_breakdown_shots(
+    shots: list[dict[str, Any]],
+    *,
+    segments: list[Any],
+    group_size: int,
+) -> list[dict[str, Any]]:
+    """Bucket shots into storyboard groups by ``segment``; fall back to even chunks of ``group_size`` if the model gave none.
+
+    Each group is capped at ``group_size`` shots -- narrative beats from the model
+    vary wildly in length, and without a cap one group could hold a dozen-plus
+    storyboard panels, which is unreadable on the canvas. Oversized groups are
+    sliced into multiple ordered groups instead.
+    """
+
+    labels: dict[int, str] = {}
+    for item in segments:
+        if not isinstance(item, dict):
+            continue
+        index = _bd_int(item.get("segment"), None)
+        if index is not None:
+            labels[index] = _bd_text(item.get("label"))
+
+    ordered: list[int] = []
+    buckets: dict[int, list[dict[str, Any]]] = {}
+    for shot in shots:
+        segment = int(shot["segment"])
+        if segment not in buckets:
+            buckets[segment] = []
+            ordered.append(segment)
+        buckets[segment].append(shot)
+
+    # If the model crammed every shot into one segment, grouping is meaningless --
+    # fall back to an even split.
+    if len(ordered) <= 1 and len(shots) > group_size:
+        ordered = []
+        buckets = {}
+        for index, shot in enumerate(shots):
+            segment = index // max(group_size, 1) + 1
+            shot["segment"] = segment
+            if segment not in buckets:
+                buckets[segment] = []
+                ordered.append(segment)
+            buckets[segment].append(shot)
+
+    size = max(group_size, 1)
+    groups: list[dict[str, Any]] = []
+    for segment in ordered:
+        members = buckets[segment]
+        chunks = [members[start : start + size] for start in range(0, len(members), size)]
+        base = labels.get(segment) or ""
+        for part, chunk in enumerate(chunks, start=1):
+            position = len(groups) + 1
+            if not base:
+                label = f"Storyboard group {position:02d}"
+            elif len(chunks) == 1:
+                label = base
+            else:
+                label = f"{base} ({part}/{len(chunks)})"
+            for shot in chunk:
+                shot["segment"] = position
+            groups.append(
+                {
+                    "group_index": position,
+                    "segment": position,
+                    "label": label,
+                    "shots": chunk,
+                }
+            )
+    return groups
+
+
+def _select_motion_shots(
+    shots: list[dict[str, Any]],
+    *,
+    max_clips: int,
+) -> list[dict[str, Any]]:
+    """Pick the shots most worth using as motion references: moving shots first, longest within each group."""
+
+    moving = [
+        shot
+        for shot in shots
+        if _bd_text(shot.get("camera_movement")).lower() not in _STATIC_CAMERA_MOVEMENTS
+    ]
+    pool = moving or shots
+    ranked = sorted(pool, key=lambda shot: float(shot.get("duration") or 0.0), reverse=True)
+    picked = ranked[: max(max_clips, 1)]
+    return sorted(picked, key=lambda shot: float(shot.get("start_time") or 0.0))
+
+
+async def run_freezone_video_breakdown(
+    *,
+    project_dir: Path,
+    job_id: str,
+    video_path: Path,
+    dimensions: Optional[list[str]] = None,
+    max_frames: int = 40,
+    scene_threshold: float = 0.3,
+    duration_sec: Optional[float] = None,
+    storyboard_group_size: int = 4,
+    max_motion_clips: int = 3,
+    motion_clip_max_sec: float = 6.0,
+    music_clip_sec: float = 15.0,
+    model: Optional[str] = None,
+    egress_context: TrustedEgressContext | None = None,
+) -> dict[str, Any]:
+    """Shot-by-shot breakdown: extract frames -> Vision split -> actually cut out storyboard images / motion clips / BGM clip.
+
+    Division of labor against ``analyze-video-story``: that one only produces a text
+    table. Breakdown has to land as real, directly usable canvas assets, so all three
+    dimensions are real files -- storyboard is images extracted at each shot's
+    timestamp, motion is video clips cut by camera movement, music is a BGM clip cut
+    from the source.
+
+    All media fields in the return value are absolute ``*_path`` paths; the runner
+    is responsible for turning them into static URLs.
+    """
+
+    import json
+
+    from novelvideo.freezone import vision_gateway
+    from novelvideo.freezone.vision_gateway import (
+        FREEZONE_VIDEO_ANALYSIS_TIMEOUT_SECONDS,
+        load_compact_vision_inputs,
+        resolve_freezone_vision_model,
+    )
+
+    # Same convention as `run_freezone_analyze_shots`: the egress helper is imported
+    # inside the function body, not at module level.
+    from novelvideo.freezone.presets import (
+        abandon_freezone_vision_egress,
+        complete_freezone_vision_egress,
+        prepare_freezone_vision_egress,
+    )
+
+    if not shutil.which("ffmpeg"):
+        raise RuntimeError("ffmpeg not found on PATH; install via brew/apt")
+    if not video_path.exists():
+        raise FileNotFoundError(f"video not found: {video_path}")
+
+    wanted = [dim for dim in (dimensions or list(VIDEO_BREAKDOWN_DIMENSIONS)) if dim]
+    unknown = [dim for dim in wanted if dim not in VIDEO_BREAKDOWN_DIMENSIONS]
+    if unknown:
+        raise ValueError(f"unsupported breakdown dimensions: {unknown}")
+    if not wanted:
+        raise ValueError("at least one breakdown dimension is required")
+
+    out_dir = outputs_dir(project_dir, "freezone_video_breakdown") / job_id
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    source_path = str(video_path)
+    total_duration = _bd_float(duration_sec, None)
+    if total_duration is None or total_duration <= 0:
+        total_duration = await _probe_video_duration(source_path)
+
+    frame_target = plan_breakdown_frame_count(duration_sec=total_duration, max_frames=max_frames)
+    frame_paths = await _extract_breakdown_frames(
+        video_path=video_path,
+        out_dir=out_dir / "frames",
+        target_frames=frame_target,
+        scene_threshold=scene_threshold,
+        duration_sec=total_duration,
+    )
+    if not frame_paths:
+        raise RuntimeError("no keyframes extracted from video")
+
+    prompt = build_video_breakdown_prompt(
+        frame_count=len(frame_paths),
+        duration_sec=total_duration,
+        group_size=storyboard_group_size,
+    )
+    images = await load_compact_vision_inputs([path for path in frame_paths if path.exists()])
+    if not images:
+        raise ValueError("no readable frames to analyze")
+    vision_model_name = resolve_freezone_vision_model(model)
+
+    # Retry once rather than give up for good: a breakdown run takes a few minutes,
+    # and it's cheaper to spend one more call than to make the user re-upload the video.
+    raw: dict[str, Any] = {}
+    vision_model = ""
+    for attempt in (1, 2):
+        # Each attempt is its own independent egress: claim and terminal state are both
+        # per-attempt. Whether the output turns out usable is decided after the egress
+        # call returns -- once the model has answered, the claim is complete regardless;
+        # a retry opens a new claim.
+        vision_egress = await prepare_freezone_vision_egress(
+            egress_context=egress_context,
+            model_name=vision_model_name,
+            prompt=prompt,
+            images=[image.data for image in images],
+            timeout_seconds=FREEZONE_VIDEO_ANALYSIS_TIMEOUT_SECONDS,
+        )
+        try:
+            vision_model, text = await vision_gateway.call_freezone_vision_model(
+                prompt=prompt,
+                images=images,
+                model_override=None if vision_egress else model,
+                timeout_seconds=FREEZONE_VIDEO_ANALYSIS_TIMEOUT_SECONDS,
+                transport_context=(vision_egress.transport_context if vision_egress else None),
+            )
+        except BaseException:
+            # Frame bytes are fully read before the claim (the digest needs them), and
+            # nothing between claim and submission can raise, so any failure here means
+            # "handed off, outcome unknown".
+            await abandon_freezone_vision_egress(vision_egress, submitted=True)
+            raise
+        await complete_freezone_vision_egress(vision_egress, result=text or "")
+        try:
+            if not text:
+                raise ValueError("vision model returned no text")
+            parsed = loads_model_json(text)
+            if not isinstance(parsed, dict):
+                raise ValueError("vision model response is not an object")
+            if not isinstance(parsed.get("shots"), list) or not parsed["shots"]:
+                raise ValueError("vision model returned no shots")
+        except ValueError as exc:  # json.JSONDecodeError is also a ValueError
+            (out_dir / "raw_response.txt").write_text(text or "", encoding="utf-8")
+            if attempt == 2:
+                raise RuntimeError(f"vision model returned unusable output: {exc}; raw saved") from exc
+            logger.warning("breakdown vision output unusable (%s); retrying once", exc)
+            continue
+        raw = parsed
+        break
+
+    raw_shots = raw["shots"]
+
+    shots = _normalize_breakdown_shots(
+        raw_shots,
+        duration_sec=total_duration,
+        frame_count=len(frame_paths),
+        group_size=storyboard_group_size,
+    )
+
+    payload: dict[str, Any] = {
+        "job_id": job_id,
+        "model": vision_model,
+        "duration_sec": round(total_duration, 3),
+        "title": _bd_text(raw.get("title")),
+        "summary": _bd_text(raw.get("summary")),
+        "dimensions": wanted,
+        "frame_paths": [str(path) for path in frame_paths],
+        "storyboard": None,
+        "motion": None,
+        "music": None,
+        "raw": raw,
+    }
+
+    # ---- storyboard: grab a frame at the midpoint of each shot ------------
+    if "storyboard" in wanted:
+        segments = raw.get("segments")
+        groups = _group_breakdown_shots(
+            shots,
+            segments=segments if isinstance(segments, list) else [],
+            group_size=storyboard_group_size,
+        )
+        code = 0
+        for group in groups:
+            for shot in group["shots"]:
+                code += 1
+                start = float(shot["start_time"])
+                end = float(shot["end_time"])
+                image_path = out_dir / f"shot_{code:02d}.jpg"
+                await _extract_frame_at(
+                    source_path=source_path,
+                    output_path=image_path,
+                    at_sec=(start + end) / 2.0,
+                )
+                shot["code"] = f"S{code:02d}"
+                shot["image_path"] = str(image_path)
+        payload["storyboard"] = {"label": "Storyboard groups", "groups": groups}
+
+    # ---- motion: cut video clips by camera movement ------------------------
+    if "motion" in wanted:
+        width, height = await _probe_video_size(source_path)
+        clips: list[dict[str, Any]] = []
+        for index, shot in enumerate(_select_motion_shots(shots, max_clips=max_motion_clips), 1):
+            start = float(shot["start_time"])
+            span = min(float(shot["duration"]) or motion_clip_max_sec, motion_clip_max_sec)
+            span = max(span, 1.0)
+            if total_duration > 0:
+                span = min(span, max(total_duration - start, 0.0))
+            if span <= 0.1:
+                continue
+            clip_path = out_dir / f"motion_{index:02d}.mp4"
+            await _render_video_clip(
+                source_path=source_path,
+                output_path=clip_path,
+                source_start=start,
+                duration=span,
+                speed=1.0,
+                width=width,
+                height=height,
+                fps=30,
+                background_color="#000000",
+                keep_original_audio=True,
+                volume=1.0,
+                muted=False,
+            )
+            preview_path = out_dir / f"motion_{index:02d}.jpg"
+            await _extract_frame_at(
+                source_path=source_path,
+                output_path=preview_path,
+                at_sec=start + span / 2.0,
+            )
+            clips.append(
+                {
+                    "code": f"M{index:02d}",
+                    "shot": shot["shot"],
+                    "start_time": round(start, 3),
+                    "end_time": round(start + span, 3),
+                    "duration_sec": round(span, 3),
+                    "camera_movement": shot["camera_movement"],
+                    "camera_angle": shot["camera_angle"],
+                    "description": shot["description"],
+                    "motion_prompt": shot["motion_prompt"],
+                    "video_path": str(clip_path),
+                    "preview_image_path": str(preview_path),
+                }
+            )
+        payload["motion"] = {"label": "Motion | camera-movement reference", "clips": clips}
+
+    # ---- music: cut one BGM segment from the source -------------------------
+    if "music" in wanted:
+        clip: Optional[dict[str, Any]] = None
+        if await _probe_has_audio(source_path):
+            raw_music = raw.get("music") if isinstance(raw.get("music"), dict) else {}
+            start = _bd_float(raw_music.get("start_time"), 0.0) or 0.0
+            span = music_clip_sec
+            if total_duration > 0:
+                start = min(max(start, 0.0), max(total_duration - 1.0, 0.0))
+                span = min(span, max(total_duration - start, 0.0))
+            if span > 0.5:
+                audio_path = out_dir / "music_01.m4a"
+                await _render_audio_clip(
+                    source_path=source_path,
+                    output_path=audio_path,
+                    source_start=start,
+                    duration=span,
+                    volume=1.0,
+                )
+                instruments = raw_music.get("instruments")
+                clip = {
+                    "code": "A01",
+                    "start_time": round(start, 3),
+                    "end_time": round(start + span, 3),
+                    "duration_sec": round(span, 3),
+                    "description": _bd_text(raw_music.get("description")),
+                    "mood": _bd_text(raw_music.get("mood")),
+                    "instruments": [
+                        _bd_text(item)
+                        for item in (instruments if isinstance(instruments, list) else [])
+                        if _bd_text(item)
+                    ],
+                    "bpm": _bd_int(raw_music.get("bpm"), None),
+                    "audio_path": str(audio_path),
+                }
+        # clip stays None when the source has no audio track (or too little to cut);
+        # the frontend uses that to decide not to create an audio node.
+        payload["music"] = {"label": "Music | BGM reference clip", "clip": clip}
+
+    out_file = out_dir / "breakdown.json"
+    out_file.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     payload["output_path"] = str(out_file)
     return payload
 

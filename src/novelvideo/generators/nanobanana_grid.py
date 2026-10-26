@@ -3131,6 +3131,72 @@ async def _generate_image(
             raise ValueError(
                 f"RunPod Qwen Image generation failed: {runpod_qwen_error or 'empty image'}"
             )
+    elif generator.provider == "runpod_qwen_edit":
+        # Added for Freezone's `/freezone/edit` and `/freezone/relight`
+        # (`run_freezone_edit`, `freezone/jobs.py`) — same reasoning as the
+        # `runpod_qwen` branch above: this function previously had no
+        # dispatch for Edit-2511 at all (only the beat-render pipeline
+        # called `_call_runpod_qwen_edit_image_api` directly). `ref_paths[0]`
+        # is always the edit canvas (`run_freezone_edit` puts `base_path`
+        # first) and becomes `image1` — the output keeps `image1`'s own
+        # size, so `aspect_ratio`/`image_size` are accepted here for
+        # call-site symmetry but genuinely unused by the worker. See
+        # `.claude/CLAUDE.md`.
+        reference_images = [
+            (
+                _webai_ref_filename(i, mimetypes.guess_type(path)[0] or "image/png"),
+                Path(path).read_bytes(),
+                mimetypes.guess_type(path)[0] or "image/png",
+            )
+            for i, path in enumerate(ref_paths)
+        ]
+        image_bytes, _text, runpod_qwen_edit_error = await _call_runpod_qwen_edit_image_api(
+            api_key=generator.api_key,
+            model=generator.model,
+            prompt=prompt,
+            reference_images=reference_images or None,
+        )
+        if not image_bytes:
+            raise ValueError(
+                f"RunPod Qwen Image Edit generation failed: {runpod_qwen_edit_error or 'empty image'}"
+            )
+    elif generator.provider == "runpod_qwen21_render":
+        # Added for Freezone's `/freezone/edit` (compositing a character/
+        # prop/reference into an existing canvas image while PRESERVING
+        # its composition/scale) — same checkpoint as `runpod_qwen` above
+        # (Qwen-Image 2.1) but a different ComfyUI graph
+        # (`_runpod_qwen21_render_image_graph`): the KSampler latent comes
+        # from `TextEncodeQwenImage21`'s own latent output (sized off
+        # `reference_images[0]`, the canvas) instead of an independently
+        # sized `EmptyLatentImage` — the fix the main render pipeline
+        # already applied on 2026-10-18
+        # (`_call_runpod_qwen21_render_image_api`) for exactly this kind
+        # of composition-preserving edit, never wired into Freezone until
+        # now. `ref_paths[0]` is always the edit canvas (`run_freezone_edit`
+        # puts `base_path` first, same convention as `runpod_qwen_edit`
+        # above) and becomes `image_1`; every reference (including the
+        # canvas) is auto-resized to a shared target area by the callee
+        # (`_qwen21_prepare_render_image`), so `aspect_ratio`/`image_size`
+        # are accepted here for call-site symmetry but genuinely unused.
+        # See `.claude/CLAUDE.md` 2026-10-26 entry.
+        reference_images = [
+            (
+                _webai_ref_filename(i, mimetypes.guess_type(path)[0] or "image/png"),
+                Path(path).read_bytes(),
+                mimetypes.guess_type(path)[0] or "image/png",
+            )
+            for i, path in enumerate(ref_paths)
+        ]
+        image_bytes, _text, runpod_qwen21_render_error = await _call_runpod_qwen21_render_image_api(
+            api_key=generator.api_key,
+            model=generator.model,
+            prompt=prompt,
+            reference_images=reference_images or None,
+        )
+        if not image_bytes:
+            raise ValueError(
+                f"RunPod Qwen Image 2.1 (render graph) generation failed: {runpod_qwen21_render_error or 'empty image'}"
+            )
     else:
         from google import genai
         from google.genai import types

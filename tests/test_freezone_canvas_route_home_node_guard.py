@@ -293,7 +293,10 @@ def test_only_placement_free_canvas_routes_opt_out_of_the_home_node_guard() -> N
     # (/freezone/video/multishot/review, /freezone/video/multishot) — both
     # stay guarded (no require_home_node=False), same as every other
     # Freezone video route that reads/writes local project files.
-    assert router_decorators == 115
+    # 2026-10-26: +1 non-canvas route for the shot-by-shot video breakdown
+    # (/freezone/video-breakdown) — same local-ffmpeg-plus-one-vision-call shape
+    # as /freezone/analyze-video-story, stays guarded.
+    assert router_decorators == 116
     assert len(canvas_routes) == 31
 
     assert set(canvas_routes) >= PLACEMENT_FREE_CANVAS_ROUTES

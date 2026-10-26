@@ -20,16 +20,31 @@ def _set_runpod_qwen_image_configured(monkeypatch, value: bool) -> None:
     monkeypatch.setattr(config_module, "_runpod_qwen_image_configured", lambda: value)
 
 
+def _set_runpod_qwen_edit_configured(monkeypatch, value: bool) -> None:
+    monkeypatch.setattr(config_module, "_runpod_qwen_edit_configured", lambda: value)
+
+
 def test_dev_catalog_entry_absent_when_not_configured(monkeypatch):
     _set_runpod_qwen_image_configured(monkeypatch, False)
+    # Isolate from the (separately-gated) Qwen-Image-Edit-2511 entry added
+    # 2026-10-25 — see its own gating tests below.
+    _set_runpod_qwen_edit_configured(monkeypatch, False)
     entries = freezone_routes._freezone_dev_media_model_catalog_entries("image")
     assert entries == []
 
 
 def test_dev_catalog_entry_present_when_configured(monkeypatch):
     _set_runpod_qwen_image_configured(monkeypatch, True)
+    _set_runpod_qwen_edit_configured(monkeypatch, False)
     entries = freezone_routes._freezone_dev_media_model_catalog_entries("image")
-    assert len(entries) == 1
+    # `_runpod_qwen21_render_configured()` is just an alias for
+    # `_runpod_qwen_image_configured()` (same endpoint, no new secret —
+    # see `.claude/CLAUDE.md` 2026-10-26), so flipping that one gate now
+    # also surfaces the `runpod_qwen21_render` entry added that day.
+    assert [entry["catalogId"] for entry in entries] == [
+        "runpod_qwen_image",
+        "runpod_qwen21_render",
+    ]
     entry = entries[0]
     assert entry["providerId"] == "runpod_qwen"
     assert entry["apiModel"] == "qwen-image-2.1"
@@ -78,6 +93,158 @@ def test_video_catalog_entry_present_when_configured(monkeypatch):
     assert entry["catalogId"] == "runpod_minimax_h3"
     assert entry["minDuration"] == 5
     assert entry["maxDuration"] == 12
+
+
+# ── Qwen-Image-Edit-2511 (relight/edit), added 2026-10-25 ───────────────
+#
+# Previously unreachable from Freezone at all: `_generate_image()` had no
+# `runpod_qwen_edit` dispatch branch, the provider wasn't allowlisted, and
+# there was no catalog row for `/freezone/edit`'s catalog-gated lookup.
+# Gated independently from the Qwen-Image-2.1 entry above (own RunPod
+# endpoint, `_runpod_qwen_edit_configured()`). See `.claude/CLAUDE.md`.
+
+
+def test_dev_catalog_edit_entry_absent_when_not_configured(monkeypatch):
+    _set_runpod_qwen_image_configured(monkeypatch, False)
+    _set_runpod_qwen_edit_configured(monkeypatch, False)
+    entries = freezone_routes._freezone_dev_media_model_catalog_entries("image")
+    assert entries == []
+
+
+def test_dev_catalog_edit_entry_present_when_configured(monkeypatch):
+    _set_runpod_qwen_image_configured(monkeypatch, False)
+    _set_runpod_qwen_edit_configured(monkeypatch, True)
+    entries = freezone_routes._freezone_dev_media_model_catalog_entries("image")
+    assert len(entries) == 1
+    entry = entries[0]
+    assert entry["providerId"] == "runpod_qwen_edit"
+    assert entry["apiModel"] == "qwen-image-edit-2511"
+    assert entry["catalogId"] == "runpod_qwen_edit"
+    # Round trip: must resolve to a real `IMAGE_GENERATION_SELECTIONS` key
+    # via `infer_image_generation_selection()`, the mechanism
+    # `_start_or_enqueue_freezone_edit_job()` actually uses for billing.
+    assert (
+        config_module.infer_image_generation_selection(
+            entry["providerId"], entry["apiModel"]
+        )
+        == "runpod_qwen_edit_render"
+    )
+
+
+def test_dev_catalog_both_runpod_image_entries_present_when_both_configured(
+    monkeypatch,
+):
+    _set_runpod_qwen_image_configured(monkeypatch, True)
+    _set_runpod_qwen_edit_configured(monkeypatch, True)
+    entries = freezone_routes._freezone_dev_media_model_catalog_entries("image")
+    # Order matches the order entries are appended in
+    # `_freezone_dev_media_model_catalog_entries` — `runpod_qwen21_render`
+    # is gated by the same flag as `runpod_qwen_image` (both alias
+    # `_runpod_qwen_image_configured()`), so it always appears alongside it.
+    assert [entry["catalogId"] for entry in entries] == [
+        "runpod_qwen_image",
+        "runpod_qwen_edit",
+        "runpod_qwen21_render",
+    ]
+
+
+def test_supported_freezone_image_providers_includes_runpod_qwen_edit_when_configured():
+    # Same pattern as `test_supported_freezone_image_providers_includes_runpod_qwen_when_configured`
+    # above — this set is computed once at import time from the real
+    # `.env` this test process was started with.
+    if config_module._runpod_qwen_edit_configured():
+        assert "runpod_qwen_edit" in route_helpers.SUPPORTED_FREEZONE_IMAGE_PROVIDERS
+
+
+def test_resolve_freezone_image_provider_accepts_runpod_qwen_edit_when_allowlisted(
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        route_helpers,
+        "SUPPORTED_FREEZONE_IMAGE_PROVIDERS",
+        route_helpers.SUPPORTED_FREEZONE_IMAGE_PROVIDERS | {"runpod_qwen_edit"},
+    )
+    assert (
+        route_helpers.resolve_freezone_image_provider("runpod_qwen_edit")
+        == "runpod_qwen_edit"
+    )
+
+
+# ── `runpod_qwen21_render` (composition-preserving edit, fixes the
+#    body-scale/EmptyLatentImage bug), added 2026-10-26 ──────────────────
+#
+# Same checkpoint/gate as `runpod_qwen_image` above
+# (`_runpod_qwen21_render_configured()` is just an alias for
+# `_runpod_qwen_image_configured()`, no new secret) but a different
+# ComfyUI graph: `_runpod_qwen21_render_image_graph` wires the KSampler
+# latent to `TextEncodeQwenImage21`'s own latent output (sized off the
+# first reference image) instead of an independently-sized
+# `EmptyLatentImage` — the official node's own tooltip warns the latter
+# "shifts the edit". Previously only reachable from the main render
+# pipeline, never from Freezone. See `.claude/CLAUDE.md`.
+
+
+def test_dev_catalog_qwen21_render_entry_absent_when_not_configured(monkeypatch):
+    _set_runpod_qwen_image_configured(monkeypatch, False)
+    _set_runpod_qwen_edit_configured(monkeypatch, False)
+    entries = freezone_routes._freezone_dev_media_model_catalog_entries("image")
+    assert "runpod_qwen21_render" not in [e["catalogId"] for e in entries]
+
+
+def test_dev_catalog_qwen21_render_entry_present_when_configured(monkeypatch):
+    _set_runpod_qwen_image_configured(monkeypatch, True)
+    _set_runpod_qwen_edit_configured(monkeypatch, False)
+    entries = freezone_routes._freezone_dev_media_model_catalog_entries("image")
+    entry = next(e for e in entries if e["catalogId"] == "runpod_qwen21_render")
+    assert entry["providerId"] == "runpod_qwen21_render"
+    assert entry["apiModel"] == "qwen-image-2.1"
+    # Round trip: must resolve to the real `IMAGE_GENERATION_SELECTIONS`
+    # key used by the main render pipeline — the same mechanism
+    # `_start_or_enqueue_freezone_edit_job()` uses for billing.
+    assert (
+        config_module.infer_image_generation_selection(
+            entry["providerId"], entry["apiModel"]
+        )
+        == "runpod_qwen21_render"
+    )
+
+
+def test_supported_freezone_image_providers_includes_runpod_qwen21_render_when_configured():
+    # This set is computed once at import time from the real `.env` this
+    # test process was started with.
+    if config_module._runpod_qwen21_render_configured():
+        assert (
+            "runpod_qwen21_render" in route_helpers.SUPPORTED_FREEZONE_IMAGE_PROVIDERS
+        )
+
+
+def test_resolve_freezone_image_provider_accepts_runpod_qwen21_render_when_allowlisted(
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        route_helpers,
+        "SUPPORTED_FREEZONE_IMAGE_PROVIDERS",
+        route_helpers.SUPPORTED_FREEZONE_IMAGE_PROVIDERS | {"runpod_qwen21_render"},
+    )
+    assert (
+        route_helpers.resolve_freezone_image_provider("runpod_qwen21_render")
+        == "runpod_qwen21_render"
+    )
+
+
+def test_resolve_freezone_image_provider_rejects_runpod_qwen21_render_when_not_allowlisted(
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        route_helpers,
+        "SUPPORTED_FREEZONE_IMAGE_PROVIDERS",
+        {"huimeng", "newapi", "openrouter", "openai"},
+    )
+    import pytest
+    from fastapi import HTTPException
+
+    with pytest.raises(HTTPException):
+        route_helpers.resolve_freezone_image_provider("runpod_qwen21_render")
 
 
 def test_request_schema_shape_is_catalog_compatible(monkeypatch):

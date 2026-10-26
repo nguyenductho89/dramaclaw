@@ -100,6 +100,11 @@ import {
   isPresetManagedNode,
 } from '@/features/canvas/domain/mainlineNodeFlags';
 import { scopeProjectionGraphIds } from '@/features/freezone/projectionGraphIds';
+import {
+  planVideoBreakdownGroups,
+  type PlanVideoBreakdownGroupsOptions,
+  type VideoBreakdownResultLike,
+} from '@/features/canvas/application/videoBreakdownGroups';
 
 export type {
   ActiveToolDialog,
@@ -299,6 +304,18 @@ interface CanvasState {
     }[],
     options?: { cols?: number; groupName?: string }
   ) => string | null;
+
+  /**
+   * Land the output of a frame-by-frame breakdown run onto the canvas: storyboard groups / a motion reference group /
+   * a music reference group, each wrapped in its own display group with provenance edges back to the breakdown node.
+   * A dimension with no output occupies no space. The whole batch is one undo step; returns the created group node
+   * ids (empty array when the result carried nothing landable, null when the source node is gone).
+   */
+  addVideoBreakdownGroups: (
+    sourceNodeId: string,
+    result: VideoBreakdownResultLike,
+    options?: Omit<PlanVideoBreakdownGroupsOptions, 'origin'>
+  ) => string[] | null;
 
   updateNodeData: (
     nodeId: string,
@@ -732,6 +749,16 @@ function normalizeNodes(rawNodes: CanvasNode[]): CanvasNode[] {
           if ('generationStartedAt' in mergedData) {
             mergedData.generationStartedAt = null;
           }
+        }
+      }
+
+      // Breakdown has no resume mechanism (no task_key is persisted at submit time), so the in-progress flag is
+      // always reset - the "start breakdown" button is disabled by isBreakingDown, and nothing would ever flip a
+      // persisted true back to false, leaving the node only recoverable by deleting and recreating it.
+      if ('isBreakingDown' in mergedData && mergedData.isBreakingDown) {
+        mergedData.isBreakingDown = false;
+        if ('breakdownStartedAt' in mergedData) {
+          mergedData.breakdownStartedAt = null;
         }
       }
 
@@ -2076,6 +2103,91 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     });
 
     return groupNode.id;
+  },
+
+  addVideoBreakdownGroups: (sourceNodeId, result, options) => {
+    const state = get();
+    const source = state.nodes.find((node) => node.id === sourceNodeId);
+    if (!source) {
+      return null;
+    }
+
+    const nodeMap = new Map(state.nodes.map((node) => [node.id, node] as const));
+    const sourceAbs = resolveAbsolutePosition(source, nodeMap);
+    const sourceSize = getNodeSize(source);
+
+    const plans = planVideoBreakdownGroups(result, {
+      ...options,
+      origin: { x: sourceAbs.x + sourceSize.width + 120, y: sourceAbs.y },
+    });
+    if (plans.length === 0) {
+      return null;
+    }
+
+    // Parent group must precede its own children in the array for React Flow -
+    // pushing group by group (group, the group's members, the next group...) naturally satisfies this.
+    const orderedNodes: CanvasNode[] = [];
+    const newEdges: CanvasEdge[] = [];
+    const groupIds: string[] = [];
+
+    for (const plan of plans) {
+      const groupNode = canvasNodeFactory.createNode(
+        CANVAS_NODE_TYPES.group,
+        plan.position,
+        { label: plan.label, displayName: plan.label }
+      );
+      groupNode.width = plan.width;
+      groupNode.height = plan.height;
+      groupNode.style = { width: plan.width, height: plan.height };
+      groupNode.selected = false;
+      orderedNodes.push(groupNode);
+      groupIds.push(groupNode.id);
+
+      for (const child of plan.children) {
+        const childNode = canvasNodeFactory.createNode(
+          child.type,
+          child.position,
+          child.data as Partial<CanvasNodeData>
+        );
+        childNode.parentId = groupNode.id;
+        childNode.width = child.width;
+        childNode.height = child.height;
+        childNode.style = {
+          ...(childNode.style ?? {}),
+          width: child.width,
+          height: child.height,
+        };
+        childNode.selected = false;
+        orderedNodes.push(childNode);
+        newEdges.push({
+          id: `e-${sourceNodeId}-${childNode.id}`,
+          source: sourceNodeId,
+          target: childNode.id,
+          sourceHandle: 'source',
+          targetHandle: 'target',
+          type: 'disconnectableEdge',
+        });
+      }
+    }
+
+    set({
+      nodes: [
+        ...state.nodes.map((node) =>
+          node.selected ? { ...node, selected: false } : node
+        ),
+        ...orderedNodes,
+      ],
+      edges: [...state.edges, ...newEdges],
+      selectedNodeId: groupIds[0] ?? null,
+      history: {
+        past: pushSnapshot(state.history.past, createSnapshot(state.nodes, state.edges)),
+        future: [],
+      },
+      dragHistorySnapshot: null,
+      ...trackEdit(state),
+    });
+
+    return groupIds;
   },
 
   addEdge: (source, target) => {

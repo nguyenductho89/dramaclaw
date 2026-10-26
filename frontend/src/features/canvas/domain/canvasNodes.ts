@@ -24,6 +24,7 @@ export const CANVAS_NODE_TYPES = {
   video: 'videoNode',
   audio: 'audioNode',
   videoStory: 'videoStoryNode',
+  videoBreakdown: 'videoBreakdownNode',
   videoCompose: 'videoComposeNode',
   script: 'scriptNode',
   pano360Viewer: 'pano360ViewerNode',
@@ -668,6 +669,40 @@ export interface VideoStoryNodeData extends NodeDisplayData {
   [key: string]: unknown;
 }
 
+/**
+ * Frame-by-frame breakdown dimensions. One breakdown run can pick several dimensions at once,
+ * each producing an independent result group downstream (storyboard group / motion-camera reference / music-BGM reference clip).
+ */
+export const VIDEO_BREAKDOWN_DIMENSIONS = ['storyboard', 'motion', 'music'] as const;
+export type VideoBreakdownDimension = (typeof VIDEO_BREAKDOWN_DIMENSIONS)[number];
+
+/**
+ * Frame-by-frame breakdown node: splits a video into three dimensions — storyboard / motion / music.
+ *
+ * Source video has two origins — local upload (via /freezone/upload into OSS) and "pick from canvas"
+ * (click an existing video node on the canvas, connect an edge and backfill the URL). Both paths only
+ * ever write `sourceVideoUrl`; the node itself does not distinguish the origin.
+ */
+export interface VideoBreakdownNodeData extends NodeDisplayData {
+  /** Video URL to break down; empty means the node is in its "upload a video to start" empty state. */
+  sourceVideoUrl?: string | null;
+  /** Source thumbnail (inherited from the upstream video node's cover when picked from canvas). */
+  previewImageUrl?: string | null;
+  /** Uploaded file name / upstream node title, shown as the source label. */
+  sourceFileName?: string | null;
+  /** Upstream video node id selected via "pick from canvas", audit-only. */
+  sourceNodeId?: string | null;
+  /** Selected breakdown dimensions, at least one kept at all times. */
+  dimensions?: VideoBreakdownDimension[];
+  /** A local upload is in progress — the source area shows a loading state and blocks re-triggering. */
+  isUploading?: boolean;
+  /** A breakdown task is in progress. */
+  isBreakingDown?: boolean;
+  breakdownStartedAt?: number | null;
+  breakdownError?: string | null;
+  [key: string]: unknown;
+}
+
 export type ScriptGenAction = 'fromScript' | 'fromVideoRef' | 'fromCharacter';
 
 export interface ScriptNodeData extends NodeDisplayData {
@@ -829,6 +864,7 @@ export type CanvasNodeData =
   | VideoNodeData
   | AudioNodeData
   | VideoStoryNodeData
+  | VideoBreakdownNodeData
   | VideoComposeNodeData
   | ScriptNodeData
   | Pano360ViewerNodeData
@@ -988,6 +1024,12 @@ export function isVideoStoryNode(
   node: CanvasNode | null | undefined
 ): node is Node<VideoStoryNodeData, typeof CANVAS_NODE_TYPES.videoStory> {
   return node?.type === CANVAS_NODE_TYPES.videoStory;
+}
+
+export function isVideoBreakdownNode(
+  node: CanvasNode | null | undefined
+): node is Node<VideoBreakdownNodeData, typeof CANVAS_NODE_TYPES.videoBreakdown> {
+  return node?.type === CANVAS_NODE_TYPES.videoBreakdown;
 }
 
 export function isScriptNode(

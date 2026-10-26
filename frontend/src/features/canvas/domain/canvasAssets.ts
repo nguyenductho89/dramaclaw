@@ -196,6 +196,10 @@ export function resolveNodeAssets(node: CanvasNode): CanvasNodeAsset[] {
       );
     case CANVAS_NODE_TYPES.videoCompose:
       return one('video', firstStr(data.resultVideoUrl), str(data.previewImageUrl));
+    case CANVAS_NODE_TYPES.videoBreakdown:
+      // The breakdown node doesn't produce a finished clip itself, but a locally uploaded source video
+      // only lives here — without registering it, the history panel can't reach it.
+      return one('video', firstStr(data.sourceVideoUrl), str(data.previewImageUrl));
     case CANVAS_NODE_TYPES.audio:
       return one('audio', firstStr(data.audioUrl));
     case CANVAS_NODE_TYPES.threeDWorld:

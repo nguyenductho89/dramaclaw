@@ -35,6 +35,7 @@ export const DEFAULT_NODE_DISPLAY_NAME: Record<CanvasNodeType, string> = {
   [CANVAS_NODE_TYPES.video]: 'Video',
   [CANVAS_NODE_TYPES.audio]: 'Audio',
   [CANVAS_NODE_TYPES.videoStory]: 'Video story',
+  [CANVAS_NODE_TYPES.videoBreakdown]: 'Frame-by-frame breakdown',
   [CANVAS_NODE_TYPES.videoCompose]: 'Video compose',
   [CANVAS_NODE_TYPES.script]: 'Script generator',
   [CANVAS_NODE_TYPES.pano360Viewer]: '360° Panorama viewer',

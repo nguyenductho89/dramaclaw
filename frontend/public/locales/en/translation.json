@@ -6476,6 +6476,7 @@
       "video": "Video",
       "audio": "Audio",
       "videoStory": "Video Story",
+      "videoBreakdown": "Frame-by-Frame",
       "script": "Script",
       "pano360Viewer": "360° View",
       "threeDWorld": "3D World",
@@ -8595,6 +8596,38 @@
     "openRouterConfigMessage": "This model requires OpenRouter, but the backend API key is not configured. Please contact an administrator.",
     "stillRunningTitle": "Still generating",
     "stillRunningMessage": "This generation is taking longer than usual. The page stopped waiting, but the job is still running in the background — refresh later to pick up the result, or check its progress in the task center."
+  },
+  "canvasPick": {
+    "title": "Pick a reference from the canvas",
+    "hint": "Click a video node on the canvas",
+    "backToNode": "Back to node",
+    "cancel": "Cancel selection",
+    "selectNode": "Select \"{{name}}\""
+  },
+  "videoBreakdown": {
+    "sourceLabel": "Source video",
+    "emptyHint": "Add a video to start",
+    "uploading": "Uploading…",
+    "uploadFailed": "Video upload failed",
+    "uploadVideo": "Upload video",
+    "pickFromCanvas": "Pick from canvas",
+    "replace": "Replace",
+    "attached": "Selected clip",
+    "dimensionsLabel": "Breakdown dimensions",
+    "dimension": {
+      "storyboard": "Shots",
+      "motion": "Motion",
+      "music": "Music"
+    },
+    "start": "Start breakdown",
+    "running": "Breaking down…",
+    "failed": "Breakdown failed",
+    "emptyResult": "Nothing usable came out of this video",
+    "groups": {
+      "storyboard": "Storyboard group {{index}}",
+      "motion": "Motion | camera-movement reference",
+      "music": "Music | BGM reference clip"
+    }
   },
   "videoCompose": {
     "title": "Video Compose",

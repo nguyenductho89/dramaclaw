@@ -2,6 +2,7 @@ import i18next from "i18next";
 import {
   CANVAS_NODE_TYPES,
   NODE_TOOL_TYPES,
+  VIDEO_BREAKDOWN_DIMENSIONS,
   resolveNodeSourceImageUrl,
   type CanvasNode,
   type CanvasEdge,
@@ -217,6 +218,19 @@ const VIDEO_UPSCALE_PARAMETER_SCHEMA = {
     description: "Default 1080p.",
   },
 };
+
+const VIDEO_BREAKDOWN_DIMENSIONS_PARAMETER = {
+  type: "array",
+  label: "Breakdown dimensions",
+  options: [...VIDEO_BREAKDOWN_DIMENSIONS],
+  option_labels: {
+    storyboard: "Storyboard",
+    motion: "Motion / camera movement",
+    music: "Music / BGM",
+  },
+  description:
+    "Optional subset of breakdown dimensions. Omit to keep the node's current selection (all three by default).",
+} as const;
 
 function videoUpscaleEditableSchema(node: CanvasNode): Record<string, CanvasEditableFieldSchema> {
   const data = node.data as {
@@ -1437,7 +1451,11 @@ function downstreamSpawnTypesForNode(node: CanvasNode): CanvasNodeType[] {
   return getDownstreamSpawnTypes(node.type);
 }
 
-function addMediaActions(node: CanvasNode, actions: CanvasNodeActionCatalogEntry[]): void {
+function addMediaActions(
+  node: CanvasNode,
+  actions: CanvasNodeActionCatalogEntry[],
+  context?: CanvasNodeActionCatalogContext,
+): void {
   if (node.type === CANVAS_NODE_TYPES.video && hasString((node.data as { videoUrl?: unknown }).videoUrl)) {
     actions.push({
       action: "open_video_viewer",
@@ -1485,6 +1503,29 @@ function addMediaActions(node: CanvasNode, actions: CanvasNodeActionCatalogEntry
       parameters: { node_id: node.id },
     });
     actions.push({
+      action: "run_video_breakdown",
+      execution: "frontend_node",
+      command_type: "run_node_action",
+      description:
+        "Frame-by-frame breakdown: create a downstream video breakdown node connected to this video, matching the toolbar frame-by-frame breakdown entry. By default it only creates the node. Pass auto_start=true when the user asked to actually run the breakdown now; it then submits the paid breakdown task (several minutes) and lands storyboard / motion / music result groups downstream of the new node.",
+      parameters: {
+        node_id: node.id,
+        parameter_schema: {
+          dimensions: VIDEO_BREAKDOWN_DIMENSIONS_PARAMETER,
+          auto_start: {
+            type: "boolean",
+            label: "Start breakdown immediately",
+            description: "true = start the breakdown on the new node right away; default false.",
+          },
+        },
+      },
+      result_effect: {
+        target: "downstream video breakdown node",
+        next_step:
+          "Without auto_start, find the new videoBreakdownNode downstream of this video and run start_video_breakdown on it.",
+      },
+    });
+    actions.push({
       action: "run_audio_separate",
       execution: "frontend_node",
       command_type: "run_node_action",
@@ -1504,6 +1545,37 @@ function addMediaActions(node: CanvasNode, actions: CanvasNodeActionCatalogEntry
       command_type: "run_node_action",
       description: "Enter boxed subtitle erase mode for this video node. The user draws a box and confirms through the existing frontend erase UI.",
       parameters: { node_id: node.id, mode: "box" },
+    });
+  }
+
+  if (node.type === CANVAS_NODE_TYPES.videoBreakdown) {
+    const data = node.data as { sourceVideoUrl?: unknown; isBreakingDown?: unknown };
+    const hasUpstreamVideo = (context?.edges ?? []).some((edge) => {
+      if (edge.target !== node.id) return false;
+      const source = context?.nodes?.find((item) => item.id === edge.source);
+      return (
+        source?.type === CANVAS_NODE_TYPES.video &&
+        hasString((source.data as { videoUrl?: unknown }).videoUrl)
+      );
+    });
+    const blockedReasons = [
+      ...(hasUpstreamVideo || hasString(data.sourceVideoUrl)
+        ? []
+        : ["no source video: connect an upstream video node with media first"]),
+      ...(data.isBreakingDown ? ["a breakdown is already running on this node"] : []),
+    ];
+    actions.push({
+      action: "start_video_breakdown",
+      execution: "frontend_node",
+      command_type: "run_node_action",
+      description:
+        "Start breakdown: submit the paid frame-by-frame breakdown for this node's source video, matching the node's start-breakdown button. Takes several minutes; the action returns once the task is submitted and the storyboard / motion / music result groups land downstream of this node when it finishes.",
+      can_run_now: blockedReasons.length === 0,
+      ...(blockedReasons.length > 0 ? { blocked_reasons: blockedReasons } : {}),
+      parameters: {
+        node_id: node.id,
+        parameter_schema: { dimensions: VIDEO_BREAKDOWN_DIMENSIONS_PARAMETER },
+      },
     });
   }
 
@@ -1580,7 +1652,7 @@ export function buildCanvasNodeActionCatalog(
   addChatCommandActions(node, actions);
   addFrontendNodeActions(node, actions, context);
   addImageToolActions(node, actions);
-  addMediaActions(node, actions);
+  addMediaActions(node, actions, context);
   addCommitAction(node, actions);
   addHtmlArtifactActions(node, actions);
 

@@ -354,7 +354,7 @@ Người dùng hỏi máy này có tính năng "phân tích 1 video đầu vào:
 
 ## SAM3 / SAM3DBody trên worker `qwen-image-t2i-fast` — để ghép nhân vật đúng scale (2026-10-27)
 
-Mục tiêu: tính scale/vị trí nhân vật bằng hình học (Python) thay vì prompt chữ, xem ADR 0009 mục "Follow-up 2026-10-26". Mới xong hạ tầng, **chưa chạy `SAM3_Detect` trên ảnh thật** (Phase 2 trở đi chưa làm).
+Mục tiêu: tính scale/vị trí nhân vật bằng hình học (Python) thay vì prompt chữ, xem ADR 0009 mục "Follow-up 2026-10-26". **Cập nhật cùng ngày: Phase 2-6 đã chạy xong và verify thành công trên `s6_fishmarket`** — chi tiết đầy đủ (bug thật gặp ở từng Phase, số liệu verify) ở `docs/adr/0010-sam3-ground-plane-compositing.md`, tóm tắt nhanh ở cuối mục này. Toàn bộ vẫn là script rời trong scratchpad, chưa đóng gói vào code sản phẩm.
 
 - Endpoint `q639jfhc6uaf3t` (`qwen-image-t2i-fast`) đã đổi sang image `ghcr.io/nguyenductho89/photoreal-qwen-worker:0.37.2-sam3` (build bằng GitHub Action của repo `photoreal-short-drama-generator`, nhánh `tesla`, commit `ca2859b`: thêm `checkpoints:` và `detection:` vào `runpod-qwen/extra_model_paths.yaml`). Endpoint này dùng chung volume `zyen2jmxt3` với các endpoint khác và với project `~/Xuongphim/trends/comfy-trends`.
 - `SAM3_Detect`, `SAM3DBody_*`, `RTDETR_detect`, `MoGe*`, `SDPose*` là node lõi ComfyUI 0.37.2, không cần custom-node pack. SAM3 dùng 1 checkpoint gộp nạp qua `CheckpointLoaderSimple`; `SAM3DBody_Loader` đọc từ `models/detection/`.
@@ -367,6 +367,11 @@ Mục tiêu: tính scale/vị trí nhân vật bằng hình học (Python) thay 
 - `object_info` trả ~3,4 triệu ký tự; dùng `jq` trên file kết quả đã lưu, đừng đọc cả file. Cold start lần đầu sau khi đổi image ~7,5 phút; lần sau vẫn vài phút.
 - Đã tắt worker (`workers.max=0`) sau khi xong; cả 4 endpoint RunPod của tài khoản đều đang ở 0.
 - Ảnh chợ cá và character sheet dùng để thử nằm trên container local (`/data/output/local/Yui/freezone/_outputs/...`), không truy cập được từ Claude Cloud; phiên cloud muốn làm tiếp Phase 2 cần ảnh được đưa lên R2/URL truy cập được.
+- **Phase 2 (`"person:N"`, bắt buộc ghi số — mặc định `max_detections=1`)**: ra 40 mask người riêng biệt, chồng lấn tối đa 3. **"ground"/"street"/"dirt road" thất bại hẳn** (rỗng hoặc sai) — SAM3 là model vật thể rời rạc, không hợp để tìm bề mặt liên tục; bỏ hướng này, không tốn thêm GPU thử câu khác.
+- **Phase 3 (khớp `height_px = k × (feet_y − horizon_y)` bằng hồi quy có loại nhiễu trên 40 điểm)**: `k=0.4842`, `horizon_y=906.3`, 38/40 điểm giữ lại. Dự đoán tại đúng vị trí đã đo tay trước đó lệch chỉ ~2-3% — xác nhận cách tự động đáng tin ngang/hơn đo tay.
+- **Phase 4 (tìm chỗ đứng), 2 bug thật trước khi đúng**: v1 (chỉ né người) chọn đúng mép ảnh/sạp hàng vì không biết đó không phải đường mở; v2 (giới hạn theo "hành lang" người thật) vẫn dính sạp vì người bán hàng đứng ngay trước sạp. **v3 sửa đúng**: gọi `call_freezone_vision_model` (`src/novelvideo/freezone/vision_gateway.py`, model `DC-freezone-vision-LLM`) hỏi ảnh nền để tự liệt kê vật cản (ra `market stall, wooden table, woven basket, wooden bucket` cho ảnh này) → đưa thẳng vào SAM3 làm query loại trừ — **không hard-code tên vật thể, tự generalize theo từng ảnh**.
+- **Phase 6 (hoà ánh sáng)**: graph `_runpod_qwen21_render_image_graph` production ép `denoise=1.0`, không hợp hoà ánh sáng — fork graph trong script scratch thêm tham số `denoise` (dùng 0.4, `cfg=3.0`), không sửa file gốc. Verify bằng đo pixel: lệch trung bình trong mask 3.73/255, ngoài mask chỉ 1.98/255 (~0.8%, nhiễu VAE roundtrip bình thường) — xác nhận giữ đúng identity/bối cảnh, chỉ sửa đúng vùng viền/bóng chân.
+- **Kết quả cuối**: pipeline đầy đủ từ ảnh nền tới ảnh ghép không cần đo tay bước nào, đúng tỉ lệ, đứng chạm đất, viền mượt — tốt hơn hẳn 3 lần thử chỉ-prompt ở ADR 0009. Mới verify 1 ảnh; `moge_2_vitl_normal_fp16.safetensors` (ước FOV cho cảnh không có vật tham chiếu) chưa tải; 2 hướng mở rộng (chuẩn hoá theo bàn/ghế/cửa cho cảnh trong nhà; SAM3DBody+MoGe cho cảnh không vật tham chiếu) đã ghi vào memory `sam3-scale-calibration-generalization.md`, chưa code.
 
 ## Đừng làm
 

@@ -352,6 +352,22 @@ Người dùng hỏi máy này có tính năng "phân tích 1 video đầu vào:
 - **Test suite**: 190+ test mới cho backend (`tests/test_freezone_video_breakdown_backend.py`, port từ upstream, dịch toàn bộ fixture tiếng Trung sang tiếng Anh) + 26 test frontend (`video-breakdown-*.test.ts`) đều pass; toàn bộ test suite backend+frontend xác nhận 0 regression (so sánh bằng `git stash`, pattern chuẩn của dự án).
 - **Cảnh báo bảo mật nhỏ lúc debug (tự xử lý, nêu ra để biết)**: lúc gọi `upsert_channel()` qua script debug để sửa `base_url`, response trả về có field `sentPayload.channel.key` chứa `QWEN_API_KEY` dạng plaintext (NewAPI không che khi trả về sau update) — đã vô tình in ra terminal/log phiên làm việc. Key chỉ dùng nội bộ máy này (DashScope), không phải thứ public-facing, nhưng nếu muốn chắc ăn thì cân nhắc rotate `QWEN_API_KEY` trong DashScope console + cập nhật lại `.env`. Bài học cho lần sau: không `print()` nguyên cục response dict của `upsert_channel()`/`get_channel_detail()` khi debug qua script, chỉ lấy field cần (`ok`/`action`/`channelId`).
 
+## SAM3 / SAM3DBody trên worker `qwen-image-t2i-fast` — để ghép nhân vật đúng scale (2026-10-27)
+
+Mục tiêu: tính scale/vị trí nhân vật bằng hình học (Python) thay vì prompt chữ, xem ADR 0009 mục "Follow-up 2026-10-26". Mới xong hạ tầng, **chưa chạy `SAM3_Detect` trên ảnh thật** (Phase 2 trở đi chưa làm).
+
+- Endpoint `q639jfhc6uaf3t` (`qwen-image-t2i-fast`) đã đổi sang image `ghcr.io/nguyenductho89/photoreal-qwen-worker:0.37.2-sam3` (build bằng GitHub Action của repo `photoreal-short-drama-generator`, nhánh `tesla`, commit `ca2859b`: thêm `checkpoints:` và `detection:` vào `runpod-qwen/extra_model_paths.yaml`). Endpoint này dùng chung volume `zyen2jmxt3` với các endpoint khác và với project `~/Xuongphim/trends/comfy-trends`.
+- `SAM3_Detect`, `SAM3DBody_*`, `RTDETR_detect`, `MoGe*`, `SDPose*` là node lõi ComfyUI 0.37.2, không cần custom-node pack. SAM3 dùng 1 checkpoint gộp nạp qua `CheckpointLoaderSimple`; `SAM3DBody_Loader` đọc từ `models/detection/`.
+- 3 file đã tải lên volume và đã xác nhận qua `object_info` (cả 3 hiện trong ô chọn của node tương ứng):
+  - `models/checkpoints/sam3.1_multiplex_fp16.safetensors` (1.745.546.848 B, repo `Comfy-Org/sam3.1`).
+  - `models/detection/sam_3d_body_dinov3_bf16.safetensors` (2.830.737.652 B, repo `Comfy-Org/sam-3d-body`).
+  - `models/diffusion_models/rt_detr_v4-x-hgnet_fp32.safetensors` (247.790.660 B, repo `Comfy-Org/SDPose`; nạp bằng `UNETLoader`, `RTDETR_detect` lọc theo `class_name` COCO, có `person`).
+  - Chưa tải `moge_2_vitl_normal_fp16.safetensors` (ước FOV, tuỳ chọn; `SAM3DBody_Predict` có tham số `fov` nhập tay). Thư mục `geometry_estimation/` cũng chưa map trong yaml.
+- Cách tải đã dùng (nhanh, ~1 phút, dưới 1 cent): pod `NVIDIA A40` secure ở `CA-MTL-1` ($0,59/giờ; RTX A4000 hết chỗ), image `alpine:3.20`, mount volume ở `/runpod-volume`, `wget -c` thẳng từ `huggingface.co/.../resolve/main/...` trong `cmd`, đọc kết quả qua log pod, rồi xoá pod. Không cần SSH/PTY.
+- `object_info` trả ~3,4 triệu ký tự; dùng `jq` trên file kết quả đã lưu, đừng đọc cả file. Cold start lần đầu sau khi đổi image ~7,5 phút; lần sau vẫn vài phút.
+- Đã tắt worker (`workers.max=0`) sau khi xong; cả 4 endpoint RunPod của tài khoản đều đang ở 0.
+- Ảnh chợ cá và character sheet dùng để thử nằm trên container local (`/data/output/local/Yui/freezone/_outputs/...`), không truy cập được từ Claude Cloud; phiên cloud muốn làm tiếp Phase 2 cần ảnh được đưa lên R2/URL truy cập được.
+
 ## Đừng làm
 
 - Đừng tìm hay in `settings.db` / token chạy của DramaClaw (hệ thống chặn thao tác dò thông tin xác thực).

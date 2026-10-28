@@ -1262,8 +1262,8 @@ def _unverified_video_model_clarification_error(
             "video_model" in question_id.casefold()
             or "model_mode" in question_id.casefold()
             or (
-                ("compatible" in text or "兼容" in text or "替代" in text)
-                and ("video model" in text or "视频模型" in text)
+                ("compatible" in text or "兼容" in text or "替代" in text)  # no-cjk-exempt
+                and ("video model" in text or "视频模型" in text)  # no-cjk-exempt
             )
         )
         if not asks_for_compatible_video_model:
@@ -1334,7 +1334,7 @@ def _handle_request_user_clarification(args: dict[str, Any], **_: Any) -> str:
         questions = [
             {
                 "id": requested_server_question_id,
-                "title": str(question.get("prompt") or "请选择下一步"),
+                "title": str(question.get("prompt") or "Choose the next step"),
                 "mode": str(question.get("mode") or "single"),
                 "options": _safe_list(question.get("options")),
             }
@@ -1343,7 +1343,7 @@ def _handle_request_user_clarification(args: dict[str, Any], **_: Any) -> str:
             generation_required_choices = None
         args = {
             **args,
-            "title": str(question.get("title") or "选择下一步"),
+            "title": str(question.get("title") or "Choose the next step"),
             "description": "",
             "allow_recommended": False,
             "allow_skip": False,
@@ -5215,7 +5215,7 @@ def _workflow_run_timeout_result(result: dict[str, Any]) -> dict[str, Any]:
     return {
         **result,
         "cancelled": False,
-        "user_message": "工作流提交结果尚未确认，请查看画布状态。",
+        "user_message": "The workflow submission result is not yet confirmed. Please check the canvas status.",
         "agent_instruction": (
             "Stop this turn; do not call freezone_run_workflow again. The original request "
             "may already be running. Inspect its existing canvas status before "

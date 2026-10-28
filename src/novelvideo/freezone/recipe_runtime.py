@@ -339,7 +339,7 @@ async def _compile_with_music_intent(task: str, music_intent: str) -> RecipeMode
     # generalizes its subject. Do not copy user_goal: it can contain UI commands.
     if music_intent and music_intent not in compiled.prompt:
         return RecipeModelCompilation(
-            prompt=f"{compiled.prompt}\n\n配乐创作要求：{music_intent}",
+            prompt=f"{compiled.prompt}\n\nMusic composition requirements: {music_intent}",
             model_call_id=compiled.model_call_id,
             executed_at=compiled.executed_at,
         )

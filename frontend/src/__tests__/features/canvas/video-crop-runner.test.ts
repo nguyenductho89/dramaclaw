@@ -113,9 +113,9 @@ describe("cropAndUploadVideo", () => {
   });
 
   it("turns a response.blob() AbortError into a canceled VideoCropError", async () => {
-    // 取消发生在下载还没读完 body 的时候：fetch() 本身已经 resolve，真正抛
-    // AbortError 的是 response.blob() 这一步，必须跟 fetch() 共用同一个
-    // abort-mapping try，否则会被当成未知错误走「裁剪失败」而不是「已取消裁剪」。
+    // Cancellation happens before the download has finished reading the body: fetch() itself has already resolved, and
+    // the AbortError is thrown by the response.blob() step, which must share the same
+    // abort-mapping try with fetch(), otherwise it would be treated as an unknown error and report "crop failed" rather than "crop cancelled".
     fetchMock.mockResolvedValueOnce({
       ok: true,
       status: 200,
@@ -150,7 +150,7 @@ describe("cropAndUploadVideo", () => {
     const cropped = new Blob(["cropped"], { type: "video/mp4" });
     const controller = new AbortController();
     vi.mocked(cropVideoBlob).mockImplementation(async () => {
-      // 裁剪算完那一刻用户点了取消——不该再传一份废文件上 OSS。
+      // The user clicked cancel at the very moment the crop finished — a useless file must not be uploaded to OSS.
       controller.abort();
       return { blob: cropped, width: 576, height: 1024, durationMs: 5000 };
     });
@@ -163,8 +163,8 @@ describe("cropAndUploadVideo", () => {
   });
 
   it("still lets an in-flight upload finish, then reports canceled once it resolves", async () => {
-    // 上传发出去了就收不回来了，中途取消也得等它落地，不然节点没建、文件却已经
-    // 在 OSS 上——那样连清理的机会都没有。留档成孤儿是已知取舍。
+    // Once the upload is sent it cannot be recalled; cancelling midway still has to wait for it to land, otherwise the node is never created while the file is
+    // already on OSS — leaving no chance to clean it up. Leaving an orphan behind is a known trade-off.
     const cropped = new Blob(["cropped"], { type: "video/mp4" });
     vi.mocked(cropVideoBlob).mockResolvedValue({ blob: cropped, width: 576, height: 1024, durationMs: 5000 });
     const controller = new AbortController();

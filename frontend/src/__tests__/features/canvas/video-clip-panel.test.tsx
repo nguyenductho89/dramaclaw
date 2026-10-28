@@ -12,7 +12,7 @@ vi.mock('@/features/canvas/application/videoFrameStrip', () => ({
 }));
 
 const TOTAL_MS = 10_000;
-/** 轨道宽 200px、左边贴 0：clientX 直接就是「毫秒 / 50」。 */
+/** Track is 200px wide with its left edge at 0: clientX is directly "milliseconds / 50". */
 const TRACK_RECT = {
   x: 0,
   y: 0,
@@ -45,8 +45,8 @@ function renderPanel(overrides: Partial<Parameters<typeof VideoClipPanel>[0]> = 
 }
 
 function handles() {
-  const start = screen.getByRole('slider', { name: '截取起点' });
-  const end = screen.getByRole('slider', { name: '截取终点' });
+  const start = screen.getByRole('slider', { name: 'Clip start' });
+  const end = screen.getByRole('slider', { name: 'Clip end' });
   const selection = start.parentElement as HTMLElement;
   const track = selection.parentElement as HTMLElement;
   return { start, end, selection, track };
@@ -62,8 +62,8 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe('VideoClipPanel 拖拽', () => {
-  it('拖动过程中不写节点，松手才提交一次', () => {
+describe('VideoClipPanel dragging', () => {
+  it('does not write the node while dragging; commits once on release', () => {
     const { onChange } = renderPanel();
     const { start } = handles();
 
@@ -72,8 +72,8 @@ describe('VideoClipPanel 拖拽', () => {
     fireEvent.pointerMove(start, { clientX: 50, pointerId: 1 });
     fireEvent.pointerMove(start, { clientX: 40, pointerId: 1 });
 
-    // 关键：updateNodeData 每次调用都会压一份画布快照并清空 redo 栈，
-    // 拖拽途中一次都不能调。
+    // Key point: every updateNodeData call pushes a canvas snapshot and clears the redo stack,
+    // so it must not be called even once during the drag.
     expect(onChange).not.toHaveBeenCalled();
 
     fireEvent.pointerUp(start, { clientX: 40, pointerId: 1 });
@@ -82,7 +82,7 @@ describe('VideoClipPanel 拖拽', () => {
     expect(onChange).toHaveBeenCalledWith({ clipStartMs: 2_000 });
   });
 
-  it('起点不会越过终点，最少留 200ms', () => {
+  it('the start never crosses the end, leaving at least 200ms', () => {
     const { onChange } = renderPanel();
     const { start } = handles();
 
@@ -93,7 +93,7 @@ describe('VideoClipPanel 拖拽', () => {
     expect(onChange).toHaveBeenCalledWith({ clipStartMs: 4_800 });
   });
 
-  it('拖选区中段整体平移，时长不变', () => {
+  it('dragging the middle of the selection shifts it as a whole, duration unchanged', () => {
     const { onChange } = renderPanel();
     const { selection } = handles();
 
@@ -105,11 +105,11 @@ describe('VideoClipPanel 拖拽', () => {
     expect(onChange).toHaveBeenCalledWith({ clipStartMs: 2_000, clipEndMs: 6_000 });
   });
 
-  it('在轨道空白处按下会把近的那一端拉过来', () => {
+  it('pressing on empty track pulls the nearer handle over', () => {
     const { onChange } = renderPanel();
     const { track } = handles();
 
-    // 8_000ms 离终点 5_000 更近，应该拉终点而不是起点。
+    // 8_000ms is closer to the end (5_000), so the end should be pulled rather than the start.
     fireEvent.pointerDown(track, { clientX: 160, pointerId: 1 });
     fireEvent.pointerUp(track, { clientX: 160, pointerId: 1 });
 
@@ -117,8 +117,8 @@ describe('VideoClipPanel 拖拽', () => {
   });
 });
 
-describe('VideoClipPanel 键盘', () => {
-  it('方向键按 100ms 步进，Shift 按 1s', () => {
+describe('VideoClipPanel keyboard', () => {
+  it('arrow keys step by 100ms, Shift steps by 1s', () => {
     const { onChange } = renderPanel();
     const { start } = handles();
 
@@ -129,7 +129,7 @@ describe('VideoClipPanel 键盘', () => {
     expect(onChange).toHaveBeenLastCalledWith({ clipStartMs: 0 });
   });
 
-  it('终点的 End 键跳到片尾', () => {
+  it('the End key on the end handle jumps to the clip end', () => {
     const { onChange } = renderPanel();
     const { end } = handles();
 
@@ -137,7 +137,7 @@ describe('VideoClipPanel 键盘', () => {
     expect(onChange).toHaveBeenLastCalledWith({ clipEndMs: TOTAL_MS });
   });
 
-  it('提交中不响应键盘', () => {
+  it('ignores the keyboard while submitting', () => {
     const { onChange } = renderPanel({ isSubmitting: true });
     const { start } = handles();
 
@@ -146,14 +146,14 @@ describe('VideoClipPanel 键盘', () => {
   });
 });
 
-describe('VideoClipPanel 轨道宽度', () => {
-  it('轨道按时长给像素，长素材摊得开', () => {
+describe('VideoClipPanel track width', () => {
+  it('the track allots pixels by duration, so long clips spread out', () => {
     renderPanel({ durationMs: 44_000 });
-    // 44s × 14px/s = 616px，而不是被节点宽度压成两百来像素。
+    // 44s × 14px/s = 616px, rather than being squeezed to about two hundred pixels by the node width.
     expect(handles().track.style.minWidth).toBe('616px');
   });
 
-  it('太短的素材有下限，太长的有上限', () => {
+  it('clips that are too short have a lower bound, too long an upper bound', () => {
     const short = renderPanel({ durationMs: 3_000 });
     expect(handles().track.style.minWidth).toBe('260px');
     short.unmount();
@@ -162,7 +162,7 @@ describe('VideoClipPanel 轨道宽度', () => {
     expect(handles().track.style.minWidth).toBe('960px');
   });
 
-  it('轨道越宽抽越多帧，格子不会被拉变形', () => {
+  it('a wider track samples more frames, so cells are not stretched out of shape', () => {
     const short = renderPanel({ durationMs: 3_000 });
     expect(captureVideoFrames).toHaveBeenLastCalledWith(expect.any(String), 6);
     short.unmount();
@@ -172,8 +172,8 @@ describe('VideoClipPanel 轨道宽度', () => {
   });
 });
 
-describe('VideoClipPanel 缩略图', () => {
-  it('抽到几帧就铺几格，不用黑格子凑数', async () => {
+describe('VideoClipPanel thumbnails', () => {
+  it('lays out as many cells as frames sampled, with no black cells as filler', async () => {
     captureVideoFrames.mockResolvedValue([
       'data:image/jpeg;base64,a',
       'data:image/jpeg;base64,b',
@@ -186,12 +186,12 @@ describe('VideoClipPanel 缩略图', () => {
     });
   });
 
-  it('失败后可以重试', async () => {
+  it('can retry after a failure', async () => {
     captureVideoFrames.mockRejectedValueOnce(new Error('boom'));
     vi.spyOn(console, 'warn').mockImplementation(() => {});
     renderPanel();
 
-    const retry = await screen.findByRole('button', { name: '重新提取画面帧' });
+    const retry = await screen.findByRole('button', { name: 'Retry extracting frames' });
     expect(captureVideoFrames).toHaveBeenCalledTimes(1);
 
     fireEvent.click(retry);
@@ -199,11 +199,11 @@ describe('VideoClipPanel 缩略图', () => {
       expect(captureVideoFrames).toHaveBeenCalledTimes(2);
     });
     await waitFor(() => {
-      expect(screen.queryByText('画面帧加载失败')).toBeNull();
+      expect(screen.queryByText('Failed to load frames')).toBeNull();
     });
   });
 
-  it('滚轮不穿透到画布（nowheel）', () => {
+  it('the wheel does not pass through to the canvas (nowheel)', () => {
     const { container } = renderPanel();
     expect(container.firstElementChild?.className).toContain('nowheel');
   });

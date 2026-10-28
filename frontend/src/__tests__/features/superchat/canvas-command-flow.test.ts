@@ -48,8 +48,8 @@ describe("assistant success summary", () => {
 describe("background canvas generation status", () => {
   it("marks media and workflow commands as running instead of completed", () => {
     const result = backgroundCanvasCommandPendingResultForTest([
-      { index: 0, type: "run_node_action", label: "生成音频", details: [] },
-      { index: 1, type: "run_workflow", label: "运行工作流", details: [] },
+      { index: 0, type: "run_node_action", label: "Generate audio", details: [] },
+      { index: 1, type: "run_workflow", label: "Run workflow", details: [] },
     ]);
 
     expect(result.applied).toBe(0);
@@ -69,7 +69,7 @@ describe("background canvas generation status", () => {
 
   it("persists the workflow run id in pending command results", () => {
     const result = backgroundCanvasCommandPendingResultForTest(
-      [{ index: 0, type: "run_workflow", label: "运行工作流", details: [] }],
+      [{ index: 0, type: "run_workflow", label: "Run workflow", details: [] }],
       "run-1",
     );
 
@@ -82,9 +82,9 @@ describe("background canvas generation status", () => {
 
   it.each([
     ["completed", "success", []],
-    ["failed", "error", ["生成失败"]],
-    ["cancelled", "error", ["后台生成已取消。"]],
-    ["interrupted", "error", ["后台生成已中断，请恢复任务或重试。"]],
+    ["failed", "error", ["Generation failed"]],
+    ["cancelled", "error", ["后台生成已取消。"]], // no-cjk-exempt: zh locale string
+    ["interrupted", "error", ["后台生成已中断，请恢复任务或重试。"]], // no-cjk-exempt: zh locale string
   ] as const)("restores a %s workflow run as a terminal result", (status, stepStatus, errors) => {
     const result = canvasCommandResultFromWorkflowRunForTest(
       {
@@ -96,7 +96,7 @@ describe("background canvas generation status", () => {
           commandIndex: 0,
           type: "run_workflow",
           status: "pending",
-          label: "运行工作流",
+          label: "Run workflow",
         }],
       },
       {
@@ -113,7 +113,7 @@ describe("background canvas generation status", () => {
           node_id: "node-1",
           action: "generate",
           status: status === "completed" ? "completed" : "failed",
-          ...(status === "failed" ? { user_error: "生成失败" } : {}),
+          ...(status === "failed" ? { user_error: "Generation failed" } : {}),
         }],
       },
       zhT as never,

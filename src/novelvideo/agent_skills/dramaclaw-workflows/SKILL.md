@@ -264,7 +264,7 @@ Route between the normal draft flow and the exact topology path in this priority
    exact topology path in
    [references/custom-topology.md](references/custom-topology.md), preparing the complete Plan as
    a persisted draft even when its stages resemble the standard template or a production Skill
-   matches. Exact cardinality words such as "exactly", "only", and "唯一" are topology
+   matches. Exact cardinality words such as "exactly", "only", and "sole" are topology
    requirements when they refer to canvas nodes; do not reinterpret them as a compact planner item
    count. The Plan must include top-level
    `schema_version` and `skill.id`/`skill.version` copied from the selected production Skill;

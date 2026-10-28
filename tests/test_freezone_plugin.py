@@ -736,7 +736,7 @@ def test_freezone_run_workflow_emits_one_deterministic_runner_command(monkeypatc
 
 
 @pytest.mark.parametrize("target", [
-    "RECOVER01_core_recover_01_mv6dfiw6", "恢复测试图片", "external-image-42",
+    "RECOVER01_core_recover_01_mv6dfiw6", "Recovered test image", "external-image-42",
 ])
 def test_run_workflow_rejects_non_canvas_identity_before_emitting(monkeypatch, target):
     plugin = _load_plugin_module()
@@ -744,8 +744,8 @@ def test_run_workflow_rejects_non_canvas_identity_before_emitting(monkeypatch, t
     monkeypatch.setattr(plugin, "_request", lambda *a, **k: {
         "ok": True, "data": {"nodes": [{
             "id": "recover-image", "type": "imageGenNode",
-            "data": {"displayName": "恢复测试图片", "externalId": "external-image-42",
-                     "prompt": "RECOVER01_core_recover_01_mv6dfiw6 一只红色马克杯"},
+            "data": {"displayName": "Recovered test image", "externalId": "external-image-42",
+                     "prompt": "RECOVER01_core_recover_01_mv6dfiw6 a red mug"},
         }]},
     })
     monkeypatch.setattr(plugin, "_single_write_command", lambda *a: emitted.append(a))
@@ -1137,7 +1137,7 @@ def test_dynamic_workflow_plan_is_rejected_before_canvas_bridge():
     ("stored_intent", "expected_status"),
     [
         ({"plan": {"schema_version": "freezone_workflow_plan.v1"}}, "workflow_draft_ready"),
-        ({"skill_id": "video-ad", "user_goal": "广告"}, "invalid_dynamic_workflow_plan"),
+        ({"skill_id": "video-ad", "user_goal": "advertisement"}, "invalid_dynamic_workflow_plan"),
     ],
 )
 def test_duplicate_invalid_plan_only_reuses_delivered_exact_plan_draft(
@@ -3422,11 +3422,11 @@ def test_same_turn_repeated_clarification_without_id_reuses_existing_card(monkey
     args = {
         "project_id": "project-a",
         "canvas_id": "canvas-a",
-        "title": "先确认方向",
+        "title": "Confirm direction first",
         "questions": [{
             "id": "scope",
-            "title": "主要做什么？",
-            "options": [{"id": "workflow", "label": "工作流"}],
+            "title": "What is the main goal?",
+            "options": [{"id": "workflow", "label": "Workflow"}],
         }],
     }
 
@@ -3932,7 +3932,7 @@ def test_generation_clarification_presents_server_owned_model_constraint_questio
     assert result == "shown"
     assert len(emitted) == 1
     event = emitted[0]
-    assert event["title"] == "选择下一步"
+    assert event["title"] == "Choose next step"
     assert event["description"] == ""
     assert event["allow_recommended"] is False
     assert event["allow_skip"] is False
@@ -3940,8 +3940,9 @@ def test_generation_clarification_presents_server_owned_model_constraint_questio
     question = event["questions"][0]
     assert question["id"] == "video_model_constraint_adjustment"
     assert question["title"] == (
-        "当前没有视频模型能同时满足全部参考模式、镜头时长和生成参数。"
-        "请选择是否调整一类约束。"
+        "No video model currently satisfies all reference modes, "
+        "shot durations and generation parameters at once. "
+        "Please choose whether to adjust one kind of constraint."
     )
     assert [option["id"] for option in question["options"]] == [
         "keep_requirements",
@@ -3974,22 +3975,22 @@ def test_generation_clarification_replaces_agent_authored_constraint_options(
 
     result = handlers["freezone_request_user_clarification"](
         {
-            "title": "视频模型或模式不兼容",
-            "description": "Seedance 只支持 firstFrame / textToVideo。",
+            "title": "Video model or mode incompatible",
+            "description": "Seedance only supports firstFrame / textToVideo.",
             "questions": [
                 {
                     "id": "video_model_constraint_adjustment",
-                    "title": "要如何处理？",
+                    "title": "How should this be handled?",
                     "mode": "single",
                     "options": [
                         {
                             "id": "adjust_reference_mode",
-                            "label": "改用 firstFrame",
-                            "description": "删除多图参考，只保留首帧。",
+                            "label": "Switch to firstFrame",
+                            "description": "Remove the multi-image references and keep only the first frame.",
                         },
                         {
                             "id": "text_to_video",
-                            "label": "改用 textToVideo",
+                            "label": "Switch to textToVideo",
                         },
                     ],
                 }
@@ -3999,7 +4000,7 @@ def test_generation_clarification_replaces_agent_authored_constraint_options(
 
     assert result == "shown"
     event = emitted[0]
-    assert event["title"] == "选择下一步"
+    assert event["title"] == "Choose next step"
     assert event["description"] == ""
     assert event["allow_recommended"] is False
     assert event["allow_skip"] is False
@@ -4012,7 +4013,7 @@ def test_generation_clarification_replaces_agent_authored_constraint_options(
     serialized = json.dumps(event, ensure_ascii=False)
     assert "firstFrame" not in serialized
     assert "textToVideo" not in serialized
-    assert "删除多图参考" not in serialized
+    assert "Remove the multi-image references" not in serialized
 
 
 def test_generation_clarification_rejects_unverified_video_model_alternatives(
@@ -4030,11 +4031,11 @@ def test_generation_clarification_rejects_unverified_video_model_alternatives(
 
     result = handlers["freezone_request_user_clarification"](
         {
-            "title": "需要确认兼容替代模型",
+            "title": "Compatible alternative model needs confirmation",
             "questions": [
                 {
                     "id": "compatible_video_model",
-                    "title": "兼容的视频模型与生成模式",
+                    "title": "Compatible video model and generation mode",
                     "mode": "single",
                     "options": [
                         {
@@ -4071,14 +4072,14 @@ def test_generation_clarification_shows_only_server_model_question(monkeypatch):
         {
             "question": {
                 "id": "compatible_video_model",
-                "title": "确认兼容的视频模型",
-                "prompt": "请选择服务端验证过的兼容模型。",
+                "title": "Confirm compatible video model",
+                "prompt": "Please choose a compatible model verified by the server.",
                 "mode": "single",
                 "options": [
                     {
                         "id": "verified-model",
                         "label": "Verified Model",
-                        "description": "服务端验证通过。",
+                        "description": "Verified by the server.",
                     }
                 ],
             }
@@ -4092,14 +4093,14 @@ def test_generation_clarification_shows_only_server_model_question(monkeypatch):
             "questions": [
                 {
                     "id": "compatible_video_model",
-                    "title": "确认兼容的视频模型",
+                    "title": "Confirm compatible video model",
                     "description": "Agent-authored option explanation",
                     "mode": "single",
                     "options": [
                         {
                             "id": "verified-model",
                             "label": "Verified Model",
-                            "description": "服务端验证通过。",
+                            "description": "Verified by the server.",
                         }
                     ],
                 },
@@ -4115,20 +4116,20 @@ def test_generation_clarification_shows_only_server_model_question(monkeypatch):
     assert result == "shown"
     assert len(emitted) == 1
     event = emitted[0]
-    assert event["title"] == "确认兼容的视频模型"
+    assert event["title"] == "Confirm compatible video model"
     assert event["description"] == ""
     assert event["allow_recommended"] is False
     assert event["allow_skip"] is False
     assert event["questions"] == [
         {
             "id": "compatible_video_model",
-            "title": "请选择服务端验证过的兼容模型。",
+            "title": "Please choose a compatible model verified by the server.",
             "mode": "single",
             "options": [
                 {
                     "id": "verified-model",
                     "label": "Verified Model",
-                    "description": "服务端验证通过。",
+                    "description": "Verified by the server.",
                 }
             ],
         }
@@ -5812,7 +5813,7 @@ def test_incompatible_video_model_requires_confirmed_full_constraint_replacement
         {
             "id": "compatible",
             "label": "Compatible Model",
-            "description": "支持当前镜头的参考模式、时长及已确认生成参数。",
+            "description": "Supports the current shot's reference mode, duration and confirmed generation parameters.",
         }
     ]
     assert (
@@ -5989,7 +5990,7 @@ def test_prepare_exact_plan_prioritizes_video_model_clarification_with_voice_blo
         {
             "id": "compatible",
             "label": "Compatible Model",
-            "description": "支持当前镜头的参考模式、时长及已确认生成参数。",
+            "description": "Supports the current shot's reference mode, duration and confirmed generation parameters.",
         }
     ]
 
@@ -6073,29 +6074,29 @@ def test_prepare_exact_plan_without_compatible_model_asks_which_constraint_to_ch
     assert "agent_instruction" not in result
     assert result["question"] == {
         "id": "video_model_constraint_adjustment",
-        "title": "选择下一步",
-        "prompt": "当前没有视频模型能同时满足全部参考模式、镜头时长和生成参数。请选择是否调整一类约束。",
+        "title": "Choose next step",
+        "prompt": ("No video model currently satisfies all reference modes, shot durations and generation parameters at once. Please choose whether to adjust one kind of constraint."),
         "mode": "single",
         "options": [
             {
                 "id": "keep_requirements",
-                "label": "保持当前要求并停止",
-                "description": "不修改当前 Plan，也不继续创建 Draft。",
+                "label": "Keep current requirements and stop",
+                "description": "Leave the current Plan unchanged and do not continue creating a Draft.",
             },
             {
                 "id": "adjust_reference_mode",
-                "label": "调整参考模式",
-                "description": "仅确认调整方向；提供具体新值前不修改参考边或媒体锚点。",
+                "label": "Adjust reference mode",
+                "description": "Only confirms the direction of the adjustment; reference edges and media anchors are not modified until a concrete new value is provided.",
             },
             {
                 "id": "adjust_shot_duration",
-                "label": "调整镜头时长",
-                "description": "仅确认调整方向；提供具体新时长前不修改 Plan。",
+                "label": "Adjust shot duration",
+                "description": "Only confirms the direction of the adjustment; the Plan is not modified until a concrete new duration is provided.",
             },
             {
                 "id": "specify_video_model",
-                "label": "重新指定模型",
-                "description": "由用户提供具体模型，再使用原约束重新执行 preflight。",
+                "label": "Specify a different model",
+                "description": "The user provides a specific model, then preflight is re-run with the original constraints.",
             },
         ],
     }
@@ -9930,14 +9931,14 @@ def test_workflow_adapter_preserves_verified_compatible_model_clarification(monk
 
     question = {
         "id": "compatible_video_model",
-        "title": "确认兼容的视频模型",
-        "prompt": "当前选择的视频模型不能同时满足参考模式和镜头时长。请选择替代模型。",
+        "title": "Confirm compatible video model",
+        "prompt": "The selected video model cannot satisfy both the reference mode and the shot duration. Please choose an alternative model.",
         "mode": "single",
         "options": [
             {
                 "id": "verified-model",
                 "label": "Verified Model",
-                "description": "支持当前镜头的参考模式、时长及已确认生成参数。",
+                "description": "Supports the current shot's reference mode, duration and confirmed generation parameters.",
             }
         ],
     }

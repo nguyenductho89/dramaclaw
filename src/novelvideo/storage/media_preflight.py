@@ -74,7 +74,7 @@ def _safe_probe_error(exc: Exception) -> MediaStorageUnavailable:
         exc.__cause__, (httpx.TimeoutException, TimeoutError)
     ):
         return MediaStorageUnavailable(
-            "MEDIA_STORAGE_TIMEOUT", "媒体存储连接超时，请检查网络后重试。"
+            "MEDIA_STORAGE_TIMEOUT", "Media storage connection timed out. Check the network and try again."
         )
     if (
         code
@@ -88,12 +88,12 @@ def _safe_probe_error(exc: Exception) -> MediaStorageUnavailable:
     ):
         return MediaStorageUnavailable(
             "MEDIA_STORAGE_AUTH_INVALID",
-            "媒体存储凭据无效，请检查 AccessKey / API Key。",
+            "Media storage credentials are invalid. Check the AccessKey / API Key.",
         )
     if code in {"AccessDenied", "AccessForbidden"} or status == 403:
         return MediaStorageUnavailable(
             "MEDIA_STORAGE_ACCESS_DENIED",
-            "媒体存储拒绝访问，请检查凭据及上传、读取权限。",
+            "Media storage denied access. Check the credentials and the upload and read permissions.",
         )
     if code in {"NoSuchBucket", "InvalidBucketName", "PermanentRedirect"} or status in {
         301,
@@ -101,15 +101,15 @@ def _safe_probe_error(exc: Exception) -> MediaStorageUnavailable:
     }:
         return MediaStorageUnavailable(
             "MEDIA_STORAGE_TARGET_INVALID",
-            "媒体存储目标不可用，请检查 bucket、endpoint 或文件夹。",
+            "The media storage target is unavailable. Check the bucket, endpoint, or folder.",
         )
     if isinstance(exc, MediaRelayConfigError):
         return MediaStorageUnavailable(
             "MEDIA_STORAGE_CONFIG_INVALID",
-            "媒体存储配置不完整或上传失败，请检查所选存储配置。",
+            "The media storage configuration is incomplete or the upload failed. Check the selected storage configuration.",
         )
     return MediaStorageUnavailable(
-        "MEDIA_STORAGE_UNAVAILABLE", "媒体存储读写验证失败，请检查连接和配置后重试。"
+        "MEDIA_STORAGE_UNAVAILABLE", "Media storage read/write verification failed. Check the connection and configuration, then try again."
     )
 
 
@@ -191,7 +191,7 @@ def verify_media_storage(
                 if not matches:
                     raise MediaStorageUnavailable(
                         "MEDIA_STORAGE_READ_MISMATCH",
-                        "媒体存储读取校验失败，请检查存储访问配置。",
+                        "Media storage read verification failed. Check the storage access configuration.",
                     )
         except MediaStorageUnavailable:
             raise
@@ -221,7 +221,7 @@ async def require_ce_media_storage() -> None:
         )
     else:
         raise MediaStorageUnavailable(
-            "MEDIA_STORAGE_CONFIG_INVALID", "不支持的媒体存储类型。"
+            "MEDIA_STORAGE_CONFIG_INVALID", "Unsupported media storage type."
         )
     if configured:
         await asyncio.to_thread(verify_media_storage, settings)

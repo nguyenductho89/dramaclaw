@@ -159,7 +159,7 @@ describe("ConfirmDialogHost", () => {
     render(<ConfirmDialogHost />);
     let pending!: Promise<boolean>;
     act(() => {
-      pending = confirmDialog({ description: "修改名称？" });
+      pending = confirmDialog({ description: "Change the name?" });
     });
     const cancel = await screen.findByRole("button", { name: "common.cancel" });
     await waitFor(() => expect(cancel).toHaveFocus());

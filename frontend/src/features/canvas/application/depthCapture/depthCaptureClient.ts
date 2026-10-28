@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
-// 深度动作捕捉 worker 的主线程客户端。与 matteClient 的单例不同，这里一个任务一个
-// worker：取消就是 terminate，不用在 worker 里做可中断的推理循环。
+// Main-thread client for the depth motion-capture worker. Unlike matteClient's singleton, each task
+// gets its own worker: cancelling is just terminate, with no need for an interruptible inference loop inside the worker.
 import type { DepthCaptureErrorCode } from "@/features/canvas/domain/canvasNodes";
 import { browserModelSource } from "@/lib/runtime-config";
 import type { DepthWorkerInbound, DepthWorkerOutbound } from "./depthCaptureProtocol";
@@ -28,7 +28,7 @@ export interface DepthCaptureJob {
   cancel: () => void;
 }
 
-/** progress 回调收到 0–1。 */
+/** The progress callback receives 0–1. */
 export function runDepthCaptureInWorker(
   blob: Blob,
   onProgress: (progress: number) => void,

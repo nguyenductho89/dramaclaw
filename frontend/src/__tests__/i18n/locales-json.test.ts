@@ -27,14 +27,14 @@ function loadLocale(language: string): unknown {
 }
 
 describe("locale translation files", () => {
-  it.each(["en", "vi"])("%s translation JSON is valid", (language) => {
+  it.each(["en", "vi", "zh", "pt"])("%s translation JSON is valid", (language) => {
     const content = readFileSync(`public/locales/${language}/translation.json`, "utf8");
 
     expect(() => JSON.parse(content)).not.toThrow();
   });
 
-  it("ships only the en and vi locales", () => {
-    expect(readdirSync("public/locales").sort()).toEqual(["en", "vi"]);
+  it("ships the en, vi, zh and pt locales", () => {
+    expect(readdirSync("public/locales").sort()).toEqual(["en", "pt", "vi", "zh"]);
   });
 
   // `en` is the reference key set. A locale may leave a value in English on

@@ -212,10 +212,10 @@ function staleErrorOffenders(source: string): string[] {
 
 describe("stale generation-error banner", () => {
   it("translates persisted storage errors at render time and keeps raw diagnostics for copying", async () => {
-    const raw = "DramaClawAPI image generation failed: 请求异常: " +
-      "MediaStorageUnavailable('MEDIA_STORAGE_READ_MISMATCH: 媒体存储读取校验失败。')";
+    const raw = "DramaClawAPI image generation failed: 请求异常: " + // no-cjk-exempt: raw backend error text matched at render time
+      "MediaStorageUnavailable('MEDIA_STORAGE_READ_MISMATCH: 媒体存储读取校验失败。')"; // no-cjk-exempt: raw backend error text matched at render time
     const data = {
-      displayName: "图片节点16",
+      displayName: "图片节点16", // no-cjk-exempt: legacy saved Chinese title
       autoTitleIndex: 16,
       generationError: raw,
       generationErrorDetails: raw,

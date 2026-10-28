@@ -13,8 +13,8 @@ function node(type: string, data: Record<string, unknown>): CanvasNode {
   return { id: 'n1', type, position: { x: 0, y: 0 }, data } as unknown as CanvasNode;
 }
 
-describe('卡内「替换素材」按钮的开关', () => {
-  it('只认逐帧拉片产出上的 allowLocalReplace', () => {
+describe('in-card "Replace media" button toggle', () => {
+  it('only honors allowLocalReplace on frame-by-frame breakdown outputs', () => {
     expect(hasInlineMediaReplaceButton({ allowLocalReplace: true })).toBe(true);
     expect(hasInlineMediaReplaceButton({ allowLocalReplace: false })).toBe(false);
     expect(hasInlineMediaReplaceButton({})).toBe(false);
@@ -22,15 +22,15 @@ describe('卡内「替换素材」按钮的开关', () => {
     expect(hasInlineMediaReplaceButton(undefined)).toBe(false);
   });
 
-  it('选中态本身不再是开关——普通生成结果不该长出这颗按钮', () => {
-    // 选中与否是节点组件里的 selected，这里锁的是它已经不在判定式里：
-    // 同一份 data 无论选中都只看 allowLocalReplace。
+  it('selection state itself is no longer the toggle: ordinary generated results must not grow this button', () => {
+    // Whether a node is selected is the `selected` flag in the node component; this pins that it is no longer in the predicate:
+    // the same data only looks at allowLocalReplace regardless of selection.
     expect(hasInlineMediaReplaceButton({ selected: true } as never)).toBe(false);
   });
 });
 
-describe('外侧 AssetCommitHandle 的互斥判定', () => {
-  it('拉片产出的图片/视频/音频走卡内按钮，不再挂外侧抓手', () => {
+describe('mutual-exclusion check for the outer AssetCommitHandle', () => {
+  it('breakdown output images/videos/audio use the in-card button and no longer mount the outer handle', () => {
     for (const type of [
       CANVAS_NODE_TYPES.exportImage,
       CANVAS_NODE_TYPES.video,
@@ -40,9 +40,9 @@ describe('外侧 AssetCommitHandle 的互斥判定', () => {
     }
   });
 
-  it('同类型的普通节点没有卡内按钮，外侧抓手必须留着', () => {
-    // 这条是回归位：早先按 type 一刀切排除，普通视频/图片节点会连外侧抓手一起丢，
-    // 「拖到素材库替换」彻底没入口。
+  it('ordinary nodes of the same type have no in-card button, so the outer handle must stay', () => {
+    // Regression guard: it used to exclude by type wholesale, so ordinary video/image nodes lost the outer handle too,
+    // leaving "drag to the asset library to replace" with no entry point at all.
     for (const type of [
       CANVAS_NODE_TYPES.exportImage,
       CANVAS_NODE_TYPES.video,
@@ -52,7 +52,7 @@ describe('外侧 AssetCommitHandle 的互斥判定', () => {
     }
   });
 
-  it('其余类型一律走外侧抓手', () => {
+  it('all other types use the outer handle', () => {
     expect(hasInlineCommitButton(node(CANVAS_NODE_TYPES.upload, { allowLocalReplace: true }))).toBe(
       false,
     );

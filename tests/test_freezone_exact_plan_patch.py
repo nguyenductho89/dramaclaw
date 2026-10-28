@@ -45,7 +45,7 @@ def exact_draft_tool(monkeypatch, workflow_run_client):
 
 def test_public_exact_plan_patch_revision_and_confirmation(exact_draft_tool, monkeypatch):
     plugin, client, requests, prepared = exact_draft_tool
-    changes = {"step_updates": [{"node_id": "brief", "prompt": "新广告要求"}]}
+    changes = {"step_updates": [{"node_id": "brief", "prompt": "New ad requirements"}]}
     args = {"draft_id": prepared["draft_id"], "expected_revision": 1, "changes": changes}
     schemas = {name: schema for name, schema, handler in plugin.TOOLS}
     Draft202012Validator(schemas["freezone_patch_workflow_draft"]["parameters"]).validate(args)
@@ -56,7 +56,7 @@ def test_public_exact_plan_patch_revision_and_confirmation(exact_draft_tool, mon
     assert revised["plan_digest"] != prepared["plan_digest"]
     target = f"/api/v1/projects/proj_demo/freezone/canvases/canvas_demo/workflow-drafts/{prepared['draft_id']}"
     stored = client.get(target).json()["data"]
-    assert stored["compiled"]["plan"]["nodes"][0]["data"]["content"] == "新广告要求"
+    assert stored["compiled"]["plan"]["nodes"][0]["data"]["content"] == "New ad requirements"
     emitted = []
     monkeypatch.setattr(plugin, "_emit_canvas_commands", lambda *a, **kw: emitted.append((a, kw)) or {
         "ok": True, "canvas_apply_status": "applied", "applied": True,
@@ -75,7 +75,7 @@ def test_public_exact_plan_patch_revision_and_confirmation(exact_draft_tool, mon
     assert len(emitted) == 1
     assert len(client.enqueued_tasks) == 1
     commands = emitted[0][0][2]
-    assert any(command.get("data", {}).get("content") == "新广告要求" for command in commands)
+    assert any(command.get("data", {}).get("content") == "New ad requirements" for command in commands)
 
 
 @pytest.mark.parametrize("changes", [
@@ -104,7 +104,7 @@ def test_public_exact_plan_patch_freezes_updated_execution_policy(exact_draft_to
     plugin, client, requests, prepared = exact_draft_tool
     revised = plugin._handle_patch_workflow_draft({
         "draft_id": prepared["draft_id"], "expected_revision": 1,
-        "changes": {"step_updates": [{"node_id": "brief", "prompt": "新版广告"}]},
+        "changes": {"step_updates": [{"node_id": "brief", "prompt": "Updated ad"}]},
         "run_after_create": True,
     })
     assert revised["ok"] is True, revised

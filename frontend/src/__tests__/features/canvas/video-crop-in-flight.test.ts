@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
-// 画面裁切在途状态的模块级登记表：VideoNode 卸载重挂、工具栏切模式都要读到
-// 同一份事实，不能各自开一份 state 互相看不见。
+// Module-level registry of in-flight frame crops: VideoNode unmount/remount and toolbar mode switches must both read
+// the same source of truth, rather than each keeping its own state that the other cannot see.
 import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
@@ -68,8 +68,8 @@ describe("videoCropInFlight", () => {
     cancelVideoCrop(nodeId);
 
     expect(signal?.aborted).toBe(true);
-    // 取消只是发信号，真正清登记表是提交流程的 finally，不然还没跑到 finally
-    // 之前又点一次提交会看不出「已经在裁」。
+    // Cancel only sends a signal; the registry is actually cleared by the submit flow's finally. Otherwise, before reaching finally,
+    // clicking submit again would not reveal that a crop is already running.
     expect(isVideoCropInFlight(nodeId)).toBe(true);
 
     clearVideoCropInFlight(nodeId);
@@ -77,15 +77,15 @@ describe("videoCropInFlight", () => {
   });
 
   it("returns null instead of the existing signal when marking a node twice", () => {
-    // 双重注册以前会把已有 signal 递回去，调用方误以为自己拿到了这次提交的
-    // 控制权，跟第一个注册者抢同一个 finally 清表——见文件头注释。
+    // Double registration used to hand back the existing signal, so the caller mistakenly thought it had control of this submission
+    // and raced the first registrant for the same finally clearing the registry; see the file header comment.
     const nodeId = "v-double-mark";
     const first = markVideoCropInFlight(nodeId);
     expect(first).not.toBeNull();
 
     const second = markVideoCropInFlight(nodeId);
     expect(second).toBeNull();
-    // 第二次失败的注册不能顶掉第一次的登记。
+    // A second, failed registration must not displace the first registration.
     expect(isVideoCropInFlight(nodeId)).toBe(true);
     expect(first?.aborted).toBe(false);
 

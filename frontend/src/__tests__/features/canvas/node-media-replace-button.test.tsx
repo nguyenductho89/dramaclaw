@@ -5,7 +5,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 
 import { NodeMediaReplaceButton } from '@/features/canvas/ui/NodeMediaReplaceButton';
 
-/** 真实浏览器点一下 = pointerdown → pointerup → click，测试里必须原样重放。 */
+/** A single click in a real browser = pointerdown → pointerup → click; the test must replay it as is. */
 function realClick(button: HTMLElement, opts: { moveBy?: number } = {}) {
   fireEvent.pointerDown(button, { button: 0, clientX: 100, clientY: 100 });
   if (opts.moveBy) {
@@ -19,9 +19,9 @@ function realClick(button: HTMLElement, opts: { moveBy?: number } = {}) {
 }
 
 describe('NodeMediaReplaceButton', () => {
-  it('点击拉起文件选择器', () => {
-    render(<NodeMediaReplaceButton title="替换" onPick={vi.fn()} onCommitDragStart={vi.fn()} />);
-    const button = screen.getByRole('button', { name: '替换' });
+  it('clicking opens the file picker', () => {
+    render(<NodeMediaReplaceButton title="Replace" onPick={vi.fn()} onCommitDragStart={vi.fn()} />);
+    const button = screen.getByRole('button', { name: 'Replace' });
     const input = document.querySelector('input[type=file]') as HTMLInputElement;
     const clickSpy = vi.spyOn(input, 'click');
 
@@ -30,12 +30,12 @@ describe('NodeMediaReplaceButton', () => {
     expect(clickSpy).toHaveBeenCalledTimes(1);
   });
 
-  it('越过阈值的拖拽不再当点击', () => {
+  it('a drag past the threshold is no longer treated as a click', () => {
     const onCommitDragStart = vi.fn();
     render(
-      <NodeMediaReplaceButton title="替换" onPick={vi.fn()} onCommitDragStart={onCommitDragStart} />,
+      <NodeMediaReplaceButton title="Replace" onPick={vi.fn()} onCommitDragStart={onCommitDragStart} />,
     );
-    const button = screen.getByRole('button', { name: '替换' });
+    const button = screen.getByRole('button', { name: 'Replace' });
     const input = document.querySelector('input[type=file]') as HTMLInputElement;
     const clickSpy = vi.spyOn(input, 'click');
 

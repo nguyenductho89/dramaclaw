@@ -7,14 +7,14 @@ import { deriveNodeDropInfo, useAssetDropStore } from '@/stores/assetDropStore';
 import type { CanvasNode } from '@/features/canvas/domain/canvasNodes';
 
 /**
- * 「按住拖到左侧素材库替换同类型素材」这条手势。原本只长在 AssetCommitHandle
- * 那颗浮在节点外侧的按钮上；抽出来是为了让节点内右上角那颗替换按钮
- * (NodeMediaReplaceButton) 也能承接同一手势 —— 同一个角上不该出现两颗长得一样、
- * 各干各的替换按钮。
+ * The gesture "press and drag to the left asset library to replace same-type assets". It originally lived only on the AssetCommitHandle
+ * button floating outside the node; it was extracted so the replace button at the top-right inside the node
+ * (NodeMediaReplaceButton) can carry the same gesture too: the same corner should not hold two identical-looking
+ * replace buttons that each do their own thing.
  *
- * 拖拽全程用原生 pointer 事件自驱动(不是 HTML5 DnD),因此:
- * - 松手命中左侧同类型素材卡片时才提交替换;
- * - 拖拽预览浮层由 NodeReplaceDragPreview 读 store 渲染。
+ * The whole drag is self-driven with native pointer events (not HTML5 DnD), therefore:
+ * - the replacement is only committed when released over a same-type asset card on the left;
+ * - the drag preview overlay is rendered by NodeReplaceDragPreview reading the store.
  */
 export function useAssetCommitDrag(node: CanvasNode | null | undefined) {
   const dropInfo = node ? deriveNodeDropInfo(node) : null;
@@ -61,7 +61,7 @@ export function useAssetCommitDrag(node: CanvasNode | null | undefined) {
       window.removeEventListener('pointerup', onUp);
       document.body.style.userSelect = prevUserSelect;
       document.body.style.cursor = prevCursor;
-      // 命中有效素材则生成替换请求,由侧栏消费。
+      // If a valid asset is hit, generate a replace request for the sidebar to consume.
       useAssetDropStore.getState().endDrag(true);
     };
 
@@ -73,8 +73,8 @@ export function useAssetCommitDrag(node: CanvasNode | null | undefined) {
 }
 
 /**
- * 节点组件内部只拿得到 id/data,拿不到完整 CanvasNode(还要节点 type 才能判断
- * 媒体类型),这里直接从 React Flow 的 nodeLookup 取当前节点。
+ * Inside a node component only id/data are available, not the full CanvasNode (the node type is also needed to determine
+ * the media type), so the current node is taken directly from React Flow's nodeLookup.
  */
 export function useAssetCommitDragById(nodeId: string) {
   const node = useStore(

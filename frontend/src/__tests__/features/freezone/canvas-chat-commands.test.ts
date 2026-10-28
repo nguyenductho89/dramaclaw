@@ -3831,7 +3831,7 @@ describe("canvas chat commands", () => {
     const nodeId = useCanvasStore.getState().addNode(
       CANVAS_NODE_TYPES.audio,
       { x: 0, y: 0 },
-      { audioKind: "music", text: "轻快背景音乐" },
+      { audioKind: "music", text: "Upbeat background music" },
     );
     const node = useCanvasStore
       .getState()
@@ -3854,7 +3854,7 @@ describe("canvas chat commands", () => {
       { x: 0, y: 0 },
       {
         audioKind: "music",
-        text: "旧音乐描述",
+        text: "Old music description",
         forceInstrumental: false,
       },
     );
@@ -3895,7 +3895,7 @@ describe("canvas chat commands", () => {
               node_id: nodeId,
               data: {
                 audioKind: "music",
-                text: "为红杯展示生成轻快温暖的木琴与轻柔鼓点纯音乐",
+                text: "Instrumental music for the red cup showcase: upbeat, warm marimba with soft drums",
                 forceInstrumental: true,
               },
             },
@@ -3912,7 +3912,7 @@ describe("canvas chat commands", () => {
       expect(result.errors).toEqual([]);
       expect(dispatchedData).toMatchObject({
         audioKind: "music",
-        text: "为红杯展示生成轻快温暖的木琴与轻柔鼓点纯音乐",
+        text: "Instrumental music for the red cup showcase: upbeat, warm marimba with soft drums",
         forceInstrumental: true,
       });
       expect(result.commandResults).toEqual(expect.arrayContaining([
@@ -4539,7 +4539,7 @@ describe("canvas chat commands", () => {
     const imageId = useCanvasStore.getState().addNode(
       CANVAS_NODE_TYPES.imageGen,
       { x: 0, y: 0 },
-      { imageUrl: "/static/project/red-cup.png", prompt: "红色马克杯" },
+      { imageUrl: "/static/project/red-cup.png", prompt: "Red mug" },
     );
     const response = await buildCanvasContextRequestResponse({
       project: "project-a",

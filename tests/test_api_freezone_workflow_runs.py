@@ -2123,7 +2123,7 @@ def test_metered_workflow_result_with_bindings_replays_delivered_draft(
     base = "/api/v1/projects/proj_demo/freezone/canvases/default/workflow-drafts"
     request = {
         "operation_id": operation["operation_id"],
-        "intent": {"skill_id": "video-ad", "user_goal": "广告"},
+        "intent": {"skill_id": "video-ad", "user_goal": "advertisement"},
         "compiled": _valid_draft_compiled(),
         "bindings": [],
     }
@@ -4213,23 +4213,23 @@ def test_backend_asks_which_constraint_to_change_when_no_video_model_is_compatib
     assert detail["question"]["options"] == [
         {
             "id": "keep_requirements",
-            "label": "保持当前要求并停止",
-            "description": "不修改当前 Plan，也不继续创建 Draft。",
+            "label": "Keep current requirements and stop",
+            "description": "Leave the current Plan unchanged and do not continue creating a Draft.",
         },
         {
             "id": "adjust_reference_mode",
-            "label": "调整参考模式",
-            "description": "仅确认调整方向；提供具体新值前不修改参考边或媒体锚点。",
+            "label": "Adjust reference mode",
+            "description": "Only confirms the direction of the adjustment; reference edges and media anchors are not modified until a concrete new value is provided.",
         },
         {
             "id": "adjust_shot_duration",
-            "label": "调整镜头时长",
-            "description": "仅确认调整方向；提供具体新时长前不修改 Plan。",
+            "label": "Adjust shot duration",
+            "description": "Only confirms the direction of the adjustment; the Plan is not modified until a concrete new duration is provided.",
         },
         {
             "id": "specify_video_model",
-            "label": "重新指定模型",
-            "description": "由用户提供具体模型，再使用原约束重新执行 preflight。",
+            "label": "Specify a different model",
+            "description": "The user provides a specific model, then preflight is re-run with the original constraints.",
         },
     ]
     assert compiled == original
@@ -4320,7 +4320,7 @@ def test_backend_offers_only_models_compatible_with_every_video_constraint(monke
         {
             "id": "compatible",
             "label": "Compatible Model",
-            "description": "支持当前镜头的参考模式、时长及已确认生成参数。",
+            "description": "Supports the current shot's reference mode, duration and confirmed generation parameters.",
         }
     ]
 

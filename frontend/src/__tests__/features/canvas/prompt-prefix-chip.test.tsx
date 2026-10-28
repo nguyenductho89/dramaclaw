@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
-// 智能续写把「对 X 的 00:00-00:04 片段进行续写：」渲染成输入框最前面一枚只读
-// chip，而**不写进 data.prompt**。所以两条底线：序列化不能把它带出去（带出去
-// 就等于混进用户正文，一个退格啃掉半句指令），退格也不能吃掉它。
+// Smart continuation renders "Continue the 00:00-00:04 clip of X:" as a read-only
+// chip at the very front of the input, and does **not write it into data.prompt**. So there are two
+// bottom lines: serialization must not carry it out (that would mix it into the user's
+// body text, and one backspace would eat half the instruction), and backspace must not eat it either.
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { fireEvent, render } from "@testing-library/react";
 
@@ -15,7 +16,7 @@ beforeAll(() => {
 });
 
 const prefix = {
-  text: "对 视频 (2) 的 00:00-00:04 片段进行续写：",
+  text: "Continue the 00:00-00:04 clip of Video (2):",
   thumbnailUrl: "https://example.com/poster.jpg",
 };
 
@@ -23,8 +24,8 @@ function editorOf(container: HTMLElement): HTMLElement {
   return container.querySelector(".prompt-mention-editor") as HTMLElement;
 }
 
-describe("PromptMentionEditor — 续写前缀", () => {
-  it("图片 + 文案渲染成一枚不可编辑的 chip", () => {
+describe("PromptMentionEditor — continuation prefix", () => {
+  it("image + text render as a single non-editable chip", () => {
     const { container } = render(
       <PromptMentionEditor value="" onChange={() => {}} candidates={[]} prefix={prefix} />,
     );
@@ -35,7 +36,7 @@ describe("PromptMentionEditor — 续写前缀", () => {
     expect(chip.querySelector("img")?.getAttribute("src")).toBe(prefix.thumbnailUrl);
   });
 
-  it("没有静态缩略图时退回视频首帧 —— 视频节点的 thumbUrl 常常是空的", () => {
+  it("falls back to the video first frame when there is no static thumbnail — a video node's thumbUrl is often empty", () => {
     const { container } = render(
       <PromptMentionEditor
         value=""
@@ -56,24 +57,24 @@ describe("PromptMentionEditor — 续写前缀", () => {
     expect(video?.getAttribute("preload")).toBe("metadata");
   });
 
-  it("前缀不参与序列化 —— 它不是用户写的内容", () => {
+  it("the prefix does not take part in serialization — it is not user-written content", () => {
     const onChange = vi.fn();
     const { container } = render(
       <PromptMentionEditor
-        value="继续往下演"
+        value="Keep the story going"
         onChange={onChange}
         candidates={[]}
         prefix={prefix}
       />,
     );
 
-    // 序列化结果与 value 一致 → 不冒 onChange。前缀一旦被读回去，这里就会收到
-    // 「对 视频 (2) 的…继续往下演」，指令当场混进用户正文。
+    // Serialized result matches value → no onChange. If the prefix were read back, we would receive
+    // "Continue the … clip of Video (2): Keep the story going" here, and the instruction would be mixed into the user's body text on the spot.
     fireEvent.input(editorOf(container));
     expect(onChange).not.toHaveBeenCalled();
   });
 
-  it("光标贴着前缀时退格不生效，删不掉指令", () => {
+  it("backspace with the caret against the prefix has no effect and cannot delete the instruction", () => {
     const onChange = vi.fn();
     const { container } = render(
       <PromptMentionEditor value="" onChange={onChange} candidates={[]} prefix={prefix} />,
@@ -99,33 +100,33 @@ describe("PromptMentionEditor — 续写前缀", () => {
     expect(container.querySelector("[data-prompt-prefix]")).toBeTruthy();
   });
 
-  it("有前缀时占位符改挂 ::after，靠 data 属性驱动", () => {
+  it("with a prefix the placeholder moves to ::after, driven by a data attribute", () => {
     const { container, rerender } = render(
       <PromptMentionEditor
         value=""
         onChange={() => {}}
         candidates={[]}
         prefix={prefix}
-        placeholder="请输入需要续写的内容"
+        placeholder="Enter the content to continue"
       />,
     );
 
-    // :empty 已经被 chip 破坏，::before 那条规则失效，改由这个属性喂 ::after。
-    expect(editorOf(container).dataset.prefixPlaceholder).toBe("请输入需要续写的内容");
+    // :empty is already broken by the chip, so the ::before rule no longer applies; this attribute feeds ::after instead.
+    expect(editorOf(container).dataset.prefixPlaceholder).toBe("Enter the content to continue");
 
     rerender(
       <PromptMentionEditor
-        value="继续"
+        value="Continue"
         onChange={() => {}}
         candidates={[]}
         prefix={prefix}
-        placeholder="请输入需要续写的内容"
+        placeholder="Enter the content to continue"
       />,
     );
     expect(editorOf(container).dataset.prefixPlaceholder).toBe("");
   });
 
-  it("给了 onPrefixRemove 才挂删除按钮，点它把前缀交回上层处理", () => {
+  it("the remove button is attached only when onPrefixRemove is given; clicking it hands the prefix back to the parent", () => {
     const onPrefixRemove = vi.fn();
     const { container } = render(
       <PromptMentionEditor
@@ -139,24 +140,24 @@ describe("PromptMentionEditor — 续写前缀", () => {
 
     const remove = container.querySelector("[data-prompt-prefix-remove]") as HTMLElement;
     expect(remove).toBeTruthy();
-    expect(remove.getAttribute("aria-label")).toBe("删除前缀");
-    // 缩略图不被顶掉，只是 hover 时用 CSS 盖住——两者共用左边这一格。
+    expect(remove.getAttribute("aria-label")).toBe("Remove prefix");
+    // The thumbnail is not displaced, only covered by CSS on hover — the two share the left-hand cell.
     expect(remove.parentElement?.querySelector("img")).toBeTruthy();
 
     fireEvent.click(remove);
     expect(onPrefixRemove).toHaveBeenCalledTimes(1);
   });
 
-  it("不给 onPrefixRemove 就是只读前缀，没有删除按钮", () => {
+  it("without onPrefixRemove the prefix is read-only and has no remove button", () => {
     const { container } = render(
       <PromptMentionEditor value="" onChange={() => {}} candidates={[]} prefix={prefix} />,
     );
     expect(container.querySelector("[data-prompt-prefix-remove]")).toBeNull();
   });
 
-  it("不给前缀时输入框跟以前一模一样", () => {
+  it("without a prefix the input behaves exactly as before", () => {
     const { container } = render(
-      <PromptMentionEditor value="随便写点" onChange={() => {}} candidates={[]} />,
+      <PromptMentionEditor value="Write something" onChange={() => {}} candidates={[]} />,
     );
     expect(container.querySelector("[data-prompt-prefix]")).toBeNull();
     expect(editorOf(container).dataset.prefixPlaceholder).toBe("");

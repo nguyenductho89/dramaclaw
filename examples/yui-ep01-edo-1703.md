@@ -1,12 +1,12 @@
-# Yui (結) xuyên không — Ep1: Edo, 1703 (Nihonbashi)
+# Yui (結) xuyên không — Ep1: Edo, 1703 (Nihonbashi) <!-- no-cjk-exempt: Japanese character name -->
 
 **Tiêu đề gợi ý:** "I time-traveled to Edo and I'm still in my school uniform" | **Định dạng:** 9:16, ~56s, handheld selfie POV | **Thoại:** tiếng Anh | **Âm thanh:** chỉ ambient (chợ, kênh, gió, chuông) — không nhạc nền
 
-Pipeline sản xuất: **Qwen-Image 2.1** (character sheet + location, qua Freezone `runpod_qwen_image`) → **Qwen-Image-Edit-2511** (relight/chỉnh sửa first frame, qua Freezone `runpod_qwen_edit`) → **MiniMax H3** ref2va/fl2va (1-shot) + **H3 multishot** (ref2va, 2 shot/chain) để dựng video. Xem `.claude/CLAUDE.md` mục "Yui (結) xuyên không" / ADR liên quan cho chi tiết hạ tầng.
+Pipeline sản xuất: **Qwen-Image 2.1** (character sheet + location, qua Freezone `runpod_qwen_image`) → **Qwen-Image-Edit-2511** (relight/chỉnh sửa first frame, qua Freezone `runpod_qwen_edit`) → **MiniMax H3** ref2va/fl2va (1-shot) + **H3 multishot** (ref2va, 2 shot/chain) để dựng video. Xem `.claude/CLAUDE.md` mục "Yui (結) xuyên không" / ADR liên quan cho chi tiết hạ tầng. <!-- no-cjk-exempt: Japanese character name -->
 
 ## Series bible (dùng chung mọi tập)
 
-**Yui Takahashi (結)**, 17 tuổi, nữ sinh năm 2 cấp 3 Tokyo hiện đại. Tò mò, nói nhanh, hay lẩm bẩm với camera, hài kiểu khô; sợ nhất là "làm thay đổi lịch sử". Tên "結" (Kết — gắn kết, thắt nút, nối liền) là ẩn dụ cho vai trò nhân vật: nút thắt nối quá khứ và hiện tại.
+**Yui Takahashi (結)**, 17 tuổi, nữ sinh năm 2 cấp 3 Tokyo hiện đại. Tò mò, nói nhanh, hay lẩm bẩm với camera, hài kiểu khô; sợ nhất là "làm thay đổi lịch sử". Tên "結" (Kết — gắn kết, thắt nút, nối liền) là ẩn dụ cho vai trò nhân vật: nút thắt nối quá khứ và hiện tại. <!-- no-cjk-exempt: Japanese character name -->
 
 - **Ngoại hình khoá cứng (character anchor, giữ nguyên mọi thời kỳ/mọi ảnh):** người Nhật, **17 tuổi, cao 158cm** (thấp hơn rõ rệt so với đàn ông trưởng thành xung quanh — nữ sinh cấp 3 trung bình, không phải người lớn), tóc đen thẳng ngang vai, mái thưa, mắt nâu đậm, nốt ruồi nhỏ dưới mắt trái. **Phải ghi rõ "17-year-old, 158cm tall, petite/average teenage build" trong MỌI prompt compositing** (không chỉ character sheet) — thiếu dòng này là nguyên nhân khiến vài lần sinh ảnh cô ấy bị lớn/cao bất thường so với người xung quanh trong cảnh.
 - **Trang phục hiện đại:** sailor seifuku navy, khăn/nơ đỏ, tất đen, giày loafer, balo đeo vai.

@@ -766,7 +766,7 @@ async def test_generate_recipe_text_omits_variant_for_user_recipe(monkeypatch):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("subject", ["红杯展示", "蓝色陶瓷花瓶展示"])
+@pytest.mark.parametrize("subject", ["red cup showcase", "blue ceramic vase showcase"])
 async def test_music_compilation_keeps_original_creative_intent_when_model_generalizes(
     monkeypatch, tmp_path, subject
 ):
@@ -775,26 +775,26 @@ async def test_music_compilation_keeps_original_creative_intent_when_model_gener
     monkeypatch.setattr(recipe_runtime, "OUTPUT_DIR", tmp_path)
     monkeypatch.setattr(recipe_runtime, "get_recipe_for_runtime", lambda **kw: {
         "id": "drama-background-music", "version": 1, "output_kind": "audio",
-        "system_prompt": "描述情绪、节奏、配器，只输出音乐生成指令。",
+        "system_prompt": "Describe mood, rhythm and instrumentation; output only the music generation instruction.",
     })
     calls = []
 
     async def generic_compiler(task):
         calls.append(task)
         return recipe_runtime.RecipeModelCompilation(
-            "轻快温暖的产品展示配乐，以木琴和轻柔鼓点为主，纯器乐、无人声、无歌词。",
+            "Light, warm product-showcase score led by marimba and soft drum beats; instrumental only, no vocals, no lyrics.",
             "compile-music-1", 123.0,
         )
 
     monkeypatch.setattr(recipe_runtime, "_run_recipe_compiler", generic_compiler)
     args = dict(
         username="local", recipe_id="drama-background-music", node_kind="audio",
-        node_prompt=f"为{subject}生成一段轻快的纯音乐，不要人声。",
-        user_goal="执行现有节点，使用 short-drama-quick Skill，不新增节点，scope=canvas。",
+        node_prompt=f"Generate a light instrumental piece for the {subject}, no vocals.",
+        user_goal="Run the existing node, use the short-drama-quick Skill, add no new nodes, scope=canvas.",
     )
     result = await recipe_runtime.compile_recipe_prompt_result(**args)
     assert subject in result.prompt
-    assert "木琴" in result.prompt and "无歌词" in result.prompt
+    assert "marimba" in result.prompt and "no lyrics" in result.prompt
     assert "short-drama-quick" not in result.prompt
     assert "scope=canvas" not in result.prompt
     assert result.mode == "model"

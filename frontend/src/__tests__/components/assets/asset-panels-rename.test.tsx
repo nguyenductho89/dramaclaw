@@ -220,32 +220,32 @@ describe("asset panel rename behavior", () => {
     server.use(
       http.get("http://localhost:3000/api/v1/projects/demo/scenes", () => HttpResponse.json({ ok: true, data: [
         { name: "Hall", scene_type: "interior" },
-        { name: "Hall_漏水_夜晚", scene_type: "interior", base_scene_id: "Hall", variant_id: "漏水", time_of_day: "夜晚", variant_prompt: "water" },
+        { name: "Hall_Leak_Night", scene_type: "interior", base_scene_id: "Hall", variant_id: "Leak", time_of_day: "Night", variant_prompt: "water" },
       ] })),
       http.patch("http://localhost:3000/api/v1/projects/demo/scenes/:name", async ({ request, params }) => {
-        expect(decodeURIComponent(String(params.name))).toBe("Hall_漏水_夜晚");
+        expect(decodeURIComponent(String(params.name))).toBe("Hall_Leak_Night");
         const payload = await request.json(); requests(payload);
         return HttpResponse.json({ ok: true, data: payload });
       }),
     );
     renderWithProviders(<ScenesPanel project="demo" />);
-    await screen.findByText("Hall_漏水_夜晚");
+    await screen.findByText("Hall_Leak_Night");
     const edits = screen.getAllByRole("button", { name: "Edit" });
     await user.click(edits[edits.length - 1]);
     const form = screen.getByRole("dialog");
-    fireEvent.change(within(form).getByLabelText("Variant"), { target: { value: "  积雪  " } });
+    fireEvent.change(within(form).getByLabelText("Variant"), { target: { value: "  Snow  " } });
     await user.click(within(form).getByRole("button", { name: "Save" }));
     let confirmation = await screen.findByRole("alertdialog");
     expect(within(confirmation).getByText(renameWarning)).toBeInTheDocument();
     expect(requests).not.toHaveBeenCalled();
     await user.click(within(confirmation).getByRole("button", { name: "Cancel" }));
-    expect(within(form).getByLabelText("Variant")).toHaveValue("  积雪  ");
-    expect(within(form).getByText("Hall_积雪_夜晚")).toBeInTheDocument();
+    expect(within(form).getByLabelText("Variant")).toHaveValue("  Snow  ");
+    expect(within(form).getByText("Hall_Snow_Night")).toBeInTheDocument();
     await user.click(within(form).getByRole("button", { name: "Save" }));
     confirmation = await screen.findByRole("alertdialog");
     await user.click(within(confirmation).getByRole("button", { name: "Save" }));
     await waitFor(() => expect(requests).toHaveBeenCalledTimes(1));
-    expect(requests).toHaveBeenCalledWith(expect.objectContaining({ name: "Hall_积雪_夜晚", variant_id: "积雪", base_scene_id: "Hall", time_of_day: "夜晚" }));
+    expect(requests).toHaveBeenCalledWith(expect.objectContaining({ name: "Hall_Snow_Night", variant_id: "Snow", base_scene_id: "Hall", time_of_day: "Night" }));
   });
 
 

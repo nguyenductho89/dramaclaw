@@ -3166,7 +3166,7 @@ export function useSuperChat({
           return next;
         });
         const cancelledMessage = i18n.t("freezone.chat.clarification.cancelledRequest", {
-          defaultValue: "用户已取消本轮请求",
+          defaultValue: "The user cancelled this request.",
         });
         for (const event of pendingClarifications) {
           void api.post("api/v1/chat/clarification-tool-result", {

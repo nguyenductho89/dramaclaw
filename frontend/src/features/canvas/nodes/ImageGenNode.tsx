@@ -508,8 +508,8 @@ export const ImageGenNode = memo(({ id, data, selected, width, height }: ImageGe
       if (nodeId !== id || action !== 'generate_image') return;
       publishNodeActionAccepted(requestId, id, action);
       void handleSubmit({
-        // 虾导外层会在任务受理后立即进入后台态；节点动作本身必须等真实产物
-        // 终态再回报成功，否则对话会把“已提交”误显示成“图片已完成”。
+        // The outer Shrimp Director enters a background state right after the task is accepted; the node action itself must wait for the real artifact's
+        // terminal state before reporting success, otherwise the conversation would show "submitted" as "image completed".
         completionMode: 'completed',
       })
         .then((output) => publishNodeActionSuccess(requestId, id, action, output))

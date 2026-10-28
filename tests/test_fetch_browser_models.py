@@ -113,5 +113,5 @@ def test_copy_ort_wasm_requires_installed_frontend_dependencies(tmp_path: Path) 
 def test_copy_ort_wasm_refuses_to_guess_between_transformers_versions(tmp_path: Path) -> None:
     frontend = _fake_frontend(tmp_path, transformers_versions=("4.2.0", "4.3.0"))
 
-    with pytest.raises(RuntimeError, match="多个"):
+    with pytest.raises(RuntimeError, match="multiple"):
         fetch_browser_models.copy_ort_wasm(tmp_path / "out", frontend)

@@ -78,8 +78,8 @@ import { spawnAssetBoardImageOpNode } from '@/features/canvas/application/assetB
 import { readUrl } from '@/lib/url-params';
 import { inheritMainlineFields } from '../domain/inheritMainlineFields';
 
-// 这些类型的卡片**有可能**在右上角自带「替换」按钮（NodeMediaReplaceButton），
-// 拖到素材库的手势由那颗一并承接，因此不再挂外侧的 AssetCommitHandle。
+// Cards of these types **may** carry their own "Replace" button (NodeMediaReplaceButton) in the top-right corner,
+// which also takes over the drag-to-asset-library gesture, so the outer AssetCommitHandle is no longer attached.
 const NODE_TYPES_WITH_INLINE_COMMIT_BUTTON = new Set<string>([
   CANVAS_NODE_TYPES.exportImage,
   CANVAS_NODE_TYPES.video,
@@ -87,9 +87,9 @@ const NODE_TYPES_WITH_INLINE_COMMIT_BUTTON = new Set<string>([
 ]);
 
 /**
- * 卡内那颗替换按钮只长在逐帧拉片的产出上（allowLocalReplace），所以判定要连 data
- * 一起看：同样是视频节点，拉片产出的那张走卡内按钮，普通生成结果没有卡内按钮 ——
- * 这里要是只按 type 排除，那些节点就连外侧抓手也一起丢了，替换素材彻底没入口。
+ * The in-card replace button only appears on frame-by-frame breakdown outputs (allowLocalReplace), so the check has to look at data
+ * as well: among video nodes, the one produced by breakdown uses the in-card button, while ordinary generation results have none —
+ * if this excluded by type alone, those nodes would lose the outer handle too and replacing media would have no entry point at all.
  */
 export function hasInlineCommitButton(node: CanvasNode): boolean {
   if (!NODE_TYPES_WITH_INLINE_COMMIT_BUTTON.has(node.type ?? '')) return false;
@@ -1039,10 +1039,10 @@ export const SelectedNodeOverlay = memo(() => {
           onOpenResize={handleOpenResize}
         />
       )}
-      {/* 逐帧拉片产出的图片/视频/音频卡片把这颗按钮画在卡片内右上角
-          （NodeMediaReplaceButton），手势一并由它承接 —— 这里再挂一条外挂抓手就会在
-          同一个角上摞出两个一样的上传图标。其余节点（普通生成结果、imageGen /
-          upload / 3D / 全景 …）没有卡内位置，仍然走这条浮在节点外侧的抓手。 */}
+      {/* Image/video/audio cards produced by frame-by-frame breakdown draw this button in the card's top-right corner
+          (NodeMediaReplaceButton), which also takes over the gesture — attaching another external handle here would
+          stack two identical upload icons on the same corner. Other nodes (ordinary generation results, imageGen /
+          upload / 3D / panorama …) have no in-card position and still use this handle floating outside the node. */}
       {selectedNode &&
         !rotateNodeId &&
         !effectiveOverlayNodeId &&

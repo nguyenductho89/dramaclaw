@@ -12,7 +12,7 @@ vi.mock('@/features/canvas/application/videoFrameStrip', () => ({
 }));
 
 const TOTAL_MS = 60_000;
-/** 轨道宽 200px、左边贴 0：clientX 直接就是「毫秒 / 300」。 */
+/** Track is 200px wide with its left edge at 0, so clientX is simply "milliseconds / 300". */
 const TRACK_RECT = {
   x: 0,
   y: 0,
@@ -42,9 +42,9 @@ function renderPanel(overrides: Partial<Parameters<typeof VideoExtendPanel>[0]> 
 
 function handles() {
   return {
-    start: screen.getByRole('slider', { name: '续写片段起点' }),
-    end: screen.getByRole('slider', { name: '续写片段终点' }),
-    confirm: screen.getByRole('button', { name: /确认续写/ }),
+    start: screen.getByRole('slider', { name: 'Extend clip start' }),
+    end: screen.getByRole('slider', { name: 'Extend clip end' }),
+    confirm: screen.getByRole('button', { name: /Confirm extend/ }),
   };
 }
 
@@ -64,82 +64,82 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe('VideoExtendPanel 默认选区', () => {
-  it('长素材默认贴着片尾取 30s', () => {
+describe('VideoExtendPanel default selection', () => {
+  it('long clips default to the last 30s', () => {
     renderPanel();
-    expect(screen.getByText('30.00 秒')).toBeTruthy();
+    expect(screen.getByText('30.00s')).toBeTruthy();
     expect(handles().start.getAttribute('aria-valuenow')).toBe('30000');
     expect(handles().end.getAttribute('aria-valuenow')).toBe('60000');
   });
 
-  it('不足 30s 的素材整条都算前情', () => {
+  it('clips under 30s are used whole as the lead-in', () => {
     renderPanel({ durationMs: 15_070 });
-    expect(screen.getByText('15.07 秒')).toBeTruthy();
+    expect(screen.getByText('15.07s')).toBeTruthy();
     expect(handles().confirm.hasAttribute('disabled')).toBe(false);
   });
 
-  it('只截一段：轨道上永远只有一对把手', () => {
+  it('single selection: the track only ever has one pair of handles', () => {
     renderPanel();
     expect(screen.getAllByRole('slider')).toHaveLength(2);
   });
 });
 
-describe('VideoExtendPanel 4-30s 边界', () => {
-  it('缩到 4s 以下会被顶住并弹提示', () => {
+describe('VideoExtendPanel 4-30s bounds', () => {
+  it('shrinking below 4s is clamped and shows a hint', () => {
     renderPanel();
-    // 57_000ms 会让选区只剩 3s，被 4s 下限顶回 56_000。
+    // 57_000ms would leave a 3s selection, which the 4s minimum clamps back to 56_000.
     drag(handles().start, 190);
 
     expect(handles().start.getAttribute('aria-valuenow')).toBe('56000');
-    expect(screen.getByText('所选视频最短不小于 4 秒')).toBeTruthy();
+    expect(screen.getByText('The selected clip must be at least 4s')).toBeTruthy();
   });
 
-  it('撑过 30s 会被顶住并弹提示', () => {
+  it('growing past 30s is clamped and shows a hint', () => {
     renderPanel();
-    // 起点往片头拖：选区已经是满 30s，再往左只会撞上限。
+    // Dragging the start toward the head: the selection is already a full 30s, so going further left hits the cap.
     drag(handles().start, 20);
 
     expect(handles().start.getAttribute('aria-valuenow')).toBe('30000');
-    expect(screen.getByText('所选视频最长不大于 30 秒')).toBeTruthy();
+    expect(screen.getByText('The selected clip can\'t exceed 30s')).toBeTruthy();
   });
 
-  it('提示过一会儿自己收掉，不挡下一次拖拽', () => {
+  it('the hint dismisses itself after a moment and does not block the next drag', () => {
     vi.useFakeTimers();
     try {
       renderPanel();
       drag(handles().start, 190);
-      expect(screen.getByText('所选视频最短不小于 4 秒')).toBeTruthy();
+      expect(screen.getByText('The selected clip must be at least 4s')).toBeTruthy();
       act(() => {
         vi.advanceTimersByTime(2_500);
       });
-      expect(screen.queryByText('所选视频最短不小于 4 秒')).toBeNull();
+      expect(screen.queryByText('The selected clip must be at least 4s')).toBeNull();
     } finally {
       vi.useRealTimers();
     }
   });
 
-  it('没顶到边就不弹提示', () => {
+  it('no hint is shown when no bound is hit', () => {
     renderPanel();
-    drag(handles().start, 140); // 42_000ms，选区 18s，两条边界都够不着
+    drag(handles().start, 140); // 42_000ms, 18s selection, neither bound is reached
 
     expect(handles().start.getAttribute('aria-valuenow')).toBe('42000');
     expect(screen.queryByRole('status')).toBeNull();
   });
 
-  it('素材本身不足 4s 时不给确认', () => {
+  it('confirm is disabled when the clip itself is under 4s', () => {
     renderPanel({ durationMs: 3_000 });
     const { confirm } = handles();
     expect(confirm.hasAttribute('disabled')).toBe(true);
-    expect(confirm.getAttribute('title')).toBe('视频不足 4 秒，无法续写');
+    expect(confirm.getAttribute('title')).toBe('Video is shorter than 4s and can\'t be extended');
   });
 });
 
-describe('VideoExtendPanel 键盘', () => {
-  it('方向键按 100ms 步进，Shift 按 1s', () => {
+describe('VideoExtendPanel keyboard', () => {
+  it('arrow keys step by 100ms, Shift steps by 1s', () => {
     renderPanel();
     const { start } = handles();
 
-    // 默认选区正好满 30s，起点已经贴在上限上，只能往右（缩短）走。
+    // The default selection is exactly 30s, so the start is already at the cap and can only move right (shorten).
     fireEvent.keyDown(start, { key: 'ArrowRight' });
     expect(start.getAttribute('aria-valuenow')).toBe('30100');
 
@@ -150,26 +150,26 @@ describe('VideoExtendPanel 键盘', () => {
     expect(start.getAttribute('aria-valuenow')).toBe('31000');
   });
 
-  it('选区已经满 30s 时，起点再往左也纹丝不动', () => {
+  it('when the selection is already 30s, moving the start further left does nothing', () => {
     renderPanel();
     const { start } = handles();
 
     fireEvent.keyDown(start, { key: 'ArrowLeft' });
     expect(start.getAttribute('aria-valuenow')).toBe('30000');
-    expect(screen.getByText('所选视频最长不大于 30 秒')).toBeTruthy();
+    expect(screen.getByText('The selected clip can\'t exceed 30s')).toBeTruthy();
   });
 
-  it('键盘顶到边界也照弹提示', () => {
+  it('hitting a bound via keyboard also shows the hint', () => {
     renderPanel();
     fireEvent.keyDown(handles().start, { key: 'Home' });
 
     expect(handles().start.getAttribute('aria-valuenow')).toBe('30000');
-    expect(screen.getByText('所选视频最长不大于 30 秒')).toBeTruthy();
+    expect(screen.getByText('The selected clip can\'t exceed 30s')).toBeTruthy();
   });
 });
 
-describe('VideoExtendPanel 出口', () => {
-  it('确认把当前区间交出去', () => {
+describe('VideoExtendPanel exits', () => {
+  it('confirm hands off the current range', () => {
     const { onConfirm } = renderPanel();
     drag(handles().start, 140);
     fireEvent.click(handles().confirm);
@@ -178,13 +178,13 @@ describe('VideoExtendPanel 出口', () => {
     expect(onConfirm).toHaveBeenCalledWith({ startMs: 42_000, endMs: 60_000 });
   });
 
-  it('X 退出截取', () => {
+  it('X exits trimming', () => {
     const { onExit } = renderPanel();
-    fireEvent.click(screen.getByRole('button', { name: '退出续写截取' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Exit extend clip selection' }));
     expect(onExit).toHaveBeenCalledTimes(1);
   });
 
-  it('提交中不再响应键盘，也点不了确认', () => {
+  it('while submitting, keyboard is ignored and confirm cannot be clicked', () => {
     renderPanel({ isSubmitting: true });
     const { start, confirm } = handles();
 
@@ -193,7 +193,7 @@ describe('VideoExtendPanel 出口', () => {
     expect(confirm.hasAttribute('disabled')).toBe(true);
   });
 
-  it('滚轮不穿透到画布（nowheel）', () => {
+  it('wheel does not leak through to the canvas (nowheel)', () => {
     const { container } = renderPanel();
     expect(container.querySelector('.nowheel')).toBeTruthy();
   });

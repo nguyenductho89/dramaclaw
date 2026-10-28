@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
-// 深度动作捕捉的纯计算：尺寸、归一化区间、灰度映射。worker 与单测共用，不碰 DOM。
+// Pure computation for depth motion capture: sizes, normalization range, grayscale mapping. Shared by the worker and unit tests; never touches the DOM.
 //
-// 模型输出是相对逆深度（近处值大），每帧量纲都不一样。逐帧 min/max 归一化会让整段
-// 视频亮度来回跳，所以区间取 1%/99% 分位数抗离群点，再用 EMA 在帧间平滑。
+// The model outputs relative inverse depth (larger for near), with a different scale on every frame. Per-frame min/max normalization would make the whole
+// video's brightness jump around, so the range uses the 1%/99% percentiles to resist outliers and is then smoothed across frames with an EMA.
 
 export const DEPTH_MAX_OUTPUT_HEIGHT = 1080;
-/** 推理画布高度：模型内部本来就缩到 518，喂更大的图只是白白多插值。 */
+/** Inference canvas height: the model downscales to 518 internally anyway, so feeding a larger image only adds pointless interpolation. */
 export const DEPTH_INFERENCE_HEIGHT = 518;
 export const DEPTH_MAX_DURATION_SEC = 60;
 export const DEPTH_RANGE_ALPHA = 0.1;
@@ -27,14 +27,14 @@ function evenFloor(value: number): number {
   return Math.max(2, Math.floor(value / 2) * 2);
 }
 
-/** 高度封顶 maxHeight（源更小则保持），宽按比例；两边都取偶数（H.264 要求）。 */
+/** Cap the height at maxHeight (keep it if the source is smaller) and scale the width proportionally; both sides are made even (H.264 requires it). */
 export function fitHeight(srcWidth: number, srcHeight: number, maxHeight: number): FrameSize {
   const height = evenFloor(Math.min(srcHeight, maxHeight));
   const width = evenFloor((srcWidth * height) / srcHeight);
   return { width, height };
 }
 
-/** 等步长抽样后取分位数；每帧十几万个像素，全量排序没必要。 */
+/** Take percentiles after uniform-stride sampling; with hundreds of thousands of pixels per frame, a full sort is unnecessary. */
 export function percentileRange(
   values: ArrayLike<number>,
   lowQ = 0.01,
@@ -56,7 +56,7 @@ export function percentileRange(
   return { lo: pick(lowQ), hi: pick(highQ) };
 }
 
-/** 首帧直接取值，之后 lo/hi 各自按 alpha 向新帧靠拢。 */
+/** Take the first frame's values directly; after that lo/hi each move toward the new frame by alpha. */
 export function smoothRange(
   prev: DepthRange | null,
   next: DepthRange,
@@ -71,7 +71,7 @@ export function smoothRange(
   };
 }
 
-/** 线性映射到 0–255 灰度写进 RGBA；Uint8ClampedArray 自带 clamp 与取整。 */
+/** Map linearly to 0–255 grayscale and write into RGBA; Uint8ClampedArray handles clamping and rounding itself. */
 export function depthToGray(
   depth: ArrayLike<number>,
   range: DepthRange,

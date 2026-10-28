@@ -74,8 +74,8 @@ export function ReferenceValidationDialog({ issues, open, onClose }: {
   const { t } = useTranslation();
   const display = (value: unknown) => Array.isArray(value) ? value.join(", ") : String(value ?? "—");
   return <Dialog open={open} onOpenChange={(value) => { if (!value) onClose(); }}>
-    {/* DESIGN.md Level 3 决策弹窗：中性 surface-modal + ui-border、24px 内边距；
-        模态不模糊、组之间靠间距不用分割线。标题/说明/卡片共用同一条左边线。 */}
+    {/* DESIGN.md Level 3 decision dialog: neutral surface-modal + ui-border, 24px padding;
+        the modal is not blurred and groups are separated by spacing, not dividers. Title/description/cards share the same left edge. */}
     <DialogContent
       className="max-h-[min(80vh,640px)] gap-4 overflow-hidden rounded-lg border border-border bg-[var(--ui-surface-modal)] p-6 ring-0 sm:max-w-[480px]"
       overlayClassName="bg-black/60 supports-backdrop-filter:backdrop-blur-none"

@@ -12,8 +12,8 @@ import {
 import { enT, zhT } from "@/__tests__/helpers/i18n-fixtures";
 
 describe("media storage error localization", () => {
-  const raw = "DramaClawAPI image generation failed: 请求异常: MediaStorageUnavailable: " +
-    "MediaStorageUnavailable('MEDIA_STORAGE_READ_MISMATCH: 媒体存储读取校验失败。'); model=example";
+  const raw = "DramaClawAPI image generation failed: 请求异常: MediaStorageUnavailable: " + // no-cjk-exempt
+    "MediaStorageUnavailable('MEDIA_STORAGE_READ_MISMATCH: 媒体存储读取校验失败。'); model=example"; // no-cjk-exempt
 
   it("translates wrapped backend failures without exposing Chinese exception wrappers", () => {
     expect(humanizeTaskError(raw, enT)).toBe(
@@ -21,9 +21,9 @@ describe("media storage error localization", () => {
     );
     expect(backendErrorToastMessage(new Error(raw), enT)).toBe(humanizeTaskError(raw, enT));
     expect(humanizeTaskError(raw, zhT)).toBe(
-      "MEDIA_STORAGE_READ_MISMATCH: 媒体存储读取校验失败，请检查存储访问配置。",
+      "MEDIA_STORAGE_READ_MISMATCH: 媒体存储读取校验失败，请检查存储访问配置。", // no-cjk-exempt
     );
-    expect(raw).toContain("请求异常");
+    expect(raw).toContain("请求异常"); // no-cjk-exempt
   });
 
   it("preserves unknown codes and unrelated provider errors", () => {

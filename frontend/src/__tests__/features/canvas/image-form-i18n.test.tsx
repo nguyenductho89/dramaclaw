@@ -36,17 +36,17 @@ function formProps(patch: Partial<ImageGenerationFormProps> = {}): ImageGenerati
     upstreamTextContents: [],
     upstreamImageContents: [],
     onDetachUpstream: vi.fn(),
-    prompt: '用户填写的中文提示词不应被改写',
+    prompt: '用户填写的中文提示词不应被改写',  // no-cjk-exempt
     onPromptChange: vi.fn(),
     onCompositionStart: vi.fn(),
     onCompositionEnd: vi.fn(),
     mentionCandidates: [],
-    upstreamTextJoined: '上游中文内容不应被改写',
+    upstreamTextJoined: '上游中文内容不应被改写',  // no-cjk-exempt
     modelId: 'example',
     aspectRatio: '16:9',
     size: '2K',
     sizeOptions: ['1K', '2K'],
-    aspectOptions: [{ value: 'auto', label: '自适应' }, { value: '16:9', label: '16:9' }],
+    aspectOptions: [{ value: 'auto', label: '自适应' }, { value: '16:9', label: '16:9' }],  // no-cjk-exempt
     quality: 'medium',
     qualityOptions: ['low', 'medium', 'high'],
     showQuality: true,
@@ -101,11 +101,11 @@ describe('image node form localization', () => {
     expect(screen.getByTitle('Translate prompt (Chinese ↔ English)')).toBeInTheDocument();
 
     await act(async () => { await i18n.changeLanguage('zh'); });
-    expect(screen.getByRole('button', { name: '风格' })).toBeInTheDocument();
-    expect(screen.getByText('资产库')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '摄像机' })).toBeInTheDocument();
-    expect(screen.getByTitle('复制节点 ID')).toHaveTextContent('节点 ID');
-    expect(screen.getByRole('textbox', { name: 'Prompt' })).toHaveValue('用户填写的中文提示词不应被改写');
+    expect(screen.getByRole('button', { name: '风格' })).toBeInTheDocument();  // no-cjk-exempt
+    expect(screen.getByText('资产库')).toBeInTheDocument();  // no-cjk-exempt
+    expect(screen.getByRole('button', { name: '摄像机' })).toBeInTheDocument();  // no-cjk-exempt
+    expect(screen.getByTitle('复制节点 ID')).toHaveTextContent('节点 ID');  // no-cjk-exempt
+    expect(screen.getByRole('textbox', { name: 'Prompt' })).toHaveValue('用户填写的中文提示词不应被改写');  // no-cjk-exempt
   });
 
   it('localizes quality, aspect, count and style popovers without changing submitted values', async () => {

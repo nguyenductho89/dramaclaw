@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { ProviderModelPicker } from "@/features/canvas/ui/ProviderModelPicker";
 import { videoModelReferenceDisabledReason } from "@/features/canvas/nodes/shared/videoModelCapabilities";
-import { zhT } from "../../helpers/i18n-fixtures";
+import { enT } from "../../helpers/i18n-fixtures";
 
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 vi.mock("@/features/canvas/hooks/useFreezoneImageModels", () => ({
@@ -25,7 +25,7 @@ describe("video model input tooltip", () => {
     let videos = 0;
     const reason = () => {
       const key = videoModelReferenceDisabledReason(depth, { images: 0, videos, audios: 0 });
-      return key ? zhT(key) : null;
+      return key ? enT(key) : null;
     };
     const props = { selectedModelId: depth.id, models: [depth], onChange, domain: "video" as const,
       getOptionDisabledReason: reason };
@@ -34,7 +34,7 @@ describe("video model input tooltip", () => {
     const option = screen.getAllByRole("button", { name: /Depth Anything Video/ })[1];
     expect(option).toHaveAttribute("aria-disabled", "true");
     fireEvent.mouseEnter(option);
-    expect(screen.getByText("需要连接视频节点（1个）")).toBeInTheDocument();
+    expect(screen.getByText("Connect a video node (exactly 1)")).toBeInTheDocument();
     fireEvent.click(option);
     expect(onChange).not.toHaveBeenCalled();
 

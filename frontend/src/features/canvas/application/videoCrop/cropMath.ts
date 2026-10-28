@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
-// 画面裁切的几何计算。框一律用「源视频显示像素」的浮点坐标，只有交给编码器或
-// 显示尺寸标签时才取偶数整像素（H.264 要求宽高为偶数）。
+// Geometry for video cropping. The box always uses floating-point coordinates in "source video display pixels"; only when handing it to the encoder or
+// the display-size label do we take even whole pixels (H.264 requires even width and height).
 
 export interface CropBox {
   x: number;
@@ -10,7 +10,7 @@ export interface CropBox {
   height: number;
 }
 
-/** 与 mediabunny 的 CropRectangle 同形，可以直接交给 Conversion。 */
+/** Same shape as mediabunny's CropRectangle, so it can be passed straight to Conversion. */
 export interface CropPixelRect {
   left: number;
   top: number;
@@ -33,15 +33,15 @@ export const CROP_ALL_HANDLES: readonly CropHandle[] = ["nw", "n", "ne", "e", "s
 export const CROP_CORNER_HANDLES: readonly CropHandle[] = ["nw", "ne", "se", "sw"];
 
 export const CROP_MIN_SIZE = 64;
-/** 浮点误差兜底：576 算成 575.9999999 时不能被 floor 成 574。 */
+/** Floating-point error guard: 576 computed as 575.9999999 must not be floored to 574. */
 const EVEN_EPSILON = 1e-6;
 
-/** max < min（比如源边长小于拖拽最小尺寸）时退化成返回 min，不产出负坐标。 */
+/** When max < min (e.g. the source edge is smaller than the minimum drag size) fall back to returning min, never producing negative coordinates. */
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), Math.max(min, max));
 }
 
-/** 宽/高；「自由」返回 null 表示不锁比例。 */
+/** Width / height; "free" returns null, meaning the ratio is not locked. */
 export function resolveCropRatio(id: CropRatioId, sourceWidth: number, sourceHeight: number): number | null {
   if (id === "free") return null;
   if (id === "original") return sourceHeight > 0 ? sourceWidth / sourceHeight : null;
@@ -49,7 +49,7 @@ export function resolveCropRatio(id: CropRatioId, sourceWidth: number, sourceHei
   return width / height;
 }
 
-/** object-contain 下画面在容器里的实际矩形（容器像素）。 */
+/** The actual rectangle of the picture inside the container under object-contain (container pixels). */
 export function containRect(
   containerWidth: number,
   containerHeight: number,
@@ -66,9 +66,9 @@ export function containRect(
 }
 
 /**
- * 原始比例、宽高各 80%、居中。用 ×4/5 而不是 ×0.8，整数源尺寸能算得精确。
- * 源边长小于拖拽最小尺寸（CROP_MIN_SIZE）时，80% 会比 min(CROP_MIN_SIZE, source) 还小，
- * 这样初始框会小于自由拖拽的下限，导致一拖手柄就越界；用 max 兜底撑到拖拽下限。
+ * Original ratio, 80% of width and height, centered. Uses ×4/5 rather than ×0.8 so integer source sizes compute exactly.
+ * When the source edge is smaller than the minimum drag size (CROP_MIN_SIZE), 80% would be smaller than min(CROP_MIN_SIZE, source),
+ * making the initial box smaller than the free-drag lower bound and going out of bounds on the first handle drag; max is used as a guard to lift it to the drag lower bound.
  */
 export function initialCropBox(sourceWidth: number, sourceHeight: number): CropBox {
   const width = Math.max((sourceWidth * 4) / 5, Math.min(CROP_MIN_SIZE, sourceWidth));
@@ -76,7 +76,7 @@ export function initialCropBox(sourceWidth: number, sourceHeight: number): CropB
   return { x: (sourceWidth - width) / 2, y: (sourceHeight - height) / 2, width, height };
 }
 
-/** 以当前框中心为基准，取画面内能放下的最大 ratio 框，再整体推回画面内。 */
+/** Centered on the current box, take the largest ratio box that fits in the picture, then push the whole box back inside the picture. */
 export function fitRatioBox(box: CropBox, ratio: number, sourceWidth: number, sourceHeight: number): CropBox {
   const width = Math.min(sourceWidth, sourceHeight * ratio);
   const height = width / ratio;
@@ -105,8 +105,8 @@ export function moveCropBox(
 }
 
 /**
- * 拖手柄。`start` 是按下瞬间的框，`dx/dy` 是从按下到现在的累计位移（源像素），
- * 这样多次 pointermove 不会累积误差。
+ * Drag a handle. `start` is the box at the moment of press, `dx/dy` is the cumulative displacement (source pixels) from press to now,
+ * so multiple pointermove events don't accumulate error.
  */
 export function dragCropHandle(
   start: CropBox,
@@ -136,14 +136,14 @@ export function dragCropHandle(
     return { x: left, y: top, width: right - left, height: bottom - top };
   }
 
-  // 锁比例只开放四个角；边中点手柄 UI 上不渲染，万一传进来也原样返回。
+  // Locked ratio only exposes the four corners; edge-midpoint handles aren't rendered in the UI, and if one is passed in anyway, return the box unchanged.
   if (!(movesWest || movesEast) || !(movesNorth || movesSouth)) return start;
 
   const anchorX = movesEast ? start.x : start.x + start.width;
   const anchorY = movesSouth ? start.y : start.y + start.height;
   const widthByX = start.width + (movesEast ? dx : -dx);
   const widthByY = (start.height + (movesSouth ? dy : -dy)) * ratio;
-  // 哪个轴的相对变化大就听哪个轴，斜着拖也不会抖。
+  // Follow whichever axis changed more in relative terms, so diagonal drags don't jitter.
   const followX = Math.abs(dx) / start.width >= Math.abs(dy) / start.height;
   const maxWidth = Math.min(
     movesEast ? sourceWidth - anchorX : anchorX,
@@ -160,7 +160,7 @@ export function dragCropHandle(
   };
 }
 
-/** 编码器与尺寸标签用：宽高向下取偶数，原点四舍五入后夹在画面内。 */
+/** For the encoder and size label: round width and height down to even, round the origin, and clamp inside the picture. */
 export function toEvenSourceRect(box: CropBox, sourceWidth: number, sourceHeight: number): CropPixelRect {
   const width = Math.max(2, Math.floor(Math.min(box.width, sourceWidth) / 2 + EVEN_EPSILON) * 2);
   const height = Math.max(2, Math.floor(Math.min(box.height, sourceHeight) / 2 + EVEN_EPSILON) * 2);

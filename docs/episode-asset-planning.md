@@ -1,24 +1,24 @@
-# 逐行脚本的场景与道具规划
+# Scene and Prop Planning for Line-by-Line Scripts
 
-生成逐行脚本时，共享工作流先补齐本集缺失的场景和道具菜单，再为镜头生成元数据。规划使用本次实际脚本输入，保留已保存的原文及用户已有的菜单；SQLite 在写入时原子判空，规划期间的新选择也会保留。场景只匹配本集范围内的唯一名称或精确别名，歧义保持未选择。
+When generating a line-by-line script, the shared workflow first fills in the scene and prop menus missing from the episode, then generates metadata for each shot. Planning uses the actual script input of this run, and preserves the saved source text and any menus the user already has. SQLite checks for emptiness atomically at write time, so selections the user makes during planning are also preserved. A scene is matched only by a unique name or exact alias within the episode's scope; ambiguous matches stay unselected.
 
-后续重新规划场景时，工作流可以补齐来源明确的生成镜头的空场景引用。生成镜头记录实际输入的 SHA256；编号、数量或摘要不匹配时不回填。已有场景选择、手工镜头及没有来源摘要的旧镜头保持原状。修改画面描述或旁白会清除来源标记，避免把用户修改后的镜头重新当作原始生成结果对齐。
+When scenes are re-planned later, the workflow can fill in empty scene references on generated shots whose origin is known. A generated shot records the SHA256 of the input it was actually generated from; if the index, count, or digest does not match, nothing is backfilled. Existing scene selections, manually created shots, and legacy shots without a source digest are left as they are. Editing the visual description or narration clears the source marker, so a shot the user has modified is not mistaken for an original generated result and re-aligned.
 
-项目 SQLite 迁移版本从 4 升至 5，新增 `source_text_sha256` 字段，旧记录默认为空。迁移不重生成脚本。前端在同步规划及后台任务完成时刷新本集详情、镜头、脚本、场景、道具和引用缓存。
+The project SQLite migration version goes from 4 to 5, adding a `source_text_sha256` column that defaults to empty for old records. The migration does not regenerate scripts. The frontend refreshes the episode details, shots, script, scene, prop, and reference caches when synchronous planning and background tasks finish.
 
-无实体地点的解说稿允许规划出空场景菜单。分析失败与合法空结果分别处理；规则无法确定场景时，分析失败仍会报错。明确传入空合法集合时，生成结果不能保留集合外的场景、人物或道具。
+A narration script with no physical locations may be planned into an empty scene menu. Analysis failures and legitimately empty results are handled separately; when the rules cannot determine the scene, an analysis failure is still reported as an error. When an empty allowed set is passed explicitly, the generated result must not keep scenes, characters, or props outside that set.
 
-脚本画面描述供镜头生成使用。视频提示词生成仍需先生成或选择草图／首帧图片，然后执行自动提示词生成。
+The script's visual descriptions are used for shot generation. Video prompt generation still requires generating or selecting a sketch / first-frame image first, then running automatic prompt generation.
 
-## 可选文本模型预算
+## Optional Text Model Budget
 
-`NEWAPI_TEXT_CONTEXT_TOKENS` 未配置时维持原有请求行为。配置后，客户端在普通及流式请求发送前计算文本、工具与输出结构的保守预算，并预留输出 token；包含验证重试历史。预算不足会明确报错，原文不会被截断。
+When `NEWAPI_TEXT_CONTEXT_TOKENS` is not configured, request behavior is unchanged. When it is configured, the client computes a conservative budget for the text, tools, and output structure before sending both regular and streaming requests, and reserves output tokens; this includes the validation retry history. An insufficient budget raises an explicit error, and the source text is never truncated.
 
-上下文预算应依据实际网关模型窗口设置，必须大于输出预算加 1024。`NEWAPI_TEXT_OUTPUT_TOKENS` 默认 8192，可由请求的输出限制覆盖。类型明确的图像内容中的 URL／Base64 不按文本计数；视觉 token 由提供方验证，因此这个检查不代表文本与视觉的合计上界。
+The context budget should be set according to the actual gateway model window, and must be greater than the output budget plus 1024. `NEWAPI_TEXT_OUTPUT_TOKENS` defaults to 8192 and can be overridden by the request's output limit. URLs / Base64 inside explicitly typed image content are not counted as text; vision tokens are validated by the provider, so this check is not an upper bound on text plus vision combined.
 
-## 测试环境隔离
+## Test Environment Isolation
 
-- 端口注册模块的重载测试在结束时同时恢复注册状态和异常类身份，保持已导入消费者的异常捕获有效。
-- 图数据库生命周期测试只替代 JSON 扩展的安装／加载命令；核心查询、读写切换、线程取消等待和锁释放仍使用原生数据库。扩展安装成功和失败单独测试，不依赖扩展下载服务器的可用性。
-- Node 环境的本地存储兼容对象使用一致的构造器和原型，使额度异常模拟可以拦截实际写入。
-- 上传错误测试使用匹配的原生 File／FormData，校验文件名、字节数及内容后验证后端错误传播。
+- The reload test for the port registry module restores both the registry state and the exception class identity at the end, so exception handling in already imported consumers keeps working.
+- The graph database lifecycle test replaces only the install / load commands of the JSON extension; core queries, read/write switching, thread-cancellation waits, and lock release still use the native database. Extension install success and failure are tested separately and do not depend on the availability of the extension download server.
+- The Node-environment local storage compatibility object uses a consistent constructor and prototype, so quota-exceeded simulation can intercept actual writes.
+- The upload error test uses a matching native File / FormData, and verifies backend error propagation after checking the file name, byte count, and content.

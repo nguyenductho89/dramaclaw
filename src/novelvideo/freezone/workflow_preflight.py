@@ -455,7 +455,7 @@ def video_model_reselection_clarification(
             {
                 "id": model_id,
                 "label": str(entry.get("label") or entry.get("name") or model_id),
-                "description": "支持当前镜头的参考模式、时长及已确认生成参数。",
+                "description": "Supports the current shot's reference mode, duration and confirmed generation parameters.",
             }
         )
     if not options:
@@ -486,10 +486,11 @@ def video_model_reselection_clarification(
         "affected_node_ids": affected_node_ids,
         "question": {
             "id": "compatible_video_model",
-            "title": "确认兼容的视频模型",
+            "title": "Confirm compatible video model",
             "prompt": (
-                "当前选择的视频模型不能同时满足参考模式和镜头时长。切换模型可能影响"
-                "成本或效果，请确认替代模型。"
+                "The selected video model cannot satisfy both the reference mode and "
+                "the shot duration. Switching models may affect cost or quality; "
+                "please confirm a replacement model."
             ),
             "mode": "single",
             "options": options,

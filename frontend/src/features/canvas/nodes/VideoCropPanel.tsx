@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
-// 画面裁切的底部浮条：退出、比例预设、实时尺寸、生成。只负责展示与回调，框状态在 VideoNode。
+// Bottom floating bar for frame cropping: exit, aspect-ratio presets, live size, generate. Only handles display and callbacks; the crop-box state lives in VideoNode.
 import { ArrowUp, Loader2, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -9,7 +9,7 @@ import { CANVAS_NODE_OPS_PANEL_CLASS } from "@/features/canvas/ui/nodeFrameStyle
 
 interface VideoCropPanelProps {
   ratioId: CropRatioId;
-  /** 偶数取整后的源像素尺寸；还没有框时传 0。 */
+  /** Source pixel size rounded to even numbers; pass 0 when there is no box yet. */
   width: number;
   height: number;
   isSubmitting: boolean;
@@ -17,7 +17,7 @@ interface VideoCropPanelProps {
   onRatioChange: (ratioId: CropRatioId) => void;
   onCancel: () => void;
   onSubmit: () => void;
-  /** 提交中点 X：中止这次裁剪请求，不是退出裁剪模式——框还留着。 */
+  /** Clicking X while submitting: aborts this crop request, not exiting crop mode; the box stays. */
   onAbort: () => void;
 }
 
@@ -40,8 +40,8 @@ export function VideoCropPanel({
     return id;
   };
 
-  // 提交中 X 的含义从「退出裁剪」变成「取消这次提交」，所以必须仍然可点，
-  // 且换一套文案，不能让用户以为点了没反应。
+  // While submitting, X changes meaning from "exit crop" to "cancel this submission", so it must stay
+  // clickable and switch to different wording, so the user does not think the click did nothing.
   const closeLabel = isSubmitting ? t("node.videoNode.crop.abort") : t("node.videoNode.crop.cancel");
 
   return (

@@ -45,10 +45,18 @@ def tracked_files() -> list[Path]:
     return [Path(p) for p in out.split("\0") if p]
 
 
+ZH_LOCALIZED_PREFIXES = (
+    "frontend/public/locales/zh/",
+    "docs/zh/",
+    "readme/README_zh.md",
+)
+
+
 def skipped(path: Path) -> bool:
     name = path.name.lower()
     return (
-        name in SKIP_NAMES
+        path.as_posix().startswith(ZH_LOCALIZED_PREFIXES)
+        or name in SKIP_NAMES
         or name.endswith(".spdx.json")
         or path.suffix.lower() in SKIP_SUFFIXES
     )

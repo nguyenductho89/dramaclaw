@@ -6,11 +6,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { requestVideoCropFocus } from "@/features/canvas/application/videoCrop/videoCropInFlight";
 import { VideoCropOverlay } from "@/features/canvas/nodes/VideoCropOverlay";
 
-// 400×300 容器里放 720×1280 的画面：画面宽 168.75px，1 屏幕像素 = 720/168.75 源像素，
-// 所以 23.4375px 正好是 100 源像素（两个数都能被二进制精确表示，断言可以用 toEqual）。
+// A 720×1280 frame in a 400×300 container: the frame is 168.75px wide, so 1 screen pixel = 720/168.75 source pixels,
+// which makes 23.4375px exactly 100 source pixels (both numbers are exactly representable in binary, so assertions can use toEqual).
 const PX_PER_100_SOURCE = 23.4375;
 const BOX = { x: 72, y: 128, width: 576, height: 1024 };
-// 一次性抢焦点的挂号表是按 nodeId 登记的模块级单例，固定一个测试节点 id 就行。
+// The one-shot focus-grab registry is a module-level singleton keyed by nodeId, so a fixed test node id is enough.
 const NODE_ID = "test-video-crop-node";
 
 type ObserverCallback = (entries: Array<{ contentRect: { width: number; height: number } }>) => void;
@@ -186,9 +186,9 @@ describe("VideoCropOverlay", () => {
   });
 
   it("still calls preventDefault on arrows and Escape while disabled, so react-flow doesn't move or deselect the node", () => {
-    // disabled 时 onChange/onEscape 不能被调用（上一条测试已经盯住了），但这两类键
-    // 还是要被吃掉——不然 react-flow 自己的方向键移动 / Canvas.tsx 的 Esc 处理会
-    // 接手，用户会看到节点自己动了或者被取消选中。
+    // When disabled, onChange/onEscape must not be called (the previous test pins that down), but these keys
+    // must still be swallowed; otherwise react-flow's own arrow-key movement / Canvas.tsx's Esc handling would
+    // take over, and the user would see the node move by itself or get deselected.
     const onEscape = vi.fn();
     const { onChange } = renderOverlay({ disabled: true, onEscape });
     const box = screen.getByTestId("video-crop-box");
@@ -227,9 +227,9 @@ describe("VideoCropOverlay", () => {
   });
 
   it("keeps a native document-level keydown listener from seeing a handled ArrowRight or Escape", () => {
-    // 跟上面那条测的是同一件事（命中的键不能冒泡出去），只是把「父级 React
-    // 处理器」换成「document 上的原生监听器」——这才是 Canvas.tsx 里真正挂的
-    // 那一层，也是这条修复原本要堵的口子。
+    // Same thing as the test above (a handled key must not bubble out), except the "parent React
+    // handler" is replaced by a "native listener on document", which is the layer Canvas.tsx actually attaches
+    // and the hole this fix was originally meant to plug.
     const onEscape = vi.fn();
     renderOverlay({ onEscape });
     const box = screen.getByTestId("video-crop-box");
@@ -247,7 +247,7 @@ describe("VideoCropOverlay", () => {
   it("focuses the crop box when a focus request is pending for this node", async () => {
     requestVideoCropFocus(NODE_ID);
     renderOverlay();
-    // 焦点是在 rAF 里抢的（见 VideoCropOverlay 里的注释），不是挂载后立刻发生。
+    // Focus is grabbed inside rAF (see the comment in VideoCropOverlay), not immediately after mount.
     await vi.waitFor(() => {
       expect(document.activeElement).toBe(screen.getByTestId("video-crop-box"));
     });
@@ -255,8 +255,8 @@ describe("VideoCropOverlay", () => {
 
   it("does not focus the crop box without a pending focus request", async () => {
     renderOverlay();
-    // 没挂号就不该抢焦点：给一轮 rAF 的时间，确认真的什么都没发生，而不是只测
-    // 挂载那一刻的状态。
+    // Without a registration it must not grab focus: give it one rAF round to confirm that nothing really happened, rather than only testing
+    // the state at the moment of mount.
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
     expect(document.activeElement).not.toBe(screen.getByTestId("video-crop-box"));
   });
@@ -269,8 +269,8 @@ describe("VideoCropOverlay", () => {
     });
     first.unmount();
 
-    // 同一个节点重新挂载（比如被 onlyRenderVisibleElements 卸载又挂回来）：
-    // 挂号已经在上一次挂载时被消费掉了，这次不该再抢焦点。
+    // The same node remounts (e.g. unmounted and remounted by onlyRenderVisibleElements):
+    // the registration was already consumed on the previous mount, so it must not grab focus again.
     renderOverlay();
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
     expect(document.activeElement).not.toBe(screen.getByTestId("video-crop-box"));

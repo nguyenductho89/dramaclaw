@@ -3,15 +3,20 @@
   "name": "Text to Image (Dynamic)",
   "enabled": true,
   "version": 1,
-  "description": "从文字需求规划并生成一张或多张普通图片，不附加视频、音频或社交平台模板阶段。",
+  "description": "Plan and generate one or more standard images from a text request, without adding video, audio, or social-platform template stages.",
   "category": "creation",
   "triggers": {
     "keywords": [
-      "文生图",
-      "图片生成工作流",
-      "生成图片工作流",
-      "纯图片工作流",
-      "只生成图片"
+      "text to image",
+      "image generation workflow",
+      "generate image workflow",
+      "image-only workflow",
+      "generate images only",
+      "\u6587\u751f\u56fe",
+      "\u56fe\u7247\u751f\u6210\u5de5\u4f5c\u6d41",
+      "\u751f\u6210\u56fe\u7247\u5de5\u4f5c\u6d41",
+      "\u7eaf\u56fe\u7247\u5de5\u4f5c\u6d41",
+      "\u53ea\u751f\u6210\u56fe\u7247"
     ],
     "node_scopes": [
       "textGeneration",
@@ -19,12 +24,12 @@
     ]
   },
   "planning": {
-    "planning_notes": "根据用户描述确定图片数量；先形成内容规划，再为每个计划项生成一张图片，不创建视频或音频节点。",
-    "prompt_guide": "每个计划项描述一张图片的主体、场景、构图和风格；多张图片需要保持用户要求的视觉一致性。",
+    "planning_notes": "Determine the number of images from the user's description; form a content plan first, then generate one image per plan item, without creating video or audio nodes.",
+    "prompt_guide": "Each plan item describes one image's subject, scene, composition, and style; multiple images must keep the visual consistency the user asks for.",
     "conduct_rules": [
-      "仅生成用户要求的图片阶段，不自动添加视频或音频阶段",
-      "仅使用 allowed_recipe_ids 中声明的能力",
-      "创建画布节点前先生成并确认动态计划"
+      "Generate only the image stages the user asked for; do not automatically add video or audio stages",
+      "Use only capabilities declared in allowed_recipe_ids",
+      "Generate and confirm the dynamic plan before creating canvas nodes"
     ]
   },
   "schema_version": "dramaclaw.workflow-skill.v1",
@@ -37,22 +42,22 @@
     "rating_bands": [
       {
         "score": 10,
-        "description": "图片节点完整满足用户目标且工作流可以执行"
+        "description": "Image nodes fully satisfy the user's goal and the workflow is executable"
       },
       {
         "score": 7,
-        "description": "核心图片流程完整，允许少量非关键调整"
+        "description": "Core image flow is complete; minor non-critical adjustments allowed"
       },
       {
         "score": 4,
-        "description": "缺少必要的规划或图片生成阶段"
+        "description": "Missing a required planning or image generation stage"
       }
     ],
     "visual_review_items": [],
     "text_review_items": [],
     "quality_threshold": 7,
     "domain_constraints": [
-      "工作流只包含规划和图片生成阶段，不得强制添加视频节点"
+      "The workflow contains only planning and image generation stages; do not force-add video nodes"
     ]
   }
 }

@@ -7,7 +7,7 @@ import {
   clearVideoFrameCache,
 } from '@/features/canvas/application/videoFrameStrip';
 
-/** 假 <video>：jsdom 不解码，seeked/loadeddata 全由用例手动喂。 */
+/** Fake <video>: jsdom does not decode, so seeked/loadeddata are fed manually by each test. */
 class FakeVideo {
   listeners = new Map<string, Set<() => void>>();
   duration = 8;
@@ -59,7 +59,7 @@ function fakeCanvas() {
   return canvas as unknown as HTMLCanvasElement;
 }
 
-/** 走完一整条带子：loadeddata + count 次 seeked。 */
+/** Run a whole strip: loadeddata + count seeked events. */
 function feed(video: FakeVideo, count: number) {
   video.emit('loadeddata');
   for (let i = 0; i < count; i += 1) video.emit('seeked');
@@ -86,18 +86,18 @@ afterEach(() => {
 });
 
 describe('captureVideoFrames', () => {
-  it('抽满后按 (src, count) 复用结果，不再开第二个 <video>', async () => {
+  it('reuses the result by (src, count) once fully captured, without opening a second <video>', async () => {
     const first = captureVideoFrames('https://cdn.example.com/a.mp4', 3);
     feed(videos[0], 3);
     expect(await first).toHaveLength(3);
     expect(videos).toHaveLength(1);
 
-    // 面板反复挂载（LOD、切模式）时命中缓存，省掉一整轮 seek + 解码。
+    // Hit the cache when the panel is mounted repeatedly (LOD, mode switches), saving a whole round of seek + decode.
     expect(await captureVideoFrames('https://cdn.example.com/a.mp4', 3)).toHaveLength(3);
     expect(videos).toHaveLength(1);
   });
 
-  it('换 src 或换帧数都要重新抽', async () => {
+  it('recaptures when src or frame count changes', async () => {
     const first = captureVideoFrames('https://cdn.example.com/a.mp4', 3);
     feed(videos[0], 3);
     await first;
@@ -113,7 +113,7 @@ describe('captureVideoFrames', () => {
     expect(videos).toHaveLength(3);
   });
 
-  it('结束后把监听器和 src 都摘干净', async () => {
+  it('removes listeners and src when finished', async () => {
     const pending = captureVideoFrames('https://cdn.example.com/a.mp4', 2);
     feed(videos[0], 2);
     await pending;
@@ -121,17 +121,17 @@ describe('captureVideoFrames', () => {
     expect(videos[0].listenerCount).toBe(0);
   });
 
-  it('一帧都没抽到就卡死时超时报错，不会一直挂着', async () => {
+  it('times out with an error when stuck before any frame is captured, instead of hanging forever', async () => {
     vi.useFakeTimers();
     const pending = captureVideoFrames('https://cdn.example.com/stuck.mp4', 4);
     const assertion = expect(pending).rejects.toThrow(/timed out/);
-    videos[0].emit('loadeddata'); // seek 出去了，seeked 永远不回来
+    videos[0].emit('loadeddata'); // seek issued, seeked never comes back
     await vi.advanceTimersByTimeAsync(20_000);
     await assertion;
     expect(videos[0].listenerCount).toBe(0);
   });
 
-  it('抽到一半卡住就交半条带子，而且不进缓存', async () => {
+  it('hands back a partial strip when stuck halfway, and does not cache it', async () => {
     vi.useFakeTimers();
     const pending = captureVideoFrames('https://cdn.example.com/half.mp4', 4);
     videos[0].emit('loadeddata');
@@ -140,7 +140,7 @@ describe('captureVideoFrames', () => {
     await vi.advanceTimersByTimeAsync(20_000);
     expect(await pending).toHaveLength(2);
 
-    // 降级结果不缓存：下次挂载还有机会抽全。
+    // Degraded results are not cached: the next mount still gets a chance to capture fully.
     vi.useRealTimers();
     const retry = captureVideoFrames('https://cdn.example.com/half.mp4', 4);
     expect(videos).toHaveLength(2);
@@ -148,7 +148,7 @@ describe('captureVideoFrames', () => {
     expect(await retry).toHaveLength(4);
   });
 
-  it('失败不进缓存，下次还能重试', async () => {
+  it('does not cache failures, so the next attempt can retry', async () => {
     const pending = captureVideoFrames('https://cdn.example.com/bad.mp4', 2);
     const assertion = expect(pending).rejects.toThrow(/video element error/);
     videos[0].emit('error');

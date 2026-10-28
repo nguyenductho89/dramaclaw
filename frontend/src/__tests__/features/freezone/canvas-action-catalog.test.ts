@@ -520,7 +520,7 @@ describe("canvas action catalog", () => {
         can_run_now: true,
       }),
     );
-    // 智能续写要 Seedance 2.5；测试环境没有模型目录，所以不该出现在清单里。
+    // Smart extend requires Seedance 2.5; the test environment has no model catalog, so it must not appear in the list.
     expect(actions.map((item) => item.action)).not.toContain("open_video_extend_tool");
   });
 

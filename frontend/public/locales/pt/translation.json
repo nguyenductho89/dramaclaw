@@ -4532,7 +4532,7 @@
       "exportZip": "Exportar ZIP",
       "composeEpisode": "Compor Episódio",
       "recomposeEpisode": "Recompor",
-      "composeTitle": "Confirmar composição de 「{{title}}」",
+      "composeTitle": "Confirmar composição de “{{title}}”",
       "composeDesc": "Concatenar todos os clipes de vídeo das batidas num episódio completo. Isto poderá demorar alguns minutos.",
       "composeDescSubtitles": " (com legendas)",
       "composeDescBgm": " (com BGM)",

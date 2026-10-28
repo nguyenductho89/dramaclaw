@@ -18,13 +18,13 @@ const mb = vi.hoisted(() => ({
   buffer: null as ArrayBuffer | null,
   disposed: 0,
   executeError: null as Error | null,
-  // execute() 挂起不resolve，直到被 cancel() 打断——用来模拟「取消发生在
-  // execute() 跑到一半」的时序。
+  // execute() hangs without resolving until interrupted by cancel() — used to simulate the timing of "cancellation happening
+  // halfway through execute()".
   pendingExecute: false,
   executeCalled: false,
   cancelCalled: 0,
-  // Conversion.init() 本身没有取消口子（见 cropVideo.ts 注释），要测「取消发生
-  // 在 init 期间」这个窗口，只能在 mock 的 init() 内部这一刻回调出去中止 signal。
+  // Conversion.init() itself has no cancel hook (see the cropVideo.ts comment); to test the window "cancellation during
+  // init", the mock init() can only call back at this moment to abort the signal.
   onInit: null as (() => void) | null,
 }));
 
@@ -258,9 +258,9 @@ describe("cropVideoBlob", () => {
   });
 
   it("reports canceled without calling execute when the signal aborts during Conversion.init", async () => {
-    // Conversion.init() 没有取消口子，跑完了才能问 signal——这段用例专门盯这条
-    // 「init 期间被取消」分支：不是一开始就 aborted（那是上面那条用例），而是
-    // init() 正在跑的这段时间里才 abort，得避免白跑一次 execute()。
+    // Conversion.init() has no cancel hook, so the signal can only be checked after it finishes — this case specifically targets that
+    // "cancelled during init" branch: not aborted from the start (that is the case above), but aborted only while
+    // init() is running, and execute() must not be run needlessly.
     const controller = new AbortController();
     mb.onInit = () => controller.abort();
 

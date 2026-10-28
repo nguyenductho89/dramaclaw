@@ -90,9 +90,9 @@ class TextContextBudget:
         if input_upper_bound + output_tokens > self.context_tokens:
             raise ValueError(
                 "MODEL_CONTEXT_BUDGET_EXCEEDED: "
-                f"文本输入 token 保守上界 {input_upper_bound:,} + 输出预算 {output_tokens:,} "
-                f"> 请求上下文预算 {self.context_tokens:,}。"
-                "请分批处理，或核实网关模型窗口后调整请求预算；原文未截断。"
+                f"Conservative upper bound of text input tokens {input_upper_bound:,} + output budget {output_tokens:,} "
+                f"> requested context budget {self.context_tokens:,}. "
+                "Process in batches, or verify the gateway model window and adjust the request budget; the original text was not truncated."
             )
         checked["max_tokens"] = output_tokens
         return checked

@@ -38,7 +38,7 @@ interface VideoExtendPanelProps {
   onConfirm: (range: ExtendClipRange) => void;
 }
 
-/** 与 VideoClipPanel 同一套换算：轨道按时长给像素，再夹上下限。 */
+/** Same conversion as VideoClipPanel: the track gets pixels by duration, then is clamped to upper and lower bounds. */
 const PX_PER_SECOND = 14;
 const MIN_TRACK_PX = 280;
 const MAX_TRACK_PX = 960;
@@ -47,25 +47,25 @@ const MIN_THUMBS = 6;
 const MAX_THUMBS = 16;
 const KEY_STEP_MS = 100;
 const KEY_STEP_COARSE_MS = 1000;
-/** 顶到边界的提示停留时长。够读完一行，又不会挡着下一次拖拽。 */
+/** How long the hit-the-boundary hint stays. Long enough to read one line, short enough not to block the next drag. */
 const BOUND_HINT_MS = 2200;
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
 }
 
-/** `15.07 秒`。两位小数是设计稿的口径——续写对前情长度敏感，取整会看不出刚过 4s。 */
+/** `15.07 s`. Two decimals match the design spec -- extension is sensitive to lead-in length, and rounding would hide that it just passed 4s. */
 function formatDuration(ms: number, t: TFn): string {
   return t('canvas.videoExtend.durationSeconds', { seconds: (ms / 1000).toFixed(2) });
 }
 
 /**
- * 「智能续写」的前置视频选段轨道：挂在**源**视频节点底下，只截一段，4~30s。
+ * Pre-selection video segment track for "Smart extend": attached under the **source** video node, cutting a single segment, 4-30s.
  *
- * 和剪辑条的差别不只是少了几个按钮：剪辑是把选中的那段裁出来当结果，续写是把选中
- * 的那段当输入，所以这里没有「提交后原地替换」的概念，确认之后落的是一个下游新节点
- * （见 VideoNode 的 handleExtendConfirm）。轨道本身不写任何节点数据，选区只活在
- * 组件本地——用户可能反复拖十几次才拍板，每一次都写 store 会把撤销栈冲干净。
+ * The difference from the clip bar is more than a few missing buttons: clipping cuts the selected segment out as the result, while extending uses the selected
+ * segment as input, so there is no "replace in place after submit" here; confirming creates a new downstream node
+ * (see VideoNode's handleExtendConfirm). The track itself writes no node data and the selection lives only in
+ * local component state -- users may drag a dozen times before deciding, and writing the store on every drag would flush the undo stack.
  */
 export const VideoExtendPanel = memo(function VideoExtendPanel({
   videoUrl,
@@ -93,8 +93,8 @@ export const VideoExtendPanel = memo(function VideoExtendPanel({
   const [range, setRange] = useState<ExtendClipRange>(() => defaultExtendRange(totalMs ?? 0));
   const rangeRef = useRef(range);
   rangeRef.current = range;
-  // 素材时长是异步读出来的（metadata 回来之前 durationMs 为 null），拿到之后
-  // 才谈得上默认选区。所以这里跟着 totalMs 重算，而不是只在挂载时取一次。
+  // The media duration is read asynchronously (durationMs is null until metadata arrives); a default
+  // selection only makes sense once it is known. So recompute along with totalMs instead of reading it once at mount.
   useEffect(() => {
     if (!totalMs) return;
     setRange(defaultExtendRange(totalMs));
@@ -108,8 +108,8 @@ export const VideoExtendPanel = memo(function VideoExtendPanel({
   const [thumbsState, setThumbsState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [thumbsAttempt, setThumbsAttempt] = useState(0);
 
-  // 提示是「刚才顶到边了」，不是一个持续状态：不自己退场的话，用户松手后它还挂着，
-  // 下一次正常拖拽也被它盖住。
+  // The hint means "you just hit the edge", not a persistent state: if it does not dismiss itself, it lingers after the user lets go
+  // and covers the next normal drag.
   useEffect(() => {
     if (!boundHint) return;
     const timer = setTimeout(() => setBoundHint(null), BOUND_HINT_MS);
@@ -169,7 +169,7 @@ export const VideoExtendPanel = memo(function VideoExtendPanel({
         cancelAnimationFrame(frame);
         frame = 0;
       }
-      apply(); // 冲掉最后一帧还没画上去的位移，免得松手时回弹一格
+      apply(); // Flush the displacement of the last frame not yet painted, so it does not snap back one step on release
       dragRef.current = null;
       setDragMode(null);
     };
@@ -229,7 +229,7 @@ export const VideoExtendPanel = memo(function VideoExtendPanel({
       if (target === null) return;
       event.preventDefault();
       event.stopPropagation();
-      // 键盘走的是和指针同一个换算，边界提示也照弹：连按方向键顶住时得有个说法。
+      // The keyboard uses the same conversion as the pointer, and the boundary hint still pops up: holding an arrow key against the edge needs feedback.
       const next = resolveExtendRange(
         { mode: edge, startAtDown: current.startMs, endAtDown: current.endMs, anchorMs: target },
         target,
@@ -251,11 +251,11 @@ export const VideoExtendPanel = memo(function VideoExtendPanel({
     onConfirm(rangeRef.current);
   }, [canConfirm, onConfirm]);
 
-  // 抽到几帧就铺几格；抽不满时铺满黑格子会让人以为视频后半段是黑的。
+  // Lay out as many cells as frames extracted; filling the rest with black cells would make people think the second half of the video is black.
   const cellCount = thumbs.length > 0 ? thumbs.length : thumbCount;
   const chipLeftPct = clamp((startPct + endPct) / 2, 8, 92);
   const hintMessage = extendClipBoundMessage(boundHint);
-  // 提示挂在被顶住的那一端下面：拖左把手时贴左，拖右把手时贴右，视线不用来回找。
+  // The hint hangs under the end that was hit: left-aligned when dragging the left handle, right-aligned for the right handle, so the eye does not have to search.
   const hintLeftPct = clamp(dragMode === 'start' ? startPct : endPct, 4, 96);
 
   return (
@@ -276,8 +276,8 @@ export const VideoExtendPanel = memo(function VideoExtendPanel({
           <X className="h-4 w-4" />
         </button>
 
-        {/* 轨道外面再套一层：提示要贴着被顶住的那一端弹出来，而百分比只有相对
-            轨道本身才对得上；轨道自己是 overflow-hidden 的，提示挂在里面会被裁掉。 */}
+        {/* Wrap the track in one more layer: the hint must pop up next to the end that was hit, and the percentage only lines up relative to
+            the track itself; the track is overflow-hidden, so a hint inside it would be clipped. */}
         <div className="relative flex-1" style={{ minWidth: trackMinWidth }}>
         <div
           ref={trackRef}
@@ -302,8 +302,8 @@ export const VideoExtendPanel = memo(function VideoExtendPanel({
               {t('canvas.videoClip.extractingFrames')}
             </div>
           )}
-          {/* z-30 + pointer-events-none：重试按钮要压在选区框上面才点得到，
-              但整块蒙层不能吃掉把手的拖拽。 */}
+          {/* z-30 + pointer-events-none: the retry button must sit above the selection box to be clickable,
+              but the whole overlay must not swallow handle drags. */}
           {thumbsState === 'error' && (
             <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center gap-1.5 text-[11px] text-text-muted/70">
               <span>{t('canvas.videoClip.framesFailed')}</span>
@@ -320,7 +320,7 @@ export const VideoExtendPanel = memo(function VideoExtendPanel({
             </div>
           )}
 
-          {/* 选区外压暗 */}
+          {/* Dim outside the selection */}
           <div
             className="pointer-events-none absolute inset-y-0 left-0 bg-black/55"
             style={{ width: `${startPct}%` }}
@@ -330,8 +330,8 @@ export const VideoExtendPanel = memo(function VideoExtendPanel({
             style={{ width: `${100 - endPct}%` }}
           />
 
-          {/* 选区内部不铺色：那块正是要对着画面挑「续到哪儿」的地方。只有两端的
-              把手带蓝，跟片段重拍的轨道保持同一套观感。 */}
+          {/* No fill inside the selection: that is exactly where you pick "where to continue from" against the frames. Only the handles
+              at both ends are blue, matching the look of the clip re-shoot track. */}
           <div
             className={`absolute inset-y-0 z-10 ${
               isSubmitting ? '' : dragMode === 'move' ? 'cursor-grabbing' : 'cursor-grab'
@@ -347,7 +347,7 @@ export const VideoExtendPanel = memo(function VideoExtendPanel({
               aria-valuemax={totalMs ?? 0}
               aria-valuenow={range.startMs}
               aria-valuetext={formatDuration(range.startMs, t)}
-              // after:* 是把手的隐形热区：视觉仍是细条，实际能点到 28px 宽。
+              // after:* is the handle's invisible hit area: visually still a thin bar, but 28px wide to click.
               className="absolute inset-y-0 left-0 flex w-3 cursor-ew-resize items-center justify-center rounded-l-md bg-[#2f6bff] outline-none after:absolute after:inset-y-0 after:-left-2 after:-right-2 after:content-[''] focus-visible:ring-2 focus-visible:ring-sky-400"
               onPointerDown={startDrag('start')}
               onKeyDown={handleKeyDown('start')}

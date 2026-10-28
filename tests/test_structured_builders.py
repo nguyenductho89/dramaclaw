@@ -2861,14 +2861,14 @@ async def test_appearance_receives_verified_quotes_from_real_extraction_merge():
         enrich_character_appearances,
     )
 
-    quote = "林默黑发披肩，站在门口。"
+    quote = "Lin Mo has shoulder-length black hair and stands in the doorway."
     chunk = _chunk(quote)
     merged = merge_character_candidates(
-        [(chunk, ChunkCharacterOutput(characters=[_candidate("林默", quotes=[quote])]))]
+        [(chunk, ChunkCharacterOutput(characters=[_candidate("Lin Mo", quotes=[quote])]))]
     )
-    agent = FakeAppearanceAgent({"林默": _appearance("林默")})
+    agent = FakeAppearanceAgent({"Lin Mo": _appearance("Lin Mo")})
     await enrich_character_appearances(merged, agent=agent)
     assert quote in agent.prompts[0]
     before = character_appearance_cache_key(merged[0])
-    merged[0].evidence[0]["evidence_text"] = "林默短发利落，走进房间。"
+    merged[0].evidence[0]["evidence_text"] = "Lin Mo has neat short hair and walks into the room."
     assert character_appearance_cache_key(merged[0]) != before

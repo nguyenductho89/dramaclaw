@@ -238,10 +238,10 @@ export const ImageNode = memo(({ id, data, selected, type, width, height }: Imag
     () => readNodeNaturalSize(data),
   );
 
-  // 「替换素材」：上传一份本地图片顶掉这条结果。走通用 freezone upload（落 OSS），
-  // 与上传节点同一条路径。natural size 一并清掉，让 <img onLoad> 按新图重新定比例
-  // 和尺寸 —— 不清的话旧图的分辨率角标会一直挂在那儿。
-  // 同一颗按钮还兼「按住拖到左侧素材库」（原 AssetCommitHandle 的手势）。
+  // "Replace media": upload a local image to replace this result. Goes through the generic freezone upload (stored in OSS),
+  // the same path as the upload node. The natural size is cleared too, so <img onLoad> recomputes the aspect ratio
+  // and size for the new image — otherwise the old image's resolution badge would stay put.
+  // The same button also doubles as "press and drag to the asset library on the left" (the gesture of the former AssetCommitHandle).
   const [isReplacing, setIsReplacing] = useState(false);
   const { canCommit: canCommitAsset, startDrag: startAssetCommitDrag } =
     useAssetCommitDragById(id);
@@ -470,10 +470,10 @@ export const ImageNode = memo(({ id, data, selected, type, width, height }: Imag
           />
         )}
 
-        {/* 卡片内右上角的「替换」入口：点击换本地文件，按住拖则丢进左侧素材库
-            替换同类型素材。只给 allowLocalReplace 的卡片（逐帧拉片产出的参考素材）——
-            其余节点的替换手势仍走浮在节点外侧的 AssetCommitHandle，见
-            SelectedNodeOverlay；两者互斥，同一个角上不会摞出两颗上传图标。 */}
+        {/* The "Replace" entry in the card's top-right corner: click to swap in a local file, press and drag to drop it into the left-hand asset library
+            to replace media of the same type. Only for allowLocalReplace cards (reference media produced by frame-by-frame breakdown) —
+            other nodes' replace gesture still goes through AssetCommitHandle floating outside the node, see
+            SelectedNodeOverlay; the two are mutually exclusive, so no two upload icons are stacked on the same corner. */}
         {canCommitAsset &&
           !isGenerating &&
           hasInlineMediaReplaceButton(data) && (

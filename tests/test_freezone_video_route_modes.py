@@ -191,7 +191,7 @@ async def test_omni_video_continuation_runs_as_video_extend(
     await freezone_routes.freezone_video_omni_gen(
         "project",
         FreezoneVideoOmniGenRequest(
-            prompt="滑板少年继续向前滑行",
+            prompt="The skateboard kid keeps gliding forward",
             references=[
                 {"type": "video", "url": "https://example.com/source.mp4"},
                 {"type": "image", "url": "https://example.com/hero.png"},
@@ -204,14 +204,14 @@ async def test_omni_video_continuation_runs_as_video_extend(
     )
 
     start = captured["start"]
-    # 执行按视频延长（任务类型 extend），计费 / 目录 / 历史仍是全能参考。
+    # Execution is video extension (task type extend); billing / catalog / history remain omni-reference.
     assert start["gen_mode"] == "video_extend"
     assert start["requested_gen_mode"] == "allReference"
     assert captured["request_mode"] == "allReference"
     assert VIDEO_EXTEND_REQUIREMENT in start["prompt"]
-    assert "全能参考模式要求" not in start["prompt"]
-    assert "不是视频编辑" not in start["prompt"]
-    # 续写仍可带视频以外的参考素材。
+    assert "Omni-reference mode requirement" not in start["prompt"]
+    assert "not video editing" not in start["prompt"]
+    # Continuation can still carry reference material other than video.
     assert [item["type"] for item in start["reference_items"]] == ["video", "image"]
 
 
@@ -224,7 +224,7 @@ async def test_omni_video_without_continuation_stays_all_reference(
     await freezone_routes.freezone_video_omni_gen(
         "project",
         FreezoneVideoOmniGenRequest(
-            prompt="参考这段视频生成新镜头",
+            prompt="Generate a new shot from this video reference",
             references=[{"type": "video", "url": "https://example.com/source.mp4"}],
             model="catalog-video",
         ),
@@ -232,7 +232,7 @@ async def test_omni_video_without_continuation_stays_all_reference(
     )
 
     assert captured["start"]["gen_mode"] == "all_reference"
-    assert "全能参考模式要求" in captured["start"]["prompt"]
+    assert "Omni-reference mode requirement" in captured["start"]["prompt"]
     assert VIDEO_EXTEND_REQUIREMENT not in captured["start"]["prompt"]
 
 
@@ -246,7 +246,7 @@ async def test_omni_video_continuation_requires_a_video_reference(
         await freezone_routes.freezone_video_omni_gen(
             "project",
             FreezoneVideoOmniGenRequest(
-                prompt="继续",
+                prompt="Continue",
                 references=[{"type": "image", "url": "https://example.com/hero.png"}],
                 model="catalog-video",
                 continuation=True,

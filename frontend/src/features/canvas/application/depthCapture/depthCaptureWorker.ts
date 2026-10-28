@@ -2,12 +2,12 @@
 // Copyright (c) 2026 ClaymoreLab
 /// <reference lib="webworker" />
 //
-// 深度动作捕捉 Web Worker：解码 → 逐帧深度估计 → 灰度帧 → H.264 编码，整条链都在
-// worker 里，主线程只收进度和最终 mp4。一个任务一个 worker，完成或取消就 terminate；
-// 模型权重走浏览器缓存，重建 worker 只多一次建推理 session。
+// Depth motion-capture Web Worker: decode → per-frame depth estimation → grayscale frames → H.264 encode. The whole chain
+// runs inside the worker; the main thread only receives progress and the final mp4. One worker per task, terminated on completion or cancel;
+// model weights go through the browser cache, so rebuilding a worker only costs one extra inference session creation.
 //
-// 模型 onnx-community/depth-anything-v2-small（Apache-2.0）。权重与 ort wasm 的来源见
-// browserModelSource.ts：配了自托管前缀走前缀，否则走 HF Hub + jsDelivr。
+// Model onnx-community/depth-anything-v2-small (Apache-2.0). See browserModelSource.ts for where the weights and ort wasm come from:
+// a self-hosted prefix is used when configured, otherwise HF Hub + jsDelivr.
 
 import { env, pipeline, RawImage } from "@huggingface/transformers";
 import {
@@ -43,7 +43,7 @@ const DEPTH_MODEL = "onnx-community/depth-anything-v2-small";
 
 const ctx = self as unknown as DedicatedWorkerGlobalScope;
 
-// 同 matteWorker：页面没有跨源隔离，ort 的 wasm 多线程起不来，把核数压到 1 免掉无效尝试和告警。
+// Same as matteWorker: the page is not cross-origin isolated, so ort's wasm multithreading cannot start; force the thread count to 1 to skip futile attempts and warnings.
 if (!ctx.crossOriginIsolated) {
   try {
     Object.defineProperty(ctx.navigator, "hardwareConcurrency", {
@@ -51,7 +51,7 @@ if (!ctx.crossOriginIsolated) {
       get: () => 1,
     });
   } catch {
-    // 个别引擎拒绝重定义只读属性，无妨。
+    // Some engines refuse to redefine read-only properties; harmless.
   }
 }
 
@@ -118,8 +118,8 @@ async function captureDepth(blob: Blob, modelSource: BrowserModelSourceConfig): 
     }
     const stats = await track.computePacketStats(100);
 
-    // 推理画布小（模型输入量级），输出画布按 1080 封顶；predicted_depth 会被 pipeline
-    // 插值回推理画布尺寸，灰度图再由浏览器双线性放大到输出尺寸。
+    // The inference canvas is small (model-input scale) and the output canvas is capped at 1080; the pipeline interpolates predicted_depth
+    // back to the inference canvas size, and the browser then bilinearly upscales the grayscale image to the output size.
     const outSize = fitHeight(track.displayWidth, track.displayHeight, DEPTH_MAX_OUTPUT_HEIGHT);
     const inferSize = fitHeight(track.displayWidth, track.displayHeight, DEPTH_INFERENCE_HEIGHT);
 
@@ -165,7 +165,7 @@ async function captureDepth(blob: Blob, modelSource: BrowserModelSourceConfig): 
       depthToGray(depth.data, range, grayImage.data);
       grayCtx.putImageData(grayImage, 0, 0);
       outCtx.drawImage(grayCanvas, 0, 0, outSize.width, outSize.height);
-      // 逐帧对应源时间戳，只把起点挪到 0。
+      // Each frame maps to its source timestamp; only the start is shifted to 0.
       await videoSource.add(timestamp - firstTimestamp, duration);
 
       const progress = durationSec > 0 ? Math.min(1, (timestamp + duration) / durationSec) : 0;

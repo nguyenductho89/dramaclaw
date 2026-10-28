@@ -5,35 +5,35 @@ import { Loader2, Upload } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 /**
- * 结果卡片右上角的「替换素材」按钮：拉起本地文件选择器，把选中的文件交回调用方
- * 上传（各节点用自己那条上传路径 —— 图片/音频走通用 upload，视频要先过一遍
- * Web 兼容转码），成功后替换该节点的媒体。
+ * The "Replace asset" button at the top-right of a result card: opens the local file picker and hands the chosen file back to the caller
+ * to upload (each node uses its own upload path: images/audio use the generic upload, video first goes through
+ * Web-compatible transcoding), then replaces the node's media on success.
  *
- * 只放在**已经有内容**的卡片上：空态节点各自有自己的上传入口（NodeSideActionRail
- * 那条「上传」按钮栏），两者不叠。
+ * Only placed on cards that **already have content**: empty-state nodes each have their own upload entry (the NodeSideActionRail
+ * "Upload" button bar), so the two never stack.
  *
- * accept 只是选择器提示 —— 用户切「所有文件」照样能塞进别的类型，硬校验必须留在
- * 调用方的 onPick 里。
+ * accept is only a picker hint: the user can switch to "All files" and still pick another type, so hard validation must stay in
+ * the caller's onPick.
  *
- * 传了 onCommitDragStart 时这颗按钮同时是「拖到左侧素材库替换」的抓手：点一下拉
- * 本地文件，按住拖走则提交到素材库。合成一颗是因为两者在用户眼里都叫「替换」，
- * 各给一颗会在同一个角上摞出两个一样的图标。
+ * When onCommitDragStart is passed, this button doubles as the handle for "drag to the left asset library to replace": a click opens the
+ * local file picker, while press-and-drag commits to the asset library. They are one button because users call both "Replace",
+ * and giving each its own would stack two identical icons in the same corner.
  *
- * 点击换本地文件是主动作，所有有内容的卡片都该给 —— 只挂拖拽、点击不做事的话，
- * 按钮长得和能点的一模一样，用户点下去没反应只会当成坏了。
+ * Clicking to swap a local file is the primary action and every card with content should offer it: if only drag were wired and click did nothing,
+ * the button would look exactly clickable and users would think it was broken when nothing happens.
  */
 interface NodeMediaReplaceButtonProps {
   accept?: string;
-  /** 上传中：按钮转圈并禁用，避免连点堆出多次上传。 */
+  /** Uploading: the button spins and is disabled, preventing repeated clicks from piling up uploads. */
   busy?: boolean;
   title: string;
-  /** 不传则这颗按钮只承接拖拽（点击不做事）——见上，别再这么用。 */
+  /** If omitted, this button only handles dragging (click does nothing); see above, don't use it that way anymore. */
   onPick?: (file: File) => void | Promise<void>;
-  /** 按住拖动超过阈值时触发（拖到左侧素材库替换同类型素材）。 */
+  /** Fires when press-and-drag exceeds the threshold (drag to the left asset library to replace same-type assets). */
   onCommitDragStart?: () => void;
 }
 
-/** 小于这个位移仍算点击 —— 手抖不该把「换本地文件」变成「拖去素材库」。 */
+/** Displacement below this still counts as a click; a shaky hand should not turn "swap local file" into "drag to asset library". */
 const DRAG_THRESHOLD_PX = 4;
 
 export function NodeMediaReplaceButton({
@@ -45,24 +45,24 @@ export function NodeMediaReplaceButton({
 }: NodeMediaReplaceButtonProps) {
   const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement | null>(null);
-  // 本次手势已经升级成拖拽 → 松手时别再把它当点击去拉文件选择器。
+  // This gesture has already escalated to a drag, so on release don't treat it as a click that opens the file picker.
   const draggedRef = useRef(false);
-  // 两种手势都在时 title 得同时说清，不然「按住拖」这层没有任何提示——缀在
-  // 「替换」title 后面的第二行，图标本身说不清「按住拖」这层语义。
+  // When both gestures exist the title must explain both, otherwise the "press and drag" part has no hint; appended as a second line after the
+  // "Replace" title, since the icon alone can't convey the "press and drag" semantics.
   const fullTitle =
     onPick && onCommitDragStart
-      ? `${title}（${t('canvas.assetLibrary.commitDragHint')}）`
+      ? `${title} (${t('canvas.assetLibrary.commitDragHint')})`
       : title;
 
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    // 先清 value 再处理：选同一个文件第二次时 change 不会再触发，清空才能重选。
+    // Clear value before handling: selecting the same file a second time won't fire change again, so clearing allows reselecting.
     event.target.value = '';
     if (file) void onPick?.(file);
   };
 
   const handlePointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
-    // nodrag 已经挡住 React Flow 拖节点，这里只需要拦住画布的框选/取消选中。
+    // nodrag already prevents React Flow from dragging the node; here we only need to block canvas box-select/deselect.
     event.stopPropagation();
     draggedRef.current = false;
     if (!onCommitDragStart || busy || event.button !== 0) return;
@@ -78,7 +78,7 @@ export function NodeMediaReplaceButton({
       }
       cleanup();
       draggedRef.current = true;
-      // 越过阈值才开拖：startDrag 会自己接管后续 pointermove / pointerup。
+      // Only start dragging once past the threshold: startDrag takes over the subsequent pointermove / pointerup itself.
       onCommitDragStart();
     };
     const cleanup = () => {
@@ -96,7 +96,7 @@ export function NodeMediaReplaceButton({
         disabled={busy}
         title={fullTitle}
         aria-label={title}
-        // nodrag：不然按下就变成拖节点，点击永远到不了。
+        // nodrag: otherwise pressing would turn into dragging the node and the click would never arrive.
         className="nodrag absolute right-2 top-2 z-20 inline-flex h-7 w-7 items-center justify-center rounded-lg border border-white/10 bg-black/55 text-white/85 backdrop-blur-sm transition-colors hover:border-white/25 hover:bg-black/80 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
         style={onCommitDragStart ? { cursor: 'grab' } : undefined}
         onPointerDown={handlePointerDown}

@@ -109,8 +109,8 @@ def parse_docx(path: Path) -> str:
             if expanded_bytes > MAX_DOCX_EXPANDED_BYTES:
                 raise DocumentParseError(
                     source_format="docx",
-                    location="文档",
-                    reason="Word 文档解压后总大小超过 50 MiB 上限",
+                    location="document",
+                    reason="Total uncompressed size of the Word document exceeds the 50 MiB limit",
                 )
         document = Document(path)
     except DocumentParseError:

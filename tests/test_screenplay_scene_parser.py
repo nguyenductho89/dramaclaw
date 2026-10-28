@@ -9,11 +9,15 @@ from novelvideo.utils.screenplay_scene_parser import is_scene_start_line
 from novelvideo.workflows.literal_script_writing import LiteralScriptWritingWorkflow
 
 
-@pytest.mark.parametrize("time_of_day", ["清晨", "上午", "正午", "午后", "白天", "黄昏", "夜晚"])
-def test_canonical_time_tokens_are_not_part_of_scene_locations(time_of_day):
-    blocks = parse_scene_blocks(f"1-1 场景：急诊部 {time_of_day} 内\n△医生停下。")
-    assert blocks[0].location == "急诊部"
-    assert normalize_time_of_day(blocks[0].time_of_day) == time_of_day
+@pytest.mark.parametrize(
+    ("time_token", "canonical"),
+    [("dawn", "dawn"), ("morning", "morning"), ("afternoon", "afternoon"),
+     ("day", "day"), ("dusk", "dusk"), ("night", "night")],
+)
+def test_canonical_time_tokens_are_not_part_of_scene_locations(time_token, canonical):
+    blocks = parse_scene_blocks(f"SCENE (1) Location: ER, {time_token}, INT\nThe doctor stops.")
+    assert blocks[0].location == "ER"
+    assert normalize_time_of_day(blocks[0].time_of_day) == canonical
 
 
 def test_parse_one_line_scene_block_header():

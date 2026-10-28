@@ -3007,9 +3007,9 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
           deleteSet.delete(node.id);
         }
       }
-      // 源节点被删了，挂在它身上的画面裁切也得跟着断——不然那次裁剪（下载 /
-      // 裁剪 / 上传的某一步）还在跑，跑完才后知后觉发现节点没了。cancelVideoCrop
-      // 对没在裁的节点是空操作，批量删除时全量调一遍没有额外代价。
+      // When the source node is deleted, the frame crop attached to it must be cut off too; otherwise that crop (one of the
+      // download / crop / upload steps) keeps running and only discovers the node is gone once it finishes. cancelVideoCrop
+      // is a no-op for nodes that are not being cropped, so calling it for every node in a bulk delete costs nothing extra.
       for (const nodeId of deleteSet) {
         cancelVideoCrop(nodeId);
       }

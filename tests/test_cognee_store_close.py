@@ -156,7 +156,7 @@ def test_real_bundled_json_extension_loads_with_an_empty_user_cache(monkeypatch,
     home.mkdir()
     monkeypatch.setenv("HOME", str(home))
     monkeypatch.setenv("USERPROFILE", str(home))
-    bundle = tmp_path / "离线 'quoted-\"bundle"
+    bundle = tmp_path / "离线 'quoted-\"bundle"  # no-cjk-exempt: non-ASCII path handling
     shutil.copytree(json_extension._BUNDLE_DIR, bundle)
     monkeypatch.setattr(json_extension, "_BUNDLE_DIR", bundle)
     json_extension.verify_bundled_json_extension()

@@ -126,9 +126,9 @@ export function NodeSelectionMenu({
         disabled: !allowedTypeSet.has(CANVAS_NODE_TYPES.video),
       },
       {
-        // 逐帧拉片：视频节点的下游候选（DOWNSTREAM_SPAWN_WHITELIST[video] 里本来
-        // 就有）。这份 items 是手写的，白名单放行了但这里没写条目的类型会被静默
-        // 漏掉 —— 用户从视频右侧拖线出来只看到「文本 / 视频 / 脚本」。
+        // Frame-by-frame breakdown: a downstream candidate of video nodes (already in
+        // DOWNSTREAM_SPAWN_WHITELIST[video]). This items list is hand-written, so a type the whitelist allows but has no entry here is silently
+        // dropped — a user dragging a line out of a video's right side would only see "Text / Video / Script".
         key: 'videoBreakdown',
         label: t('node.menu.videoBreakdown'),
         Icon: ScanSearch,

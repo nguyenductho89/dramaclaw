@@ -3,17 +3,22 @@
 import { useSyncExternalStore } from "react";
 
 /**
- * 「画面裁切」在途状态的模块级登记表——不放组件 state 的原因：
- * 1. 节点被 onlyRenderVisibleElements 平移出视口、或换成 LOD shell 时会卸载
- *    重挂，useState 一律归零；裁切请求还没回来，用户对着重挂后的节点能再点
- *    一次提交，裁两份。
- * 2. 工具栏（NodeActionToolbar）切模式时要在写 isCropMode 之前先问一句「这个
- *    节点在裁吗」，它跟节点组件不共享 state，只能读模块级登记表。
+ * Module-level registry of in-flight "frame crop" operations. It is not kept in
+ * component state because:
+ * 1. When a node is panned out of the viewport by onlyRenderVisibleElements, or
+ *    swapped for an LOD shell, it unmounts and remounts and useState resets to
+ *    zero. If the crop request has not returned yet, the user could submit again
+ *    on the remounted node and get two crops.
+ * 2. The toolbar (NodeActionToolbar) must ask "is this node cropping?" before
+ *    writing isCropMode when switching modes. It does not share state with the
+ *    node component, so it can only read the module-level registry.
  *
- * 每个在途节点绑一个 AbortController，供用户中途取消：cancelVideoCrop 只发
- * 中止信号，不摘登记表——真正摘表是提交流程 finally 里的 clearVideoCropInFlight，
- * 这样「已中止但还没跑到 finally」的这段时间里再问 isVideoCropInFlight 仍然是
- * true，不会让用户以为可以立刻再提交一次。
+ * Each in-flight node is bound to an AbortController so the user can cancel
+ * midway: cancelVideoCrop only sends the abort signal and does not remove the
+ * entry. The entry is removed by clearVideoCropInFlight in the submit flow's
+ * finally, so during the window "aborted but finally not reached yet",
+ * isVideoCropInFlight still returns true and the user is not led to believe they
+ * can submit again immediately.
  */
 const inFlight = new Map<string, AbortController>();
 const listeners = new Set<() => void>();
@@ -28,10 +33,12 @@ function subscribe(listener: () => void): () => void {
 }
 
 /**
- * 登记失败（这个节点已经在裁）时返回 null，而不是悄悄把已有的 signal 递回去——
- * 调用方一旦把 null 当成「注册成功」用，就会对同一次裁剪抢注册两个消费者，
- * 谁的 finally 先跑谁清表，另一个还在跑的请求就会对着已经清空的登记表收尾。
- * 调用方看到 null 必须直接放弃这次提交。
+ * Returns null when registration fails (this node is already cropping), rather
+ * than quietly handing back the existing signal. If a caller treated that as
+ * "registered", two consumers would register for the same crop, whichever
+ * finally runs first would clear the entry, and the other still-running request
+ * would finish against an already-cleared registry. A caller that sees null must
+ * abandon this submission.
  */
 export function markVideoCropInFlight(nodeId: string): AbortSignal | null {
   if (inFlight.has(nodeId)) return null;
@@ -59,12 +66,16 @@ export function useVideoCropInFlight(nodeId: string): boolean {
 }
 
 /**
- * 「一次性抢焦点」的挂号表——只在工具栏主动进入裁剪模式时挂号，浮层看到自己
- * 挂了号才抢一次焦点，抢完立刻摘号。不用「每次挂载都抢」是因为：
- * 1. Radix 下拉菜单关闭时会把焦点收回触发它的按钮，跟浮层的挂载焦点抢一次
- *    还抢不过，得靠下拉那边 onCloseAutoFocus 让路 + 这边真正抢到。
- * 2. 节点被 onlyRenderVisibleElements 卸载重挂时浮层会重新挂载，如果每次挂载
- *    都抢焦点，用户正在别的输入框打字，光标会被这次重挂无声地薅走。
+ * Registry for "one-shot focus grab": registered only when the toolbar actively
+ * enters crop mode. The overlay grabs focus once if it sees it was registered,
+ * then immediately unregisters. We do not grab on every mount because:
+ * 1. When a Radix dropdown menu closes it returns focus to the button that
+ *    triggered it, and a single grab at overlay mount time would still lose that
+ *    race; the dropdown has to yield via onCloseAutoFocus and this side has to
+ *    actually win the focus.
+ * 2. The overlay remounts whenever a node is unmounted and remounted by
+ *    onlyRenderVisibleElements. If every mount grabbed focus, a user typing in
+ *    another input would have their cursor silently stolen by the remount.
  */
 const pendingFocus = new Set<string>();
 
@@ -72,7 +83,7 @@ export function requestVideoCropFocus(nodeId: string): void {
   pendingFocus.add(nodeId);
 }
 
-/** 消费一次性挂号；命中就摘号并返回 true，浮层据此决定要不要抢焦点。 */
+/** Consume the one-shot registration; on a hit it is removed and true is returned, which the overlay uses to decide whether to grab focus. */
 export function consumeVideoCropFocus(nodeId: string): boolean {
   return pendingFocus.delete(nodeId);
 }

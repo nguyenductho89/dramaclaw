@@ -97,9 +97,9 @@ describe("canvasStore projection groups", () => {
   });
 
   it("cancels an in-flight frame crop when its source node is deleted", () => {
-    // 裁切在跑的时候源节点被删掉：不跟着中止的话，下载/裁剪/上传会一直跑到
-    // 结尾才发现节点没了——白等一轮还可能在 OSS 上留个孤儿文件，不如一开始
-    // 删除时就把 signal 打断，见 canvasStore.ts deleteNodes 里的 cancelVideoCrop。
+    // The source node is deleted while a crop is running: if the crop is not aborted along with it, download/crop/upload
+    // would run to the end before discovering the node is gone, wasting a round and possibly leaving an orphan file on OSS.
+    // So abort the signal right at deletion; see cancelVideoCrop in deleteNodes in canvasStore.ts.
     const nodeId = "video_being_cropped";
     useCanvasStore.setState({
       nodes: [
@@ -120,7 +120,7 @@ describe("canvasStore projection groups", () => {
     useCanvasStore.getState().deleteNode(nodeId);
 
     expect(signal?.aborted).toBe(true);
-    // 取消只发信号，不摘登记表——真正清表是裁切流程自己的 finally。
+    // Cancel only sends the signal and does not remove the registry entry; the crop flow's own finally clears it.
     expect(isVideoCropInFlight(nodeId)).toBe(true);
 
     clearVideoCropInFlight(nodeId);

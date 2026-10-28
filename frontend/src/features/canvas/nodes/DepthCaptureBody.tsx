@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
-// 深度动作捕捉产出节点在拿到 videoUrl 之前的节点体：处理中显示与生成中一致的进度；失败或刷新后
-// 残留的 running 态（任务表里已没有它）显示错误与重试。
+// Node body of a depth motion capture output node before it has a videoUrl: while processing it shows
+// the same progress as generation; after a failure or a refresh, a leftover running state (the task
+// table no longer has it) shows the error and a retry.
 import { AlertTriangle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -29,7 +30,7 @@ export function DepthCaptureBody({ nodeId, state }: { nodeId: string; state: Dep
 
   if (state.status === "running" && isDepthCaptureActive(nodeId)) {
     return (
-      // 与图片/视频节点生成中一致的进度展示，只是百分比用真实进度。
+      // Same progress display as image/video node generation, except the percentage uses real progress.
       <div className="relative h-full w-full">
         <NodeGenerationOverlay percent={state.progress} />
       </div>
@@ -63,7 +64,7 @@ export function DepthCaptureBody({ nodeId, state }: { nodeId: string; state: Dep
       </span>
       <span className="max-h-[64px] overflow-y-auto break-words text-center text-[11px] leading-5 text-red-200/90 [overflow-wrap:anywhere]">
         {reason}
-        {detail ? `：${detail}` : ""}
+        {detail ? `: ${detail}` : ""}
       </span>
       <div className="mt-1">
         <RegenerateButton onClick={handleRetry} label={t("node.videoNode.depthCapture.retry")} />

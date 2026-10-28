@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
-// 画面裁切的裁剪框：叠在视频真实画面上（object-contain 的黑边不算），框外压暗、框内
-// 三分网格，四角 + 四边中点 8 个手柄；锁定比例时只留四角。受控组件——框状态在
-// VideoNode，这里只把指针位移换算成源像素交给 cropMath。
+// Crop box for video cropping: overlaid on the real video frame (letterbox bars from object-contain don't count), dimmed outside the box and a
+// rule-of-thirds grid inside, 8 handles (four corners + four edge midpoints); only the four corners when the ratio is locked. Controlled component: box state lives in
+// VideoNode; this only converts pointer displacement into source pixels and hands it to cropMath.
 import {
   useEffect,
   useRef,
@@ -25,20 +25,20 @@ import {
 import { consumeVideoCropFocus } from "@/features/canvas/application/videoCrop/videoCropInFlight";
 
 interface VideoCropOverlayProps {
-  /** 挂号一次性抢焦点用，见 consumeVideoCropFocus。 */
+  /** Used to claim one-shot focus; see consumeVideoCropFocus. */
   nodeId: string;
   box: CropBox;
-  /** 宽/高；null = 自由比例。 */
+  /** Width / height; null = free ratio. */
   ratio: number | null;
   sourceWidth: number;
   sourceHeight: number;
   disabled: boolean;
   onChange: (box: CropBox) => void;
-  /** Esc 退出裁剪模式；不传就不响应 Esc（保持向后兼容）。 */
+  /** Esc exits crop mode; if omitted, Esc is ignored (backward compatible). */
   onEscape?: () => void;
 }
 
-/** 方向键单步 1 源像素，Shift 加速到 10。 */
+/** Arrow keys move 1 source pixel per step; Shift speeds up to 10. */
 const KEY_STEP = 1;
 const KEY_STEP_FAST = 10;
 
@@ -59,7 +59,7 @@ interface DragState {
   startBox: CropBox;
   clientX: number;
   clientY: number;
-  /** 屏幕像素 / 源像素。按下时定格，拖动途中画布缩放不影响这一次拖拽。 */
+  /** Screen pixels per source pixel. Frozen on press so canvas zoom mid-drag doesn't affect this drag. */
   clientPxPerSourcePx: number;
 }
 
@@ -92,19 +92,19 @@ export function VideoCropOverlay({
   }, []);
 
   useEffect(() => {
-    // 只在工具栏「进入裁剪模式」那一次点击挂了号（见 videoCropInFlight.ts 的
-    // requestVideoCropFocus）才抢一次焦点，不是「每次挂载都抢」：
-    // 1. Radix 下拉菜单关闭时会把焦点收回触发它的按钮，跟这里抢一次抢不赢，得靠
-    //    NodeActionToolbar 那边的 onCloseAutoFocus 让路 + 这里真正抢到。
-    // 2. 节点被 onlyRenderVisibleElements 卸载重挂时这个浮层会重新挂载；如果每次
-    //    挂载都抢焦点，用户正在别的输入框打字，光标会被这次重挂无声地薅走。
-    // consumeVideoCropFocus 是一次性的，就算这个 effect 因为 containerSize 变化
-    // 重跑好几遍，也只有挂着号的那一次会真正拿到 true。
+    // Only the single click on the toolbar's "enter crop mode" action registers a claim (see requestVideoCropFocus in
+    // videoCropInFlight.ts) and grabs focus once, rather than grabbing it on every mount:
+    // 1. When a Radix dropdown closes it returns focus to its trigger button, so a single grab here would lose; this relies on
+    //    NodeActionToolbar's onCloseAutoFocus yielding, plus actually grabbing focus here.
+    // 2. When a node is unmounted and remounted by onlyRenderVisibleElements this overlay remounts; if every
+    //    mount grabbed focus, the cursor would be silently stolen while the user types in another input.
+    // consumeVideoCropFocus is one-shot: even if this effect reruns several times because containerSize
+    // changes, only the call holding the claim ever gets true.
     if (disabled || !boxRef.current) return;
     if (!consumeVideoCropFocus(nodeId)) return;
     const el = boxRef.current;
-    // 框要等 ResizeObserver 第一次回调（容器有宽高了）才会渲染出来；rAF 让浏览器
-    // 先把这一帧布局落定，避免抢到一个还没真正出现在页面上的元素。
+    // The box only renders after the first ResizeObserver callback (once the container has a size); rAF lets the browser
+    // settle this frame's layout first, avoiding focusing an element not yet actually on the page.
     const raf = requestAnimationFrame(() => {
       el.focus({ preventScroll: true });
     });
@@ -112,7 +112,7 @@ export function VideoCropOverlay({
   }, [disabled, nodeId, containerSize.w, containerSize.h]);
 
   useEffect(() => {
-    // 源尺寸变了（比如切换到另一段视频）：父组件会重新给一个框，旧的拖拽起点作废。
+    // Source size changed (e.g. switched to another video): the parent supplies a new box, so the old drag origin is void.
     dragRef.current = null;
   }, [sourceWidth, sourceHeight]);
 
@@ -126,14 +126,14 @@ export function VideoCropOverlay({
   const beginDrag = (event: ReactPointerEvent<HTMLElement>, kind: DragState["kind"]) => {
     event.preventDefault();
     event.stopPropagation();
-    // 仍然吞掉事件不让 react-flow 处理，但只有主按钮（左键/触摸/触控笔）才真正开始拖拽。
+    // Still swallow the event so react-flow doesn't handle it, but only the primary button (left click/touch/pen) actually starts a drag.
     if (event.button !== 0) return;
     if (disabled) return;
-    // preventDefault 顺带吃掉了默认的点击抢焦点，手动补上，不然拖完键盘挪不动框。
+    // preventDefault also swallowed the default click focus; restore it manually, otherwise the keyboard can't move the box after a drag.
     boxRef.current?.focus({ preventScroll: true });
     const container = containerRef.current;
     if (!container || displayed.width <= 0) return;
-    // 画布缩放时节点带 CSS transform：clientX 是屏幕像素，contentRect 是布局像素。
+    // When the canvas is zoomed the node has a CSS transform: clientX is in screen pixels, contentRect in layout pixels.
     const zoom = containerSize.w > 0 ? container.getBoundingClientRect().width / containerSize.w : 1;
     dragRef.current = {
       kind,
@@ -146,7 +146,7 @@ export function VideoCropOverlay({
     try {
       container.setPointerCapture(event.pointerId);
     } catch {
-      // jsdom / 已释放的 pointer 不支持捕获，拖拽照样靠冒泡工作
+      // jsdom / released pointers don't support capture; dragging still works via bubbling
     }
   };
 
@@ -154,7 +154,7 @@ export function VideoCropOverlay({
     const drag = dragRef.current;
     if (!drag || drag.pointerId !== event.pointerId) return;
     if (disabled) {
-      // 拖到一半外部把裁剪关掉了：清掉拖拽状态，不再把位移套用到框上。
+      // Crop was turned off externally mid-drag: clear the drag state and stop applying displacement to the box.
       dragRef.current = null;
       return;
     }
@@ -174,14 +174,14 @@ export function VideoCropOverlay({
     try {
       containerRef.current?.releasePointerCapture(event.pointerId);
     } catch {
-      // pointer 可能没被捕获
+      // the pointer may not have been captured
     }
   };
 
-  // 方向键挪框、Alt+方向键从右下角调大小、Esc 退出。命中的按键要 stopPropagation，
-  // 否则会同时触发 react-flow 节点自带的方向键移动整个节点、以及 Canvas.tsx 里
-  // 挂在 document 上另外注册的方向键 / Esc 处理——这里只挡这两类键，不影响删除、
-  // 撤销这些走其它按键的快捷键。
+  // Arrow keys move the box, Alt+arrow resizes from the bottom-right corner, Esc exits. Matched keys must stopPropagation,
+  // otherwise they would also trigger the react-flow node's built-in arrow-key movement of the whole node, and the arrow-key / Esc handling
+  // registered separately on document in Canvas.tsx. Only these two classes of keys are blocked here; shortcuts on other keys such as delete and
+  // undo are unaffected.
   const handleKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
     const directions: Record<string, { dx: number; dy: number }> = {
       ArrowLeft: { dx: -1, dy: 0 },
@@ -193,8 +193,8 @@ export function VideoCropOverlay({
     const direction = directions[event.key];
     if (!isEscape && !direction) return;
 
-    // disabled 时也要吃掉这两类键：不然 react-flow / Canvas.tsx 那两层还是会接
-    // 到，只是这里不再触发裁剪框自己的挪动/退出动作。
+    // Swallow these two classes of keys when disabled too: otherwise the react-flow / Canvas.tsx layers would still
+    // receive them; the crop box just no longer performs its own move/exit actions.
     event.preventDefault();
     event.stopPropagation();
     if (disabled) return;
@@ -229,7 +229,7 @@ export function VideoCropOverlay({
     >
       {displayed.width > 0 && (
         <>
-          {/* 压暗层：超大 box-shadow 画框外，外面套一层只露出画面区域的裁剪容器。 */}
+          {/* Dim layer: an oversized box-shadow paints outside the box, wrapped in a crop container that exposes only the picture area. */}
           <div className="pointer-events-none absolute overflow-hidden" style={displayed}>
             <div
               className="absolute shadow-[0_0_0_9999px_rgba(0,0,0,0.55)]"
@@ -268,7 +268,7 @@ export function VideoCropOverlay({
               <div
                 key={name}
                 data-crop-handle={name}
-                // before 伪元素把可点击区域悄悄扩大一圈，手柄本身还是视觉上的小圆点。
+                // The before pseudo-element quietly enlarges the clickable area; the handle itself stays a small visual dot.
                 className="absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border border-black/30 bg-white shadow before:absolute before:-inset-2 before:content-['']"
                 style={{
                   left: HANDLE_LAYOUT[name].left,

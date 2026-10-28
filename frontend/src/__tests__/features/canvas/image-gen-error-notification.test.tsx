@@ -133,7 +133,7 @@ describe("ImageGen error notification contract", () => {
   });
 
   it("localizes storage failures while preserving their raw diagnostic details", async () => {
-    const raw = "请求异常: MediaStorageUnavailable('MEDIA_STORAGE_ACCESS_DENIED: 媒体存储拒绝访问。')";
+    const raw = "Request error: MediaStorageUnavailable('MEDIA_STORAGE_ACCESS_DENIED: Media storage access denied.')";
     vi.mocked(submitFreezoneGen).mockRejectedValueOnce(new Error(raw));
     const { result } = renderHook(() => useImageGenerationForm("img-1"));
     await waitFor(() => expect(result.current.submitDisabled).toBe(false));

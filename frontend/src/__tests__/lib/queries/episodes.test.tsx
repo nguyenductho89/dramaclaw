@@ -316,8 +316,8 @@ describe("episode scene / prop planning", () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
-    const referencesKey = queryKeys.assetReferenceDetail("demo", '["scene:宫门"]');
-    queryClient.setQueryData(referencesKey, { references: { "scene:宫门": [] } });
+    const referencesKey = queryKeys.assetReferenceDetail("demo", '["scene:宫门"]'); // no-cjk-exempt: CJK scene-name key fixture
+    queryClient.setQueryData(referencesKey, { references: { "scene:宫门": [] } }); // no-cjk-exempt: CJK scene-name key fixture
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
     const { result } = renderHook(() => usePlanEpisodeScenes("demo"), {
       wrapper: wrapperWithClient(queryClient),

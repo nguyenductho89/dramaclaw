@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
-// 深度动作捕捉编排：取源视频 → worker 计算 → 上传 → 写回节点。
+// Depth motion-capture orchestration: fetch source video → worker computation → upload → write back to the node.
 //
-// 任务表是模块级的，不挂在 React 组件上：画布 LOD、切画布都会卸载节点组件，但只有
-// 节点真的从 store 里消失才该取消。页面刷新后表是空的，残留的 running 态节点据此
-// 显示为「已中断」（见 DepthCaptureBody）。
+// The task table is module-level, not attached to a React component: canvas LOD and switching canvases both unmount node components, but a task should only be cancelled once
+// the node has really disappeared from the store. After a page refresh the table is empty, and any leftover node in the running state
+// is shown as "Interrupted" accordingly (see DepthCaptureBody).
 import { uploadFreezoneVideo } from "@/api/ops";
 import { resolveImageDisplayUrl } from "@/features/canvas/application/imageData";
 import type { DepthCaptureState } from "@/features/canvas/domain/canvasNodes";
@@ -17,8 +17,8 @@ import {
 
 const activeJobs = new Map<string, { sourceVideoUrl: string; cancel: () => void }>();
 
-// 每个任务一个 worker、一份模型 session，同时跑几个只会互相抢本机 GPU/显存，
-// 谁也快不了，低配机器还会直接爆内存。所以全局只放行一个，其余按点击顺序排队。
+// Each task gets its own worker and model session; running several at once just fights for the local GPU/VRAM,
+// nobody gets faster, and low-end machines may even run out of memory. So only one is allowed globally and the rest queue in click order.
 const MAX_CONCURRENT_JOBS = 1;
 let runningJobs = 0;
 const slotWaiters: Array<(granted: boolean) => void> = [];
@@ -35,7 +35,7 @@ function acquireSlot(): { granted: Promise<boolean>; abandon: () => void } {
   slotWaiters.push(waiter);
   return {
     granted,
-    // 还在排队就被取消：直接出队，不用等轮到它再放弃。
+    // Cancelled while still queued: dequeue it directly instead of waiting for its turn to give up.
     abandon: () => {
       const index = slotWaiters.indexOf(waiter);
       if (index >= 0) {
@@ -49,7 +49,7 @@ function acquireSlot(): { granted: Promise<boolean>; abandon: () => void } {
 function releaseSlot(): void {
   const next = slotWaiters.shift();
   if (next) {
-    // 名额直接转交给下一个，runningJobs 不变。
+    // The slot is handed straight to the next one; runningJobs is unchanged.
     next(true);
   } else {
     runningJobs -= 1;
@@ -60,12 +60,12 @@ export function isDepthCaptureActive(nodeId: string): boolean {
   return activeJobs.has(nodeId);
 }
 
-/** 是否有任务在跑或在排队；新任务会排在它们后面。 */
+/** Whether any task is running or queued; a new task is placed behind them. */
 export function hasActiveDepthCapture(): boolean {
   return activeJobs.size > 0;
 }
 
-/** 同一条源视频在途（含排队）任务的结果节点；没有返回 null。 */
+/** Result node of an in-flight (including queued) task for the same source video; null if none. */
 export function findActiveDepthCaptureNodeId(sourceVideoUrl: string): string | null {
   for (const [nodeId, job] of activeJobs) {
     if (job.sourceVideoUrl === sourceVideoUrl) {
@@ -101,10 +101,10 @@ export async function startDepthCapture({
   let job: DepthCaptureJob | null = null;
   const slot = acquireSlot();
   let holdsSlot = false;
-  // 取源视频和上传结果都可能很慢；取消时必须真的掐断请求，否则这个已经没人要的
-  // 任务会一直占着唯一名额，后面排队的全被它堵住。
+  // Fetching the source video and uploading the result can both be very slow; on cancel the request must really be cut off, otherwise this task nobody wants any more
+  // would hold the only slot forever and block everything queued behind it.
   const abort = new AbortController();
-  // 排队和取源视频期间 worker 还没建，也要先占住任务表，否则节点会误显示「已中断」。
+  // The worker has not been created yet while queued and fetching the source video, so the task table must be claimed first, otherwise the node would wrongly show "Interrupted".
   activeJobs.set(nodeId, {
     sourceVideoUrl,
     cancel: () => {
@@ -122,7 +122,7 @@ export async function startDepthCapture({
 
   const { updateNodeData } = useCanvasStore.getState();
   const writeState = (state: DepthCaptureState) =>
-    // 进度写很频繁，不进撤销栈。
+    // Progress is written very frequently; it does not go on the undo stack.
     updateNodeData(nodeId, { depthCapture: state }, { recordHistory: false });
   const running = (progress: number): DepthCaptureState => ({
     status: "running",
@@ -134,7 +134,7 @@ export async function startDepthCapture({
 
   try {
     writeState(running(0));
-    // 源视频也等轮到了再取，排队的任务不占内存。
+    // The source video is also fetched only once it is this task's turn, so queued tasks hold no memory.
     holdsSlot = await slot.granted;
     if (!holdsSlot || cancelled) {
       return;

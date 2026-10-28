@@ -13,8 +13,8 @@ import { enT, zhT } from '@/__tests__/helpers/i18n-fixtures';
 
 describe('numbered node title localization', () => {
   it.each([
-    [CANVAS_NODE_TYPES.textAnnotation, '文本7', 7, 'Text7'],
-    [CANVAS_NODE_TYPES.imageGen, '图片节点16', 16, 'Image node16'],
+    [CANVAS_NODE_TYPES.textAnnotation, '文本7', 7, 'Text7'], // no-cjk-exempt: legacy saved Chinese titles
+    [CANVAS_NODE_TYPES.imageGen, '图片节点16', 16, 'Image node16'], // no-cjk-exempt: legacy saved Chinese titles
   ])('localizes the default %s title without changing saved data', (type, displayName, index, english) => {
     const data = { displayName: String(displayName), autoTitleIndex: Number(index) };
     expect(localizeNodeDisplayName(type as typeof CANVAS_NODE_TYPES.imageGen, data, enT)).toBe(english);
@@ -29,17 +29,17 @@ describe('numbered node title localization', () => {
 
   it('keeps custom titles and legacy titles without numbering metadata unchanged', () => {
     for (const data of [
-      { displayName: '我的图片16', autoTitleIndex: 16 },
-      { displayName: '图片节点42', autoTitleIndex: 16 },
-      { displayName: '图片节点16' },
+      { displayName: '我的图片16', autoTitleIndex: 16 }, // no-cjk-exempt: legacy saved Chinese titles
+      { displayName: '图片节点42', autoTitleIndex: 16 }, // no-cjk-exempt: legacy saved Chinese titles
+      { displayName: '图片节点16' }, // no-cjk-exempt: legacy saved Chinese titles
     ]) {
       expect(localizeNodeDisplayName(CANVAS_NODE_TYPES.imageGen, data, enT)).toBe(data.displayName);
     }
-    expect(localizeNodeDisplayName(CANVAS_NODE_TYPES.group, { label: '我的自定义分组' }, enT))
-      .toBe('我的自定义分组');
+    expect(localizeNodeDisplayName(CANVAS_NODE_TYPES.group, { label: '我的自定义分组' }, enT)) // no-cjk-exempt: legacy saved Chinese titles
+      .toBe('我的自定义分组'); // no-cjk-exempt: legacy saved Chinese titles
     // A title that is another type's default is still a custom title here.
-    expect(localizeNodeDisplayName(CANVAS_NODE_TYPES.imageEdit, { displayName: '图片节点' }, enT))
-      .toBe('图片节点');
+    expect(localizeNodeDisplayName(CANVAS_NODE_TYPES.imageEdit, { displayName: '图片节点' }, enT)) // no-cjk-exempt: legacy saved Chinese titles
+      .toBe('图片节点'); // no-cjk-exempt: legacy saved Chinese titles
   });
 });
 

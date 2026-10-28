@@ -964,8 +964,8 @@ export interface FreezoneVideoOmniGenPayload extends FreezoneNodeContext {
   /** Fixed business mode of the omni-reference entry. */
   genMode: "allReference";
   /**
-   * 画布「智能续写」：仍走全能参考入口，但后端按视频延长任务提交给模型
-   * （任务类型与提示词要求同视频延长）。
+   * Canvas "smart extend": still goes through the all-reference entry, but the backend submits it to the model as a video extension task
+   * (task type and prompt requirements are the same as video extension).
    */
   continuation?: boolean;
   /** See {@link FreezoneVideoGenPayload.humanReview}. */
@@ -3009,7 +3009,7 @@ export interface FreezoneUploadOptions {
    * the in-flight request and DevTools shows the row as `canceled`.
    */
   timeoutMs?: number | false;
-  /** ky 直接透传给底层 fetch；不传就是不可取消（历史行为）。 */
+  /** ky passes this straight through to the underlying fetch; omitted means not cancellable (historical behavior). */
   signal?: AbortSignal;
 }
 

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
-// 画面裁切的执行链：拉源视频 → 浏览器里裁 → 传 OSS。建节点、连边留给 VideoNode，
-// 这里不碰画布 store，方便单测。
+// Execution chain for frame crop: fetch the source video -> crop in the browser -> upload to OSS. Creating nodes and connecting edges is left to VideoNode;
+// this file does not touch the canvas store, which keeps it easy to unit test.
 import { uploadFreezoneVideo } from "@/api/ops";
 import { resolveImageDisplayUrl } from "@/features/canvas/application/imageData";
 import type { CropBox } from "@/features/canvas/application/videoCrop/cropMath";
@@ -28,9 +28,9 @@ export async function cropAndUploadVideo(options: CropAndUploadOptions): Promise
   let response: Response;
   let source: Blob;
   try {
-    // response.blob() 跟 fetch() 放同一个 try 里：body 还没读完时中止，fetch()
-    // 本身早就 resolve 了，真正抛 AbortError 的是这一步的流读取，不在这里接就会
-    // 被当成普通失败，走到「裁剪失败」而不是「已取消裁剪」。
+    // response.blob() sits in the same try as fetch(): if aborted while the body is still being read, fetch()
+    // itself resolved long ago and it is this step's stream read that throws AbortError. If it were not caught here it would
+    // be treated as an ordinary failure and surface as "crop failed" rather than "crop canceled".
     response = await fetch(resolveImageDisplayUrl(options.videoUrl), { signal });
     if (!response.ok) throw new VideoCropError("fetchFailed", String(response.status));
     source = await response.blob();
@@ -51,7 +51,7 @@ export async function cropAndUploadVideo(options: CropAndUploadOptions): Promise
   });
 
   if (signal?.aborted) {
-    // 裁剪结果算完了但用户已经点了取消——这时还没传 OSS，直接不传，不留孤儿。
+    // The crop result is ready but the user already clicked cancel. Nothing has been uploaded to OSS yet, so skip the upload and leave no orphan.
     throw new VideoCropError("canceled", "aborted before upload");
   }
 
@@ -69,9 +69,9 @@ export async function cropAndUploadVideo(options: CropAndUploadOptions): Promise
     }
     throw error;
   }
-  // 上传现在能真中止了，但仍有一个窄窗口：服务端已经收完整个 body 并回了响应，
-  // 用户几乎同时点了取消——ky 不一定来得及把这次成功响应变成 AbortError。留这
-  // 一道兜底：文件已经躺在 OSS 上（不去删，见上面 upload 调用点），但不建节点。
+  // Upload can now truly be aborted, but a narrow window remains: the server has received the whole body and replied,
+  // and the user clicks cancel almost simultaneously, so ky may not get to turn this successful response into an AbortError. This is
+  // the safety net: the file is already on OSS (we do not delete it, see the upload call site above), but no node is created.
   if (signal?.aborted) {
     throw new VideoCropError("canceled", "aborted during upload");
   }

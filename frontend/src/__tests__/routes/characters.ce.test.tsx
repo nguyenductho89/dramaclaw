@@ -372,7 +372,7 @@ describe("character and identity rename confirmation", () => {
     const user = userEvent.setup();
     renderCharactersPage();
     const input = await screen.findByDisplayValue("Li Qing");
-    const role = screen.getByDisplayValue("主角");
+    const role = screen.getByDisplayValue("Lead");
     await user.click(input);
     await user.clear(input);
     await user.type(input, "  Li Qing New  ");
@@ -521,8 +521,8 @@ describe("character and identity rename confirmation", () => {
     fireEvent.change(input, { target: { value: "New" } });
     fireEvent.blur(input);
     const confirmation = await screen.findByRole("alertdialog");
-    expect(within(confirmation).getByText("修改名称会改变资产 ID。已有规划、分镜及生成结果不会自动迁移，保存后可能需要重新规划并生成。是否继续？")).toBeInTheDocument();
+    expect(within(confirmation).getByText("修改名称会改变资产 ID。已有规划、分镜及生成结果不会自动迁移，保存后可能需要重新规划并生成。是否继续？")).toBeInTheDocument(); // no-cjk-exempt: asserts the zh locale string
     expect(updateCharacterMutationMock).not.toHaveBeenCalled();
-    await userEvent.click(within(confirmation).getByRole("button", { name: "取消" }));
+    await userEvent.click(within(confirmation).getByRole("button", { name: "取消" })); // no-cjk-exempt: zh locale button label
   });
 });

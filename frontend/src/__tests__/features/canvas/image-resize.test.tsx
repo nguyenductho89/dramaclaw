@@ -34,7 +34,7 @@ describe('local image resizing', () => {
       callback(new Blob(['PNG'], { type: 'image/png' }));
     });
     const source = structuredClone(useCanvasStore.getState().nodes[0]);
-    const result = resizeImage('source', '/static/original.png', 537, 300, '已调整像素')!;
+    const result = resizeImage('source', '/static/original.png', 537, 300, 'Resized image')!;
     await result.completion;
     expect(drawImage).toHaveBeenCalledWith(expect.anything(), 0, 0, 179, 100, 0, 0, 537, 300);
     expect(upload).toHaveBeenCalledOnce();
@@ -77,23 +77,23 @@ describe('resize panel', () => {
   it('loads natural dimensions, locks the original ratio, permits unlocking and cancels without creating nodes', async () => {
     const close = vi.fn();
     render(<ImageResizePanel nodeId="source" imageSource="/static/original.png" onClose={close} />);
-    await screen.findByText('原像素：179 × 100 像素');
+    await screen.findByText('Original: 179 × 100 pixels');
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    expect(screen.getByRole('region', { name: '调整像素' })).toBeInTheDocument();
-    const width = screen.getByLabelText('宽度（px）');
-    const height = screen.getByLabelText('高度（px）');
-    expect(screen.getByRole('button', { name: '调整' })).toBeDisabled();
+    expect(screen.getByRole('region', { name: 'Resize image' })).toBeInTheDocument();
+    const width = screen.getByLabelText('Width (px)');
+    const height = screen.getByLabelText('Height (px)');
+    expect(screen.getByRole('button', { name: 'Resize' })).toBeDisabled();
     fireEvent.change(width, { target: { value: '537' } });
     expect(height).toHaveValue(300);
-    expect(screen.getByRole('button', { name: '调整' })).toBeEnabled();
-    fireEvent.click(screen.getByRole('button', { name: '锁定宽高比' }));
+    expect(screen.getByRole('button', { name: 'Resize' })).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Lock aspect ratio' }));
     fireEvent.change(height, { target: { value: '400' } });
     expect(width).toHaveValue(537);
     fireEvent.change(width, { target: { value: '16000' } });
-    expect(screen.getByRole('button', { name: '调整' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Resize' })).toBeEnabled();
     fireEvent.change(height, { target: { value: '16000' } });
-    expect(screen.getByRole('button', { name: '调整' })).toBeDisabled();
-    fireEvent.click(screen.getByRole('button', { name: '取消' }));
+    expect(screen.getByRole('button', { name: 'Resize' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(close).toHaveBeenCalledOnce();
     expect(useCanvasStore.getState().nodes).toHaveLength(1);
     expect(upload).not.toHaveBeenCalled();
@@ -102,7 +102,7 @@ describe('resize panel', () => {
   it('shows original-image loading failure and keeps submission disabled', async () => {
     load.mockRejectedValue(new Error('Load failed'));
     render(<ImageResizePanel nodeId="source" imageSource="/static/original.png" onClose={vi.fn()} />);
-    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('无法读取原图'));
-    expect(screen.getByRole('button', { name: '调整' })).toBeDisabled();
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Unable to load the original image'));
+    expect(screen.getByRole('button', { name: 'Resize' })).toBeDisabled();
   });
 });

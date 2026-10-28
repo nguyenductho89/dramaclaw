@@ -80,9 +80,9 @@
   --ui-border-strong: rgba(15, 23, 42, 0.2);
   --canvas-node-input-placeholder: rgba(96, 96, 104, 0.72);
   --canvas-node-input-helper: rgba(104, 104, 112, 0.76);
-  /* 分组默认底色：没有配色的组光靠一圈描边根本看不出边界，垫一层灰把「这是一
-     个组」讲清楚。画布本身接近纯黑，想让灰更明显只能往亮里加 —— 往暗里调在这个
-     底色上根本拉不开差别。 */
+  /* Default group background: a group with no color scheme can hardly show its boundary with just an outline, so a layer of gray makes it clear "this is a
+     group". The canvas itself is nearly pure black, so to make the gray more visible it can only be lightened; darkening it makes no
+     noticeable difference on this background. */
   --group-node-bg: rgba(15, 23, 42, 0.09);
   --ui-shadow-panel: 0 14px 34px rgba(15, 23, 42, 0.18);
   --ui-radius-lg: 12px;
@@ -573,12 +573,12 @@
   content: attr(data-placeholder);
 }
 
-/* 智能续写的固定引子：`[缩略图] 对 视频 (2) 的 00:00-00:04 片段进行续写：`。
-   比 mention chip 收敛得多 —— 它是这个节点的题面，不是用户插进去的一块引用，
-   做得跟 chip 一样醒目会喧宾夺主，反倒看不清自己写了什么。 */
-/* 续写前缀：一枚「缩略图 + 文案」的胶囊，跟用户正文在同一行流下去。
-   给底/描边是为了让它一眼看出来「这段不是我打的字」——纯文本混在正文里，
-   用户会当成可以随手改的开头。 */
+/* Fixed lead-in for smart extend: `[thumbnail] Extend the 00:00-00:04 clip of Video (2): `.
+   Much more restrained than a mention chip: it is this node's heading, not a quote the user inserted,
+   and making it as prominent as a chip would steal attention and make it hard to see what the user wrote. */
+/* Extend prefix: a "thumbnail + text" capsule that flows on the same line as the user's body text.
+   The background/outline make it obvious at a glance that "this part is not what I typed"; plain text
+   mixed into the body would be mistaken for an opening the user can freely edit. */
 .prompt-prefix-chip {
   display: inline-flex;
   align-items: center;
@@ -596,8 +596,8 @@
   user-select: none;
 }
 
-/* 缩略图和删除按钮叠在同一格里：平时露图，hover 换成 ×。两者都绝对定位撑满
-   这一格，切换只改 opacity —— 用 display 切会让 chip 宽度在 hover 时抖一下。 */
+/* The thumbnail and delete button are stacked in the same slot: the image shows normally and hover swaps it for ×. Both are absolutely positioned to fill
+   the slot and switching only changes opacity; switching with display would make the chip width jitter on hover. */
 .prompt-prefix-chip-slot {
   position: relative;
   width: 20px;
@@ -653,8 +653,8 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* 挂了前缀之后编辑器不再是 :empty，占位符改从 ::after 出，接在前缀右边。
-   非空时属性是空串，伪元素自然什么都不画。 */
+/* Once a prefix is attached the editor is no longer :empty, so the placeholder comes from ::after, placed to the right of the prefix.
+   When non-empty the attribute is an empty string, so the pseudo-element naturally draws nothing. */
 .prompt-mention-editor::after {
   content: attr(data-prefix-placeholder);
   color: rgba(160, 160, 170, 0.7);

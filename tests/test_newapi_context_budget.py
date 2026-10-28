@@ -89,15 +89,15 @@ async def test_context_budget_blocks_before_network(monkeypatch, oversized_part)
         return _response(payload)
 
     class LargeSchema(BaseModel):
-        value: str = Field(description="设定" * 2000)
+        value: str = Field(description="设定" * 2000)  # no-cjk-exempt: CJK text exercises token budgeting
 
     agent = Agent(
         _model(monkeypatch, handler),
-        system_prompt="设定" * 2000 if oversized_part == "system" else "check",
+        system_prompt="设定" * 2000 if oversized_part == "system" else "check",  # no-cjk-exempt: CJK text exercises token budgeting
         output_type=LargeSchema if oversized_part == "schema" else Result,
     )
     with pytest.raises(ValueError, match="MODEL_CONTEXT_BUDGET_EXCEEDED"):
-        await agent.run("正文" * 2000 if oversized_part == "user" else "short")
+        await agent.run("正文" * 2000 if oversized_part == "user" else "short")  # no-cjk-exempt: CJK text exercises token budgeting
     assert requests == []
 
 
@@ -107,7 +107,7 @@ async def test_context_budget_counts_native_output_description(
     monkeypatch, description_source
 ):
     requests = []
-    description = "正文 " * 5000
+    description = "正文 " * 5000  # no-cjk-exempt: CJK text exercises token budgeting
     result_type = create_model(
         "DescribedResult",
         __doc__=description if description_source == "docstring" else None,
@@ -186,7 +186,7 @@ async def test_context_budget_checks_streaming_before_network(monkeypatch):
     model = _model(monkeypatch, forbidden)
     with pytest.raises(ValueError, match="MODEL_CONTEXT_BUDGET_EXCEEDED"):
         async with model.request_stream(
-            [ModelRequest(parts=[UserPromptPart(content="正文" * 2000)])],
+            [ModelRequest(parts=[UserPromptPart(content="正文" * 2000)])],  # no-cjk-exempt: CJK text exercises token budgeting
             None,
             ModelRequestParameters(),
         ):
@@ -287,7 +287,7 @@ async def test_context_budget_still_blocks_large_text_next_to_image(monkeypatch)
     with pytest.raises(ValueError, match="MODEL_CONTEXT_BUDGET_EXCEEDED"):
         await Agent(_model(monkeypatch, forbidden), output_type=Result).run(
             [
-                "正文" * 2000,
+                "正文" * 2000,  # no-cjk-exempt: CJK text exercises token budgeting
                 BinaryContent(data=b"image-bytes", media_type="image/jpeg"),
             ]
         )
@@ -376,13 +376,13 @@ async def test_budget_rejection_does_not_report_an_outer_request(
         with pytest.raises(ValueError, match="MODEL_CONTEXT_BUDGET_EXCEEDED"):
             if streaming:
                 async with model.request_stream(
-                    [ModelRequest(parts=[UserPromptPart(content="正文" * 2000)])],
+                    [ModelRequest(parts=[UserPromptPart(content="正文" * 2000)])],  # no-cjk-exempt: CJK text exercises token budgeting
                     None,
                     ModelRequestParameters(),
                 ):
                     pytest.fail("stream must not start")
             else:
-                await Agent(model, output_type=Result).run("正文" * 2000)
+                await Agent(model, output_type=Result).run("正文" * 2000)  # no-cjk-exempt: CJK text exercises token budgeting
         assert runtime._receipts.get() == ("v1.outer.sig",)
     finally:
         runtime._receipts.reset(outer)

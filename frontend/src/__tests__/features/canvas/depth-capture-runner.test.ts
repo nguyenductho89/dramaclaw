@@ -164,7 +164,7 @@ describe("startDepthCapture", () => {
     });
     await vi.waitFor(() => expect(runDepthCaptureInWorker).toHaveBeenCalledTimes(1));
 
-    // 排队的任务也算在途：节点不显示「已中断」，同源去重查得到它，但还没取源视频。
+    // Queued tasks also count as in flight: the node does not show "interrupted", same-source dedup can find it, but it has not fetched the source video yet.
     expect(isDepthCaptureActive("n2")).toBe(true);
     expect(findActiveDepthCaptureNodeId("https://oss/other.mp4")).toBe("n2");
     expect(fetch).toHaveBeenCalledTimes(1);
@@ -212,7 +212,7 @@ describe("startDepthCapture", () => {
     await first;
     expect(runDepthCaptureInWorker).toHaveBeenCalledTimes(1);
 
-    // 名额已归还：后面的任务不用等，直接开跑。
+    // The slot has been returned: later tasks do not wait and start running immediately.
     vi.mocked(runDepthCaptureInWorker).mockReturnValue({
       promise: Promise.reject(new DepthCaptureError("failed", "boom")),
       cancel: vi.fn(),
@@ -221,7 +221,7 @@ describe("startDepthCapture", () => {
     expect(runDepthCaptureInWorker).toHaveBeenCalledTimes(2);
   });
 
-  // 中止信号一到就拒绝的受控请求，模拟一笔永远下不完/传不完的慢请求。
+  // A controlled request that rejects as soon as the abort signal arrives, simulating a slow request whose download/upload never finishes.
   const hangUntilAborted = (signal: AbortSignal | undefined) =>
     new Promise<never>((_, reject) => {
       signal?.addEventListener("abort", () =>
@@ -242,7 +242,7 @@ describe("startDepthCapture", () => {
         : Promise.resolve({ ok: true, status: 200, blob: async () => new Blob(["src"]) }),
     );
     vi.stubGlobal("fetch", fetchMock);
-    // 轮到时才造这个失败结果：提前建好的 rejected promise 会被当成未处理的拒绝。
+    // Build this failure result only when its turn comes: a pre-built rejected promise would be treated as an unhandled rejection.
     vi.mocked(runDepthCaptureInWorker).mockImplementation(() => ({
       promise: Promise.reject(new DepthCaptureError("failed", "boom")),
       cancel: vi.fn(),
@@ -256,7 +256,7 @@ describe("startDepthCapture", () => {
     });
     await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
 
-    // 下载还没结束就删掉节点：请求被掐断，名额立刻让给排队的任务。
+    // Delete the node before the download finishes: the request is cut off and the slot is handed to a queued task right away.
     useCanvasStore.setState({ nodes: [{ id: "n2", data: {} }] } as never);
     await downloading;
     expect(isDepthCaptureActive("n1")).toBe(false);
@@ -288,7 +288,7 @@ describe("startDepthCapture", () => {
 
     expect(isDepthCaptureActive("n1")).toBe(false);
 
-    // 名额已归还：新任务直接开跑，不用等那笔被掐断的上传。
+    // The slot has been returned: the new task starts immediately without waiting for the aborted upload.
     useCanvasStore.setState({ nodes: [{ id: "n1", data: {} }] } as never);
     vi.mocked(runDepthCaptureInWorker).mockReturnValue({
       promise: Promise.reject(new DepthCaptureError("failed", "boom")),

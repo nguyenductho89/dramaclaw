@@ -7177,7 +7177,7 @@ function AssistantClarificationInputCard({
             disabled={!onSubmit || isSubmitting || (hasNext ? false : !canSubmit)}
             onClick={continueAction}
           >
-            {isSubmitting ? "提交中…" : continueLabel}
+            {isSubmitting ? "Submitting…" : continueLabel}
           </Button>
         </div>
       </div>

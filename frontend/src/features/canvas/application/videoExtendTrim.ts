@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
-// 智能续写提交前把选区真截出来：拉源视频 → 浏览器里按时间段重编 → 传 OSS，拿到的
-// 地址顶替整条源视频成为参考素材。与画面裁切共用 mediabunny 那条编码链，所以画幅
-// 原样保留（后端 compose 会把竖屏素材垫成 16:9 黑边，不能拿来当续写的前情）。
+// Before submitting a smart extend, actually cut out the selection: fetch the source video → re-encode the time range in the browser → upload to OSS; the resulting
+// URL replaces the whole source video as the reference material. It shares the mediabunny encoding chain with frame cropping, so the aspect ratio
+// is preserved as-is (backend compose pads portrait material with 16:9 black bars, which cannot serve as the lead-in for an extension).
 import { uploadFreezoneVideo } from "@/api/ops";
 import { resolveImageDisplayUrl } from "@/features/canvas/application/imageData";
 import { cropVideoBlob, VideoCropError } from "@/features/canvas/application/videoCrop/cropVideo";
@@ -13,9 +13,9 @@ export interface ExtendTrimResult {
   durationMs: number;
 }
 
-// 同一段只截一次：生成失败后重试、一次出多条，都复用这份成品。只放内存不落节点
-// 数据——落盘的话它就成了又一个要跟着画布复制/迁移的媒体字段，而重截一段几秒的
-// 视频很便宜。失败的不留缓存，下次提交重新来。
+// Each segment is cut only once: retries after a failed generation and multi-output runs all reuse this result. It is kept in memory only, not written to node
+// data -- persisting it would make it yet another media field to copy/migrate with the canvas, while re-cutting a few seconds of
+// video is cheap. Failures are not cached; the next submit starts over.
 const cache = new Map<string, Promise<ExtendTrimResult>>();
 
 export function trimAndUploadExtendClip(options: {
@@ -43,7 +43,7 @@ async function run(projectId: string, videoUrl: string, range: ExtendClipRange):
   return { url, durationMs: trimmed.durationMs };
 }
 
-/** 仅供单测清理。 */
+/** For unit-test cleanup only. */
 export function resetExtendTrimCacheForTest(): void {
   cache.clear();
 }

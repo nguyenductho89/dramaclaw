@@ -30,10 +30,10 @@ function renderPanel(overrides: Partial<Parameters<typeof VideoCropPanel>[0]> = 
 describe("VideoCropPanel", () => {
   it("lists the ratio presets and reports the picked one", () => {
     const { onRatioChange } = renderPanel();
-    for (const name of ["自由", "原始", "1:1", "9:16", "16:9", "4:3", "3:4"]) {
+    for (const name of ["Free", "Original", "1:1", "9:16", "16:9", "4:3", "3:4"]) {
       expect(screen.getByRole("button", { name })).toBeInTheDocument();
     }
-    expect(screen.getByRole("button", { name: "自由" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Free" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("button", { name: "1:1" })).toHaveAttribute("aria-pressed", "false");
 
     fireEvent.click(screen.getByRole("button", { name: "1:1" }));
@@ -47,20 +47,20 @@ describe("VideoCropPanel", () => {
 
   it("wires cancel and submit", () => {
     const { onCancel, onSubmit } = renderPanel();
-    fireEvent.click(screen.getByRole("button", { name: "退出裁剪" }));
-    fireEvent.click(screen.getByRole("button", { name: "生成裁剪" }));
+    fireEvent.click(screen.getByRole("button", { name: "Exit crop" }));
+    fireEvent.click(screen.getByRole("button", { name: "Generate crop" }));
     expect(onCancel).toHaveBeenCalledTimes(1);
     expect(onSubmit).toHaveBeenCalledTimes(1);
   });
 
   it("locks ratio and submit while submitting, but keeps the X enabled to abort", () => {
     const { onAbort, onCancel } = renderPanel({ isSubmitting: true });
-    expect(screen.getByRole("button", { name: "生成裁剪" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Generate crop" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "1:1" })).toBeDisabled();
     expect(screen.getByTestId("video-crop-submitting")).toBeInTheDocument();
 
-    // 提交中 X 不再是「退出裁剪」，换成「取消裁剪」，且必须仍然可点。
-    const abortButton = screen.getByRole("button", { name: "取消裁剪" });
+    // While submitting, the X is no longer "Exit crop" but "Cancel crop", and it must stay clickable.
+    const abortButton = screen.getByRole("button", { name: "Cancel crop" });
     expect(abortButton).not.toBeDisabled();
     fireEvent.click(abortButton);
     expect(onAbort).toHaveBeenCalledTimes(1);
@@ -69,7 +69,7 @@ describe("VideoCropPanel", () => {
 
   it("disables submit until there is a crop box", () => {
     renderPanel({ canSubmit: false, width: 0, height: 0 });
-    expect(screen.getByRole("button", { name: "生成裁剪" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Generate crop" })).toBeDisabled();
     expect(screen.getByText("—")).toBeInTheDocument();
   });
 });

@@ -13,8 +13,8 @@ import { useCanvasStore } from '@/stores/canvasStore';
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, fallback?: string) => ({
-      'assetBoard.multiAngleEditor': '多维度编辑器',
-      'assetBoard.relightEditor': '打光效果编辑器',
+      'assetBoard.multiAngleEditor': 'Multi-angle editor',
+      'assetBoard.relightEditor': 'Relight editor',
     } as Record<string, string>)[key] ?? fallback ?? key,
   }),
 }));

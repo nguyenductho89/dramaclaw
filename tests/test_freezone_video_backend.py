@@ -343,16 +343,16 @@ def test_build_freezone_image_to_video_prompt_uses_image_reference_semantics() -
 
 
 def test_build_freezone_image_to_video_prompt_drops_image_clause_without_images() -> None:
-    # 视频编辑端点复用这个 builder 且常常一张参考图都没有（片段重拍就是）。
-    # 没有图还写「把输入图片作为主体…」= 向模型描述一个不存在的素材。
+    # The video-edit endpoint reuses this builder and often has no reference image at all (clip re-shoot is one).
+    # Writing "use the input image as the subject..." with no image = describing a nonexistent asset to the model.
     prompt = build_freezone_image_to_video_prompt(
-        user_prompt="把大猩猩换一个\n00:00-00:04",
+        user_prompt="Swap the gorilla for another one\n00:00-00:04",
         reference_image_count=0,
     )
 
-    assert "图片参考约束" not in prompt
-    assert "把大猩猩换一个" in prompt
-    assert "输出要求" in prompt
+    assert "Image reference constraint" not in prompt
+    assert "Swap the gorilla for another one" in prompt
+    assert "Output requirement" in prompt
 
 
 def test_build_freezone_image_to_video_prompt_supports_multi_image_references() -> None:

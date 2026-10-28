@@ -30,20 +30,20 @@ interface VideoClipPanelProps {
 
 const MIN_CLIP_MS = 200;
 /**
- * 轨道按时长给像素，而不是一律跟着节点宽度走。
+ * Allot track pixels by duration rather than always following the node width.
  *
- * 固定宽度下，44s 的素材摊到 200px 就是 220ms/px——一个像素的手抖就跳过小半秒，
- * 根本没法卡点。给足像素密度后再夹一层上下限：太短的素材不至于缩成一条缝，
- * 太长的也不会把面板拉到出屏。
+ * At a fixed width, a 44s clip spread over 200px is 220ms/px: a one-pixel hand tremor skips
+ * nearly half a second, so snapping to a beat is impossible. Give it enough pixel density, then clamp it
+ * between bounds: very short clips do not shrink to a sliver, and very long ones do not stretch the panel off screen.
  */
 const PX_PER_SECOND = 14;
 const MIN_TRACK_PX = 260;
 const MAX_TRACK_PX = 960;
-/** 一格缩略图的目标宽度：h-14(56px) 配 16:9 差不多就是这个数，拉宽了就多铺几格。 */
+/** Target width of one thumbnail cell: h-14 (56px) at 16:9 is about this; a wider track just tiles more cells. */
 const THUMB_CELL_PX = 100;
 const MIN_THUMBS = 6;
 const MAX_THUMBS = 16;
-/** 方向键单步；按住 Shift 走大步。 */
+/** Arrow-key single step; hold Shift for a big step. */
 const KEY_STEP_MS = 100;
 const KEY_STEP_COARSE_MS = 1000;
 
@@ -62,10 +62,10 @@ type DragMode = 'start' | 'end' | 'move';
 interface DragState {
   mode: DragMode;
   rect: DOMRect;
-  /** 按下瞬间的区间，move 模式靠它保持时长不变。 */
+  /** Range at the moment of pointer-down; move mode uses it to keep the duration unchanged. */
   startAtDown: number;
   endAtDown: number;
-  /** 按下瞬间指针对应的时间码，move 模式用它算位移。 */
+  /** Timecode under the pointer at pointer-down; move mode uses it to compute the offset. */
   anchorMs: number;
 }
 
@@ -109,14 +109,14 @@ export const VideoClipPanel = memo(function VideoClipPanel({
   const dragRef = useRef<DragState | null>(null);
   const [dragMode, setDragMode] = useState<DragMode | null>(null);
   /**
-   * 拖拽期间的区间只留在组件本地，松手才写回节点。
+   * While dragging, the range stays local to the component and is only written back to the node on release.
    *
-   * `onChange` 落到 `updateNodeData`，那里每次调用都会压一整份画布快照并清空
-   * redo 栈——按 pointermove 的频率调，一次拖拽就能压进去上百份快照，撤销记录
-   * 直接被冲没。本地 draft + 松手提交让一次拖拽只留一条撤销记录。
+   * `onChange` ends up in `updateNodeData`, which pushes a whole canvas snapshot on every call and clears the
+   * redo stack. Called at pointermove frequency, a single drag could push in hundreds of snapshots and the undo history
+   * would be wiped out. A local draft plus commit on release leaves a single undo entry per drag.
    */
   const [draft, setDraft] = useState<{ start: number; end: number } | null>(null);
-  /** 与 draft 同步的镜像：pointerup 要在同一个事件里拿到最终值提交，来不及等 state。 */
+  /** Mirror kept in sync with the draft: pointerup must get the final value inside the same event, without waiting for state. */
   const draftRef = useRef<{ start: number; end: number } | null>(null);
   const [thumbs, setThumbs] = useState<string[]>([]);
   const [thumbsState, setThumbsState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
@@ -154,13 +154,13 @@ export const VideoClipPanel = memo(function VideoClipPanel({
       const patch: { clipStartMs?: number; clipEndMs?: number } = {};
       if (next.start !== committedStartMs) patch.clipStartMs = next.start;
       if (next.end !== committedEndMs) patch.clipEndMs = next.end;
-      // 一次拖拽 = 一次 updateNodeData = 一条撤销记录。两端都动了也只发一个 patch。
+      // One drag = one updateNodeData = one undo entry. Even if both ends moved, only one patch is sent.
       if (patch.clipStartMs !== undefined || patch.clipEndMs !== undefined) onChange(patch);
     },
     [committedEndMs, committedStartMs, onChange],
   );
 
-  /** 把指针位置换算成区间。纯函数，好让键盘和指针共用同一套夹取规则。 */
+  /** Convert a pointer position into a range. Pure function so keyboard and pointer share the same clamping rules. */
   const resolveRange = useCallback(
     (drag: DragState, pointerMs: number, total: number) => {
       if (drag.mode === 'start') {
@@ -199,7 +199,7 @@ export const VideoClipPanel = memo(function VideoClipPanel({
       setDraft(next);
     };
 
-    // pointermove 在高刷屏上一秒能来 100+ 次，按帧合并一次就够画面用了。
+    // On high-refresh screens pointermove can fire 100+ times a second; coalescing once per frame is enough for the display.
     const handlePointerMove = (event: PointerEvent) => {
       pendingX = event.clientX;
       if (!frame) frame = requestAnimationFrame(apply);
@@ -210,7 +210,7 @@ export const VideoClipPanel = memo(function VideoClipPanel({
         cancelAnimationFrame(frame);
         frame = 0;
       }
-      apply(); // 冲掉最后一帧还没画上去的位移，免得松手时回弹一格
+      apply(); // Flush the displacement of the last frame not yet painted, to avoid a one-cell snap-back on release
       const final = draftRef.current;
       dragRef.current = null;
       draftRef.current = null;
@@ -257,7 +257,7 @@ export const VideoClipPanel = memo(function VideoClipPanel({
         anchorMs: pointerMs,
       };
       dragRef.current = drag;
-      // 直接从当前值起拖，不要等第一次 pointermove——否则轨道空白处按下时没有反馈。
+      // Start dragging from the current value right away instead of waiting for the first pointermove, otherwise pressing on an empty part of the track gives no feedback.
       const initial =
         mode === 'move'
           ? { start: committedStartMs, end: committedEndMs }
@@ -274,7 +274,7 @@ export const VideoClipPanel = memo(function VideoClipPanel({
     [beginDrag],
   );
 
-  /** 在轨道空白处按下：把离得近的那一端拉过来，顺手接上拖拽。 */
+  /** Pressing on an empty part of the track: pull the nearer end over and continue into a drag. */
   const handleTrackPointerDown = useCallback(
     (event: ReactPointerEvent<HTMLDivElement>) => {
       if (isSubmitting || !totalMs) return;
@@ -283,7 +283,7 @@ export const VideoClipPanel = memo(function VideoClipPanel({
       const rect = track.getBoundingClientRect();
       const ratio = clamp((event.clientX - rect.left) / Math.max(rect.width, 1), 0, 1);
       const pointerMs = Math.round(ratio * totalMs);
-      if (pointerMs >= committedStartMs && pointerMs <= committedEndMs) return; // 选区内部交给 move
+      if (pointerMs >= committedStartMs && pointerMs <= committedEndMs) return; // The inside of the selection is left to move
       const mode: DragMode =
         Math.abs(pointerMs - committedStartMs) <= Math.abs(pointerMs - committedEndMs) ? 'start' : 'end';
       beginDrag(mode, event);
@@ -320,9 +320,9 @@ export const VideoClipPanel = memo(function VideoClipPanel({
     [commit, committedEndMs, committedStartMs, isSubmitting, totalMs],
   );
 
-  // 抽到几帧就铺几格；抽不满时铺满黑格子会让人以为视频后半段是黑的。
+  // Tile as many cells as frames were extracted; filling the rest with black cells would make people think the second half of the video is black.
   const cellCount = thumbs.length > 0 ? thumbs.length : thumbCount;
-  // 时长气泡贴着选区中点，但不让它探出轨道两头。
+  // The duration bubble sticks to the selection midpoint but never sticks out past either end of the track.
   const chipLeftPct = clamp((startPct + endPct) / 2, 8, 92);
 
   return (
@@ -354,8 +354,8 @@ export const VideoClipPanel = memo(function VideoClipPanel({
       <div
         ref={trackRef}
         className="relative h-14 flex-1 select-none overflow-hidden rounded-md bg-bg-dark/80"
-        // 撑宽靠 min-width：面板外层是 w-max，节点窄的时候由它把整条面板顶开，
-        // 节点宽的时候 flex-1 又能继续吃满剩余空间。
+        // Widening relies on min-width: the panel's outer layer is w-max, so when the node is narrow it pushes the whole panel open,
+        // and when the node is wide flex-1 can still take up the remaining space.
         style={{ minWidth: trackMinWidth }}
         onPointerDown={handleTrackPointerDown}
       >
@@ -379,8 +379,8 @@ export const VideoClipPanel = memo(function VideoClipPanel({
             {t('canvas.videoClip.extractingFrames')}
           </div>
         )}
-        {/* z-30 + pointer-events-none：重试按钮要压在选区框上面才点得到，
-            但整块蒙层不能吃掉把手的拖拽。 */}
+        {/* z-30 + pointer-events-none: the retry button must sit above the selection frame to be clickable,
+            but the overlay as a whole must not swallow handle drags. */}
         {thumbsState === 'error' && (
           <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center gap-1.5 text-[11px] text-text-muted/70">
             <span>{t('canvas.videoClip.framesFailed')}</span>
@@ -423,8 +423,8 @@ export const VideoClipPanel = memo(function VideoClipPanel({
             aria-valuemax={totalMs ?? 0}
             aria-valuenow={startMs}
             aria-valuetext={formatSeconds(startMs)}
-            // after:* 是把手的隐形热区：视觉仍是 12px 细条，实际能点到 28px 宽，
-            // 选区很窄时两个把手也不会互相抢点击。
+            // after:* is the handle's invisible hotspot: visually still a 12px strip, but clickable across a 28px width,
+            // and with a very narrow selection the two handles do not fight over clicks.
             className="absolute inset-y-0 left-0 flex w-3 cursor-ew-resize items-center justify-center rounded-l-md bg-white outline-none after:absolute after:inset-y-0 after:-left-2 after:-right-2 after:content-[''] focus-visible:ring-2 focus-visible:ring-sky-400"
             onPointerDown={startDrag('start')}
             onKeyDown={handleKeyDown('start')}
@@ -449,7 +449,7 @@ export const VideoClipPanel = memo(function VideoClipPanel({
           </div>
         </div>
 
-        {/* 拖拽中把两端的时间码顶到轨道上沿，正中留给画面 */}
+        {/* While dragging, push the timecodes at both ends to the top edge of the track, leaving the center for the picture */}
         {dragMode && (
           <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex justify-between px-1 pt-0.5 text-[10px] font-medium tabular-nums text-white/90">
             <span className="rounded bg-black/65 px-1">{formatSeconds(startMs)}</span>

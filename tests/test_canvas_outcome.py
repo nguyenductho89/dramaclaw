@@ -36,8 +36,8 @@ def test_requested_canvas_write_cannot_end_as_read_only_without_receipt():
     result = finalize_canvas_reply(
         reply(
             message=(
-                "正在通过节点绑定的 drama-background-music Recipe 编译提示词并执行 "
-                "generate_audio。"
+                "Compiling the prompt and running generate_audio through the "
+                "drama-background-music Recipe bound to the node."
             )
         ),
         attempts={},
@@ -45,7 +45,7 @@ def test_requested_canvas_write_cannot_end_as_read_only_without_receipt():
         write_requested=True,
     )
 
-    assert result == "画布操作未完成：本轮没有可验证的画布写入回执，请重试。"
+    assert result == "Canvas operation incomplete: this turn has no verifiable canvas write receipt; please retry."
 
 
 def test_freezone_instructions_embed_schema_and_valid_greeting_example():

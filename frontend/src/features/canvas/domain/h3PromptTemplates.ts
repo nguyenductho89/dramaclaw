@@ -17,6 +17,9 @@
 // picker's titles/descriptions are localized. `[BRACKETS]` mark the parts to
 // replace. The backend accepts 5-12 s and 16:9 / 9:16.
 
+import type { VideoGenMode } from "./canvasNodes";
+import { FAL_H3_PROMPT_TEMPLATES } from "./falH3PromptTemplates";
+
 export const RUNPOD_H3_VIDEO_MODEL_ID = "runpod_minimax_h3";
 
 export function isRunpodH3VideoModel(modelId: string | null | undefined): boolean {
@@ -29,6 +32,8 @@ export type H3TemplateCategory =
   | "ecommerce"
   | "drama"
   | "animation"
+  | "motion"
+  | "ui"
   | "audio";
 
 export const H3_TEMPLATE_CATEGORIES: readonly H3TemplateCategory[] = [
@@ -37,6 +42,8 @@ export const H3_TEMPLATE_CATEGORIES: readonly H3TemplateCategory[] = [
   "ecommerce",
   "drama",
   "animation",
+  "motion",
+  "ui",
   "audio",
 ];
 
@@ -46,15 +53,27 @@ export interface H3TemplateInput {
   /** `<Picture N>` or `<Audio N>` exactly as written in the prompt. */
   label: string;
   role: Localized;
+  /**
+   * English prompt for generating this input with an image model. Only on
+   * `<Picture N>` inputs; `<Audio N>` has to be uploaded.
+   */
+  imagePrompt?: string;
 }
+
+export type H3TemplateSource = "pixo" | "fal";
+export type H3TemplateMode = "fl2va" | "flf2va" | "ref2va";
 
 export interface H3PromptTemplate {
   id: string;
+  source: H3TemplateSource;
   category: H3TemplateCategory;
   title: Localized;
   description: Localized;
-  /** fl2va = first frame only, ref2va = first frame + extra references. */
-  mode: "fl2va" | "ref2va";
+  /**
+   * fl2va = first frame only, flf2va = first + last frame,
+   * ref2va = first frame + extra references.
+   */
+  mode: H3TemplateMode;
   aspectRatio: "9:16" | "16:9";
   durationSec: number;
   inputs: H3TemplateInput[];
@@ -72,7 +91,7 @@ const FIRST_FRAME: H3TemplateInput = {
 const NO_TEXT =
   "There are no subtitles, captions, logos or watermarks anywhere in frame.";
 
-export const H3_PROMPT_TEMPLATES: readonly H3PromptTemplate[] = [
+const PIXO_TEMPLATES: readonly Omit<H3PromptTemplate, "source">[] = [
   // ---------------------------------------------------------------- cinematic
   {
     id: "scifi_trailer_beat",
@@ -92,7 +111,7 @@ integrated_multimodal_description:
 Cinematic sci-fi trailer look, anamorphic widescreen, cold teal shadows with a single warm practical light, fine film grain.
 [Shot 1] A wide shot begins from <Picture 1>: [the astronaut] stands at the edge of [a frozen alien plateau] under a sky with two pale moons. The camera pushes in slowly. At 1.00 seconds, a low rumble rises and loose ice skitters across the ground toward the camera. At 2.50 seconds, [the astronaut] turns her helmeted head toward the horizon, visor catching a distant flash.
 [Shot 2] At 00:04.500, after a hard cut through two black frames, a close-up holds on [the astronaut]'s face behind the visor, breath fogging the glass. (S1) She says quietly, <d>[English] [It was never a signal. It was a warning.]</d>
-[Shot 3] At 00:08.000, the shot cuts to black and the title [YOUR TITLE] fades up in thin white letters at frame center, then holds until the final frame.
+[Shot 3] At 00:08.000, the shot cuts to black and the title ECHO fades up in thin white letters at frame center, then holds until the final frame.
 All motion happens at natural real-time speed. No logos or watermarks.
 
 overall_soundscape:
@@ -197,7 +216,7 @@ N/A`,
     ],
     prompt: `subject_definitions:
 <Subject 1> is [the product, a matte black wireless earbud case], on the product sheet <Picture 2>, with its exact shape, finish and button placement.
-<Subject 2> is the [BRAND] logo, on the logo sheet <Picture 3>, with its exact shape and colors.
+<Subject 2> is the AURORA logo, on the logo sheet <Picture 3>, with its exact shape and colors.
 <Picture 1> is the first frame of [Shot 1], showing <Subject 1> resting on [a dark wet stone surface] in low light.
 
 summary:
@@ -242,7 +261,7 @@ A tense, minimal electronic pulse building with each shot, ending on a single ba
 <Subject 1> is [the model], on the character sheet <Picture 2>, with [sleek dark bob haircut and a cream silk dress].
 <Subject 2> is [the handbag], on the product sheet <Picture 3>, with its exact leather color, stitching and clasp.
 <Subject 3> is the visual style, on the mood sheet <Picture 4>, with its color palette and fine film grain.
-<Subject 4> is the [BRAND] logo, on the logo sheet <Picture 5>.
+<Subject 4> is the AURORA logo, on the logo sheet <Picture 5>.
 <Picture 1> is the first frame of [Shot 1], showing <Subject 1> holding <Subject 2> on [a sunlit marble staircase].
 
 summary:
@@ -634,7 +653,7 @@ Retro 1990s anime title-sequence look in the style of <Subject 1>; stylish and c
 [Shot 1] The shot begins from <Picture 1>. The silhouette of <Subject 2> lights a cigarette; the flame flares.
 [Shot 2] At 00:03.000, on the beat, a hard graphic wipe reveals a bold color-block split screen of rain on a neon street.
 [Shot 3] At 00:06.000, on the beat, <Subject 2> turns sharply in a three-quarter view, coat swinging, against a flat blue background.
-[Shot 4] At 00:09.000, on the beat, the title [YOUR TITLE] slams in once in thick hand-painted letters over a freeze frame of <Subject 2>, and holds until the final frame. No watermarks.
+[Shot 4] At 00:09.000, on the beat, the title ECHO slams in once in thick hand-painted letters over a freeze frame of <Subject 2>, and holds until the final frame. No watermarks.
 
 overall_soundscape:
 Rain hiss, a lighter flick, a short tire screech on the second wipe.
@@ -709,6 +728,132 @@ non_diegetic_music:
 N/A`,
   },
 ];
+
+// Image-model prompts for the `<Picture N>` inputs of the pixo templates, in
+// input order, so "Create & run" can generate the pictures instead of waiting
+// for uploads.
+const PIXO_IMAGE_PROMPTS: Record<string, readonly string[]> = {
+  scifi_trailer_beat: [
+    "Cinematic wide shot of an astronaut in a white suit and helmet standing at the edge of a frozen alien plateau under a sky with two pale moons, cold teal shadows, anamorphic widescreen, film grain",
+  ],
+  macro_match_morph: [
+    "Extreme macro photograph of coffee foam swirling in a cup, caramel streaks, warm low-angle light, shallow depth of field",
+    "Texture sheet photo of coffee foam with fine milky bubbles and caramel streaks",
+    "Landscape photo of golden desert dunes with sharp wind-carved ridges and warm light",
+  ],
+  add_cast_member: [
+    "Cinematic vertical photo of an empty rain-wet street corner at night under a single yellow streetlight",
+    "Character sheet of a person with short black hair and a beige trench coat, front, side and back views, plain background",
+  ],
+  product_trailer_spot: [
+    "Low macro photo of a matte black wireless earbud case resting on dark wet stone in low light with a hard rim light",
+    "Product photo of a matte black wireless earbud case on a neutral background",
+    "A simple geometric brand logo mark in white on a solid black background, no text",
+  ],
+  fashion_campaign: [
+    "Full-body editorial photo of a woman with a sleek dark bob in a cream silk dress holding a leather handbag on a sunlit marble staircase, vertical",
+    "Fashion portrait of a woman with a sleek dark bob and a cream silk dress, neutral background",
+    "Product photo of a leather handbag with a gold clasp on a neutral background",
+    "Soft warm editorial film photograph in a cream and gold palette with fine film grain, no subject",
+    "A minimalist geometric brand mark in dark ink on a cream background, no text",
+  ],
+  keyframe_brand_film: [
+    "Photo of a calm mountain lake seen through a black double-circle binocular mask, documentary look",
+    "Photo of a hawk on a pine branch seen through a black double-circle binocular mask",
+    "Photo of a waterfall mist cloud seen through a black double-circle binocular mask",
+    "Photo of a hiker waving on a ridge at sunrise seen through a black double-circle binocular mask",
+  ],
+  same_sku_three_scenes: [
+    "Vertical photo of a stainless steel insulated bottle on a kitchen counter in morning light",
+    "Product photo of a brushed stainless steel insulated bottle with a black cap on a white background",
+    "Macro detail photo of the cap and laser engraving of a stainless steel insulated bottle",
+  ],
+  kitchen_action_moment: [
+    "Vertical photo of a home cook with curly hair tied up wearing a green apron at a stove holding a non-stick frying pan in a bright kitchen",
+    "Portrait of a home cook with curly hair tied up and a green apron, neutral background",
+    "Product photo of a non-stick frying pan on a white background",
+  ],
+  penthouse_contract: [
+    "Vertical cinematic photo of a night-time penthouse with a glass desk, a CEO with slicked-back hair in a charcoal three-piece suit on one side and a young woman with long straight hair in a white blouse on the other, city lights behind",
+    "Portrait of a man with slicked-back hair in a charcoal three-piece suit, neutral dark background",
+    "Portrait of a young woman with long straight hair in a white blouse, neutral dark background",
+  ],
+  gothic_corridor_confession: [
+    "Vertical cinematic photo of a knight with dark wavy hair in a worn leather doublet and a princess with braided silver hair in a deep crimson gown facing each other at the far end of a gothic stone corridor with candle sconces",
+    "Portrait of a knight with dark wavy hair and a worn leather doublet, neutral background",
+    "Portrait of a princess with braided silver hair and a deep crimson gown, neutral background",
+    "Empty gothic castle corridor with stone arches and candle sconces, moody light, vertical",
+  ],
+  storyboard_character_pv: [
+    "Vertical anime-style illustration of a girl with ash-blonde hair in a navy school blazer and a red ribbon standing under a cherry blossom tree",
+    "Four-panel storyboard grid of an anime girl with ash-blonde hair and a navy blazer walking, turning, smiling and looking up, no text",
+    "Character turnaround sheet of an anime girl with ash-blonde hair, a navy school blazer and a red ribbon, front, side and back views, plain background",
+  ],
+  wuxia_handoff: [
+    "Cinematic photo of a swordswoman with a black topknot in a white hanfu with a sword at the hip waiting on a path in a misty bamboo forest",
+    "Character sheet of a swordswoman with a black topknot in a white hanfu with a sword at the hip, plain background",
+    "Character sheet of a masked courier in a bamboo hat and a dark grey cloak, plain background",
+  ],
+  claymation_chase: [
+    "Stop-motion claymation scene of an orange plasticine fox with button eyes crouched behind a cardboard hedge in a miniature garden set",
+    "Style sheet of an orange plasticine clay fox with visible fingerprints and button eyes, plain background",
+  ],
+  anime_title_sequence: [
+    "Retro 1960s crime anime frame of a detective in a long coat and loosened tie silhouetted against a red-orange city skyline, flat color blocks, thick ink outlines, halftone shading",
+    "Retro 1960s crime anime frame of a vintage car speeding through a rainy night street, flat color blocks, thick ink outlines, halftone shading",
+    "Retro 1960s crime anime frame of a black-gloved hand sliding an envelope across a table, flat color blocks, thick ink outlines, halftone shading",
+    "Retro 1960s crime anime frame of two figures on a rooftop under a giant yellow moon, flat color blocks, thick ink outlines, halftone shading",
+  ],
+  voice_cloned_narration: [
+    "Vertical photo of a presenter with short grey hair, round glasses and a navy cardigan seated at a wooden desk in a cozy study",
+    "Portrait of a presenter with short grey hair, round glasses and a navy cardigan, neutral background",
+  ],
+  sound_designed_silence: [
+    "Wide cinematic photo of a librarian alone between tall wooden shelves at closing time, golden-hour light through tall windows, dust in the air",
+  ],
+};
+
+function withImagePrompts(
+  template: Omit<H3PromptTemplate, "source">,
+): H3PromptTemplate {
+  const prompts = PIXO_IMAGE_PROMPTS[template.id] ?? [];
+  let pictureIndex = 0;
+  return {
+    ...template,
+    source: "pixo",
+    inputs: template.inputs.map((input) =>
+      input.label.startsWith("<Picture")
+        ? { ...input, imagePrompt: prompts[pictureIndex++] }
+        : input,
+    ),
+  };
+}
+
+export const H3_PROMPT_TEMPLATES: readonly H3PromptTemplate[] = [
+  ...FAL_H3_PROMPT_TEMPLATES,
+  ...PIXO_TEMPLATES.map(withImagePrompts),
+];
+
+/** The frontend video gen mode a template runs in. */
+export function h3TemplateGenMode(template: H3PromptTemplate): VideoGenMode {
+  if (template.mode === "fl2va") return "firstFrame";
+  if (template.mode === "flf2va") return "firstLastFrame";
+  return "imageReference";
+}
+
+// Square brackets that are part of the official H3 format and must survive.
+const KEEP_BRACKET = /^(Shot \d+|keyframe completion.*|reference generation|English|Vietnamese|Chinese|Japanese|Korean)$/;
+
+/**
+ * The prompt as it is sent when a template is applied: descriptive `[sample
+ * values]` are unwrapped, while `[Shot N]`, `[keyframe completion + reference
+ * generation]` and `<d>[Language] ...</d>` tags stay.
+ */
+export function h3TemplateRunnablePrompt(template: H3PromptTemplate): string {
+  return template.prompt.replace(/\[([^\]\n]+)\]/g, (match, inner: string) =>
+    KEEP_BRACKET.test(inner.trim()) ? match : inner,
+  );
+}
 
 export function h3TemplateText(value: Localized, language: string | undefined): string {
   return String(language ?? "").toLowerCase().startsWith("vi") ? value.vi : value.en;

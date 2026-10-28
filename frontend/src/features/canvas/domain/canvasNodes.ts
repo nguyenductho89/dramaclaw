@@ -453,6 +453,11 @@ export interface ImageGenNodeData extends NodeImageData {
   /** User-uploaded reference image, fed into the generation request. */
   referenceImageUrl?: string | null;
   /**
+   * Set on image nodes created from an H3 video template. When the user uploads their own picture
+   * into such a node, a workflow run uses it as-is instead of regenerating it from the template prompt.
+   */
+  h3TemplateInput?: boolean;
+  /**
    * Storyboard "feature" node: the empty node built after clicking a one-image feature in the image detail (grid template / panorama /
    * multi-angle / lighting) carries this key; the input box shows it as a closable feature chip,
    * and submitting with the up button goes through the matching capability instead of regular text-to-image. For the value domain see `AssetBoardImageOpKey` in

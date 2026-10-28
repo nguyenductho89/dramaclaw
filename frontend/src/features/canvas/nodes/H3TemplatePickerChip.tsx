@@ -8,6 +8,7 @@ import {
   H3_TEMPLATE_CATEGORIES,
   type H3PromptTemplate,
   type H3TemplateCategory,
+  type H3TemplateSource,
   h3TemplateText,
 } from "@/features/canvas/domain/h3PromptTemplates";
 import {
@@ -23,7 +24,10 @@ const POPOVER_GAP = 8;
 interface H3TemplatePickerChipProps {
   /** Current prompt — applying over a non-empty prompt asks for confirmation. */
   prompt: string;
-  onApply: (template: H3PromptTemplate) => void;
+  /** Images already connected to the video node; new inputs would shift their `<Picture N>` numbers. */
+  connectedImageCount: number;
+  /** `run` also generates the picture inputs and then the video. */
+  onApply: (template: H3PromptTemplate, options: { run: boolean }) => void | Promise<void>;
 }
 
 /**
@@ -32,18 +36,30 @@ interface H3TemplatePickerChipProps {
  * `domain/h3PromptTemplates.ts`. Same portal/anchor pattern as the camera
  * movement chip so the popover sits above the react-flow toolbar.
  */
-export function H3TemplatePickerChip({ prompt, onApply }: H3TemplatePickerChipProps) {
+export function H3TemplatePickerChip({ prompt, connectedImageCount, onApply }: H3TemplatePickerChipProps) {
   const { t, i18n } = useTranslation();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [anchor, setAnchor] = useState<{ left: number; top: number } | null>(null);
-  const [category, setCategory] = useState<H3TemplateCategory>("drama");
+  const [source, setSource] = useState<H3TemplateSource>("fal");
+  const [category, setCategory] = useState<H3TemplateCategory>("cinematic");
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
+  const categories = useMemo(
+    () =>
+      H3_TEMPLATE_CATEGORIES.filter((key) =>
+        H3_PROMPT_TEMPLATES.some((item) => item.source === source && item.category === key),
+      ),
+    [source],
+  );
+  const activeCategory = categories.includes(category) ? category : (categories[0] ?? category);
   const visible = useMemo(
-    () => H3_PROMPT_TEMPLATES.filter((item) => item.category === category),
-    [category],
+    () =>
+      H3_PROMPT_TEMPLATES.filter(
+        (item) => item.source === source && item.category === activeCategory,
+      ),
+    [source, activeCategory],
   );
   const selected =
     visible.find((item) => item.id === selectedId) ?? visible[0] ?? null;
@@ -84,10 +100,13 @@ export function H3TemplatePickerChip({ prompt, onApply }: H3TemplatePickerChipPr
     return () => document.removeEventListener("mousedown", onPointerDown, true);
   }, [isOpen]);
 
-  const handleApply = () => {
+  const hasAudioInput = selected?.inputs.some((input) => input.label.startsWith("<Audio")) ?? false;
+
+  const handleApply = (run: boolean) => {
     if (!selected) return;
     if (prompt.trim() && !window.confirm(t("canvas.h3Templates.confirmReplace"))) return;
-    onApply(selected);
+    if (connectedImageCount > 0 && !window.confirm(t("canvas.h3Templates.confirmConnected"))) return;
+    void onApply(selected, { run });
     setIsOpen(false);
   };
 
@@ -133,8 +152,28 @@ export function H3TemplatePickerChip({ prompt, onApply }: H3TemplatePickerChipPr
                 </button>
               </div>
 
+              <div className="flex shrink-0 gap-1.5 px-4 pb-1.5">
+                {(["fal", "pixo"] as const).map((key) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => {
+                      setSource(key);
+                      setSelectedId(null);
+                    }}
+                    className={`h-7 rounded-md border px-2.5 text-[12px] transition-colors ${
+                      key === source
+                        ? "border-accent bg-[rgb(var(--accent-rgb)/0.14)] text-text-dark"
+                        : "border-white/12 text-text-muted hover:bg-white/[0.08] hover:text-text-dark"
+                    }`}
+                  >
+                    {t(`canvas.h3Templates.sources.${key}`)}
+                  </button>
+                ))}
+              </div>
+
               <div className="flex shrink-0 flex-wrap gap-1.5 px-4 pb-2">
-                {H3_TEMPLATE_CATEGORIES.map((key) => (
+                {categories.map((key) => (
                   <button
                     key={key}
                     type="button"
@@ -143,7 +182,7 @@ export function H3TemplatePickerChip({ prompt, onApply }: H3TemplatePickerChipPr
                       setSelectedId(null);
                     }}
                     className={`h-7 rounded-md px-2.5 text-[12px] transition-colors ${
-                      key === category
+                      key === activeCategory
                         ? "bg-white/[0.14] text-text-dark"
                         : "text-text-muted hover:bg-white/[0.08] hover:text-text-dark"
                     }`}
@@ -184,7 +223,9 @@ export function H3TemplatePickerChip({ prompt, onApply }: H3TemplatePickerChipPr
                     <div className="text-[11px] text-text-muted">
                       {selected.mode === "fl2va"
                         ? t("canvas.h3Templates.modeFirstFrame")
-                        : t("canvas.h3Templates.modeReference")}
+                        : selected.mode === "flf2va"
+                          ? t("canvas.h3Templates.modeFirstLastFrame")
+                          : t("canvas.h3Templates.modeReference")}
                       {" · "}
                       {selected.aspectRatio}
                       {" · "}
@@ -199,6 +240,11 @@ export function H3TemplatePickerChip({ prompt, onApply }: H3TemplatePickerChipPr
                           <span className="font-mono text-text-dark/90">{input.label}</span>
                           {" — "}
                           {h3TemplateText(input.role, i18n.language)}
+                          {input.imagePrompt && (
+                            <div className="mt-0.5 line-clamp-2 text-[10.5px] italic text-text-muted/80">
+                              {input.imagePrompt}
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -211,13 +257,26 @@ export function H3TemplatePickerChip({ prompt, onApply }: H3TemplatePickerChipPr
               </div>
 
               <div className="flex shrink-0 items-center justify-end gap-2 px-4 pb-4 pt-1">
+                {hasAudioInput && (
+                  <span className="mr-auto text-[11px] text-text-muted">
+                    {t("canvas.h3Templates.needsAudioUpload")}
+                  </span>
+                )}
                 <button
                   type="button"
-                  onClick={handleApply}
+                  onClick={() => handleApply(false)}
                   disabled={!selected}
+                  className="h-8 min-w-[50px] rounded-md border border-white/15 px-3 text-[13px] text-text-dark transition-colors hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:text-text-muted"
+                >
+                  {t("canvas.h3Templates.createNodes")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleApply(true)}
+                  disabled={!selected || hasAudioInput}
                   className="h-8 min-w-[50px] rounded-md bg-primary px-3 text-[13px] text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-text-muted"
                 >
-                  {t("canvas.h3Templates.apply")}
+                  {t("canvas.h3Templates.createAndRun")}
                 </button>
               </div>
             </div>

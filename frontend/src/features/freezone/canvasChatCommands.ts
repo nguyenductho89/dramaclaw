@@ -1805,10 +1805,17 @@ function defaultWorkflowActionForNode(node: CanvasNode): string | null {
   return null;
 }
 
-function isWorkflowUserInputNode(node: CanvasNode | undefined): boolean {
+export function isWorkflowUserInputNode(node: CanvasNode | undefined): boolean {
   if (!node) return false;
   const data = node.data as Record<string, unknown>;
   if (data.workflowCatalogRole === "user_input") return true;
+  // An image input spawned from an H3 video template that the user filled with their own upload
+  // keeps that picture; the template prompt must not regenerate over it.
+  if (
+    node.type === CANVAS_NODE_TYPES.imageGen
+    && data.h3TemplateInput === true
+    && Boolean(nonEmptyString(data.referenceImageUrl))
+  ) return true;
   // An image node containing only an uploaded reference already supplies media to
   // downstream nodes. It has no generated output to wait for and no prompt to run.
   if (

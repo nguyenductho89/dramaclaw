@@ -99,7 +99,17 @@ import {
 } from "@/features/canvas/ui/nodeControlStyles";
 import { CameraMovementPickerPopover } from "@/features/canvas/nodes/CameraMovementPickerPopover";
 import { H3TemplatePickerChip } from "@/features/canvas/nodes/H3TemplatePickerChip";
-import { isRunpodH3VideoModel } from "@/features/canvas/domain/h3PromptTemplates";
+import {
+  h3TemplateGenMode,
+  h3TemplateRunnablePrompt,
+  isRunpodH3VideoModel,
+  type H3PromptTemplate,
+} from "@/features/canvas/domain/h3PromptTemplates";
+import { spawnH3TemplateInputs } from "@/features/canvas/application/spawnH3TemplateRun";
+import {
+  applyCanvasChatCommandsAsync,
+  CANVAS_CHAT_COMMANDS_SCHEMA_VERSION,
+} from "@/features/freezone/canvasChatCommands";
 import {
   cameraMovementPresetLabel,
   findCameraMovementPreset,
@@ -701,6 +711,73 @@ export function VideoOperationsPanel({
       [addEdge, addNode, id],
     );
 
+    // Applies an H3 template: spawns the picture/audio input nodes, fills this video node, and
+    // optionally runs the connected workflow (images first, then the video).
+    const handleApplyH3Template = useCallback(
+      async (template: H3PromptTemplate, options: { run: boolean }) => {
+        const state = useCanvasStore.getState();
+        const self = state.nodes.find((n) => n.id === id);
+        if (!self) return;
+        const nextMode = h3TemplateGenMode(template);
+        const result = spawnH3TemplateInputs(
+          {
+            id,
+            position: self.position,
+            height: self.measured?.height ?? self.height ?? undefined,
+          },
+          template,
+          {
+            genMode: nextMode,
+            modelParams: filterMediaModelParamsForMode(
+              selectedVideoModel?.request?.parameters,
+              data.modelParams,
+              nextMode,
+            ),
+          },
+          {
+            addNode,
+            addEdge,
+            updateNodeData: (nodeId, patch) => updateNodeData(nodeId, patch),
+            autoGroupSpawn: (sourceId, spawnedIds, opts) =>
+              state.autoGroupSpawn(sourceId, spawnedIds, opts),
+          },
+        );
+        setPromptDraft(h3TemplateRunnablePrompt(template));
+        if (result.rejectedNodeIds.length > 0) {
+          toast.error(t("canvas.h3Templates.edgeRejected"));
+          return;
+        }
+        if (!options.run) {
+          toast.success(t("canvas.h3Templates.nodesCreated"));
+          return;
+        }
+        try {
+          const { project: projectId, canvas: canvasId } = readUrl();
+          const outcome = await applyCanvasChatCommandsAsync(
+            [
+              {
+                schema_version: CANVAS_CHAT_COMMANDS_SCHEMA_VERSION,
+                ...(projectId ? { project_id: projectId } : {}),
+                ...(canvasId ? { canvas_id: canvasId } : {}),
+                commands: [
+                  { type: "run_workflow", node_ids: [id], direction: "connected" },
+                ],
+              },
+            ],
+            { projectId: projectId ?? undefined, canvasId: canvasId ?? undefined },
+          );
+          if (outcome.errors.length > 0) {
+            toast.error(outcome.errors[0] ?? t("canvas.nodeToolbar.workflowRunFailed"));
+          } else {
+            toast.success(t("canvas.nodeToolbar.workflowStarted"));
+          }
+        } catch (error) {
+          toast.error(error instanceof Error ? error.message : String(error));
+        }
+      },
+      [addEdge, addNode, data.modelParams, id, selectedVideoModel, t, updateNodeData],
+    );
+
     const handleTranslatePrompt = useCallback(async () => {
       if (isTranslatingPrompt || isGenerating) return;
       const trimmed = prompt.trim();
@@ -821,25 +898,8 @@ export function VideoOperationsPanel({
                   {isRunpodH3VideoModel(selectedVideoModel?.apiModel ?? modelId) && (
                     <H3TemplatePickerChip
                       prompt={promptDraft}
-                      onApply={(template) => {
-                        // A camera-move fragment would be prepended ahead of
-                        // the structured H3 sections, so clear it.
-                        const nextMode =
-                          template.mode === "fl2va" ? "first_frame" : "image_reference";
-                        setPromptDraft(template.prompt);
-                        updateNodeData(id, {
-                          prompt: template.prompt,
-                          aspectRatio: template.aspectRatio,
-                          durationSec: template.durationSec,
-                          cameraMovement: null,
-                          genMode: nextMode,
-                          modelParams: filterMediaModelParamsForMode(
-                            selectedVideoModel?.request?.parameters,
-                            data.modelParams,
-                            nextMode,
-                          ),
-                        });
-                      }}
+                      connectedImageCount={upstreamCounts.images}
+                      onApply={handleApplyH3Template}
                     />
                   )}
                 </div>

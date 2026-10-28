@@ -6041,6 +6041,25 @@
     },
     "matte": {
       "defaultTitle": "Tách nền"
+    },
+    "h3Templates": {
+      "title": "Mẫu H3",
+      "hint": "Prompt MiniMax-H3 dựng sẵn (phỏng theo ví dụ của pixo.video)",
+      "confirmReplace": "Thay prompt hiện tại bằng mẫu này?",
+      "apply": "Dùng mẫu",
+      "inputs": "Nối đầu vào theo đúng thứ tự",
+      "modeFirstFrame": "Chỉ first frame",
+      "modeReference": "First frame + ảnh tham chiếu",
+      "seconds": "{{count}} giây",
+      "placeholderHint": "Thay các phần trong [NGOẶC VUÔNG]. @image1 = <Picture 1> (first frame), @image2 = <Picture 2>…",
+      "categories": {
+        "cinematic": "Điện ảnh",
+        "brand": "Thương hiệu & TVC",
+        "ecommerce": "Thương mại điện tử",
+        "drama": "Phim ngắn",
+        "animation": "Hoạt hình & phong cách",
+        "audio": "Theo âm thanh"
+      }
     }
   },
   "tool": {

@@ -642,7 +642,15 @@ class RunPodMiniMaxH3VideoGenerator(VideoGeneratorBase):
             _fit_canvas_bytes, first_frame_raw, width, height
         )
 
-        image_refs = [item for item in (references or []) if item.type == "image"]
+        # Freezone passes its full reference list, first (and last) frame
+        # included — drop those so the first frame isn't uploaded twice and
+        # `<Picture N>` in the prompt maps to the Nth connected image.
+        frame_paths = {str(image_path), str(last_frame_path or "")}
+        image_refs = [
+            item
+            for item in (references or [])
+            if item.type == "image" and str(item.path) not in frame_paths
+        ]
         audio_refs = [item for item in (references or []) if item.type == "audio"]
 
         image_payloads: list[tuple[str, bytes, str]] = [

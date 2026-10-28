@@ -6155,6 +6155,25 @@
     },
     "matte": {
       "defaultTitle": "Matte"
+    },
+    "h3Templates": {
+      "title": "H3 templates",
+      "hint": "Quick-start MiniMax-H3 prompts (adapted from pixo.video examples)",
+      "confirmReplace": "Replace the current prompt with this template?",
+      "apply": "Use template",
+      "inputs": "Connect, in this order",
+      "modeFirstFrame": "First frame only",
+      "modeReference": "First frame + references",
+      "seconds": "{{count}}s",
+      "placeholderHint": "Replace the [BRACKETED] parts. @image1 = <Picture 1> (first frame), @image2 = <Picture 2>…",
+      "categories": {
+        "cinematic": "Cinematic",
+        "brand": "Brand & TVC",
+        "ecommerce": "E-commerce",
+        "drama": "Drama",
+        "animation": "Animation & style",
+        "audio": "Audio-driven"
+      }
     }
   },
   "tool": {

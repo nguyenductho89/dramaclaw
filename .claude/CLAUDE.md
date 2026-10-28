@@ -371,3 +371,10 @@ Mục tiêu: tính scale/vị trí nhân vật bằng hình học (Python) thay 
 ## Đừng làm
 
 - Đừng tìm hay in `settings.db` / token chạy của DramaClaw (hệ thống chặn thao tác dò thông tin xác thực).
+
+## Freezone: mẫu prompt H3 dựng sẵn cho RunPod (2026-10-28)
+
+- Node Video của Freezone có thêm nút **"Mẫu H3"** (chỉ hiện khi model là `runpod_minimax_h3`, không hiện cho multishot). Có 16 mẫu phỏng theo `pixo.video/blog/minimax-h3-prompts`, đã viết lại theo đúng format chính thức của H3: ref2va có 6 mục, fl2va có 3 mục, dùng `<Picture N>`/`<Subject N>`/`[Shot N] At MM:SS.mmm`/`<d>[Language] …</d>`. Dữ liệu nằm ở `frontend/src/features/canvas/domain/h3PromptTemplates.ts`, UI ở `nodes/H3TemplatePickerChip.tsx`. Khi chọn một mẫu, prompt, tỉ lệ khung, thời lượng và genMode được ghi đè, đồng thời camera-move bị xoá (vì fragment camera sẽ chèn lên trước các mục H3).
+- Các mẫu pixo cần video tham chiếu (ghép thêm diễn viên vào footage có sẵn, đổi câu thoại mà giữ nguyên take, cắt theo nhịp video, voxel hoá footage) **không đưa vào**, vì backend này có `referenceVideoMax: 0`. Mẫu "add cast member" đã được làm lại để dùng first frame thay cho footage. Thời lượng giới hạn trong 5–12 giây, tỉ lệ 16:9 hoặc 9:16.
+- Quy ước số thứ tự: `@image1` = `<Picture 1>` (first frame), `@image2` = `<Picture 2>`… và `<Audio N>` = audio thứ N. Để quy ước này đúng, đã vá `runpod_minimax_h3_video.py`: trước đây Freezone truyền cả first frame (và last frame) vào `references`, nên generator upload first frame 2 lần và ảnh tham chiếu thật bị đẩy lệch thành `<Picture 3>`. Giờ generator lọc các ảnh trùng `image_path`/`last_frame_path`. Pipeline beat không bị ảnh hưởng vì không truyền first frame vào `references`. Test: `tests/test_h3_video_reference_dedupe.py`, `h3PromptTemplates.test.ts`.
+- Chưa build lại container `web`/`api` trên máy local và chưa chạy GPU thật. Muốn dùng thì làm theo quy trình đã ghi ở các mục trên: `docker cp src/novelvideo` + restart api; build `web` rồi `up -d web` kèm `-f docker-compose.web-local.yml`.

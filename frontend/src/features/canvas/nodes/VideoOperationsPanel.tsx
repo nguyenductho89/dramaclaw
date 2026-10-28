@@ -98,6 +98,8 @@ import {
   NODE_TEXT_CONTROL_TRIGGER_CLASS,
 } from "@/features/canvas/ui/nodeControlStyles";
 import { CameraMovementPickerPopover } from "@/features/canvas/nodes/CameraMovementPickerPopover";
+import { H3TemplatePickerChip } from "@/features/canvas/nodes/H3TemplatePickerChip";
+import { isRunpodH3VideoModel } from "@/features/canvas/domain/h3PromptTemplates";
 import {
   cameraMovementPresetLabel,
   findCameraMovementPreset,
@@ -816,6 +818,30 @@ export function VideoOperationsPanel({
                   <CharacterLibraryChip
                     onOpen={() => setIsCharacterLibraryOpen(true)}
                   />
+                  {isRunpodH3VideoModel(selectedVideoModel?.apiModel ?? modelId) && (
+                    <H3TemplatePickerChip
+                      prompt={promptDraft}
+                      onApply={(template) => {
+                        // A camera-move fragment would be prepended ahead of
+                        // the structured H3 sections, so clear it.
+                        const nextMode =
+                          template.mode === "fl2va" ? "first_frame" : "image_reference";
+                        setPromptDraft(template.prompt);
+                        updateNodeData(id, {
+                          prompt: template.prompt,
+                          aspectRatio: template.aspectRatio,
+                          durationSec: template.durationSec,
+                          cameraMovement: null,
+                          genMode: nextMode,
+                          modelParams: filterMediaModelParamsForMode(
+                            selectedVideoModel?.request?.parameters,
+                            data.modelParams,
+                            nextMode,
+                          ),
+                        });
+                      }}
+                    />
+                  )}
                 </div>
                 <div className="ml-3 flex shrink-0 items-center gap-3">
                   <GenModeSelect

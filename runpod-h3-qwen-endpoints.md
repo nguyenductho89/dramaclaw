@@ -210,7 +210,23 @@ Thiết kế cuối cùng khác với dự kiến ban đầu ở 1 điểm quan 
 - **Rollback:** đổi image về `h3only-0.37.2`, `minCudaVersion` về `12.0`, xoá `COMFY_EXTRA_ARGS`. Chỉ tắt Sage: xoá `COMFY_EXTRA_ARGS` (vẫn giữ cu130).
 - **`RUNPOD_H3_SAGE_ATTENTION` trong `.env` giữ trống:** Sage giờ bật bằng cờ toàn cục của ComfyUI trên worker, không cần node KJ `PathchSageAttentionKJ` (`generators/comfy_sage.py`). Chỉ dùng được vì image H3 đã tách riêng khỏi Qwen.
 - **Endpoint này dùng chung với project `comfy-trends`:** họ cũng chạy trên image cu130 + Sage từ nay.
-- **Chưa làm:** endpoint multishot `u0hkrms7k1xeua` (image `comfy-trends-h3-multishot`) vẫn torch cu128; chưa đo PDD 4/6 bước, `two_stage`, profile `draft`, và chưa đo encoder `int8_convrot` sau cu130 (encode ~29s).
+- **Chưa làm:** chưa đo PDD 4/6 bước, `two_stage`, profile `draft`, và chưa đo encoder `int8_convrot` sau cu130 (encode ~29s).
+
+### 8b. Endpoint multishot `u0hkrms7k1xeua` cũng đã lên cu130 + Sage (2026-10-28)
+
+Đo 2 shot × 124 khung, ref2va, PDD 8 bước, 768×1344, seed 424242, cùng graph/input (`build_h3_multishot_graph`), A40:
+
+| Cấu hình | `executionTime` | Sampling mỗi shot |
+| --- | --- | --- |
+| Image `0.37.2-ms2.7.2` (cu128) | 1181s | ~64s/bước (shot 1 ~9.6 phút) |
+| Image `0.37.2-ms2.7.2-cu130` + `--use-sage-attention` | **631s** (−47%) | ~31s/bước (shot 1 ~5.1 phút) |
+
+- **Image build ở đâu:** repo `comfy-trends` không có CI, nên `runpod_multishot/` được sao sang repo `photoreal-short-drama-generator` (thư mục `runpod-multishot/`, nhánh `tesla`, commit `45ed415`) và workflow `build-worker-image.yml` có thêm lựa chọn `image=multishot`. Image đẩy về `ghcr.io/nguyenductho89/comfy-trends-h3-multishot:0.37.2-ms2.7.2-cu130`; tag cũ `0.37.2-ms2.7.2` giữ nguyên để rollback. Dockerfile đổi cùng kiểu như image 1-shot (CUDA 13.0.3, torch cu130, `gcc python3.12-dev`, `sageattention==1.0.6`); `handler.py` và `extra_model_paths.yaml` giống hệt bản 1-shot; `start.sh` nối `${COMFY_EXTRA_ARGS}`.
+- **Cấu hình endpoint hiện tại:** image `-cu130`, `gpu.minCudaVersion=13.0`, env `COMFY_EXTRA_ARGS=--use-sage-attention` (giữ nguyên 4 biến R2). Log khởi động: `torch 2.11.0+cu130`, comfy_kitchen `cuda: disabled False`, `Using sage attention`, không có `Error running sage attention`.
+- **Chất lượng:** không có lỗi hình ảnh (mặt, áo, nền, tay đều sạch), kiểm tra tự động đạt (247 khung, 768×1344, độ sáng, audio). **Nhưng video không giống từng khung với bản cũ:** SSIM so với baseline chỉ 0.87 (PSNR 23.0 dB), thấp hơn nhiều so với 1-shot (0.97). Lý do: pack multishot nối các shot qua khung cuối thật, nên sai khác số học nhỏ từ kernel mới cộng dồn qua chuỗi và quỹ đạo hành động rẽ hướng khác (baseline: nhân vật quay mặt về camera rồi xoay lưng; bản mới: quay lưng ở giữa rồi quay mặt ở cuối). Cả hai đều là cách diễn giải hợp lệ của prompt. Với multishot, đừng kỳ vọng cùng seed cho đúng cùng video giữa các bản image.
+- **SSIM khung đầu không dùng được làm ngưỡng cho multishot:** chính baseline cũng chỉ đạt 0.809 (bản mới 0.789), vì pack không ghim `start_image` chặt như `MiniMaxH3AddGuide` của graph 1-shot. Với multishot phải so với baseline, không dùng ngưỡng tuyệt đối 0.90.
+- **Đã quan sát:** job có `retries: 1` (bị đẩy lại hàng đợi 1 lần khi worker cũ bị thay sau khi đổi image/env), chạy lại ổn trên worker mới, không có crash. Cold start worker multishot ~8.7 phút (cu128) / ~6 phút (cu130).
+- **Rollback:** đổi image về `0.37.2-ms2.7.2`, `minCudaVersion` về `12.0`, xoá `COMFY_EXTRA_ARGS`.
 - Cold start worker mới sau khi đổi image/env ~6 phút (kéo image + nạp model).
 
 ## 6. Global Volume — chưa làm, để sau (quyết định của user 2026-10-19)

@@ -561,7 +561,7 @@ vi.mock("@/lib/queries/video", () => ({
                     media_type: "audio",
                     selected: true,
                     exists: true,
-                    reference_label: "Audio 1",
+                    reference_label: "audio1",
                     note: "Seedance2 narrator reference voice",
                     path: "assets/narrator/voice.mp3",
                     url: "/static/demo/assets/narrator/voice.mp3",
@@ -1817,7 +1817,7 @@ describe("VideoPane Seedance2 inspector", () => {
     fireEvent.dragStart(image, { dataTransfer });
     fireEvent.drop(textarea, { dataTransfer });
 
-    expect(textarea).toHaveValue("Reference@image2  as the starting composition");
+    expect(textarea).toHaveValue("Reference@image2 as the starting composition");
   });
 
   it("uses the prompt cursor position from before dragging the image tile steals focus", () => {
@@ -1847,7 +1847,7 @@ describe("VideoPane Seedance2 inspector", () => {
     fireEvent.dragStart(image, { dataTransfer });
     fireEvent.drop(textarea, { dataTransfer });
 
-    expect(textarea).toHaveValue("Reference@image2  as the starting composition");
+    expect(textarea).toHaveValue("Reference@image2 as the starting composition");
   });
 
   it("inserts a dragged reference even when the prompt already mentions it", () => {

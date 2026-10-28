@@ -432,7 +432,7 @@ describe("RenderSection", () => {
       </I18nextProvider>,
     );
 
-    expect(screen.getByText("Relight to day")).toBeInTheDocument();
+    expect(screen.getByText("Relight to Daytime")).toBeInTheDocument();
     expect(screen.getByTitle("Relight: re-lights the shot for the beat's time of day without changing the scene structure.")).toBeInTheDocument();
     expect(screen.queryByText(/Seedance2/)).not.toBeInTheDocument();
   });

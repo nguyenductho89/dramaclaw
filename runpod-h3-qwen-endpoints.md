@@ -210,7 +210,7 @@ Thiết kế cuối cùng khác với dự kiến ban đầu ở 1 điểm quan 
 - **Rollback:** đổi image về `h3only-0.37.2`, `minCudaVersion` về `12.0`, xoá `COMFY_EXTRA_ARGS`. Chỉ tắt Sage: xoá `COMFY_EXTRA_ARGS` (vẫn giữ cu130).
 - **`RUNPOD_H3_SAGE_ATTENTION` trong `.env` giữ trống:** Sage giờ bật bằng cờ toàn cục của ComfyUI trên worker, không cần node KJ `PathchSageAttentionKJ` (`generators/comfy_sage.py`). Chỉ dùng được vì image H3 đã tách riêng khỏi Qwen.
 - **Endpoint này dùng chung với project `comfy-trends`:** họ cũng chạy trên image cu130 + Sage từ nay.
-- **Chưa kiểm — đừng coi là an toàn cho clip dài:** lần thử cu130 trước (dòng 4 bảng sự cố) từng OOM RAM hệ thống ở bước VAE decode/thu output với 243 khung × 14 bước; ngày 2026-10-28 chỉ đo 141 khung (1 shot) và 2×124 khung (multishot, worker báo RAM 96%), chưa chạy lại 243 khung/14 bước hay 294 khung, và ref2va có `ref_video` cũng chưa test. Nếu gặp `Connection to remote host was lost`, tra log tìm OOM và kiểm R2 trước.
+- **Chưa kiểm — đừng coi là an toàn cho clip dài:** lần thử cu130 trước (dòng 4 bảng sự cố) từng OOM RAM hệ thống ở bước VAE decode/thu output với 243 khung × 14 bước; ngày 2026-10-28 test thêm ref2va 243 khung PDD 8 bước: xong 869s, không OOM, RAM worker đỉnh 96% lúc VAE decode (sát trần, 294 khung chưa thử); đo trước đó chỉ 141 khung (1 shot) và 2×124 khung (multishot, worker báo RAM 96%), chưa chạy lại 243 khung/14 bước hay 294 khung, và ref2va có `ref_video` cũng chưa test. Nếu gặp `Connection to remote host was lost`, tra log tìm OOM và kiểm R2 trước.
 - **Chưa làm:** chưa đo PDD 4/6 bước, `two_stage`, profile `draft`, và chưa đo encoder `int8_convrot` sau cu130 (encode ~29s).
 
 ### 8b. Endpoint multishot `u0hkrms7k1xeua` cũng đã lên cu130 + Sage (2026-10-28)

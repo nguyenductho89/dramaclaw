@@ -76,6 +76,11 @@ import {
 } from '@/features/canvas/domain/videoReferenceLimits';
 import { videoReferenceEnvelopeForNode } from '@/features/canvas/application/videoReferenceEnvelope';
 import {
+  planVideoBreakdownGroups,
+  type PlanVideoBreakdownGroupsOptions,
+  type VideoBreakdownResultLike,
+} from '@/features/canvas/application/videoBreakdownGroups';
+import {
   type ViewportBookmark,
   type ViewportBookmarks,
   BOOKMARK_SLOT_COUNT,
@@ -85,6 +90,7 @@ import {
 import { nodeCatalog } from '@/features/canvas/application/nodeCatalog';
 import { canvasNodeFactory } from '@/features/canvas/application/canvasServices';
 import { resetStyleNodeSyncStates } from '@/features/canvas/application/styleNodeSync';
+import { cancelVideoCrop } from '@/features/canvas/application/videoCrop/videoCropInFlight';
 import {
   aspectRatioFromImageDimensions,
   ensureAtLeastOneMinEdge,
@@ -760,6 +766,13 @@ function normalizeNodes(rawNodes: CanvasNode[]): CanvasNode[] {
         if ('breakdownStartedAt' in mergedData) {
           mergedData.breakdownStartedAt = null;
         }
+      }
+
+      // Frame crop likewise has no resume mechanism: the box / ratio live only in component-local state (see the
+      // VideoNode comment), so a persisted isCropMode: true would reopen with no box and no in-flight request to
+      // reattach to. Always reset it to closed; isClipMode / subtitleEraseMode / isExtendPickMode are unaffected.
+      if ('isCropMode' in mergedData && mergedData.isCropMode) {
+        mergedData.isCropMode = false;
       }
 
       const normalizedNode = {
@@ -2993,6 +3006,12 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
         if (deleteSet.has(node.id) && isPresetManagedNode(node)) {
           deleteSet.delete(node.id);
         }
+      }
+      // 源节点被删了，挂在它身上的画面裁切也得跟着断——不然那次裁剪（下载 /
+      // 裁剪 / 上传的某一步）还在跑，跑完才后知后觉发现节点没了。cancelVideoCrop
+      // 对没在裁的节点是空操作，批量删除时全量调一遍没有额外代价。
+      for (const nodeId of deleteSet) {
+        cancelVideoCrop(nodeId);
       }
       const nodesAfterDelete = state.nodes
         .filter((node) => !deleteSet.has(node.id))

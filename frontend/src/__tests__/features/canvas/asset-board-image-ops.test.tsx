@@ -157,7 +157,7 @@ function openDetail(name: string) {
  */
 function openMoreMenu(): HTMLElement {
   const detail = detailPanel();
-  const trigger = within(detail).getByRole('button', { name: 'More' });
+  const trigger = within(detail).getByRole('button', { name: 'More actions' });
   if (trigger.getAttribute('aria-expanded') !== 'true') fireEvent.click(trigger);
   return detail;
 }
@@ -257,7 +257,7 @@ describe('AssetBoard detail image operations (batch 2: "..." edit items + panora
     openDetail('Image-edit node');
     const detail = detailPanel();
     // The three edit items have no image to edit -> the whole "..." is not rendered (otherwise it would open an empty panel).
-    expect(within(detail).queryByRole('button', { name: 'More' })).not.toBeInTheDocument();
+    expect(within(detail).queryByRole('button', { name: 'More actions' })).not.toBeInTheDocument();
     expect(within(detail).queryByRole('button', { name: /Panorama/ })).not.toBeInTheDocument();
     expect(within(detail).queryByRole('button', { name: /Multi-angle/ })).not.toBeInTheDocument();
   });
@@ -354,7 +354,7 @@ describe('AssetBoard detail image operations (batch 2: "..." edit items + panora
     expect(within(detail).getByText('Generates after confirmation')).toBeInTheDocument();
     expect(within(detail).queryByRole('img', { name: 'Upscale' })).toBeNull();
     // The empty-state node renders no operation toolbar at all (download/"..."/panorama... all need media to apply).
-    expect(within(detail).queryByRole('button', { name: 'More' })).toBeNull();
+    expect(within(detail).queryByRole('button', { name: 'More actions' })).toBeNull();
     expect(within(detail).queryByRole('button', { name: /Panorama/ })).toBeNull();
   });
 
@@ -552,7 +552,7 @@ describe('AssetBoard detail image operations (batch 2: "..." edit items + panora
     const dialog = await screen.findByRole('dialog', { name: 'Lighting effect editor' });
     expect(within(detail).queryByRole('dialog')).toBeNull();
     // The old inline plane config row (key light direction segments) no longer coexists.
-    expect(screen.queryByText('Key light direction')).not.toBeInTheDocument();
+    expect(within(detail).queryByText('Key light direction')).not.toBeInTheDocument();
 
     await user.click(within(dialog).getByRole('button', { name: 'Generate' }));
     expect(relightImage).toHaveBeenCalledWith(

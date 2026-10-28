@@ -26,7 +26,7 @@
   "planning_prompt": "From the key elements, the storyboard and the reference limits, generate a single-shot video prompt for survival-exploration / action-crisis content.",
   "result_summary": "Single-shot video generation prompt for survival-exploration / action-crisis content.",
   "requires_source_media": false,
-  "requires_generated_audio": true,
+  "requires_generated_audio": false,
   "force_enhancement": false,
   "skip_detail_check": false
 }

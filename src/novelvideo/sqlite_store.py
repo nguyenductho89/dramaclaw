@@ -223,6 +223,7 @@ CREATE TABLE IF NOT EXISTS beats (
     beat_number            INTEGER NOT NULL,
     narration              TEXT DEFAULT '',
     visual_description     TEXT DEFAULT '',
+    source_text_sha256     TEXT DEFAULT '',
     detected_identities_json TEXT DEFAULT '[]',
     detected_props_json    TEXT DEFAULT '[]',
     scene_ref_json         TEXT DEFAULT '',
@@ -398,7 +399,7 @@ _PROJECT_STORE_SCHEMA_COMPONENT = "project_store"
 # MIGRATION CONTRACT: increment this whenever SQLITE_SCHEMA_SQL or any
 # _ensure_*_columns migration above changes. Existing databases skip the
 # initializer after this version has been recorded.
-_PROJECT_STORE_SCHEMA_VERSION = 4
+_PROJECT_STORE_SCHEMA_VERSION = 5
 
 
 def _table_columns(db: sqlite3.Connection, table: str) -> set[str]:
@@ -596,6 +597,7 @@ class SQLiteStore:
     def _ensure_beat_current_columns(self, db: sqlite3.Connection) -> None:
         """Add beat columns required by the current script/render pipeline."""
         columns = {
+            "source_text_sha256": "TEXT DEFAULT ''",
             "detected_identities_json": "TEXT DEFAULT '[]'",
             "detected_props_json": "TEXT DEFAULT '[]'",
             "scene_ref_json": "TEXT DEFAULT ''",
@@ -2061,8 +2063,14 @@ Return JSON only, with nothing else."""
         "chapter_end": ("chapter_end", "int"),
     }
 
-    async def patch_episode(self, episode_number: int, **fields: Any) -> None:
+    async def patch_episode(
+        self, episode_number: int, *, _only_if_empty: bool = False, **fields: Any
+    ) -> None:
         """Update only the columns the caller named, atomically.
+
+        Automatic asset preparation may condition one menu write on emptiness.
+        This condition is evaluated by SQL, preserving selections made while
+        the planner was running; the cache then reflects the winning menu.
 
         Anything that writes the whole episode row re-serialises columns it was
         never asked to change, from whatever the caller happened to load
@@ -2083,6 +2091,12 @@ Return JSON only, with nothing else."""
         """
         assignments: list[str] = []
         params: list[Any] = []
+        empty_predicate = ""
+        if _only_if_empty:
+            if len(fields) != 1 or not set(fields) <= {"scene_menu", "prop_menu"}:
+                raise ValueError("conditional menu patch requires one scene_menu or prop_menu")
+            column = self._PATCHABLE_EPISODE_FIELDS[next(iter(fields))][0]
+            empty_predicate = f" AND ({column} IS NULL OR TRIM({column}) IN ('', '[]', 'null'))"
 
         for field, value in fields.items():
             spec = self._PATCHABLE_EPISODE_FIELDS.get(field)
@@ -2120,16 +2134,18 @@ Return JSON only, with nothing else."""
         assignments.append("updated_at = datetime('now')")
         params.append(int(episode_number))
         cursor = await db.execute(
-            f"UPDATE episodes SET {', '.join(assignments)} WHERE number = ?",
+            f"UPDATE episodes SET {', '.join(assignments)} WHERE number = ?{empty_predicate}",
             params,
         )
-        if not cursor.rowcount:
+        if not cursor.rowcount and not _only_if_empty:
             raise ValueError(f"Episode {episode_number} does not exist")
         await db.commit()
 
         refreshed = await self.get_episode_from_graph(episode_number)
         if refreshed is not None:
             self._episodes[episode_number] = refreshed
+        elif _only_if_empty:
+            raise ValueError(f"Episode {episode_number} does not exist")
 
     # ── episode menu normalization ──────────────────────────────────────
     #
@@ -2420,6 +2436,7 @@ Return JSON only, with nothing else."""
             episode_number=row["episode_number"],
             narration=row["narration"] or "",
             visual_description=row["visual_description"] or "",
+            source_text_sha256=row["source_text_sha256"] if "source_text_sha256" in row.keys() else "",
             detected_identities_json=row["detected_identities_json"] or "[]",
             detected_props_json=(
                 row["detected_props_json"] if "detected_props_json" in row.keys() else "[]"
@@ -2521,6 +2538,7 @@ Return JSON only, with nothing else."""
                     "beat_number": b.beat_number,
                     "narration_segment": b.narration,
                     "visual_description": b.visual_description,
+                    "source_text_sha256": b.source_text_sha256,
                     "scene_ref": (
                         b.scene_ref.model_dump() if getattr(b, "scene_ref", None) else None
                     ),
@@ -2597,6 +2615,8 @@ Return JSON only, with nothing else."""
             properties["narration"] = narration_segment
         if visual_description is not None:
             properties["visual_description"] = visual_description
+        if narration_segment is not None or visual_description is not None:
+            properties["source_text_sha256"] = ""
         if audio_type is not None:
             properties["audio_type"] = audio_type
         if speaker is not None:
@@ -2667,8 +2687,8 @@ Return JSON only, with nothing else."""
                    detected_identities_json, detected_props_json, scene_ref_json,
                    audio_type, speaker, speaker_kind, time_of_day,
                    video_mode, video_prompt, keyframe_prompt,
-                   shot_order, duration_seconds, is_manual_shot)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                   shot_order, duration_seconds, is_manual_shot, source_text_sha256)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                    ON CONFLICT(episode_number, beat_number) DO UPDATE SET
                    narration=excluded.narration, visual_description=excluded.visual_description,
                    detected_identities_json=excluded.detected_identities_json,
@@ -2683,6 +2703,7 @@ Return JSON only, with nothing else."""
                    shot_order=excluded.shot_order,
                    duration_seconds=excluded.duration_seconds,
                    is_manual_shot=excluded.is_manual_shot,
+                   source_text_sha256=excluded.source_text_sha256,
                    updated_at=datetime('now')""",
                 (
                     b.episode_number,
@@ -2702,6 +2723,7 @@ Return JSON only, with nothing else."""
                     getattr(b, "shot_order", None),
                     getattr(b, "duration_seconds", None),
                     1 if getattr(b, "is_manual_shot", False) else 0,
+                    getattr(b, "source_text_sha256", "") or "",
                 ),
             )
         await db.commit()
@@ -2873,6 +2895,36 @@ Return JSON only, with nothing else."""
             updated_count += cursor.rowcount or 0
         await db.commit()
         return updated_count
+
+    async def fill_missing_beat_scene_refs(
+        self, episode_number: int, beats_data: list[dict]
+    ) -> int:
+        """Fill scene references atomically, preserving manual shots and edits."""
+        db = await self._ensure_db()
+        count = 0
+        for beat in beats_data:
+            payload = {"scene_ref": beat.get("scene_ref")}
+            sync_beat_asset_refs(payload)
+            ref = payload.get("scene_ref")
+            source_text_sha256 = str(beat.get("source_text_sha256") or "")
+            if not ref or not source_text_sha256:
+                continue
+            cursor = await db.execute(
+                "UPDATE beats SET scene_ref_json = ?, updated_at = datetime('now') "
+                "WHERE episode_number = ? AND beat_number = ? "
+                "AND COALESCE(is_manual_shot, 0) = 0 "
+                "AND source_text_sha256 = ? "
+                "AND (scene_ref_json IS NULL OR TRIM(scene_ref_json) IN ('', '{}', 'null'))",
+                (
+                    json.dumps(ref, ensure_ascii=False),
+                    episode_number,
+                    int(beat["beat_number"]),
+                    source_text_sha256,
+                ),
+            )
+            count += cursor.rowcount or 0
+        await db.commit()
+        return count
 
     async def delete_all_scenes(self) -> int:
         """Delete all scenes."""

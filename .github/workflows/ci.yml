@@ -36,6 +36,11 @@ jobs:
         run: uv run ruff check --output-format=github .
       - name: Verify Workflow MCP contracts
         run: uv run python scripts/check_workflow_agent_contracts.py --json
+      # The Ladybug JSON extension ships with the repo (src/novelvideo/assets/ladybug-json); it is
+      # loaded by absolute path and never downloaded. Validate the file and load it once for real
+      # here, so upgrading ladybug without replacing the file fails at this step.
+      - name: Verify the bundled Ladybug JSON extension
+        run: uv run python -m novelvideo.ladybug_json_extension
       # Unit tests: pytest default addopts already excludes ee/e2e; -n auto runs in parallel via xdist.
       - name: Run tests
         run: uv run pytest -n auto

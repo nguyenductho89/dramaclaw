@@ -351,6 +351,59 @@ async def test_analyze_shots_leaf_receives_the_organization_egress_context(
     assert seen[0] is not None and seen[0].is_organization
 
 
+@pytest.mark.asyncio
+async def test_video_breakdown_leaf_receives_the_organization_egress_context(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+) -> None:
+    """Video breakdown has a Vision hop; an organization task must reach the leaf carrying the organization identity.
+
+    It first runs several minutes of ffmpeg frame extraction before going out to the network -- a missed
+    classification would only be rejected after the frames are extracted, wasting compute.
+    """
+
+    from novelvideo.task_backend.runners import freezone
+
+    seen: list[TrustedEgressContext | None] = []
+
+    async def breakdown_leaf(
+        *,
+        project_dir,
+        job_id,
+        video_path,
+        dimensions,
+        max_frames,
+        scene_threshold,
+        duration_sec,
+        storyboard_group_size,
+        max_motion_clips,
+        motion_clip_max_sec,
+        music_clip_sec,
+        model,
+        progress,
+        egress_context=None,
+    ):
+        seen.append(egress_context)
+        return {"model": "m", "dimensions": ["storyboard"], "frame_paths": []}
+
+    monkeypatch.setattr(freezone, "get_task_manager", lambda: _TaskManager())
+    monkeypatch.setattr(
+        "novelvideo.freezone.jobs.run_freezone_video_breakdown", breakdown_leaf
+    )
+    monkeypatch.setattr(
+        "novelvideo.freezone.jobs.ensure_freezone_dirs", lambda *_a, **_k: None
+    )
+
+    result = await freezone._run_freezone_video_breakdown_async(
+        _organization_envelope(tmp_path, task_type="freezone_video_breakdown"),
+        _project_context(tmp_path),
+    )
+
+    assert result["job_id"] == "job-1"
+    assert len(seen) == 1
+    assert seen[0] is not None and seen[0].is_organization
+
+
 def test_local_table_is_exactly_the_audited_leaves() -> None:
     """The local table strictly matches the leaves that still do not go out to the network (guardrail b).
 

@@ -21,6 +21,7 @@ import {
   AlertTriangle,
   Boxes,
   ChevronDown,
+  ClockPlus,
   Copy,
   Crop,
   Download,
@@ -40,13 +41,16 @@ import {
   Lightbulb,
   Loader2,
   Maximize2,
+  Scaling,
   Mountain,
   Package,
   Palette,
   PenLine,
+  PersonStanding,
   RefreshCw,
   Rewind,
   RotateCw,
+  ScanSearch,
   Scissors,
   Send,
   Sparkles,
@@ -82,6 +86,7 @@ import {
 import { deriveNodeDropInfo } from "@/stores/assetDropStore";
 
 import {
+  VIDEO_BREAKDOWN_DIMENSIONS,
   NODE_TOOL_TYPES,
   CANVAS_NODE_TYPES,
   VIDEO_BREAKDOWN_DIMENSIONS,
@@ -130,11 +135,23 @@ import { copyImageSourceToClipboard } from "@/commands/image";
 import { resolveImageDisplayUrl } from "@/features/canvas/application/imageData";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { useCanvasStore } from "@/stores/canvasStore";
+import { useFreezoneVideoModels } from "@/features/canvas/hooks/useFreezoneVideoModels";
+import { findSeedance25VideoModel } from "@/features/canvas/nodes/shared/videoModelCapabilities";
 import { openPresetProjectionInMyCanvas } from "@/features/freezone/openPresetProjection";
 import { analyzeVideoStory } from "@/features/canvas/application/videoAnalyzeStory";
 import { separateVideoAudio } from "@/features/canvas/application/videoSeparateAudio";
 import { openHtmlArtifact, readHtmlArtifact, exportHtmlArtifact } from "@/features/html-artifacts/api";
 import { readUrl } from "@/lib/url-params";
+import { DEPTH_MAX_DURATION_SEC } from "@/features/canvas/application/depthCapture/depthMath";
+import {
+  findActiveDepthCaptureNodeId,
+  hasActiveDepthCapture,
+  startDepthCapture,
+} from "@/features/canvas/application/depthCapture/runDepthCapture";
+import {
+  isVideoCropInFlight,
+  requestVideoCropFocus,
+} from "@/features/canvas/application/videoCrop/videoCropInFlight";
 import { sanitizeStoryboardText } from "@/features/canvas/application/storyboardText";
 import { buildGenerationErrorReport } from "@/features/canvas/application/generationErrorReport";
 import { workflowGroupState } from "@/features/canvas/domain/workflowGroupState";
@@ -176,6 +193,7 @@ interface NodeActionToolbarProps {
   onOpenRedraw: (nodeId: string) => void;
   onOpenErase: (nodeId: string) => void;
   onOpenRotate: (nodeId: string) => void;
+  onOpenResize: (nodeId: string) => void;
 }
 
 const toolIconMap: Record<ToolIconKey, typeof Crop> = {
@@ -488,8 +506,23 @@ export const NodeActionToolbar = memo(
     onOpenRedraw,
     onOpenErase,
     onOpenRotate,
+    onOpenResize,
   }: NodeActionToolbarProps) => {
     const { t, i18n } = useTranslation();
+    // When a Radix dropdown closes it returns focus to the trigger button by default; after the "frame crop" item is selected we want
+    // the overlay's crop box to grab focus, so this close must yield. This ref is set to true only at the moment the crop item is selected;
+    // DropdownMenuContent's onCloseAutoFocus calls preventDefault when it reads it, and resets it right after reading
+    // — otherwise closing the dropdown from other entries would also be wrongly blocked from returning focus by default.
+    const cropItemSelectedRef = useRef(false);
+    // While a frame crop is in flight, the toolbar entries that compete with it for isCropMode / the overlay must all be blocked. It used to
+    // silently return, so users who clicked with no response could think it was stuck; now we block and also say "cropping in progress".
+    const guardVideoCropInFlight = (nodeId: string): boolean => {
+      if (!isVideoCropInFlight(nodeId)) return false;
+      // info rather than error: this is not a failure, only a status notice that "cropping, wait for it to finish", the same convention as other
+      // status notices in this file (such as crop canceled). Passing an id makes repeated clicks occupy only one toast.
+      toast.info(t("node.videoNode.crop.busy"), { id: `video-crop-busy-${nodeId}` });
+      return true;
+    };
     const videoAnalyzeCreditCost = useGenerationCreditCost(
       "feature",
       isVideoNode(node) ? "freezone.video_analyze" : null,
@@ -505,6 +538,14 @@ export const NodeActionToolbar = memo(
       (videoAnalyzeBillingRuleMissing
         ? t("common.billingRuleNotConfiguredShort")
         : null);
+    // Clip reshoot is a Seedance 2.5-exclusive capability (the timecodes are consumed by its video edit), so the entry's
+    // availability is decided directly by "whether this project's model catalog has 2.5". The catalog is a module-level shared
+    // store, so subscribing once more here does not send extra requests.
+    const { models: videoModelsForExtend } = useFreezoneVideoModels();
+    const extendModel = useMemo(
+      () => findSeedance25VideoModel(videoModelsForExtend),
+      [videoModelsForExtend],
+    );
     const isImageEdit = isImageEditNode(node);
     // Plain (non-protected) group → eligible for ungroup. Captured up here as a
     // boolean + a plain id while `node` still has its full type: over-broad node
@@ -1138,6 +1179,120 @@ export const NodeActionToolbar = memo(
       [addEdge, addNode, findNodePosition, node.id, requireVideoUrl],
     );
 
+    // Frame crop: enter crop mode and have the overlay's crop box grab focus once. While a crop is uploading (these tens of seconds)
+    // switching away is not allowed: when the result lands it flips isCropMode back to false, and a mid-way detour would fight with that finalization.
+    const handleOpenVideoCrop = useCallback(() => {
+      requireVideoUrl();
+      if (isVideoCropInFlight(node.id)) {
+        throw new Error(t("node.videoNode.crop.busy"));
+      }
+      updateNodeData(node.id, {
+        isCropMode: true,
+        isClipMode: false,
+        isExtendPickMode: false,
+        subtitleEraseMode: null,
+      });
+      requestVideoCropFocus(node.id);
+      setSelectedNode(node.id);
+    }, [node.id, requireVideoUrl, setSelectedNode, t, updateNodeData]);
+
+    // Smart continuation: the entry does not create a node, it just switches the source node into the "cut pre-video" state —
+    // a track below lets you pick only one segment, and only after the user confirms the range does VideoNode create the
+    // downstream node (the range is part of the new node's prompt prefix, so it must exist first).
+    const handleOpenVideoExtend = useCallback(() => {
+      requireVideoUrl();
+      if (!extendModel) {
+        throw new Error(t("nodeToolbar.video.extendRequiresSeedance25"));
+      }
+      if (isVideoCropInFlight(node.id)) {
+        throw new Error(t("node.videoNode.crop.busy"));
+      }
+      updateNodeData(node.id, { isExtendPickMode: true, isCropMode: false });
+      setSelectedNode(node.id);
+    }, [extendModel, node.id, requireVideoUrl, setSelectedNode, t, updateNodeData]);
+
+    // Depth motion capture: depth is computed frame by frame in the browser and the product is a new video, so first land a
+    // processing-state video node downstream (referenceOnly, no generation panel mounted); the task shows progress on the node,
+    // and after finishing it uploads and writes back videoUrl. The duration cap is blocked here first, to avoid creating a node for nothing.
+    const handleStartVideoDepthCapture = useCallback(() => {
+      const url = requireVideoUrl();
+      const videoData = node.data as Record<string, unknown>;
+      const projectId = readUrl().project;
+      if (!projectId) {
+        throw new Error(t("node.videoNode.depthCapture.errors.noProject"));
+      }
+      if (
+        typeof videoData.durationMs === "number" &&
+        videoData.durationMs > DEPTH_MAX_DURATION_SEC * 1000
+      ) {
+        throw new Error(
+          t("node.videoNode.depthCapture.errors.tooLong", {
+            seconds: DEPTH_MAX_DURATION_SEC,
+          }),
+        );
+      }
+      // If the same source video is still being computed, don't start another: the result would be the same and it would only take an extra queue slot.
+      if (findActiveDepthCaptureNodeId(url)) {
+        throw new Error(t("node.videoNode.depthCapture.errors.alreadyRunning"));
+      }
+      if (hasActiveDepthCapture()) {
+        toast.info(t("node.videoNode.depthCapture.queued"));
+      } else if (!("gpu" in navigator)) {
+        toast.info(t("node.videoNode.depthCapture.noWebGpu"));
+      }
+      const label = t("nodeToolbar.video.motionCapture");
+      const sourceName =
+        typeof videoData.displayName === "string" &&
+        videoData.displayName.trim().length > 0
+          ? videoData.displayName.trim()
+          : label;
+      const position = findNodePosition(node.id, 580, 380);
+      const depthNodeId = addNode(
+        CANVAS_NODE_TYPES.video,
+        position,
+        {
+          displayName: `${sourceName}-${label}`,
+          videoUrl: null,
+          previewImageUrl: null,
+          aspectRatio:
+            typeof videoData.aspectRatio === "string"
+              ? videoData.aspectRatio
+              : "16:9",
+          referenceOnly: true,
+          isGenerating: false,
+          depthCapture: {
+            status: "running",
+            progress: 0,
+            sourceVideoUrl: url,
+            errorCode: null,
+            errorDetail: null,
+          },
+        } as unknown as Parameters<typeof addNode>[2],
+      );
+      addEdge(node.id, depthNodeId);
+      onNodesChange([
+        { id: node.id, type: "select", selected: false },
+        { id: depthNodeId, type: "select", selected: true },
+      ]);
+      setSelectedNode(depthNodeId);
+      void startDepthCapture({
+        nodeId: depthNodeId,
+        projectId,
+        sourceVideoUrl: url,
+      });
+      return { nodeId: depthNodeId, started: true };
+    }, [
+      addEdge,
+      addNode,
+      findNodePosition,
+      node.data,
+      node.id,
+      onNodesChange,
+      requireVideoUrl,
+      setSelectedNode,
+      t,
+    ]);
+
     // The following symbols are used by temporarily hidden toolbar buttons; the code is kept, not deleted:
     // - the Sparkles icon is used by the AI image edit button
     // - the Copy icon is used by the copy button
@@ -1342,10 +1497,24 @@ export const NodeActionToolbar = memo(
             .catch((error) => publishNodeActionError(requestId, node.id, action, error));
           return;
         }
-        if (action === "run_video_breakdown") {
+        if (action === "open_video_crop_tool" || action === "open_video_extend_tool") {
           try {
             publishNodeActionAccepted(requestId, node.id, action);
-            const output = handleCreateVideoBreakdown(parameters);
+            if (action === "open_video_crop_tool") handleOpenVideoCrop();
+            else handleOpenVideoExtend();
+            publishNodeActionSuccess(requestId, node.id, action, { openedUiAction: true });
+          } catch (error) {
+            publishNodeActionError(requestId, node.id, action, error);
+          }
+          return;
+        }
+        if (action === "run_video_breakdown" || action === "run_video_depth_capture") {
+          try {
+            publishNodeActionAccepted(requestId, node.id, action);
+            const output =
+              action === "run_video_breakdown"
+                ? handleCreateVideoBreakdown(parameters)
+                : handleStartVideoDepthCapture();
             publishNodeActionSuccess(requestId, node.id, action, output);
           } catch (error) {
             publishNodeActionError(requestId, node.id, action, error);
@@ -1370,6 +1539,9 @@ export const NodeActionToolbar = memo(
       handleDownloadVideo,
       handleMatteImage,
       handleOpenVideoClip,
+      handleOpenVideoCrop,
+      handleOpenVideoExtend,
+      handleStartVideoDepthCapture,
       handleOpenVideoSubtitleErase,
       handleOpenVideoUpscale,
       handleOpenVideoViewer,
@@ -1870,6 +2042,18 @@ export const NodeActionToolbar = memo(
                 }}
               />
             )}
+            {canHandleImage && (
+              <ToolbarIconChip
+                key="image-resize"
+                label={t("resizeEditor.title")}
+                icon={Scaling}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  closeDownloadMenu();
+                  onOpenResize(node.id);
+                }}
+              />
+            )}
             {/* The re-upload button is temporarily hidden (code kept; uncomment when the requirement is restored)
         {!isImageEdit && canReupload && (
           <UiChipButton
@@ -1966,6 +2150,29 @@ export const NodeActionToolbar = memo(
                   );
                 };
 
+                // The implementations of these entries are lifted to the component level (the agent's node actions go through the same code); here we only
+                // turn the thrown reason into a toast.
+                const handleVideoMotionCapture = () => {
+                  if (!hasVideo) return;
+                  try {
+                    handleStartVideoDepthCapture();
+                  } catch (error) {
+                    toast.error(error instanceof Error ? error.message : String(error));
+                  }
+                };
+
+                const handleVideoBreakdown = () => {
+                  if (!hasVideo) return;
+                  handleCreateVideoBreakdown();
+                };
+
+                const handleVideoExtendPick = () => {
+                  if (!hasVideo || !extendModel) return;
+                  if (guardVideoCropInFlight(node.id)) return;
+                  handleOpenVideoExtend();
+                  toast.info(t("nodeToolbar.video.extendPickHint"));
+                };
+
                 const handleVideoAnalyze = () => {
                   if (!hasVideo || !videoUrl || isAnalyzing) {
                     return;
@@ -2049,24 +2256,32 @@ export const NodeActionToolbar = memo(
 
                 return (
                   <>
+                    {/* Smart continuation likewise needs a Seedance 2.5 model that can edit video; when there is no video or
+                        no model it is grayed out, with the reason on the title. Clip reshoot has been taken offline (whole-clip editing
+                        cannot reach a specified range) and will be re-attached after being redone as "crop → segmented edit → splice",
+                        so this is no longer a dropdown but falls back to a single button. */}
                     <UiChipButton
-                      key="video-clip"
-                      className={`${stubButtonClass} ${!hasVideo ? "opacity-50 cursor-not-allowed" : ""}`}
+                      key="video-extend"
+                      className={`${stubButtonClass} ${
+                        !hasVideo || !extendModel
+                          ? "opacity-50 cursor-not-allowed"
+                          : ""
+                      }`}
                       title={
                         !hasVideo
                           ? t("nodeToolbar.video.requiresVideo")
-                          : undefined
+                          : !extendModel
+                            ? t("nodeToolbar.video.extendRequiresSeedance25")
+                            : undefined
                       }
                       onClick={(event) => {
                         event.stopPropagation();
-                        if (!hasVideo) return;
-                        updateNodeData(node.id, {
-                          isClipMode: !videoData.isClipMode,
-                        });
+                        if (!hasVideo || !extendModel) return;
+                        handleVideoExtendPick();
                       }}
                     >
-                      <Scissors className="h-3.5 w-3.5" />
-                      {t("nodeToolbar.video.clip")}
+                      <ClockPlus className="h-3.5 w-3.5" />
+                      {t("nodeToolbar.video.extend")}
                     </UiChipButton>
                     <UiChipButton
                       key="video-hd"
@@ -2118,6 +2333,97 @@ export const NodeActionToolbar = memo(
                         }
                       />
                     </UiChipButton>
+                    {/* The breakdown-family tools share one dropdown. "Clip trim" is the formerly standalone "Edit"
+                        button (isClipMode); frame crop / depth motion capture are both wired to real
+                        logic; handleVideoStub only logs for the two subtitle-removal entries when there is no video,
+                        and does not mean the feature itself is a placeholder. */}
+                    <DropdownMenu
+                      onOpenChange={(open) => {
+                        if (open) closeDownloadMenu();
+                      }}
+                    >
+                      <DropdownMenuTrigger asChild>
+                        <UiChipButton
+                          key="video-frame-analysis"
+                          className={`${stubButtonClass} ${!hasVideo ? "opacity-50 cursor-not-allowed" : ""}`}
+                          title={
+                            !hasVideo
+                              ? t("nodeToolbar.video.requiresVideo")
+                              : undefined
+                          }
+                          onClick={(event) => event.stopPropagation()}
+                        >
+                          <ScanSearch className="h-3.5 w-3.5" />
+                          {t("nodeToolbar.video.frameAnalysis")}
+                          <ChevronDown className="h-3 w-3" />
+                        </UiChipButton>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent
+                        align="start"
+                        sideOffset={6}
+                        className={`${TOOLBAR_MENU_CONTENT_CLASS} min-w-[180px]`}
+                        onClick={(event) => event.stopPropagation()}
+                        onCloseAutoFocus={(event) => {
+                          // This close happened because "frame crop" was selected: let the overlay's crop box grab
+                          // focus, and don't let Radix return focus to the button that triggered this dropdown.
+                          if (!cropItemSelectedRef.current) return;
+                          cropItemSelectedRef.current = false;
+                          event.preventDefault();
+                        }}
+                      >
+                        <DropdownMenuItem
+                          className={TOOLBAR_MENU_ITEM_CLASS}
+                          disabled={!hasVideo}
+                          onSelect={() => handleVideoBreakdown()}
+                        >
+                          <ScanSearch className="h-4 w-4" />
+                          {t("nodeToolbar.video.frameAnalysis")}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className={TOOLBAR_MENU_ITEM_CLASS}
+                          disabled={!hasVideo}
+                          onSelect={() => {
+                            // Switching away is not allowed during the tens of seconds a crop is uploading: when the result lands it flips
+                            // isCropMode back to false, and a mid-way detour would fight with that finalization.
+                            if (guardVideoCropInFlight(node.id)) return;
+                            updateNodeData(node.id, {
+                              isClipMode: !videoData.isClipMode,
+                              isCropMode: false,
+                            });
+                          }}
+                        >
+                          <Scissors className="h-4 w-4" />
+                          {t("nodeToolbar.video.segmentExtract")}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className={TOOLBAR_MENU_ITEM_CLASS}
+                          disabled={!hasVideo}
+                          onSelect={() => {
+                            if (guardVideoCropInFlight(node.id)) return;
+                            cropItemSelectedRef.current = true;
+                            // Only "entering" crop mode registers a one-time focus grab (in
+                            // handleOpenVideoCrop); on exit the overlay is no longer rendered at all,
+                            // and a registration would be consumed by no one, needlessly occupying the registry.
+                            if (videoData.isCropMode) {
+                              updateNodeData(node.id, { isCropMode: false });
+                            } else {
+                              handleOpenVideoCrop();
+                            }
+                          }}
+                        >
+                          <Crop className="h-4 w-4" />
+                          {t("nodeToolbar.video.frameCrop")}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className={TOOLBAR_MENU_ITEM_CLASS}
+                          disabled={!hasVideo}
+                          onSelect={handleVideoMotionCapture}
+                        >
+                          <PersonStanding className="h-4 w-4" />
+                          {t("nodeToolbar.video.motionCapture")}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                     <DropdownMenu
                       onOpenChange={(open) => {
                         if (open) closeDownloadMenu();
@@ -2148,10 +2454,12 @@ export const NodeActionToolbar = memo(
                               handleVideoStub("subtitle-smart-erase");
                               return;
                             }
+                            if (guardVideoCropInFlight(node.id)) return;
                             updateNodeData(node.id, {
                               subtitleEraseMode: 'smart',
                               subtitleEraseBox: null,
                               isClipMode: false,
+                              isCropMode: false,
                             });
                             setSelectedNode(node.id);
                           }}
@@ -2166,10 +2474,12 @@ export const NodeActionToolbar = memo(
                               handleVideoStub("subtitle-box-erase");
                               return;
                             }
+                            if (guardVideoCropInFlight(node.id)) return;
                             updateNodeData(node.id, {
                               subtitleEraseMode: 'box',
                               subtitleEraseBox: null,
                               isClipMode: false,
+                              isCropMode: false,
                             });
                             setSelectedNode(node.id);
                           }}
@@ -2653,6 +2963,7 @@ export const NodeActionToolbar = memo(
           </UiPanel>
           </ZoomScaledToolbar>
         </ReactFlowNodeToolbar>
+
       </>
     );
   },

@@ -12,7 +12,12 @@
 // Why build our own Worker: inference (especially the WASM fallback path), if run on the main thread, would freeze the whole canvas.
 // Putting the whole pipeline in a worker means the main thread is never blocked, whether or not WebGPU is available.
 
-import { pipeline } from "@huggingface/transformers";
+import { env, pipeline } from "@huggingface/transformers";
+import {
+  applyBrowserModelSource,
+  type BrowserModelSourceConfig,
+  type TransformersEnvLike,
+} from "./browserModelSource";
 
 // Matting models (all under permissive commercial licenses, switchable at any time):
 //   - "Xenova/modnet"            Apache-2.0, ~6.6MB (q8)/13MB (fp16), portrait/character matting, the smallest
@@ -20,9 +25,10 @@ import { pipeline } from "@huggingface/transformers";
 // This project's canvas is mainly character portraits / storyboard figures, so MODNet is the default (a download far smaller than the old imgly ~45MB).
 const MATTE_MODEL = "Xenova/modnet";
 
+// modelSource: the source of the model and wasm (see browserModelSource.ts); all null means use the library default source.
 type InboundMessage =
-  | { type: "preload"; id: number }
-  | { type: "matte"; id: number; blob: Blob };
+  | { type: "preload"; id: number; modelSource: BrowserModelSourceConfig }
+  | { type: "matte"; id: number; blob: Blob; modelSource: BrowserModelSourceConfig };
 
 type OutboundMessage =
   | { type: "ready"; id: number }
@@ -70,9 +76,10 @@ type MatteImage = { toBlob(): Promise<Blob> };
 type RemoveBackground = (input: string) => Promise<MatteImage>;
 let removerPromise: Promise<RemoveBackground> | null = null;
 
-function getRemover(): Promise<RemoveBackground> {
+function getRemover(modelSource: BrowserModelSourceConfig): Promise<RemoveBackground> {
   if (!removerPromise) {
     removerPromise = (async () => {
+      applyBrowserModelSource(env as unknown as TransformersEnvLike, modelSource, ctx.navigator);
       const useGpu = await detectGpu();
       const remover = await pipeline("background-removal", MATTE_MODEL, {
         device: useGpu ? "webgpu" : "wasm",
@@ -89,11 +96,11 @@ ctx.onmessage = async (event: MessageEvent<InboundMessage>) => {
   const message = event.data;
   try {
     if (message.type === "preload") {
-      await getRemover();
+      await getRemover(message.modelSource);
       ctx.postMessage({ type: "ready", id: message.id } satisfies OutboundMessage);
       return;
     }
-    const remover = await getRemover();
+    const remover = await getRemover(message.modelSource);
     // The background-removal pipeline returns a single RawImage for a single input (the matte already composited into the alpha channel).
     const url = URL.createObjectURL(message.blob);
     try {
@@ -112,7 +119,6 @@ ctx.onmessage = async (event: MessageEvent<InboundMessage>) => {
   }
 };
 
-// Model weights are loaded from the Hugging Face Hub and the ort wasm runtime from jsDelivr (both
-// the transformers.js default behavior). In production the edge worker's CSP must allow these two origins
-// (see connect-src / script-src of worker/index.ts). If switching to self-hosted same-origin, set
-// env.allowRemoteModels=false / env.localModelPath / env.backends.onnx.wasm.wasmPaths.
+// The sources of model weights and the ort wasm are defined in ./browserModelSource.ts: if the backend configures a
+// self-hosted prefix or a public mirror, they are pulled from there; otherwise the transformers.js default behavior applies
+// (weights from the Hugging Face Hub, wasm from jsDelivr).

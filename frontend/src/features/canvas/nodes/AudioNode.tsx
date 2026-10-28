@@ -19,6 +19,7 @@ import { toast } from 'sonner';
 
 import {
   CANVAS_NODE_TYPES,
+  hasInlineMediaReplaceButton,
   type AudioNodeData,
   type AudioVoiceRef,
 } from '@/features/canvas/domain/canvasNodes';
@@ -33,6 +34,10 @@ import { AddNodeToChatButton } from '@/features/canvas/ui/AddNodeToChatButton';
 import { NodeResizeHandle } from '@/features/canvas/ui/NodeResizeHandle';
 import { NodeGenerationOverlay } from '@/features/canvas/ui/NodeGenerationOverlay';
 import { AudioWaveformPlayer } from '@/features/canvas/ui/AudioWaveformPlayer';
+import { NodeMediaReplaceButton } from '@/features/canvas/ui/NodeMediaReplaceButton';
+import {
+  useAssetCommitDragById,
+} from '@/features/canvas/ui/useAssetCommitDrag';
 import { setNodeMediaActive } from '@/features/canvas/application/canvasLod';
 import { useNodeGenerationTaskState } from '@/features/canvas/application/useNodeGenerationTaskState';
 import { CANVAS_NODE_PANEL_SURFACE_CLASS, canvasNodeFrameClass } from '@/features/canvas/ui/nodeFrameStyles';
@@ -210,6 +215,11 @@ export const AudioNode = memo(({ id, data, selected, width, height }: AudioNodeP
   );
   const currentVoiceRef: AudioVoiceRef = data.voiceRef ?? { scope: 'project_narrator' };
   const speechMode = data.speechMode ?? 'clone';
+
+  // The replace button inside the card doubles as "press and drag to the left asset library" (the gesture of the former AssetCommitHandle).
+  const { canCommit: canCommitAsset, startDrag: startAssetCommitDrag } =
+    useAssetCommitDragById(id);
+
   // Upload a local audio file to the backend freezone — reuses the generic upload endpoint (the backend does not distinguish mime).
   // After a successful upload, audioUrl/sourceFileName land in the store, and AudioOperationsPanel
   // automatically picks this audio up for follow-up processing.
@@ -392,7 +402,9 @@ export const AudioNode = memo(({ id, data, selected, width, height }: AudioNodeP
       />
 
       {/* The audio node is no longer an upload entry (empty state / replace both removed): upload audio via the "Upload node"
-          or drag the audio file into the canvas; external handoff still goes through canvasEventBus 'audio-node/external-file'. */}
+          or drag the audio file into the canvas; external handoff still goes through canvasEventBus 'audio-node/external-file'.
+          The one exception is allowLocalReplace (the BGM reference produced by frame-by-frame breakdown) - that is a reference
+          asset, and swapping in your own track is normal usage, see the replace button at the top-right below. */}
 
       <div
         className={`relative flex h-full w-full items-center justify-center ${audioSource ? 'overflow-hidden' : 'overflow-visible'} rounded-[var(--node-radius)] border ${CANVAS_NODE_PANEL_SURFACE_CLASS} transition-colors ${cardToneClass}`}
@@ -440,6 +452,22 @@ export const AudioNode = memo(({ id, data, selected, width, height }: AudioNodeP
             <span className="text-[12px]">{t('node.audioNode.empty')}</span>
           </div>
         )}
+
+        {/* The "replace" entry at the top-right inside the card: click to swap in a local file, press and drag to drop into the left asset library.
+            Only for cards with allowLocalReplace (the BGM reference produced by frame-by-frame breakdown) - other audio nodes
+            are not upload entries to begin with (see above); their replace gesture goes through the AssetCommitHandle floating outside the node,
+            see SelectedNodeOverlay. */}
+        {canCommitAsset &&
+          !isGenerating &&
+          hasInlineMediaReplaceButton(data) && (
+            <NodeMediaReplaceButton
+              accept="audio/*"
+              busy={Boolean(data.isUploading)}
+              title={t('node.audio.replaceAudioTitle')}
+              onPick={processFile}
+              onCommitDragStart={startAssetCommitDrag}
+            />
+          )}
       </div>
 
       {/* Once the node has audio content (manual upload or TTS synthesis), the bottom operations area is no longer shown —

@@ -33,6 +33,10 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  ChannelModelInput,
+  ChannelModelsButton,
+} from "@/components/settings/channel-model-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -46,6 +50,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { safeLocalStorageSet } from "@/lib/localStorageQuota";
 import { cn } from "@/lib/utils";
+import { mediaStorageErrorMessage } from "@/lib/api-errors";
 import {
   FEATURE_MODEL_GROUPS,
   FEATURE_MODEL_PRODUCT_GROUPS,
@@ -62,6 +67,7 @@ import {
   useEnableCustom,
   useEnableHybrid,
   useEnableBrainClaw,
+  useSaveAgentLlmConfig,
   useSaveOfficialConfig,
   useSaveBrainClawConfig,
   useSetCustomLlmMode,
@@ -75,6 +81,7 @@ import {
   useSaveMediaRelayConfig,
   useSyncProviderChannel,
   type GatewayMode,
+  type AgentLlmMode,
   type CustomLlmMode,
   type ModelGatewayConfig,
   type CustomChannelInput,
@@ -279,29 +286,33 @@ async function getRequestErrorMessage(
   error: unknown,
   fallback: string,
 ): Promise<string> {
-  const response = (error as { response?: Response } | null)?.response;
-  if (response) {
-    const body = await response
-      .clone()
-      .json()
-      .catch(() => null);
-    if (body && typeof body === "object") {
-      const data = body as {
-        detail?: unknown;
-        error?: unknown;
-        message?: unknown;
-      };
-      for (const value of [data.detail, data.error, data.message]) {
-        if (typeof value === "string" && value.trim()) return value.trim();
+  const requestError = error as {
+    data?: unknown;
+    response?: Response;
+    message?: unknown;
+  } | null;
+  // Ky 2 consumes the response body and exposes the parsed payload as error.data.
+  const data = requestError?.data;
+  if (typeof data === "string" && data.trim()) return data.trim();
+  const dataMessage = getResponseErrorMessage(data, "");
+  if (dataMessage) return dataMessage;
+
+  const response = requestError?.response;
+  if (response && !response.bodyUsed) {
+    try {
+      const text = (await response.clone().text()).trim();
+      if (text) {
+        try {
+          return getResponseErrorMessage(JSON.parse(text), text);
+        } catch {
+          return text;
+        }
       }
+    } catch {
+      // Cloning can throw synchronously; error reporting must still reach the toast.
     }
-    const text = await response
-      .clone()
-      .text()
-      .catch(() => "");
-    if (text.trim()) return text.trim();
   }
-  const message = (error as { message?: unknown } | null)?.message;
+  const message = requestError?.message;
   return typeof message === "string" && message.trim()
     ? message.trim()
     : fallback;
@@ -514,6 +525,8 @@ function ModelConfigSection({ open }: { open: boolean }) {
         </div>
       ) : null}
 
+      <AgentLlmPanel config={config} loading={loading} />
+
       <Tabs
         className="mt-4"
         value={mode}
@@ -666,6 +679,194 @@ function ModelConfigSection({ open }: { open: boolean }) {
         </>
       ) : null}
     </section>
+  );
+}
+
+function AgentLlmPanel({
+  config,
+  loading,
+}: {
+  config: ModelGatewayConfig | undefined;
+  loading: boolean;
+}) {
+  const { t } = useTranslation();
+  const saveAgent = useSaveAgentLlmConfig();
+  const saved = config?.agent;
+  const [mode, setMode] = useState<AgentLlmMode>(saved?.mode ?? "inherit");
+  const [baseUrl, setBaseUrl] = useState(saved?.baseUrl ?? "");
+  const [apiKey, setApiKey] = useState("");
+  const [model, setModel] = useState(saved?.model ?? "");
+  const [revealKey, setRevealKey] = useState(false);
+
+  useEffect(() => {
+    if (!saved) return;
+    setMode(saved.mode);
+    setBaseUrl(saved.baseUrl);
+    setModel(saved.model);
+  }, [saved]);
+
+  const endpointChanged = Boolean(
+    saved?.baseUrl && baseUrl.trim() && baseUrl.trim().replace(/\/$/, "") !== saved.baseUrl.replace(/\/$/, ""),
+  );
+  const thirdPartyReady = Boolean(
+    baseUrl.trim() &&
+      model.trim() &&
+      (apiKey.trim() || (saved?.apiKeyPreview && !endpointChanged)),
+  );
+
+  const handleSave = async () => {
+    try {
+      const response = await saveAgent.mutateAsync(
+        mode === "inherit"
+          ? { mode }
+          : {
+              mode,
+              baseUrl: baseUrl.trim(),
+              model: model.trim(),
+              ...(apiKey.trim() ? { apiKey: apiKey.trim() } : {}),
+            },
+      );
+      if (!response.ok) {
+        toast.error(
+          getResponseErrorMessage(response, t("settings.modelConfig.requestFailed")),
+        );
+        return;
+      }
+      setApiKey("");
+      setRevealKey(false);
+      toast.success(t("settings.modelConfig.agent.saved"));
+    } catch (error) {
+      toast.error(
+        await getRequestErrorMessage(error, t("settings.modelConfig.requestFailed")),
+      );
+    }
+  };
+
+  return (
+    <div className="mt-4 rounded-md border border-border/70 px-3 py-3">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h4 className="text-xs font-medium text-foreground">
+            {t("settings.modelConfig.agent.title")}
+          </h4>
+          <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+            {t("settings.modelConfig.agent.description")}
+          </p>
+        </div>
+        <Tabs value={mode} onValueChange={(value) => setMode(value as AgentLlmMode)}>
+          <TabsList>
+            <TabsTrigger value="inherit">
+              {t("settings.modelConfig.agent.inherit")}
+            </TabsTrigger>
+            <TabsTrigger value="third_party">
+              {t("settings.modelConfig.agent.thirdParty")}
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
+
+      {mode === "third_party" ? (
+        <div className="mt-3 space-y-2.5">
+          <div className="grid grid-cols-[120px_1fr] items-center gap-3">
+            <Label className="justify-start text-[11px] font-normal tracking-wide text-muted-foreground uppercase">
+              {t("settings.modelConfig.fields.gatewayBaseUrl")}
+            </Label>
+            <Input
+              name="agent-third-party-base-url"
+              value={baseUrl}
+              onChange={(event) => setBaseUrl(event.target.value)}
+              placeholder="https://api.example.com/v1"
+              autoCapitalize="none"
+              spellCheck={false}
+              className="h-9"
+            />
+          </div>
+          <div className="grid grid-cols-[120px_1fr] items-center gap-3">
+            <Label className="justify-start text-[11px] font-normal tracking-wide text-muted-foreground uppercase">
+              {t("settings.modelConfig.fields.apiKey")}
+            </Label>
+            <div className="relative">
+              <Input
+                name="agent-third-party-api-key"
+                autoComplete="new-password"
+                data-1p-ignore="true"
+                data-lpignore="true"
+                type={revealKey ? "text" : "password"}
+                value={apiKey}
+                onChange={(event) => {
+                  setApiKey(event.target.value);
+                  if (!event.target.value) setRevealKey(false);
+                }}
+                placeholder={
+                  saved?.apiKeyPreview
+                    ? t("settings.secretSavedPlaceholder", {
+                        preview: saved.apiKeyPreview,
+                      })
+                    : "sk-..."
+                }
+                autoCapitalize="none"
+                spellCheck={false}
+                className={cn(
+                  "h-9",
+                  apiKey ? "pr-9" : saved?.apiKeyPreview ? "pr-16" : "",
+                )}
+              />
+              {apiKey ? (
+                <button
+                  type="button"
+                  onClick={() => setRevealKey((value) => !value)}
+                  aria-label={
+                    revealKey
+                      ? t("settings.mediaStorage.hideSecret")
+                      : t("settings.mediaStorage.showSecret")
+                  }
+                  className="absolute top-1/2 right-2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  {revealKey ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                </button>
+              ) : saved?.apiKeyPreview ? (
+                <span className="absolute top-1/2 right-2 -translate-y-1/2 rounded bg-emerald-400/10 px-1.5 py-0.5 text-[10px] font-medium text-emerald-400">
+                  {t("settings.secretSavedBadge")}
+                </span>
+              ) : null}
+            </div>
+          </div>
+          <div className="grid grid-cols-[120px_1fr] items-center gap-3">
+            <Label className="justify-start text-[11px] font-normal tracking-wide text-muted-foreground uppercase">
+              {t("settings.modelConfig.agent.model")}
+            </Label>
+            <Input
+              name="agent-third-party-model"
+              value={model}
+              onChange={(event) => setModel(event.target.value)}
+              placeholder="gpt-5.2-codex"
+              autoCapitalize="none"
+              spellCheck={false}
+              className="h-9"
+            />
+          </div>
+          <p className="text-[11px] leading-relaxed text-muted-foreground">
+            {t("settings.modelConfig.agent.thirdPartyHint")}
+          </p>
+        </div>
+      ) : null}
+
+      <div className="mt-3 flex justify-end">
+        <Button
+          type="button"
+          size="sm"
+          onClick={handleSave}
+          disabled={
+            loading ||
+            saveAgent.isPending ||
+            (mode === "third_party" && !thirdPartyReady)
+          }
+        >
+          {saveAgent.isPending ? <Loader2 className="size-3.5 animate-spin" /> : null}
+          {t("settings.modelConfig.agent.save")}
+        </Button>
+      </div>
+    </div>
   );
 }
 
@@ -3286,11 +3487,12 @@ function EmbeddingModelBlock({
               ))}
             </SelectContent>
           </Select>
-          <Input
+          <ChannelModelInput
+            provider={selectedProvider}
+            newApiBaseUrl={newApiBaseUrl}
+            database={database}
             value={upstreamModel}
-            onChange={(event) =>
-              updateLocal({ upstreamModel: event.target.value })
-            }
+            onChange={(model) => updateLocal({ upstreamModel: model })}
             placeholder={t(
               "settings.modelConfig.embeddingModel.upstreamModelPlaceholder",
             )}
@@ -3823,9 +4025,12 @@ function MediaModelsBlock({
                   {t("settings.modelConfig.mediaModels.officialOnly")}
                 </div>
               ) : (
-                <Input
+                <ChannelModelInput
+                  provider={value}
+                  newApiBaseUrl={newApiBaseUrl}
+                  database={database}
                   value={entry?.upstreamModel ?? ""}
-                  onChange={(event) =>
+                  onChange={(model) =>
                     setLocalMediaModels((prev) => ({
                       ...prev,
                       [row.model]: {
@@ -3834,7 +4039,7 @@ function MediaModelsBlock({
                           prev[row.model]?.provider ??
                           configuredProviders[0] ??
                           "ali",
-                        upstreamModel: event.target.value,
+                        upstreamModel: model,
                       },
                     }))
                   }
@@ -3912,6 +4117,8 @@ function MediaModelsBlock({
             <LocalMediaModelEditor
               key={editingModel ?? "__new_media_model__"}
               originalModel={editingModel}
+              newApiBaseUrl={newApiBaseUrl}
+              database={database}
               entry={editingModel ? mediaModels[editingModel] : undefined}
               configuredProviders={configuredProviders}
               comfyOnly={comfyOnly}
@@ -3973,6 +4180,8 @@ function MediaModelsBlock({
 }
 
 function LocalMediaModelEditor({
+  newApiBaseUrl,
+  database,
   originalModel,
   entry,
   configuredProviders,
@@ -3980,6 +4189,8 @@ function LocalMediaModelEditor({
   onCancel,
   onSave,
 }: {
+  newApiBaseUrl: string;
+  database: NewApiDatabaseConfigInput | undefined;
   originalModel: string | null;
   entry?: MediaModelEntry;
   configuredProviders: readonly FeatureModelProvider[];
@@ -4177,12 +4388,20 @@ function LocalMediaModelEditor({
           </Select>
         </div>
         <div className="col-span-2">
-          <FieldRow
-            label={t("settings.modelConfig.mediaModels.colUpstreamModel")}
-            value={upstreamModel}
-            onChange={setUpstreamModel}
-            placeholder={model || "upstream-model-name"}
-          />
+          <div className="grid grid-cols-[120px_1fr] items-center gap-3">
+            <Label className="justify-start text-[11px] font-normal text-muted-foreground">
+              {t("settings.modelConfig.mediaModels.colUpstreamModel")}
+            </Label>
+            <ChannelModelInput
+              provider={provider}
+              newApiBaseUrl={newApiBaseUrl}
+              database={database}
+              value={upstreamModel}
+              onChange={setUpstreamModel}
+              placeholder={model || "upstream-model-name"}
+              className="h-9"
+            />
+          </div>
         </div>
         <div className="grid grid-cols-[120px_1fr] items-center gap-3">
           <Label className="justify-start text-[11px] font-normal text-muted-foreground">
@@ -5016,7 +5235,21 @@ function ProviderChannelRow({
             className="mt-1.5 h-9 rounded-md border-input/80 focus-visible:border-ring/70 focus-visible:ring-1 focus-visible:ring-ring/30"
           />
         </div>
-        <div className="flex items-center justify-end gap-1.5 sm:self-end">
+        <div className="flex flex-wrap items-center justify-end gap-1.5 sm:self-end">
+          {!isComfyUI ? (
+            <ChannelModelsButton
+              provider={provider}
+              newApiBaseUrl={newApiBaseUrl}
+              database={database}
+              disabled={
+                !savedChannel?.configured ||
+                syncProviderChannel.isPending ||
+                Boolean(upstreamKeyValue.trim()) ||
+                (channel?.baseUrl ?? "").trim().replace(/\/$/, "") !==
+                  (savedChannel?.baseUrl ?? "").replace(/\/$/, "")
+              }
+            />
+          ) : null}
           {!isComfyUI ? (
             <Button
               type="button"
@@ -5483,9 +5716,12 @@ function FeatureModelCapabilitySection({
             ))}
           </SelectContent>
         </Select>
-        <Input
+        <ChannelModelInput
+          provider={bulkProvider}
+          newApiBaseUrl={newApiBaseUrl}
+          database={database}
           value={bulkModel}
-          onChange={(event) => setBulkModel(event.target.value)}
+          onChange={setBulkModel}
           placeholder={t(
             "settings.modelConfig.featureModels.bulkModelPlaceholder",
           )}
@@ -5714,12 +5950,15 @@ function FeatureModelRow({
         </SelectContent>
       </Select>
       <div className="flex items-center gap-2">
-        <Input
+        <ChannelModelInput
+          provider={provider ?? ""}
+          newApiBaseUrl={newApiBaseUrl}
+          database={database}
           value={model}
-          onChange={(e) =>
+          onChange={(selectedModel) =>
             updateFeatureModel(featureId, {
               provider: provider ?? fallbackProvider,
-              model: e.target.value,
+              model: selectedModel,
             })
           }
           placeholder={t(
@@ -5806,6 +6045,8 @@ function MediaStorageSection() {
   const configuredProvider = hasConfiguredMediaRelay
     ? mediaRelay?.provider
     : provider;
+  const localizeStorageError = (message: string) =>
+    mediaStorageErrorMessage(message, t) ?? message;
   const handleSave = async () => {
     const ttl = Number(ttlSeconds.trim() || "0");
     if (!Number.isFinite(ttl) || ttl <= 0) {
@@ -5841,7 +6082,7 @@ function MediaStorageSection() {
             },
       );
       if (!res.ok) {
-        toast.error(res.error);
+        toast.error(localizeStorageError(res.error));
         return;
       }
       if (provider === "cloudinary") {
@@ -5856,9 +6097,11 @@ function MediaStorageSection() {
       );
     } catch (error) {
       toast.error(
-        await getRequestErrorMessage(
-          error,
-          t("settings.mediaStorage.saveFailed"),
+        localizeStorageError(
+          await getRequestErrorMessage(
+            error,
+            t("settings.mediaStorage.saveFailed"),
+          ),
         ),
       );
     }

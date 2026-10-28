@@ -241,6 +241,17 @@ def _isolate_settings_db(monkeypatch: pytest.MonkeyPatch, tmp_path):
         monkeypatch.delenv(key, raising=False)
 
 
+@pytest.fixture
+def storage_probe(monkeypatch):
+    from novelvideo.storage import media_preflight
+
+    calls = []
+    monkeypatch.setattr(
+        media_preflight, "verify_media_storage", lambda settings, **kwargs: calls.append(settings)
+    )
+    return calls
+
+
 def test_settings_db_retries_transient_sqlite_io_error(monkeypatch, tmp_path):
     _isolate_settings_db(monkeypatch, tmp_path)
     real_connect = gateway_settings.sqlite3.connect
@@ -2892,6 +2903,102 @@ def test_clear_comfyui_removes_channel_and_media_models(monkeypatch, tmp_path):
     assert set(get_newapi_media_model_mappings()) == {"seedance-2.0"}
 
 
+@pytest.mark.parametrize("provider", ["claude", "anthropic"])
+@respx.mock
+def test_anthropic_provider_sync_without_saved_channel_type(
+    monkeypatch, tmp_path, provider
+):
+    """Canonical NewAPI provider names work before local presets are saved."""
+    _isolate_settings_db(monkeypatch, tmp_path)
+    monkeypatch.setenv("NEWAPI_PROVISIONER_ENABLED", "true")
+    cfg = NewApiProvisionerConfig(
+        admin_base_url="http://new-api:3000",
+        sql_dsn="local",
+        sqlite_path="/tmp/one-api.db",
+        admin_username="root",
+        init_timeout_ms=1000,
+        relay_token_name="dramaclaw-ce-runtime",
+    )
+    admin = AdminToken(1, "root", "admin-secret", False)
+    monkeypatch.setattr(model_gateway, "get_provisioner_config", lambda *_a, **_kw: cfg)
+    monkeypatch.setattr(model_gateway, "ensure_admin_access_token", lambda _cfg: admin)
+    channel_name = f"DC-{provider}"
+    respx.get("http://new-api:3000/api/channel/").mock(
+        return_value=Response(
+            200,
+            json={
+                "success": True,
+                "data": {"items": [{"id": 2, "name": channel_name, "type": 14}]},
+            },
+        )
+    )
+    respx.get("http://new-api:3000/api/channel/2").mock(
+        return_value=Response(
+            200,
+            json={
+                "success": True,
+                "data": {
+                    "id": 2,
+                    "name": channel_name,
+                    "type": 14,
+                    "key": "sk-old-upstream",
+                    "base_url": "https://old.example",
+                    "models": "op-5-5",
+                    "model_mapping": '{"op-5-5":"op-5-5"}',
+                    "group": ",default,",
+                    "priority": 2,
+                    "test_model": "op-5-5",
+                },
+            },
+        )
+    )
+    update = respx.put("http://new-api:3000/api/channel/").mock(
+        return_value=Response(200, json={"success": True})
+    )
+    app = FastAPI()
+    app.include_router(model_gateway.router)
+    client = TestClient(app)
+    assert get_newapi_provider_channels() == []
+
+    for _ in range(2):
+        response = client.post(
+            "/model-gateway/custom/newapi/provider-channel/sync",
+            json={
+                "newApiBaseUrl": "http://new-api:3000",
+                "provider": provider,
+                "upstreamKey": "sk-new-upstream",
+                "baseUrl": "https://relay.example",
+            },
+        )
+        assert response.status_code == 200, response.text
+        assert response.json()["ok"] is True
+        assert response.json()["data"]["channelId"] == 2
+        sent = json.loads(update.calls.last.request.content)
+        assert sent["name"] == channel_name
+        assert sent["type"] == 14
+        assert sent["key"] == "sk-new-upstream"
+        assert sent["models"] == "op-5-5"
+        assert json.loads(sent["model_mapping"]) == {"op-5-5": "op-5-5"}
+        assert sent["priority"] == 2
+        assert "status" not in sent
+        saved = get_newapi_provider_channels()
+        assert saved[0]["provider"] == provider
+        assert saved[0]["upstreamKey"] == "sk-new-upstream"
+        assert saved[0]["baseUrl"] == "https://relay.example"
+
+
+@pytest.mark.parametrize("provider", ["claude", "anthropic"])
+def test_anthropic_channel_creation_without_explicit_type(provider):
+    payload = build_channel_payload(
+        provider=provider,
+        upstream_key="sk-new-upstream",
+        model_mapping={"op-5-5": "op-5-5"},
+    )
+    assert payload["channel"]["name"] == f"DC-{provider}"
+    assert payload["channel"]["type"] == 14
+    assert payload["channel"]["base_url"] == "https://api.anthropic.com"
+
+
 def test_custom_newapi_provider_channel_sync_updates_newapi_and_local_config(
     monkeypatch,
     tmp_path,
@@ -3816,7 +3923,7 @@ def test_custom_newapi_channels_batch_reports_partial_failure(monkeypatch, tmp_p
     assert body["data"]["results"][1]["httpStatus"] == 400
 
 
-def test_media_relay_config_route_persists_and_masks_oss_keys(monkeypatch, tmp_path):
+def test_media_relay_config_route_persists_and_masks_oss_keys(monkeypatch, tmp_path, storage_probe):
     _isolate_settings_db(monkeypatch, tmp_path)
     monkeypatch.setenv("NEWAPI_PROVISIONER_ENABLED", "true")
     monkeypatch.setattr(model_gateway.app_config, "MEDIA_RELAY_PROVIDER", "aliyun_oss")
@@ -3852,10 +3959,12 @@ def test_media_relay_config_route_persists_and_masks_oss_keys(monkeypatch, tmp_p
     assert data["accessKeySecretPreview"] == "SK-u...cret"
     assert "LTAI-user-secret" not in response.text
     assert "SK-user-secret" not in response.text
+    assert storage_probe[0].access_key_id == "LTAI-user-secret"
+    assert storage_probe[0].bucket == "user-relay"
 
 
 def test_media_relay_config_route_persists_and_masks_cloudinary_keys(
-    monkeypatch, tmp_path
+    monkeypatch, tmp_path, storage_probe
 ):
     _isolate_settings_db(monkeypatch, tmp_path)
     monkeypatch.setenv("NEWAPI_PROVISIONER_ENABLED", "true")
@@ -3898,10 +4007,11 @@ def test_media_relay_config_route_persists_and_masks_cloudinary_keys(
     assert data["configured"] is True
     assert "cloudinary-api-key-secret" not in response.text
     assert "cloudinary-api-secret" not in response.text
+    assert storage_probe[0].cloud_name == "demo-cloud"
 
 
 def test_media_relay_config_route_supports_partial_credential_updates(
-    monkeypatch, tmp_path
+    monkeypatch, tmp_path, storage_probe
 ):
     _isolate_settings_db(monkeypatch, tmp_path)
     monkeypatch.setenv("NEWAPI_PROVISIONER_ENABLED", "true")
@@ -3954,10 +4064,13 @@ def test_media_relay_config_route_supports_partial_credential_updates(
     assert data["configured"] is True
     assert "LTAI-new-secret" not in updated.text
     assert "SK-old-secret" not in updated.text
+    assert storage_probe[-1].access_key_id == "LTAI-new-secret"
+    assert storage_probe[-1].access_key_secret == "SK-old-secret"
+    assert storage_probe[-1].endpoint == "oss-cn-beijing.aliyuncs.com"
 
 
 def test_media_relay_config_route_preserves_inactive_provider_credentials(
-    monkeypatch, tmp_path
+    monkeypatch, tmp_path, storage_probe
 ):
     _isolate_settings_db(monkeypatch, tmp_path)
     monkeypatch.setenv("NEWAPI_PROVISIONER_ENABLED", "true")
@@ -4029,6 +4142,35 @@ def test_media_relay_config_route_preserves_inactive_provider_credentials(
     assert switched_data["configured"] is True
     assert switched_data["cloudinaryApiKeyPreview"] == "clou...-key"
     assert switched_data["cloudinaryApiSecretPreview"] == "clou...cret"
+
+
+def test_failed_storage_validation_preserves_saved_config(monkeypatch, tmp_path, storage_probe):
+    from novelvideo.storage import media_preflight
+
+    _isolate_settings_db(monkeypatch, tmp_path)
+    app = FastAPI()
+    app.include_router(model_gateway.router)
+    client = TestClient(app)
+    saved = {
+        "provider": "aliyun_oss", "endpoint": "oss.example.com", "bucket": "working-bucket",
+        "accessKeyId": "working-access-key", "accessKeySecret": "working-secret",
+    }
+    assert client.post("/model-gateway/media-relay/config", json=saved).status_code == 200
+
+    def reject(settings, **kwargs):
+        assert settings.access_key_id == "invalid-new-key"
+        raise media_preflight.MediaStorageUnavailable("MEDIA_STORAGE_AUTH_INVALID", "Invalid storage credentials")
+
+    monkeypatch.setattr(media_preflight, "verify_media_storage", reject)
+    response = client.post("/model-gateway/media-relay/config", json={
+        **saved, "accessKeyId": "invalid-new-key", "bucket": "new-bucket",
+    })
+    assert response.status_code == 400
+    assert "MEDIA_STORAGE_AUTH_INVALID" in response.json()["detail"]
+    assert "invalid-new-key" not in response.text
+    effective = get_effective_media_relay_config()
+    assert effective.bucket == "working-bucket"
+    assert effective.access_key_id == "working-access-key"
 
 
 def test_media_relay_status_prefers_database_config(monkeypatch, tmp_path):

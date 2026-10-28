@@ -9,6 +9,7 @@ import type { ErrorResponse, OkResponse } from "@/types/api";
 
 export type GatewayMode = "official" | "custom" | "hybrid";
 export type CustomLlmMode = "relayclaw_brainclaw" | "advanced";
+export type AgentLlmMode = "inherit" | "third_party";
 
 /** Generic "endpoint preview": the server only returns a key preview, never the full key. */
 export interface GatewayEndpointPreview {
@@ -43,6 +44,11 @@ export interface EffectiveLlmConfig extends EffectiveGatewayConfig {
   mode: string;
   model: string;
   brainclaw: boolean;
+}
+
+export interface AgentLlmConfig extends GatewayEndpointPreview {
+  mode: AgentLlmMode;
+  model: string;
 }
 
 export interface NewApiDatabaseStatus {
@@ -127,6 +133,7 @@ export interface ModelGatewayConfig {
   mode: GatewayMode;
   effective: EffectiveGatewayConfig;
   llmEffective: EffectiveLlmConfig;
+  agent?: AgentLlmConfig;
   official: OfficialGatewayConfig;
   brainclaw?: GatewayEndpointPreview;
   custom: CustomGatewayConfig;
@@ -156,6 +163,13 @@ export interface SaveOfficialConfigInput {
 export interface SaveBrainClawConfigInput {
   newApiBaseUrl: string;
   newApiApiKey?: string;
+}
+
+export interface SaveAgentLlmConfigInput {
+  mode: AgentLlmMode;
+  baseUrl?: string;
+  apiKey?: string;
+  model?: string;
 }
 
 export interface NewApiDatabaseConfigInput {
@@ -232,6 +246,18 @@ export interface SyncProviderChannelInput {
   provider: string;
   upstreamKey?: string;
   baseUrl?: string;
+}
+
+export interface ChannelModelsInput {
+  newApiBaseUrl: string;
+  database?: NewApiDatabaseConfigInput;
+  provider: string;
+}
+
+export interface ChannelModelsResult {
+  provider: string;
+  channelId: number | string;
+  models: string[];
 }
 
 export interface SaveMediaModelsInput {
@@ -429,6 +455,22 @@ export function useSaveOfficialConfig() {
   });
 }
 
+export function useSaveAgentLlmConfig() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: SaveAgentLlmConfigInput) =>
+      api
+        .post("api/v1/model-gateway/agent/config", {
+          json: input,
+          throwHttpErrors: false,
+        })
+        .json<OkResponse<ModelGatewayConfig> | ErrorResponse>(),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.modelGateway() });
+    },
+  });
+}
+
 export function useEnableOfficial() {
   const qc = useQueryClient();
   return useMutation({
@@ -550,6 +592,7 @@ export function useSaveProviderChannels() {
         >(),
     onSuccess: async (response) => {
       if (response.ok === true) {
+        await qc.resetQueries({ queryKey: CHANNEL_MODELS_QUERY_KEY });
         await qc.cancelQueries({ queryKey: queryKeys.modelGateway() });
         qc.setQueryData<OkResponse<ModelGatewayConfig>>(
           queryKeys.modelGateway(),
@@ -599,7 +642,32 @@ export function useClearComfyUIConfig() {
   });
 }
 
-/** Updates the key / Base URL of an existing NewAPI provider channel without changing model mappings. */
+const CHANNEL_MODELS_QUERY_KEY = ["newapi-channel-models"] as const;
+
+/** Fetch explicitly; all model inputs for this gateway/provider share the list. */
+export function useChannelModels(input: ChannelModelsInput) {
+  return useQuery({
+    queryKey: [
+      ...CHANNEL_MODELS_QUERY_KEY,
+      input.newApiBaseUrl.trim().replace(/\/v1\/?$/, ""),
+      input.provider,
+    ],
+    queryFn: ({ signal }) =>
+      api
+        .post("api/v1/model-gateway/custom/newapi/provider-channel/models", {
+          json: input,
+          signal,
+          timeout: 60_000,
+          retry: 0,
+        })
+        .json<OkResponse<ChannelModelsResult>>(),
+    enabled: false,
+    retry: false,
+    staleTime: Infinity,
+  });
+}
+
+/** Creates the provider channel on first use; later calls update the key / Base URL and keep model mappings. */
 export function useSyncProviderChannel() {
   const qc = useQueryClient();
   return useMutation({
@@ -611,8 +679,9 @@ export function useSyncProviderChannel() {
           throwHttpErrors: false,
         })
         .json<OkResponse<SyncProviderChannelResult> | ErrorResponse | FastApiErrorResponse>(),
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       if (data.ok === true) {
+        await qc.resetQueries({ queryKey: CHANNEL_MODELS_QUERY_KEY });
         qc.invalidateQueries({ queryKey: queryKeys.modelGateway() });
       }
     },

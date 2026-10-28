@@ -38,6 +38,7 @@ vi.mock('@/api/ops', async (importOriginal) => ({
       providerId: 'huimeng',
       apiModel: 'test_video_api',
       label: 'Test video model',
+      humanReview: true,
     },
   ]),
   fetchFreezoneVideoCameraTemplates: vi.fn(async () => []),
@@ -113,7 +114,7 @@ describe('Storyboard detail · video generation form', () => {
   });
 
   it('with a prompt -> clicking submit goes through the real submission chain (submitFreezoneVideoGen receives that prompt)', async () => {
-    seed([emptyVideoNode({ prompt: 'A glowing kitten strolls across a rooftop on a snowy night' })]);
+    seed([emptyVideoNode({ prompt: 'A glowing kitten strolls across a rooftop on a snowy night', humanReview: true })]);
     openDetail('Video node 1');
 
     const submit = within(detailPanel()).getByRole('button', { name: 'Submit' });
@@ -126,6 +127,8 @@ describe('Storyboard detail · video generation form', () => {
     expect(payload.prompt).toBe('A glowing kitten strolls across a rooftop on a snowy night');
     expect(payload.nodeId).toBe('vid-1');
     expect(payload.genMode).toBe('textToVideo');
+    expect(payload.humanReview).toBe(false);
+    expect(within(detailPanel()).queryByRole('switch')).not.toBeInTheDocument();
   });
 
   it('a video node with output still mounts the form, and no longer renders the read-only prompt block twice', () => {

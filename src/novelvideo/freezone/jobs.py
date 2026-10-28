@@ -23,7 +23,7 @@ import re
 import shutil
 import subprocess
 import tempfile
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from pathlib import Path
 from typing import Any, Literal, Optional
 
@@ -36,6 +36,7 @@ from novelvideo.egress_context import (
     TrustedEgressContext,
     ambient_organization_egress_context,
 )
+from novelvideo.i18n_message import MessageLike, lmsg
 from novelvideo.ports.egress import EgressError
 from novelvideo.task_backend.subprocesses import (
     EgressBoundaryError,
@@ -848,6 +849,24 @@ async def _run_cmd(
             raise EgressBoundaryError("ORG_SERVICE_EGRESS_DENIED")
         stderr = (proc.stderr or "").strip()
         raise RuntimeError(stderr[-1000:] or f"command failed: {' '.join(cmd)}")
+
+
+async def _try_run_cmd(cmd: list[str]) -> bool:
+    """Run a command, returning only ``False`` on failure.
+
+    For probing calls where "no output" is itself a normal result -- e.g. scene
+    detection on a single unbroken take, which legitimately has zero cut points;
+    that should not be raised as an error.
+    """
+
+    proc = await asyncio.to_thread(
+        subprocess.run,
+        cmd,
+        capture_output=True,
+        text=True,
+        timeout=1800,
+    )
+    return proc.returncode == 0
 
 
 async def _probe_has_audio(
@@ -1697,7 +1716,17 @@ async def run_freezone_video_gen(
         for item in (reference_items or [])
         if str(item.get("path") or "").strip()
     ]
-    from novelvideo.freezone.video_node import is_freezone_seedance2_backend
+    from novelvideo.freezone.video_node import (
+        effective_video_human_review,
+        is_freezone_seedance2_backend,
+    )
+
+    human_review = effective_video_human_review(
+        human_review,
+        gen_mode=gen_mode,
+        reference_items=reference_items,
+        last_frame_path=last_frame_path,
+    )
 
     video_gen = create_video_generator(
         backend=backend,
@@ -1946,6 +1975,94 @@ JSON schema:
 """
 
 
+_MAX_JSON_REPAIRS = 32
+_MERGED_JSON_KEY_RE = re.compile(
+    r'^(?P<name>[A-Za-z_][A-Za-z0-9_]*?)(?P<value>-?\d+(?:\.\d+)?),?$'
+)
+
+
+def _strip_json_fence(text: str) -> str:
+    cleaned = text.strip()
+    if cleaned.startswith("```"):
+        cleaned = "\n".join(
+            line for line in cleaned.splitlines() if not line.strip().startswith("```")
+        ).strip()
+    return cleaned
+
+
+def _split_merged_json_key(text: str, pos: int) -> Optional[str]:
+    """``{"shot25,"segment"...`` → ``{"shot":25,"segment"...``
+
+    The vision model occasionally glues the key, value and comma into one string
+    (dropping the ``":``). This typo tends to repeat several times within one output,
+    so patching them one by one is far cheaper than discarding the whole response.
+    """
+
+    end_quote = text.rfind('"', 0, pos)
+    if end_quote <= 0:
+        return None
+    start_quote = text.rfind('"', 0, end_quote)
+    if start_quote == -1:
+        return None
+    match = _MERGED_JSON_KEY_RE.match(text[start_quote + 1 : end_quote])
+    if not match:
+        return None
+    fixed = f'"{match.group("name")}":{match.group("value")},'
+    return text[:start_quote] + fixed + text[end_quote:]
+
+
+def _drop_broken_json_element(text: str, pos: int) -> Optional[str]:
+    """Drop the whole array element that failed to parse and return the new text; None if it can't be done."""
+
+    start = text.rfind("{", 0, pos + 1)
+    if start <= 0:  # 0 is the start of the whole document -- dropping it would leave nothing
+        return None
+    end = text.find("}", pos)
+    if end == -1:
+        return None
+
+    head = text[:start].rstrip()
+    tail = text[end + 1 :].lstrip()
+    if head.endswith("["):  # first element of the array
+        return head + (tail[1:] if tail.startswith(",") else tail)
+    if head.endswith(","):  # a middle or last element
+        return head[:-1] + tail
+    return None
+
+
+def loads_model_json(text: str) -> Any:
+    """Parse JSON returned by a model, patching broken spots in place instead of discarding the whole response.
+
+    Vision models occasionally write ``"shot":25`` as ``"shot25``; one dropped
+    token can invalidate a whole 20KB breakdown table. Try the known typo patterns
+    first, and only drop the element that still can't be repaired.
+    """
+
+    cleaned = _strip_json_fence(text)
+    try:
+        return json.loads(cleaned)
+    except json.JSONDecodeError as exc:
+        first_error = exc  # kept because `exc` is unbound once the except block ends
+
+    repaired = cleaned
+    for _ in range(_MAX_JSON_REPAIRS):
+        try:
+            parsed = json.loads(repaired)
+        except json.JSONDecodeError as exc:
+            candidate = _split_merged_json_key(repaired, exc.pos) or _drop_broken_json_element(
+                repaired, exc.pos
+            )
+            if candidate is None or candidate == repaired:
+                break
+            repaired = candidate
+            continue
+        logger.warning(
+            "model JSON was malformed at char %s; repaired and recovered", first_error.pos
+        )
+        return parsed
+    raise first_error
+
+
 async def run_freezone_analyze_shots(
     *,
     project_dir: Path,
@@ -2032,15 +2149,8 @@ async def run_freezone_analyze_shots(
         if not text:
             raise RuntimeError(f"{used_provider} Vision returned no text")
 
-        cleaned = text.strip()
-        if cleaned.startswith("```"):
-            cleaned = "\n".join(
-                line
-                for line in cleaned.splitlines()
-                if not line.strip().startswith("```")
-            ).strip()
         try:
-            analyses = json.loads(cleaned)
+            analyses = loads_model_json(text)
         except json.JSONDecodeError as exc:
             (out_dir / "raw_response.txt").write_text(text, encoding="utf-8")
             raise RuntimeError(
@@ -2113,93 +2223,6 @@ _BREAKDOWN_SHOT_TARGET_SEC = 2.5
 # images, so doubling the frame count means each frame has to be shrunk to compensate.
 _BREAKDOWN_FRAME_WIDTH = 768
 
-_MAX_JSON_REPAIRS = 32
-_MERGED_JSON_KEY_RE = re.compile(
-    r'^(?P<name>[A-Za-z_][A-Za-z0-9_]*?)(?P<value>-?\d+(?:\.\d+)?),?$'
-)
-
-
-def _strip_json_fence(text: str) -> str:
-    cleaned = text.strip()
-    if cleaned.startswith("```"):
-        cleaned = "\n".join(
-            line for line in cleaned.splitlines() if not line.strip().startswith("```")
-        ).strip()
-    return cleaned
-
-
-def _split_merged_json_key(text: str, pos: int) -> Optional[str]:
-    """``{"shot25,"segment"...`` -> ``{"shot":25,"segment"...``
-
-    Vision models occasionally mash a key, its value and the following comma into
-    one string (dropping the ``":``). This typo tends to repeat several times in the
-    same response, so patching it in place is far cheaper than discarding the whole output.
-    """
-
-    end_quote = text.rfind('"', 0, pos)
-    if end_quote <= 0:
-        return None
-    start_quote = text.rfind('"', 0, end_quote)
-    if start_quote == -1:
-        return None
-    match = _MERGED_JSON_KEY_RE.match(text[start_quote + 1 : end_quote])
-    if not match:
-        return None
-    fixed = f'"{match.group("name")}":{match.group("value")},'
-    return text[:start_quote] + fixed + text[end_quote:]
-
-
-def _drop_broken_json_element(text: str, pos: int) -> Optional[str]:
-    """Drop the whole array element that failed to parse and return the new text; None if it can't be done."""
-
-    start = text.rfind("{", 0, pos + 1)
-    if start <= 0:  # 0 is the start of the whole document -- dropping it would leave nothing
-        return None
-    end = text.find("}", pos)
-    if end == -1:
-        return None
-
-    head = text[:start].rstrip()
-    tail = text[end + 1 :].lstrip()
-    if head.endswith("["):  # first element of the array
-        return head + (tail[1:] if tail.startswith(",") else tail)
-    if head.endswith(","):  # a middle or last element
-        return head[:-1] + tail
-    return None
-
-
-def loads_model_json(text: str) -> Any:
-    """Parse JSON returned by a model, patching broken spots in place instead of discarding the whole response.
-
-    Vision models occasionally write ``"shot":25`` as ``"shot25``; one dropped
-    token can invalidate a whole 20KB breakdown table. Try the known typo patterns
-    first, and only drop the element that still can't be repaired.
-    """
-
-    cleaned = _strip_json_fence(text)
-    try:
-        return json.loads(cleaned)
-    except json.JSONDecodeError as exc:
-        first_error = exc  # kept because `exc` is unbound once the except block ends
-
-    repaired = cleaned
-    for _ in range(_MAX_JSON_REPAIRS):
-        try:
-            parsed = json.loads(repaired)
-        except json.JSONDecodeError as exc:
-            candidate = _split_merged_json_key(repaired, exc.pos) or _drop_broken_json_element(
-                repaired, exc.pos
-            )
-            if candidate is None or candidate == repaired:
-                break
-            repaired = candidate
-            continue
-        logger.warning(
-            "model JSON was malformed at char %s; repaired and recovered", first_error.pos
-        )
-        return parsed
-    raise first_error
-
 
 def _bd_text(value: Any, default: str = "") -> str:
     if value is None:
@@ -2226,7 +2249,7 @@ def _bd_int(value: Any, default: Optional[int] = None) -> Optional[int]:
 
 
 def plan_breakdown_frame_count(*, duration_sec: Optional[float], max_frames: int) -> int:
-    """Pick a frame count from video duration: roughly one frame per second, floored and capped.
+    """Pick a frame count from video duration: roughly one frame per second, floored at 8 and capped by the caller's ``max_frames``.
 
     Duration is unknown only rarely; when it is, fall back to the caller's cap --
     better to use the whole budget than to guess at a density.
@@ -2266,7 +2289,10 @@ def plan_breakdown_shot_range(
 
 
 def build_video_breakdown_prompt(
-    *, frame_count: int, duration_sec: Optional[float] = None, group_size: int = 4
+    *,
+    frame_count: int,
+    duration_sec: Optional[float] = None,
+    group_size: int = 4,
 ) -> str:
     """Vision prompt dedicated to the shot-by-shot breakdown.
 
@@ -2343,20 +2369,6 @@ JSON schema:
   }}
 }}
 """
-
-
-async def _try_run_cmd(cmd: list[str]) -> bool:
-    """Run a command, returning only ``False`` on failure.
-
-    For probing calls where "no output" is itself a normal result -- e.g. scene
-    detection on a single unbroken take, which legitimately has zero cut points;
-    that should not be raised as an error.
-    """
-
-    proc = await asyncio.to_thread(
-        subprocess.run, cmd, capture_output=True, text=True, timeout=1800
-    )
-    return proc.returncode == 0
 
 
 async def _extract_frame_at(*, source_path: str, output_path: Path, at_sec: float) -> None:
@@ -2660,6 +2672,7 @@ async def run_freezone_video_breakdown(
     motion_clip_max_sec: float = 6.0,
     music_clip_sec: float = 15.0,
     model: Optional[str] = None,
+    progress: Optional[Callable[[float, MessageLike], None]] = None,
     egress_context: TrustedEgressContext | None = None,
 ) -> dict[str, Any]:
     """Shot-by-shot breakdown: extract frames -> Vision split -> actually cut out storyboard images / motion clips / BGM clip.
@@ -2706,12 +2719,26 @@ async def run_freezone_video_breakdown(
     out_dir = outputs_dir(project_dir, "freezone_video_breakdown") / job_id
     out_dir.mkdir(parents=True, exist_ok=True)
 
+    def report(ratio: float, message: MessageLike) -> None:
+        if progress is not None:
+            progress(ratio, message)
+
     source_path = str(video_path)
     total_duration = _bd_float(duration_sec, None)
     if total_duration is None or total_duration <= 0:
         total_duration = await _probe_video_duration(source_path)
 
-    frame_target = plan_breakdown_frame_count(duration_sec=total_duration, max_frames=max_frames)
+    frame_target = plan_breakdown_frame_count(
+        duration_sec=total_duration, max_frames=max_frames
+    )
+    report(
+        0.08,
+        lmsg(
+            "tasks.progress.videoBreakdown.extractFrames",
+            f"Extracting keyframes with ffmpeg (target {frame_target} frames)...",
+            frameTarget=frame_target,
+        ),
+    )
     frame_paths = await _extract_breakdown_frames(
         video_path=video_path,
         out_dir=out_dir / "frames",
@@ -2722,12 +2749,22 @@ async def run_freezone_video_breakdown(
     if not frame_paths:
         raise RuntimeError("no keyframes extracted from video")
 
+    report(
+        0.28,
+        lmsg(
+            "tasks.progress.videoBreakdown.analyzing",
+            f"Analyzing {len(frame_paths)} frames with Vision...",
+            frameCount=len(frame_paths),
+        ),
+    )
     prompt = build_video_breakdown_prompt(
         frame_count=len(frame_paths),
         duration_sec=total_duration,
         group_size=storyboard_group_size,
     )
-    images = await load_compact_vision_inputs([path for path in frame_paths if path.exists()])
+    images = await load_compact_vision_inputs(
+        [path for path in frame_paths if path.exists()]
+    )
     if not images:
         raise ValueError("no readable frames to analyze")
     vision_model_name = resolve_freezone_vision_model(model)
@@ -2752,9 +2789,11 @@ async def run_freezone_video_breakdown(
             vision_model, text = await vision_gateway.call_freezone_vision_model(
                 prompt=prompt,
                 images=images,
-                model_override=None if vision_egress else model,
+                model_override=model,
                 timeout_seconds=FREEZONE_VIDEO_ANALYSIS_TIMEOUT_SECONDS,
-                transport_context=(vision_egress.transport_context if vision_egress else None),
+                transport_context=(
+                    vision_egress.transport_context if vision_egress else None
+                ),
             )
         except BaseException:
             # Frame bytes are fully read before the claim (the digest needs them), and
@@ -2774,8 +2813,17 @@ async def run_freezone_video_breakdown(
         except ValueError as exc:  # json.JSONDecodeError is also a ValueError
             (out_dir / "raw_response.txt").write_text(text or "", encoding="utf-8")
             if attempt == 2:
-                raise RuntimeError(f"vision model returned unusable output: {exc}; raw saved") from exc
+                raise RuntimeError(
+                    f"vision model returned unusable output: {exc}; raw saved"
+                ) from exc
             logger.warning("breakdown vision output unusable (%s); retrying once", exc)
+            report(
+                0.28,
+                lmsg(
+                    "tasks.progress.videoBreakdown.retrying",
+                    "Model output could not be parsed; retrying once...",
+                ),
+            )
             continue
         raw = parsed
         break
@@ -2805,6 +2853,14 @@ async def run_freezone_video_breakdown(
 
     # ---- storyboard: grab a frame at the midpoint of each shot ------------
     if "storyboard" in wanted:
+        report(
+            0.5,
+            lmsg(
+                "tasks.progress.videoBreakdown.storyboard",
+                f"Cutting {len(shots)} storyboard images...",
+                shotCount=len(shots),
+            ),
+        )
         segments = raw.get("segments")
         groups = _group_breakdown_shots(
             shots,
@@ -2829,6 +2885,10 @@ async def run_freezone_video_breakdown(
 
     # ---- motion: cut video clips by camera movement ------------------------
     if "motion" in wanted:
+        report(
+            0.68,
+            lmsg("tasks.progress.videoBreakdown.motion", "Cutting camera-movement reference clips..."),
+        )
         width, height = await _probe_video_size(source_path)
         clips: list[dict[str, Any]] = []
         for index, shot in enumerate(_select_motion_shots(shots, max_clips=max_motion_clips), 1):
@@ -2879,6 +2939,10 @@ async def run_freezone_video_breakdown(
 
     # ---- music: cut one BGM segment from the source -------------------------
     if "music" in wanted:
+        report(
+            0.86,
+            lmsg("tasks.progress.videoBreakdown.music", "Cutting BGM reference clip..."),
+        )
         clip: Optional[dict[str, Any]] = None
         if await _probe_has_audio(source_path):
             raw_music = raw.get("music") if isinstance(raw.get("music"), dict) else {}
@@ -2919,7 +2983,10 @@ async def run_freezone_video_breakdown(
     out_file = out_dir / "breakdown.json"
     out_file.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     payload["output_path"] = str(out_file)
+    report(0.95, lmsg("tasks.progress.videoBreakdown.saved", "Breakdown results saved"))
     return payload
+
+
 
 
 async def _sample_evenly(

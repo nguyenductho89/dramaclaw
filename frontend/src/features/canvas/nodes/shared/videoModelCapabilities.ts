@@ -47,6 +47,53 @@ export function isSeedance2VideoModel(modelId: string | null | undefined): boole
   return /seedance2/.test(normalizeVideoModelId(modelId));
 }
 
+/**
+ * Seedance 2.5 (in the catalog `gateway_model = seedance-2.5`, apiModel `newapi_seedance-2.5`).
+ *
+ * After normalization it is `seedance25`, so it also matches `isSeedance2VideoModel` above (`/seedance2/`)
+ * — that one is the coarse "2.x family" criterion (accepts multi-image / video / audio); the two do not conflict, so do not
+ * change it to `seedance20` just to tell them apart: 2.5's multi-image and reference-material capabilities belong to the same family as 2.0,
+ * and narrowing would push 2.5 back to 1.x treatment.
+ *
+ * This is used **only** for 2.5-exclusive entry points such as "clip reshoot". It matches by prefix rather than equality, so that
+ * variants like `seedance-2.5-fast` in the future need no further change.
+ */
+export function isSeedance25VideoModel(modelId: string | null | undefined): boolean {
+  return /seedance25/.test(normalizeVideoModelId(modelId));
+}
+
+/**
+ * Which model "smart continuation" should land on: the first Seedance 2.5 in the catalog, or null if there is none.
+ *
+ * Returning null means this project's catalog has no 2.5 at all — the caller should gray out the entry point rather than
+ * pick an arbitrary model as a stand-in: the continuation's reference-material spec is set for 2.5, and another model would only yield a
+ * baffling generation.
+ */
+export function findSeedance25VideoModel<T extends { id: string; apiModel?: string }>(
+  models: readonly T[],
+): T | null {
+  return models.find((model) => isSeedance25VideoModel(model.apiModel ?? model.id)) ?? null;
+}
+
+/**
+ * Whether the output ratio / duration is determined by the input video — this is how Seedance video editing works: the vendor hard-validates
+ * that `ratio` must be `adaptive` and `duration` must be -1; specifying concrete values gets the whole order rejected
+ * (`[InvalidParameter.TaskTypeConstraint] ... the output ratio and duration follow
+ * the input video`). So these two items should not appear in the UI either — a knob that has no effect when changed and
+ * makes people think they can set the output duration is worse than not offering it.
+ *
+ * The backend `VideoGenerator._follows_source_video_output` is the same check (seedance family +
+ * video edit); change one side and the other must be kept in sync. HappyHorse's video edit is not included; it carries
+ * ratio and duration as usual.
+ */
+export function videoOutputFollowsSourceVideo(
+  mode: VideoGenMode | null | undefined,
+  modelId: string | null | undefined,
+): boolean {
+  if (mode !== "videoEdit") return false;
+  return /seedance/.test(normalizeVideoModelId(modelId));
+}
+
 // The base Seedance 2.0 (`…seedance-2.0` itself, excluding the fast / value / fast-value variants).
 // After normalization, ending in `seedance20` means the base model — variants all carry an extra `fast` / `value` suffix behind it.
 function isBaseSeedance2VideoModel(modelId: string | null | undefined): boolean {
@@ -326,6 +373,45 @@ export function videoModeRequiresMedia(mode: VideoGenMode): boolean {
   return mode !== "textToVideo";
 }
 
+export interface VideoModeInputCounts {
+  images: number;
+  videos: number;
+  audios: number;
+  hasOtherReference?: boolean;
+}
+
+/** Required inputs, shared by mode availability and model switching. */
+export function videoModeMissingInputReason(
+  mode: VideoGenMode,
+  counts: VideoModeInputCounts,
+): string | null {
+  if (mode === "videoEdit" || mode === "videoExtend") {
+    return counts.videos === 0 ? "node.videoOps.modeDisabled.needOneVideo" : null;
+  }
+  // All-reference entry semantics are separate from input-required image/video modes.
+  if (mode !== "textToVideo" && mode !== "allReference" && counts.images === 0) {
+    return "node.videoOps.modeDisabled.needOneImage";
+  }
+  return null;
+}
+
+/** Preserve compatible explicit modes, including those waiting for their input. */
+export function videoModeForModel(
+  mode: VideoGenMode,
+  model: VideoModelRef,
+  counts: VideoModeInputCounts,
+): VideoGenMode {
+  if (!model) return mode;
+  const supportsCurrentMode = isVideoModeSupportedByModel(mode, model);
+  if (supportsCurrentMode && !videoSubmitMediaRejectionReason(mode, model, counts)) return mode;
+  const candidates = (Object.keys(GEN_MODE_TO_CATALOG_MODE) as VideoGenMode[])
+    .filter((candidate) => isVideoModeSupportedByModel(candidate, model));
+  return candidates.find((candidate) =>
+    !videoModeMissingInputReason(candidate, counts) &&
+    !videoSubmitMediaRejectionReason(candidate, model, counts)
+  ) ?? (supportsCurrentMode ? mode : candidates[0] ?? mode);
+}
+
 /**
  * Which mode to fall back to once all upstream assets are removed: `"textToVideo"` = back to text-to-video, null = leave alone.
  *
@@ -342,11 +428,12 @@ export function videoModeRequiresMedia(mode: VideoGenMode): boolean {
  */
 export function videoNoUpstreamResetMode(
   mode: VideoGenMode,
-  counts: { images: number; videos: number; audios: number },
+  counts: VideoModeInputCounts,
+  model?: VideoModelRef,
 ): VideoGenMode | null {
-  if (counts.images > 0 || counts.videos > 0 || counts.audios > 0) return null;
-  // A multishot-only model cannot run text-to-video at all (see
-  // isVideoModeSupportedByModel) — falling back there on an emptied start
+  if (counts.images > 0 || counts.videos > 0 || counts.audios > 0 || counts.hasOtherReference) return null;
+  if (model && !isVideoModeSupportedByModel("textToVideo", model)) return null;
+  // A multishot-only model cannot run text-to-video at all — falling back there on an emptied start
   // frame would strand the node on a mode its own model doesn't support.
   // Leave it on multishot; the submit guard already requires >=1 image.
   if (mode === "multishot") return null;
@@ -779,6 +866,12 @@ export function videoModelReferenceDisabledReason(
   counts: { images: number; videos: number; audios: number },
 ): string | null {
   if (typeof model === "object" && model !== null && (model.supportedModes?.length ?? 0) > 0) {
+    if (
+      counts.videos === 0 &&
+      model.supportedModes?.every((mode) => mode === "video_edit" || mode === "video_extend")
+    ) {
+      return "node.videoOps.modeDisabled.needOneVideo";
+    }
     if (counts.images > 0 && videoEmptyStateCtaModes(model).length === 0) {
       return "node.videoModel.reason.imageUnsupported";
     }

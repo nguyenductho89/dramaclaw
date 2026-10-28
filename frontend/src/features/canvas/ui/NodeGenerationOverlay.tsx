@@ -7,6 +7,8 @@ type NodeGenerationOverlayProps = {
   startedAt?: number | null;
   /** Estimated total generation duration (milliseconds), used to simulate progress advance. */
   durationMs?: number;
+  /** Real progress (0-100). When provided it is shown directly instead of a time-based estimate. */
+  percent?: number;
   /** @deprecated Kept only for compatibility with old callers; the loading state no longer draws a background mask. */
   hasBackground?: boolean;
   /** Corner radius, following the node corner radius variable by default. */
@@ -24,12 +26,21 @@ const DEFAULT_DURATION_MS = 60000;
 export function NodeGenerationOverlay({
   startedAt = null,
   durationMs = DEFAULT_DURATION_MS,
+  percent: actualPercent,
   hasBackground: _hasBackground = false,
   rounded = 'rounded-[var(--node-radius)]',
   messageKey: _messageKey = 'canvas.generationProgress',
 }: NodeGenerationOverlayProps) {
   // The estimation algorithm is extracted to useEstimatedProgress, shared with the storyboard cards/detail.
-  const percent = useEstimatedProgress(startedAt, durationMs);
+  const estimatedPercent = useEstimatedProgress(
+    startedAt,
+    durationMs,
+    actualPercent !== undefined,
+  );
+  const percent =
+    actualPercent === undefined
+      ? estimatedPercent
+      : Math.min(100, Math.max(0, Math.round(actualPercent)));
 
   return (
     <div

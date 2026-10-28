@@ -2,7 +2,7 @@
 // Copyright (c) 2026 ClaymoreLab
 import i18n from 'i18next';
 import { useCallback, useMemo, useState, type ReactElement } from 'react';
-import { Boxes, Crop, Globe2, ImageUpscale, Lightbulb, RotateCw } from 'lucide-react';
+import { Boxes, Crop, Globe2, ImageUpscale, Lightbulb, RotateCw, Scaling } from 'lucide-react';
 
 import {
   createCropResultNode,
@@ -23,6 +23,7 @@ import {
 } from '@/features/canvas/ui/ProviderModelPicker';
 import { useCanvasStore } from '@/stores/canvasStore';
 
+import { ImageResizeDialog } from '../ImageResizeDialog';
 import { AssetBoardCropDialog } from './AssetBoardCropDialog';
 import { AssetBoardMultiAngleDialog } from './AssetBoardMultiAngleDialog';
 import { AssetBoardRelightDialog } from './AssetBoardRelightDialog';
@@ -129,6 +130,7 @@ export function useAssetBoardImageEditActions({
   // the editor live-previews and writes the result back into this node on save; cancelling reclaims it.
   const [cropNodeId, setCropNodeId] = useState<string | null>(null);
   const [rotateNodeId, setRotateNodeId] = useState<string | null>(null);
+  const [resizeOpen, setResizeOpen] = useState(false);
 
   const { models: imageModels } = useFreezoneImageModels();
   // Model selection priority is the same as the workflow UpscaleEditorOverlay / OutpaintEditorOverlay: prefer the
@@ -226,13 +228,16 @@ export function useAssetBoardImageEditActions({
         [
           { kind: 'action', key: 'hd', icon: ImageUpscale, label: i18n.t('canvas.assetBoard.imageOps.upscale'), onSelect: handleOpenHd },
           { kind: 'action', key: 'crop', icon: Crop, label: i18n.t('canvas.assetBoard.imageOps.crop'), busy: busyOp === 'crop', onSelect: handleOpenCrop },
+          { kind: 'action', key: 'resize', icon: Scaling, label: i18n.t('resizeEditor.title'), onSelect: () => { if (!busyOp) setResizeOpen(true); } },
           { kind: 'action', key: 'rotate', icon: RotateCw, label: i18n.t('canvas.assetBoard.imageOps.rotate'), busy: busyOp === 'rotate', onSelect: handleOpenRotate },
         ] satisfies MoreMenuEntry[]
       ).filter((entry) => !(isPresetLocked && (entry.key === 'hd' || entry.key === 'rotate')));
 
   const overlays =
-    !imageSource || (!cropNodeId && !rotateNodeId) ? null : (
+    !imageSource || (!cropNodeId && !rotateNodeId && !resizeOpen) ? null : (
       <>
+        {resizeOpen && <ImageResizeDialog nodeId={node.id} imageSource={imageSource}
+          onClose={() => setResizeOpen(false)} onCreated={onOpenNode} />}
         {/* Crop: large image + crop frame + floating control bar (same as liblib). Pure local canvas cutting,
         does not go through the generation API. */}
         {cropNodeId && (

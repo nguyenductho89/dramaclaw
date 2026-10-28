@@ -18,6 +18,7 @@ import {
   X,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { mediaStorageErrorMessage } from '@/lib/api-errors';
 
 import {
   CANVAS_NODE_TYPES,
@@ -179,7 +180,7 @@ export const ImageGenNode = memo(({ id, data, selected, width, height }: ImageGe
   // so interaction in both views is identical; a plain image generation node gets null and renders as before.
   const opFormProps = useImageOpFormProps(id, { isGenerating });
 
-  const generationError =
+  const rawGenerationError =
     typeof data.generationError === 'string' && data.generationError.length > 0
       ? data.generationError
       : null;
@@ -187,6 +188,10 @@ export const ImageGenNode = memo(({ id, data, selected, width, height }: ImageGe
     typeof data.generationErrorDetails === 'string' && data.generationErrorDetails.length > 0
       ? data.generationErrorDetails
       : null;
+  const generationError = rawGenerationError
+    ? mediaStorageErrorMessage(generationErrorDetails || rawGenerationError, t)
+      ?? rawGenerationError
+    : null;
   const generationErrorRequestId =
     typeof data.generationErrorRequestId === 'string' && data.generationErrorRequestId.length > 0
       ? data.generationErrorRequestId
@@ -196,7 +201,7 @@ export const ImageGenNode = memo(({ id, data, selected, width, height }: ImageGe
   const [errorDetailsCopied, setErrorDetailsCopied] = useState(false);
 
   const handleCopyErrorDetails = useCallback(async () => {
-    const copyText = generationErrorDetails || generationError || generationErrorRequestId;
+    const copyText = generationErrorDetails || rawGenerationError || generationErrorRequestId;
     if (!copyText) return;
     try {
       await navigator.clipboard.writeText(copyText);
@@ -205,7 +210,7 @@ export const ImageGenNode = memo(({ id, data, selected, width, height }: ImageGe
     } catch (error) {
       console.error('[image-gen] copy error details failed', error);
     }
-  }, [generationError, generationErrorDetails, generationErrorRequestId]);
+  }, [rawGenerationError, generationErrorDetails, generationErrorRequestId]);
 
   // While generating, clicking a history record goes through a "non-destructive preview": it does not overwrite imageUrl or interrupt the in-flight
   // task, and only temporarily shows this history image on the body (see the isGenerating render branch). After the new image finishes,
@@ -499,11 +504,13 @@ export const ImageGenNode = memo(({ id, data, selected, width, height }: ImageGe
   const submitDisabled = formSubmitDisabled || modelTaskAccess.blocked;
 
   useEffect(() => {
-    return subscribeNodeAction(({ nodeId, action, executionMode, requestId }) => {
+    return subscribeNodeAction(({ nodeId, action, requestId }) => {
       if (nodeId !== id || action !== 'generate_image') return;
       publishNodeActionAccepted(requestId, id, action);
       void handleSubmit({
-        completionMode: executionMode === 'single' ? 'submitted' : 'completed',
+        // 虾导外层会在任务受理后立即进入后台态；节点动作本身必须等真实产物
+        // 终态再回报成功，否则对话会把“已提交”误显示成“图片已完成”。
+        completionMode: 'completed',
       })
         .then((output) => publishNodeActionSuccess(requestId, id, action, output))
         .catch((error) => publishNodeActionError(requestId, id, action, error));

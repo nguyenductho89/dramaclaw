@@ -3,6 +3,8 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
+import { CANVAS_NODE_TYPES } from "@/features/canvas/domain/canvasNodes";
+import { getDownstreamSpawnTypes } from "@/features/canvas/domain/nodeRegistry";
 import { NodeSelectionMenu } from "@/features/canvas/NodeSelectionMenu";
 
 const translations: Record<string, string> = {
@@ -23,6 +25,8 @@ const translations: Record<string, string> = {
   "node.menu.script": "Script",
   "node.menu.pano360Viewer": "360° Panorama",
   "node.menu.threeDWorld": "3D World",
+  "node.menu.videoBreakdown": "Frame-by-frame breakdown",
+  "canvas.nodeMenu.referenceGenerate": "Generate from this node",
 };
 
 vi.mock("react-i18next", () => ({
@@ -42,5 +46,25 @@ describe("NodeSelectionMenu", () => {
     );
 
     expect(screen.getByText("Shot context")).toBeInTheDocument();
+  });
+
+  it("offers Frame-by-frame breakdown when dragging a line out of a video node", () => {
+    // The "Generate from this node" entries are hand-written: a type the allowlist lets through
+    // but that has no entry here would be silently swallowed -- feed in the real downstream
+    // candidates so a missing entry fails right here.
+    const allowedTypes = getDownstreamSpawnTypes(CANVAS_NODE_TYPES.video);
+    expect(allowedTypes).toContain(CANVAS_NODE_TYPES.videoBreakdown);
+
+    render(
+      <NodeSelectionMenu
+        position={{ x: 12, y: 16 }}
+        allowedTypes={allowedTypes}
+        onSelect={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Generate from this node")).toBeInTheDocument();
+    expect(screen.getByText("Frame-by-frame breakdown")).toBeInTheDocument();
   });
 });

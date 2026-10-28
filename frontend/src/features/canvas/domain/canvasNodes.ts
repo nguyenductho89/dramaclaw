@@ -100,6 +100,13 @@ export interface NodeImageData extends NodeDisplayData {
   previewImageUrl?: string | null;
   aspectRatio: string;
   isSizeManuallyAdjusted?: boolean;
+  /**
+   * The "replace asset" button at the top-right of the card is **always visible** (no need to select the node first). Clicking to
+   * swap in a local file is a capability every card with content has; this switch only governs when the button is visible: the
+   * output groups of frame-by-frame breakdown (storyboard/motion/music) are reference assets and swapping images is a frequent
+   * action, so it is always shown; other nodes still show it only when selected, so the canvas isn't covered with a row of upload icons.
+   */
+  allowLocalReplace?: boolean;
   candidate_origin?: Record<string, unknown>;
   output_role?: string;
   committed_at?: string | null;
@@ -158,6 +165,25 @@ export interface VideoMultishotShot {
   fallbackUsed?: boolean;
 }
 
+/** Failure reason for depth motion capture; `failed` is the fallback, with the raw error kept in errorDetail. */
+export type DepthCaptureErrorCode =
+  | 'tooLong'
+  | 'noVideoTrack'
+  | 'cannotDecode'
+  | 'cancelled'
+  | 'failed';
+
+/** Processing state of depth motion capture (computed in the browser); on success it is written back to videoUrl and cleared to null. */
+export interface DepthCaptureState {
+  status: 'running' | 'failed';
+  /** Integer percentage from 0 to 100. */
+  progress: number;
+  /** Source video address to rerun on retry. */
+  sourceVideoUrl: string;
+  errorCode: DepthCaptureErrorCode | null;
+  errorDetail: string | null;
+}
+
 export interface VideoNodeData extends NodeDisplayData {
   videoUrl: string | null;
   previewImageUrl?: string | null;
@@ -167,6 +193,8 @@ export interface VideoNodeData extends NodeDisplayData {
    * and the bottom generation panel (mode tabs / prompt / submit) is not rendered.
    */
   referenceOnly?: boolean;
+  /** See NodeImageData.allowLocalReplace. */
+  allowLocalReplace?: boolean;
   aspectRatio: string;
   isSizeManuallyAdjusted?: boolean;
   sourceFileName?: string | null;
@@ -174,6 +202,8 @@ export interface VideoNodeData extends NodeDisplayData {
   heightPx?: number | null;
   durationMs?: number | null;
   isUploading?: boolean;
+  /** Processing state of the depth-motion-capture output node, see DepthCaptureState. */
+  depthCapture?: DepthCaptureState | null;
   isAnalyzing?: boolean;
   analysisResult?: string | null;
   analysisError?: string | null;
@@ -182,6 +212,31 @@ export interface VideoNodeData extends NodeDisplayData {
   isClipMode?: boolean;
   clipStartMs?: number | null;
   clipEndMs?: number | null;
+  // frame crop ------------------------------------------------------
+  /**
+   * Temporary state on the **source** video node: a crop box is overlaid on the picture and a ratio bar hangs below.
+   * The box itself is not persisted (writing the store at pointermove frequency would flush the undo stack); only this
+   * toggle is node data. Mutually exclusive with isClipMode / isExtendPickMode / subtitleEraseMode.
+   */
+  isCropMode?: boolean;
+  // smart extend (libtv-style) --------------------------------------
+  /**
+   * Temporary state on the **source** video node: currently capturing the "pre-extend video", with a segment-selection
+   * track hanging below the card. The selection is not persisted (it takes a dozen drags to settle, and writing the store
+   * each time would flush the undo stack); only clicking "Confirm extend" carries the range into the newly created
+   * downstream node. Mutually exclusive with isClipMode.
+   */
+  isExtendPickMode?: boolean;
+  /**
+   * Downstream node produced by "smart extend": model locked to Seedance 2.5, mode locked to all-round reference, with a
+   * fixed "Continue the mm:ss-mm:ss segment of X:" line ahead of the prompt. The prefix is not written into the prompt
+   * itself (see extendPromptPrefix of [[videoExtendClip]]); it is only concatenated at submission time.
+   */
+  isExtendMode?: boolean;
+  /** Asset name in the prefix, taken from the source node's displayName. Renaming the source node does not apply retroactively - the instruction has already been issued. */
+  extendSourceName?: string;
+  extendStartMs?: number;
+  extendEndMs?: number;
   // subtitle erase (libtv-style smart subtitle removal) ----------------------------------
   /** `smart` = auto-estimate bottom subtitle band; `box` = user-drawn region. */
   subtitleEraseMode?: 'smart' | 'box' | null;
@@ -272,6 +327,10 @@ export interface VideoNodeData extends NodeDisplayData {
 export interface VideoComposeNodeData extends NodeDisplayData {
   /** The video url of the latest compose export. */
   resultVideoUrl?: string | null;
+  /** Persistent task key of the latest successful result write-back, used for idempotent convergence. */
+  resultVideoTaskKey?: string | null;
+  /** Compose task ID of the latest successful result write-back. */
+  resultVideoJobId?: string | null;
   /** Cover of the result video (empty while not yet generated). */
   previewImageUrl?: string | null;
   /** The export resolution used last time. */
@@ -572,6 +631,8 @@ export interface AudioNodeData extends NodeDisplayData {
   sourceFileName?: string | null;
   durationMs?: number | null;
   isUploading?: boolean;
+  /** See NodeImageData.allowLocalReplace. */
+  allowLocalReplace?: boolean;
   /**
    * Generation type of the audio node:
    * - 'speech' (default/absent): clone audio, text to speech (/freezone/audio/speech), using voiceRef/tone words.
@@ -912,6 +973,21 @@ export type NodeToolType = (typeof NODE_TOOL_TYPES)[keyof typeof NODE_TOOL_TYPES
 export interface ActiveToolDialog {
   nodeId: string;
   toolType: NodeToolType;
+}
+
+/**
+ * The sole switch for the "replace asset" button at the top-right inside the card (NodeMediaReplaceButton).
+ *
+ * Only the output groups of frame-by-frame breakdown (storyboard / motion / music) carry allowLocalReplace - those are reference
+ * assets, and swapping in your own image/track is a frequent action, so the button stays on the card. Every other node gets no
+ * in-card button (otherwise the canvas is covered with a row of upload icons, and it is easy to mis-click and replace a generated
+ * result); their "drag onto the asset library to replace" gesture goes through the AssetCommitHandle floating outside the node -
+ * the two entry points are mutually exclusive, see SelectedNodeOverlay.
+ */
+export function hasInlineMediaReplaceButton(
+  data: { allowLocalReplace?: boolean } | null | undefined
+): boolean {
+  return data?.allowLocalReplace === true;
 }
 
 export function isUploadNode(

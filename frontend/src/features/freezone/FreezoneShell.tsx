@@ -247,14 +247,16 @@ const EXTERNAL_CANVAS_REVISION_POLL_MS = 2_000;
  * Icons only; the text goes in the hover tooltip + aria-label (the text capsules took too much canvas).
  * Order is visual order - the slider offset is computed from the index (the 2nd key is translate-x-7).
  */
-const FREEZONE_VIEW_MODE_TABS: ReadonlyArray<{
+function getFreezoneViewModeTabs(t: ReturnType<typeof useTranslation>["t"]): ReadonlyArray<{
   mode: FreezoneViewMode;
   icon: LucideIcon;
   label: string;
-}> = [
-  { mode: "workflow", icon: Workflow, label: "Workflow" },
-  { mode: "board", icon: Clapperboard, label: "Storyboard" },
-];
+}> {
+  return [
+    { mode: "workflow", icon: Workflow, label: t("freezone.viewMode.workflow") },
+    { mode: "board", icon: Clapperboard, label: t("freezone.viewMode.board") },
+  ];
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === "object" && !Array.isArray(value));
@@ -2305,7 +2307,7 @@ export function FreezoneShell({
                       viewMode === "board" && "translate-x-11",
                     )}
                   />
-                  {FREEZONE_VIEW_MODE_TABS.map(({ mode, icon: Icon, label }) => (
+                  {getFreezoneViewModeTabs(t).map(({ mode, icon: Icon, label }) => (
                     <Tooltip key={mode}>
                       <TooltipTrigger
                         render={
@@ -3178,6 +3180,7 @@ function FreezoneAgentHistoryPanel({
   onSelect: (agentId: string) => void;
   onAdd: () => void;
 }) {
+  const { t } = useTranslation();
   const normalizedSearch = search.trim().toLowerCase();
   const visibleAgents = agents
     .filter((agent) => {

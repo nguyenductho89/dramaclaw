@@ -22,10 +22,7 @@ import type {
   ImageSize,
 } from '@/features/canvas/domain/canvasNodes';
 import { resolveImageDisplayUrl } from '@/features/canvas/application/imageData';
-import {
-  IMAGE_QUALITY_OPTIONS,
-  resolveNearestAspectOption,
-} from '@/features/canvas/nodes/shared/imageGenerationOptions';
+import { resolveNearestAspectOption } from '@/features/canvas/nodes/shared/imageGenerationOptions';
 import type { UpstreamContent } from '@/features/canvas/application/ports';
 import { useCanvasStore } from '@/stores/canvasStore';
 import { ReferenceTextChip } from '@/features/canvas/nodes/shared/ReferenceTextChip';
@@ -131,9 +128,10 @@ function AspectSizeChip({
   }, [isOpen]);
 
   const nearestAspect = resolveNearestAspectOption(aspectRatio, aspectOptions);
-  const aspectLabel = nearestAspect.label;
-  const qualityLabel = IMAGE_QUALITY_OPTIONS.find((option) => option.value === quality)?.label
-    ?? quality;
+  const aspectLabel = nearestAspect.value === 'auto'
+    ? t('node.imageGen.aspect.auto')
+    : nearestAspect.label;
+  const qualityLabel = t(`node.imageGen.quality.${quality}`, { defaultValue: quality });
 
   return (
     <div className="relative">
@@ -169,8 +167,7 @@ function AspectSizeChip({
               <div className={IMAGE_PARAM_LABEL_CLASS}>{t('node.imageGen.param.quality')}</div>
               <div className={IMAGE_PARAM_ROW_CLASS}>
                 {qualityOptions.map((value) => {
-                  const label =
-                    IMAGE_QUALITY_OPTIONS.find((option) => option.value === value)?.label ?? value;
+                  const label = t(`node.imageGen.quality.${value}`, { defaultValue: value });
                   const isActive = quality === value;
                   return (
                     <button
@@ -226,7 +223,7 @@ function AspectSizeChip({
                       : IMAGE_PARAM_IDLE_BUTTON_CLASS
                   }`}
                 >
-                  {option.label}
+                  {option.value === 'auto' ? t('node.imageGen.aspect.auto') : option.label}
                 </button>
               );
             })}

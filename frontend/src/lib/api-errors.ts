@@ -6,6 +6,14 @@ import type { ErrorResponse } from "@/types/api";
 
 export const NOVEL_IMPORT_REQUIRED_CODE = "NOVEL_IMPORT_REQUIRED";
 
+export function mediaStorageErrorMessage(raw: string, t: TFunction): string | null {
+  // Generation errors can wrap this code in several provider/task exceptions.
+  const code = raw.match(/\b(MEDIA_STORAGE_[A-Z_]+)\b/)?.[1];
+  if (!code) return null;
+  const translated = t(`settings.mediaStorage.errors.${code}`, { defaultValue: "" });
+  return translated ? `${code}: ${translated}` : null;
+}
+
 export function backendErrorCodeToastMessage(
   errorCode: string | null | undefined,
   fallback: string,
@@ -14,7 +22,7 @@ export function backendErrorCodeToastMessage(
   if (errorCode === NOVEL_IMPORT_REQUIRED_CODE) {
     return t("common.novelImportRequired", { defaultValue: fallback });
   }
-  return null;
+  return errorCode ? mediaStorageErrorMessage(errorCode, t) : null;
 }
 
 /**
@@ -486,6 +494,8 @@ export function humanizeTaskError(
   t: TFunction,
 ): string {
   const fallback = raw && raw.trim() ? raw : t("common.error");
+  const storageMessage = raw ? mediaStorageErrorMessage(raw, t) : null;
+  if (storageMessage) return storageMessage;
   if (raw && /billing rule is not configured/i.test(raw)) {
     return t("common.billingRuleNotConfigured", {
       defaultValue: "Billing rules are not configured. Contact an administrator to set up credit rules.",

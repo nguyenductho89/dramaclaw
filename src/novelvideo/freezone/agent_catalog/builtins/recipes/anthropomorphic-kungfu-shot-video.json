@@ -30,7 +30,7 @@
   "planning_prompt": "From the anthropomorphic kung fu key elements, the current storyboard and the sound effect notes, produce a single-clip action-comedy video prompt.",
   "result_summary": "Single-clip action-comedy video prompt for anthropomorphic kung fu",
   "requires_source_media": true,
-  "requires_generated_audio": true,
+  "requires_generated_audio": false,
   "force_enhancement": true,
   "skip_detail_check": true
 }

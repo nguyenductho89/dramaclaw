@@ -568,12 +568,17 @@ def build_freezone_image_to_video_prompt(
     if marks_block:
         parts.append(marks_block)
 
-    if int(reference_image_count or 1) > 1:
+    # With 0 images, add nothing: video editing reuses this builder (the video-edit
+    # endpoint in routes/freezone.py), and writing "use the input image as the subject..."
+    # when there is no reference image describes material that does not exist -- the
+    # vendor infers the task type from the prompt, so such made-up wording only misleads it.
+    image_count = 1 if reference_image_count is None else int(reference_image_count)
+    if image_count > 1:
         parts.append(
             "Image reference constraint: combine the multiple input images, prioritizing consistent subject identity, appearance, clothing, scene cues and overall style, "
             "and do not collage the images into a multi-panel picture."
         )
-    else:
+    elif image_count == 1:
         parts.append(
             "Image reference constraint: use the input images as references for subject, appearance, color tone, texture and overall style, with the prompt driving the video content; "
             "do not force the input image to be locked as the first frame of the video."
@@ -582,6 +587,13 @@ def build_freezone_image_to_video_prompt(
         "Output requirement: generate a single coherent video shot with natural action and smooth motion, avoiding flicker, deformation, frame skipping and subject identity drift."
     )
     return "\n".join(part for part in parts if part)
+
+
+# "Video extension" and the canvas "smart continuation" share the same requirement sentence: to the vendor they are the same kind of task.
+VIDEO_EXTEND_REQUIREMENT = (
+    "Video extension requirement: continue generating from the end of the input video, keeping subject identity, scene, lighting, camera movement, "
+    "sound and narrative continuous, without redoing or editing what the input video already contains."
+)
 
 
 def build_freezone_video_extend_prompt(
@@ -595,10 +607,7 @@ def build_freezone_video_extend_prompt(
     template = get_video_camera_template(camera_template_id)
     if template:
         parts.append(f"Camera movement template: {template['name']}. {template['prompt']}")
-    parts.append(
-        "Video extension requirement: continue generating from the end of the input video, keeping subject identity, scene, lighting, camera movement, "
-        "sound and narrative continuous, without redoing or editing what the input video already contains."
-    )
+    parts.append(VIDEO_EXTEND_REQUIREMENT)
     return "\n".join(part for part in parts if part)
 
 
@@ -649,7 +658,12 @@ def build_freezone_omni_video_prompt(
     camera_template_id: str | None = None,
     marks: list[dict[str, Any]] | None = None,
     reference_items: list[dict[str, Any]] | None = None,
+    continuation: bool = False,
 ) -> str:
+    """continuation: canvas "smart continuation". The requirement matches "video extension"
+    and omits the omni-reference wording (whose "this is a video reference for generating a
+    new video" is the opposite of continuation)."""
+
     parts = [str(user_prompt or "").strip()]
 
     if theme and theme.strip():
@@ -662,6 +676,10 @@ def build_freezone_omni_video_prompt(
     marks_block = format_video_marks(marks)
     if marks_block:
         parts.append(marks_block)
+
+    if continuation:
+        parts.append(VIDEO_EXTEND_REQUIREMENT)
+        return "\n".join(part for part in parts if part)
 
     parts.append(
         "Omni-reference mode requirement: model the text, image, video, audio, file and web link references together, "
@@ -793,6 +811,23 @@ def validate_omni_reference_image_dimensions(
         )
 
 
+def effective_video_human_review(
+    requested: bool,
+    *,
+    gen_mode: str | None,
+    reference_items: list[dict] | None,
+    last_frame_path: str | None = None,
+) -> bool:
+    """Review applies to visual input materials, never text-to-video requests."""
+    if not requested or gen_mode in {"textToVideo", "text_to_video"}:
+        return False
+    return bool(last_frame_path and last_frame_path.strip()) or any(
+        str(item.get("type") or "image") in {"image", "video"}
+        and bool(str(item.get("path") or "").strip())
+        for item in (reference_items or [])
+    )
+
+
 async def run_trusted_freezone_video_gen(
     *,
     project_dir: Path,
@@ -854,7 +889,12 @@ async def run_trusted_freezone_video_gen(
         "duration": float(duration_seconds),
         "last_frame_path": last_frame_path,
         "references": references,
-        "human_review": bool(human_review),
+        "human_review": effective_video_human_review(
+            human_review,
+            gen_mode=gen_mode,
+            reference_items=reference_items,
+            last_frame_path=last_frame_path,
+        ),
         "seedance2_config": (
             {"scene_optimize": scene_optimize} if scene_optimize else None
         ),

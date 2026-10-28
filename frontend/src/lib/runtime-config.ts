@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
 import { z } from "zod";
+import type { BrowserModelSourceConfig } from "@/features/canvas/application/browserModelSource";
 
 export const RuntimeConfigResponse = z.object({
   ok: z.literal(true),
@@ -14,6 +15,9 @@ export const RuntimeConfigResponse = z.object({
     // if ANY of the 4 is configured. Settings fetches per-key status via
     // GET /api/v1/runpod-worker/keys to decide which sections to render.
     runpod_worker_control_enabled: z.boolean().optional(),
+    browser_model_asset_base: z.string().nullable().optional(),
+    browser_model_hf_endpoint: z.string().nullable().optional(),
+    browser_ort_wasm_base: z.string().nullable().optional(),
   }),
 });
 
@@ -31,7 +35,15 @@ export interface RuntimeConfig {
   instanceId?: string;
   mcpDirectCanvasApply: boolean;
   runpodWorkerControlEnabled: boolean;
+  /** Source of the in-browser inference models and wasm; all null means the transformers.js default source. */
+  browserModelSource: BrowserModelSourceConfig;
 }
+
+const DEFAULT_BROWSER_MODEL_SOURCE: BrowserModelSourceConfig = {
+  assetBase: null,
+  hfEndpoint: null,
+  ortWasmBase: null,
+};
 
 let runtimeConfig: RuntimeConfig = {
   edition: "ee",
@@ -39,6 +51,7 @@ let runtimeConfig: RuntimeConfig = {
   mcpDirectCanvasApply: false,
   phoneOtpEntryVisible: false,
   runpodWorkerControlEnabled: false,
+  browserModelSource: DEFAULT_BROWSER_MODEL_SOURCE,
 };
 
 function fallbackRuntimeConfig(): RuntimeConfig {
@@ -49,6 +62,7 @@ function fallbackRuntimeConfig(): RuntimeConfig {
         phoneOtpEntryVisible: false,
         mcpDirectCanvasApply: false,
         runpodWorkerControlEnabled: false,
+        browserModelSource: DEFAULT_BROWSER_MODEL_SOURCE,
       }
     : {
         edition: "ee",
@@ -56,6 +70,7 @@ function fallbackRuntimeConfig(): RuntimeConfig {
         phoneOtpEntryVisible: false,
         mcpDirectCanvasApply: false,
         runpodWorkerControlEnabled: false,
+        browserModelSource: DEFAULT_BROWSER_MODEL_SOURCE,
       };
 }
 
@@ -91,6 +106,11 @@ export async function loadRuntimeConfig(): Promise<void> {
       instanceId: parsed.data.instance_id,
       mcpDirectCanvasApply: parsed.data.mcp_direct_canvas_apply ?? false,
       runpodWorkerControlEnabled: parsed.data.runpod_worker_control_enabled ?? false,
+      browserModelSource: {
+        assetBase: parsed.data.browser_model_asset_base || null,
+        hfEndpoint: parsed.data.browser_model_hf_endpoint || null,
+        ortWasmBase: parsed.data.browser_ort_wasm_base || null,
+      },
     };
   } catch (error) {
     // eslint-disable-next-line no-console
@@ -117,4 +137,8 @@ export function phoneOtpEntryVisible(): boolean {
 
 export function runpodWorkerControlEnabled(): boolean {
   return runtimeConfig.runpodWorkerControlEnabled;
+}
+
+export function browserModelSource(): BrowserModelSourceConfig {
+  return runtimeConfig.browserModelSource;
 }

@@ -4,13 +4,18 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { toast } from "sonner";
+import ky from "ky";
 
 import { SettingsDialog } from "@/components/settings/settings-dialog";
+import { enT, viT } from "@/__tests__/helpers/i18n-fixtures";
 
 const runtimeState = vi.hoisted(() => ({ isCeRuntime: true }));
+const localeState = vi.hoisted(() => ({ language: "en" }));
 const modelGatewayMocks = vi.hoisted(() => ({
   config: undefined as Record<string, unknown> | undefined,
+  saveAgent: vi.fn(),
   saveBrainClaw: vi.fn(),
+  saveMediaRelay: vi.fn(),
   setCustomLlmMode: vi.fn(),
 }));
 const freezoneAgentConfigMocks = vi.hoisted(() => ({
@@ -73,6 +78,10 @@ vi.mock("@/lib/queries/model-gateway", () => ({
   useEnableHybrid: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useEnableBrainClaw: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useSaveOfficialConfig: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useSaveAgentLlmConfig: () => ({
+    mutateAsync: modelGatewayMocks.saveAgent,
+    isPending: false,
+  }),
   useSaveBrainClawConfig: () => ({
     mutateAsync: modelGatewayMocks.saveBrainClaw,
     isPending: false,
@@ -87,8 +96,17 @@ vi.mock("@/lib/queries/model-gateway", () => ({
   useSaveEmbeddingModel: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useSaveMediaModels: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useSaveProviderChannels: () => ({ mutateAsync: vi.fn(), isPending: false }),
-  useSaveMediaRelayConfig: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useSaveMediaRelayConfig: () => ({
+    mutateAsync: modelGatewayMocks.saveMediaRelay,
+    isPending: false,
+  }),
   useSyncProviderChannel: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useChannelModels: () => ({
+    data: undefined,
+    isFetching: false,
+    isError: false,
+    refetch: vi.fn(),
+  }),
 }));
 
 vi.mock("sonner", () => ({
@@ -99,7 +117,9 @@ vi.mock("sonner", () => ({
   },
 }));
 
-vi.mock("react-i18next", () => ({
+vi.mock("react-i18next", async () => {
+  const { enT, viT } = await import("@/__tests__/helpers/i18n-fixtures");
+  return {
   useTranslation: () => ({
     t: (
       key: string,
@@ -115,7 +135,9 @@ vi.mock("react-i18next", () => ({
         missing?: number;
       },
     ) =>
-      ({
+      key.startsWith("settings.mediaStorage.errors.")
+        ? (localeState.language === "vi" ? viT : enT)(key, options)
+        : ({
         "settings.title": "Settings",
         "settings.close": "Close",
         "settings.navigationLabel": "Settings categories",
@@ -140,6 +162,14 @@ vi.mock("react-i18next", () => ({
         "settings.modelConfig.brainclaw.description": "Xia Brain is only available through Xia Relay",
         "settings.modelConfig.brainclaw.model": "Fixed model",
         "settings.modelConfig.brainclaw.save": "Save and enable BrainClaw",
+        "settings.modelConfig.agent.title": "Agent model",
+        "settings.modelConfig.agent.description": "Agent model description",
+        "settings.modelConfig.agent.inherit": "Follow current channel",
+        "settings.modelConfig.agent.thirdParty": "Third-party",
+        "settings.modelConfig.agent.model": "Model name",
+        "settings.modelConfig.agent.thirdPartyHint": "Must be compatible with the Responses API",
+        "settings.modelConfig.agent.save": "Save Agent config",
+        "settings.modelConfig.agent.saved": "Agent model config saved",
         "settings.modelConfig.featureModels.title": "Business Model Mapping",
         "settings.modelConfig.embeddingModel.title": "Embedding model",
         "settings.modelConfig.mediaModels.title": "Media models",
@@ -338,9 +368,16 @@ vi.mock("react-i18next", () => ({
         "settings.freezoneCatalog.newRecipe.copyRawJson": "Copy JSON",
         "settings.freezoneCatalog.newRecipe.rawJsonCopied": "Recipe JSON copied",
         "settings.freezoneCatalog.newRecipe.rawJsonCopyFailed": "Copy failed; copy manually",
-      })[key] ?? options?.defaultValue ?? key,
+      })[key] ?? (() => {
+        try {
+          return enT(key, options);
+        } catch {
+          return options?.defaultValue ?? key;
+        }
+      })(),
   }),
-}));
+  };
+});
 
 function renderSettingsDialog() {
   return render(
@@ -357,8 +394,13 @@ function openRecipesManagement() {
 
 beforeEach(() => {
   runtimeState.isCeRuntime = true;
+  localeState.language = "en";
   modelGatewayMocks.config = undefined;
+  modelGatewayMocks.saveAgent.mockReset();
   modelGatewayMocks.saveBrainClaw.mockReset();
+  modelGatewayMocks.saveMediaRelay.mockReset();
+  vi.mocked(toast.error).mockClear();
+  vi.mocked(toast.success).mockClear();
   modelGatewayMocks.setCustomLlmMode.mockReset();
   modelGatewayMocks.setCustomLlmMode.mockResolvedValue({ ok: true });
   freezoneAgentConfigMocks.delete.mockReset();
@@ -379,6 +421,148 @@ beforeEach(() => {
 });
 
 describe("SettingsDialog pages", () => {
+  it.each([
+    {
+      language: "en",
+      expected: "MEDIA_STORAGE_ACCESS_DENIED: Media storage access denied. Check your credentials and upload/read permissions.",
+    },
+    {
+      language: "vi",
+      expected: `MEDIA_STORAGE_ACCESS_DENIED: ${viT("settings.mediaStorage.errors.MEDIA_STORAGE_ACCESS_DENIED")}`,
+    },
+  ])("shows the $language storage error after Ky consumes the HTTP response", async ({ language, expected }) => {
+    localeState.language = language;
+    const detail = "MEDIA_STORAGE_ACCESS_DENIED: Media storage access denied (backend text)";
+    let requestError: unknown;
+    try {
+      await ky
+        .post("https://storage.example.test/config", {
+          retry: 0,
+          fetch: async () =>
+            new Response(JSON.stringify({ detail }), {
+              status: 400,
+              headers: { "content-type": "application/json" },
+            }),
+        })
+        .json();
+    } catch (error) {
+      requestError = error;
+    }
+    expect(requestError).toMatchObject({
+      data: { detail },
+      response: { bodyUsed: true },
+    });
+    modelGatewayMocks.saveMediaRelay.mockRejectedValue(requestError);
+
+    renderSettingsDialog();
+    fireEvent.click(screen.getByRole("button", { name: /Media Storage/ }));
+    fireEvent.click(
+      screen.getByRole("tab", {
+        name: enT("settings.mediaStorage.providerAliyunOss"),
+      }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: enT("settings.mediaStorage.save") }),
+    );
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith(expected));
+    expect(modelGatewayMocks.saveMediaRelay).toHaveBeenCalledWith(
+      expect.objectContaining({ provider: "aliyun_oss" }),
+    );
+    expect(toast.success).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["MEDIA_STORAGE_TIMEOUT", "Media storage connection timed out. Check your network and try again."],
+    ["MEDIA_STORAGE_AUTH_INVALID", "Media storage credentials are invalid. Check your AccessKey / API Key."],
+    ["MEDIA_STORAGE_ACCESS_DENIED", "Media storage access denied. Check your credentials and upload/read permissions."],
+    ["MEDIA_STORAGE_TARGET_INVALID", "Media storage destination is unavailable. Check the bucket, endpoint, or folder."],
+    ["MEDIA_STORAGE_CONFIG_INVALID", "Media storage configuration is incomplete or the upload failed. Check the selected storage settings."],
+    ["MEDIA_STORAGE_UNAVAILABLE", "Media storage read/write verification failed. Check your connection and settings, then try again."],
+    ["MEDIA_STORAGE_READ_MISMATCH", "Media storage read verification failed. Check the storage access settings."],
+  ])("translates %s in failed save responses", async (code, message) => {
+    localeState.language = "en";
+    modelGatewayMocks.saveMediaRelay.mockResolvedValue({
+      ok: false,
+      error: `${code}: backend raw error text`,
+    });
+    renderSettingsDialog();
+    fireEvent.click(screen.getByRole("button", { name: /Media Storage/ }));
+    fireEvent.click(
+      screen.getByRole("tab", {
+        name: enT("settings.mediaStorage.providerAliyunOss"),
+      }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: enT("settings.mediaStorage.save") }),
+    );
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith(`${code}: ${message}`));
+    expect(toast.success).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    {
+      name: "parsed text payload",
+      error: () => ({ data: "  Storage unavailable  " }),
+      expected: "Storage unavailable",
+    },
+    {
+      name: "unknown storage error code",
+      error: () => ({ data: { detail: "MEDIA_STORAGE_NEW_ERROR: Original error" } }),
+      expected: "MEDIA_STORAGE_NEW_ERROR: Original error",
+    },
+    {
+      name: "unconsumed legacy response",
+      error: () => ({
+        response: new Response(JSON.stringify({ detail: "Legacy storage error" })),
+      }),
+      expected: "Legacy storage error",
+    },
+    {
+      name: "consumed response without parsed data",
+      error: async () => {
+        const response = new Response("unavailable");
+        await response.text();
+        return { response, message: "Storage request failed" };
+      },
+      expected: "Storage request failed",
+    },
+    {
+      name: "synchronous response cloning failure",
+      error: () => ({
+        response: {
+          bodyUsed: false,
+          clone: () => {
+            throw new TypeError("Cannot clone response");
+          },
+        },
+        message: "Storage request failed",
+      }),
+      expected: "Storage request failed",
+    },
+    {
+      name: "missing error details",
+      error: () => ({}),
+      expected: enT("settings.mediaStorage.saveFailed"),
+    },
+  ])("shows a storage save error for $name", async ({ error, expected }) => {
+    modelGatewayMocks.saveMediaRelay.mockRejectedValue(await error());
+    renderSettingsDialog();
+    fireEvent.click(screen.getByRole("button", { name: /Media Storage/ }));
+    fireEvent.click(
+      screen.getByRole("tab", {
+        name: enT("settings.mediaStorage.providerAliyunOss"),
+      }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: enT("settings.mediaStorage.save") }),
+    );
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith(expected));
+    expect(toast.success).not.toHaveBeenCalled();
+  });
+
   it("opens on the model settings page", () => {
     renderSettingsDialog();
 
@@ -387,6 +571,45 @@ describe("SettingsDialog pages", () => {
       "page",
     );
     expect(screen.getByText("Choose a model gateway channel")).toBeInTheDocument();
+    expect(screen.getByText("Agent model")).toBeInTheDocument();
+  });
+
+  it("saves an independent third-party Agent model", async () => {
+    modelGatewayMocks.config = {
+      mode: "official",
+      effective: { source: "official", baseUrl: "https://relay.example/v1", apiKeyPreview: "", configured: false },
+      llmEffective: { mode: "official", source: "official", baseUrl: "https://relay.example/v1", apiKeyPreview: "", configured: false, model: "brainclaw", brainclaw: true },
+      agent: { mode: "inherit", baseUrl: "", apiKeyPreview: "", configured: false, model: "" },
+      official: { source: "database", baseUrl: "https://relay.example/v1", apiKeyPreview: "", configured: false, environment: { baseUrl: "https://relay.example/v1", apiKeyPreview: "", configured: false } },
+      custom: { llmMode: "advanced", baseUrl: "", apiKeyPreview: "", configured: false, adminBaseUrl: "", tokenName: "", tokenId: "" },
+    };
+    modelGatewayMocks.saveAgent.mockResolvedValue({ ok: true, data: modelGatewayMocks.config });
+
+    renderSettingsDialog();
+    fireEvent.click(screen.getByRole("tab", { name: "Third-party" }));
+    fireEvent.change(screen.getByPlaceholderText("https://api.example.com/v1"), {
+      target: { value: "https://agent.example/v1" },
+    });
+    const agentApiKey = document.querySelector(
+      'input[name="agent-third-party-api-key"]',
+    );
+    expect(agentApiKey).not.toBeNull();
+    fireEvent.change(agentApiKey!, {
+      target: { value: "sk-agent-secret" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("gpt-5.2-codex"), {
+      target: { value: "vendor-agent-model" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save Agent config" }));
+
+    await waitFor(() => {
+      expect(modelGatewayMocks.saveAgent).toHaveBeenCalledWith({
+        mode: "third_party",
+        baseUrl: "https://agent.example/v1",
+        apiKey: "sk-agent-secret",
+        model: "vendor-agent-model",
+      });
+    });
   });
 
   it("lets BrainClaw use an editable NewAPI endpoint in custom mode", async () => {

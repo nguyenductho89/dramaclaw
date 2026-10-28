@@ -53,6 +53,8 @@ import {
 import {
   isVideoModeSupportedByModel,
   videoModelReferenceDisabledReason,
+  videoModeMissingInputReason,
+  type VideoModeInputCounts,
 } from "@/features/canvas/nodes/shared/videoModelCapabilities";
 import {
   PromptMentionEditor,
@@ -142,14 +144,14 @@ interface GenModeSelectProps {
   value: VideoGenMode;
   modelId: string | null | undefined;
   supportedModes?: string[];
-  upstreamCounts: { videos: number; images: number; audios: number };
+  upstreamCounts: VideoModeInputCounts;
   onChange: (next: VideoGenMode) => void;
 }
 
 export function videoModeDisabledReason(
   mode: VideoGenMode,
   modelId: string | null | undefined,
-  upstreamCounts: { videos: number; images: number; audios: number },
+  upstreamCounts: VideoModeInputCounts,
   t: TFn,
   supportedModes?: string[],
 ): string | null {
@@ -230,7 +232,8 @@ export function videoModeDisabledReason(
   if (mode === "firstLastFrame" && upstreamCounts.images > 2) {
     return t("node.videoOps.modeDisabled.moreThanTwoImages");
   }
-  return null;
+  const missingInputReason = videoModeMissingInputReason(mode, upstreamCounts);
+  return missingInputReason ? t(missingInputReason) : null;
 }
 
 function GenModeSelect({
@@ -368,7 +371,7 @@ function GenModeSelect({
               t,
               supportedModes,
             );
-            const isDisabled = disabledReason != null && !isActive;
+            const isDisabled = disabledReason != null;
             // A disabled button fires no mouse events in most browsers, so the hover hint hangs on the outer div;
             // the hint bubble is positioned to the right of the menu, consistent with the design.
             return (
@@ -391,10 +394,10 @@ function GenModeSelect({
                     setIsOpen(false);
                   }}
                   className={`block w-full rounded-[6px] px-3 py-1.5 text-left text-xs transition-colors ${
-                    isActive
-                      ? VIDEO_PARAM_ACTIVE_BUTTON_CLASS
-                      : isDisabled
-                        ? "cursor-not-allowed text-text-muted/40"
+                    isDisabled
+                      ? "cursor-not-allowed text-text-muted/40"
+                      : isActive
+                        ? VIDEO_PARAM_ACTIVE_BUTTON_CLASS
                         : "text-text-muted/95 hover:bg-white/[0.11] hover:text-text-dark"
                   }`}
                 >
@@ -1399,7 +1402,7 @@ export interface VideoGenerationFormProps {
    * modes are decided by the upstream node type (including empty nodes with no image filled), while other models count by resolved asset URLs;
    * that conditional judgment stays in the host (VideoNode), and this component only displays.
    */
-  genModeUpstreamCounts: { videos: number; images: number; audios: number };
+  genModeUpstreamCounts: VideoModeInputCounts;
   upstreamTextContents: readonly UpstreamContent[];
   onDetachUpstream: (sourceNodeId: string) => void;
   /** Reference assets already ordered by reference order and supplemented with "same-type index + whether within the mode cap". */
@@ -1644,12 +1647,13 @@ export const VideoGenerationForm = memo((props: VideoGenerationFormProps) => {
             onChange={onModelChange}
             domain="video"
             popoverPlacement="top"
-            getOptionDisabledReason={(model) =>
-              videoModelReferenceDisabledReason(
+            getOptionDisabledReason={(model) => {
+              const reason = videoModelReferenceDisabledReason(
                 model,
                 modelUpstreamCounts,
-              )
-            }
+              );
+              return reason ? t(reason) : null;
+            }}
           />
           <VideoConfigChip
             aspectRatio={aspectRatio}

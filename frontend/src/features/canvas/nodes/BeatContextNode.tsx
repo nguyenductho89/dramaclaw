@@ -605,8 +605,8 @@ export const BeatContextNode = memo(
     const titleFromData = resolveBeatContextTitle(data);
     const title =
       isStandaloneContext &&
-      // Several canonical titles that were historically written into node data; recognize them and swap in the one in the current language.
-      ["Custom Beat Context", "Beat Context", "Custom Shot Context"].includes(titleFromData)
+      // Several canonical titles that were historically written into node data (including legacy Chinese ones, written as unicode escapes); recognize them and swap in the one in the current language.
+      ["Custom Beat Context", "Beat Context", "Custom Shot Context", "\u81ea\u5b9a\u4e49 Beat Context", "\u81ea\u5b9a\u4e49 Beat \u4e0a\u4e0b\u6587", "\u81ea\u5b9a\u4e49\u955c\u5934\u4e0a\u4e0b\u6587"].includes(titleFromData)
         ? t("node.beatContextNode.standaloneTitle", { defaultValue: "Custom Shot Context" })
         : titleFromData;
     const episode =

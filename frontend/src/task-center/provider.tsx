@@ -67,6 +67,11 @@ function invalidateCompletedAssetQueries(
       queryClient.invalidateQueries({
         queryKey: queryKeys.beats(projectId, task.episode),
       });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.episodeDetail(projectId, task.episode),
+      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.scenes(projectId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.props(projectId) });
       // Splitting shots is the step where beat_count goes from 0 to N, which the shot-count badge in the episode list reads.
       queryClient.invalidateQueries({ queryKey: queryKeys.episodes(projectId) });
       // Splitting shots rewrites all beats of the episode, and the reference relations of identities/scenes/props change with it. The asset index hangs on a project-level
@@ -156,6 +161,11 @@ function invalidateCompletedAssetQueries(
 
   if (task.task_type === "episode_scene_planner") {
     queryClient.invalidateQueries({ queryKey: queryKeys.scenes(projectId) });
+    if (task.episode > 0) {
+      queryClient.invalidateQueries({ queryKey: queryKeys.beats(projectId, task.episode) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.script(projectId, task.episode) });
+      invalidateAssetReferences(queryClient, projectId);
+    }
   } else {
     queryClient.invalidateQueries({ queryKey: queryKeys.props(projectId) });
   }

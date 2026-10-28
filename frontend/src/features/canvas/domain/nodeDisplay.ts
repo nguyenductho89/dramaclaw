@@ -15,8 +15,8 @@ import {
  * and must not change with the language, otherwise the same canvas would save different contents under Chinese vs. English; the latter is what should be translated.
  *
  * So the table below stays unchanged as the "canonical defaults", with a separate key table alongside; at render time use
- * localizeNodeDisplayName: when the name is empty or happens to equal a canonical default (meaning the user never renamed it),
- * it is shown in the current language, otherwise the name the user chose is shown as is.
+ * localizeNodeDisplayName: the default name of the current type (including the auto number) is shown in the current language,
+ * while a user-defined name is kept as is, even if it happens to equal another node type's default name.
  */
 // i18n-exempt-start: canonical defaults, written into the canvas JSON; for display use NODE_DISPLAY_NAME_KEYS
 export const DEFAULT_NODE_DISPLAY_NAME: Record<CanvasNodeType, string> = {
@@ -63,12 +63,6 @@ const EXPORT_RESULT_DISPLAY_NAME_KEYS: Record<ExportImageNodeResultKind, string>
   Object.fromEntries(
     Object.keys(EXPORT_RESULT_DISPLAY_NAME).map((kind) => [kind, `node.exportResult.${kind}`]),
   ) as Record<ExportImageNodeResultKind, string>;
-
-/** All canonical defaults, used to judge whether "this name was given by the system or chosen by the user". */
-const CANONICAL_DEFAULT_NAMES = new Set<string>([
-  ...Object.values(DEFAULT_NODE_DISPLAY_NAME),
-  ...Object.values(EXPORT_RESULT_DISPLAY_NAME),
-]);
 
 function resolveExportResultKind(data: Partial<CanvasNodeData>): ExportImageNodeResultKind {
   return (data as { resultKind?: ExportImageNodeResultKind }).resultKind ?? 'generic';
@@ -182,7 +176,17 @@ export function localizeNodeDisplayName(
   t: TFunction,
 ): string {
   const name = resolveNodeDisplayName(type, data);
-  return CANONICAL_DEFAULT_NAMES.has(name)
+  if (name === getDefaultNodeDisplayName(type, data)) {
+    const index = data.autoTitleIndex;
+    const suffix = typeof index === 'number' && Number.isFinite(index) && index > 0
+      ? String(index)
+      : '';
+    return `${localizeDefaultNodeDisplayName(type, data, t)}${suffix}`;
+  }
+  const defaultBase = type === CANVAS_NODE_TYPES.exportImage
+    ? resolveExportResultDefault(data)
+    : DEFAULT_NODE_DISPLAY_NAME[type];
+  return name === defaultBase
     ? localizeDefaultNodeDisplayName(type, data, t)
     : name;
 }

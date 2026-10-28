@@ -609,6 +609,13 @@ export const BASE_CANVAS_ACTION_CAPABILITIES: CanvasActionCapability[] = [
   videoUiCapability("ui.run_video_breakdown", "Frame-by-frame breakdown", "run_video_breakdown", {
     execution: "frontend_node",
   }),
+  videoUiCapability("ui.open_video_crop_tool", "Frame crop", "open_video_crop_tool"),
+  videoUiCapability("ui.open_video_extend_tool", "Smart extend", "open_video_extend_tool"),
+  videoUiCapability("ui.run_video_depth_capture", "Depth motion capture", "run_video_depth_capture", {
+    execution: "frontend_node",
+    mediaType: "video",
+    nodeKind: "candidate",
+  }),
 ];
 
 export function buildCanvasActionCatalog(nodes: CanvasNode[], edges: CanvasEdge[] = []): CanvasActionCatalog {

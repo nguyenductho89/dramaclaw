@@ -57,6 +57,69 @@ def test_background_canvas_agent_notification_is_hidden_from_chat_history(
     assert [item["role"] for item in chat_store.list_messages("admin", scope)] == ["user"]
 
 
+@pytest.mark.anyio
+async def test_cancelled_canvas_turn_settles_pending_clarification(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    from novelvideo.chat import hermes_pool, hermes_workspace
+    from novelvideo.freezone import canvas_command_bridge
+
+    event = {
+        "type": "assistant.clarification.request",
+        "bridge_key": "bridge-a",
+        "clarification_id": "clarify-a",
+        "questions": [{"id": "image_model", "options": []}],
+    }
+    appended = []
+    resolved = []
+
+    async def list_messages(*_args, **_kwargs):
+        return [{"role": "user", "turn_id": "turn-a", "ui_events": [event]}]
+
+    async def append_event(_username, _scope, turn_id, persisted_event):
+        appended.append((turn_id, persisted_event))
+        return {}
+
+    monkeypatch.setattr(chat_store, "list_messages_async", list_messages)
+    monkeypatch.setattr(chat_store, "append_ui_event_async", append_event)
+    monkeypatch.setattr(
+        hermes_workspace,
+        "ensure_user_hermes_workspace",
+        lambda *_args, **_kwargs: tmp_path / "hermes",
+    )
+    monkeypatch.setattr(
+        hermes_pool,
+        "canvas_bridge_dir_for_profile",
+        lambda *_args, **_kwargs: tmp_path / "bridge",
+    )
+    monkeypatch.setattr(
+        canvas_command_bridge,
+        "resolve_clarification_result",
+        lambda key, result, **kwargs: resolved.append((key, result, kwargs)),
+    )
+
+    await chat_service._cancel_pending_clarifications_for_turn(
+        username="admin",
+        store_scope=ChatScope(kind="project", id="project-a"),
+        turn_id="turn-a",
+        project_state_dir=tmp_path / "project",
+        agent_profile="freezone:main",
+    )
+
+    assert appended[0][0] == "turn-a"
+    assert appended[0][1]["submitted"] is True
+    assert appended[0][1]["cancelled"] is True
+    assert appended[0][1]["clarification_status"] == "cancelled"
+    assert resolved[0][0] == "bridge-a"
+    assert resolved[0][1]["cancelled"] is True
+    assert resolved[0][1]["message"] == "The user cancelled this turn's request"
+    assert resolved[0][1]["message_i18n"] == {
+        "code": "freezone.chat.clarification.cancelledRequest",
+    }
+    assert resolved[0][2]["bridge_dir"] == tmp_path / "bridge"
+
+
 @pytest.fixture
 def anyio_backend():
     return "asyncio"
@@ -1362,6 +1425,12 @@ def test_codex_freezone_write_request_detection_ignores_injected_context_and_que
         )
         is False
     )
+    assert (
+        chat_service._freezone_canvas_write_requested(
+            "do not move the nodes, just give me layout suggestions"
+        )
+        is False
+    )
     assert chat_service._freezone_canvas_write_requested("generate an image") is True
     assert (
         chat_service._freezone_canvas_write_requested("generate a cyberpunk-style image")
@@ -1496,6 +1565,7 @@ def test_codex_freezone_instructions_forbid_invented_resource_uris():
         "freezone_confirm_workflow_draft does not accept run_after_create" in instructions
     )
     assert "not a Workflow catalog skill_id" in instructions
+    assert "text-to-image for a pure image workflow" in instructions
     assert "text-to-image-video" in instructions
     assert "Never ask for a duplicate 'create and run' confirmation" in instructions
     assert "the Freezone write tool creates that card" in instructions
@@ -1506,19 +1576,229 @@ def test_codex_freezone_instructions_forbid_invented_resource_uris():
     assert "freezone_run_node_action" in instructions
 
     canvas_instructions = chat_service._FREEZONE_CANVAS_ASSISTANT_INSTRUCTIONS
+    assert "pure image workflow must use text-to-image" in canvas_instructions
     assert "one-node workflow is still a workflow" in canvas_instructions
     assert "do not read node detail before starting it" in canvas_instructions
     assert "freezone_run_node_action" in canvas_instructions
 
 
-def test_recipe_generation_on_an_existing_standalone_node_routes_to_node_action():
+def test_codex_freezone_thread_advertises_exact_agent_skill_locator(
+    monkeypatch,
+    tmp_path,
+):
+    workspace = tmp_path / "project-workspace"
+    skill = workspace / ".agents" / "skills" / "dramaclaw-workflows" / "SKILL.md"
+    skill.parent.mkdir(parents=True)
+    skill.write_text("# Workflow skill\n", encoding="utf-8")
+    captured = {}
+
+    class FakeCodexClient:
+        def __init__(self, **kwargs):
+            captured.update(kwargs)
+
+        def thread_start(self):
+            return "new-thread"
+
+    monkeypatch.setattr(
+        chat_service,
+        "ensure_user_codex_workspace",
+        lambda *_args, **_kwargs: (workspace, tmp_path / "codex-home"),
+    )
+    monkeypatch.setattr(chat_service, "_build_codex_env", lambda *_args, **_kwargs: {})
+    monkeypatch.setattr(
+        chat_service,
+        "_codex_turn_gateway_credentials",
+        lambda _authorization: ("turn-key", "https://gateway.example/v1"),
+    )
+    monkeypatch.setattr(
+        chat_service, "_codex_gateway_config_overrides", lambda _url: ()
+    )
+    monkeypatch.setattr(
+        chat_service, "_codex_mcp_config_overrides", lambda _servers: ()
+    )
+    monkeypatch.setattr(
+        chat_service, "_get_codex_thread_id", lambda *_args, **_kwargs: None
+    )
+    monkeypatch.setattr(chat_service, "CodexClient", FakeCodexClient)
+
+    thread = chat_service._build_codex_thread(
+        "admin",
+        "project-a",
+        "agent-token",
+        authorization=None,
+        agent_profile="freezone:main",
+        tool_mode="freezone_canvas",
+    )
+
+    match = re.search(
+        r"\[DRAMACLAW_AGENT_SKILL_LOCATORS\]\n(.*?)\n"
+        r"\[/DRAMACLAW_AGENT_SKILL_LOCATORS\]",
+        captured["developer_instructions"],
+        re.DOTALL,
+    )
+    assert thread == "new-thread"
+    assert match is not None
+    assert json.loads(match.group(1)) == {
+        "agent_skills": [
+            {
+                "name": "dramaclaw-workflows",
+                "server": "dramaclaw",
+                "uri": skill.resolve().as_uri(),
+            }
+        ],
+        "workflow_catalog_server": "dramaclaw_workflows",
+    }
+
+
+def test_codex_exact_node_action_thread_enables_native_tool_search(
+    monkeypatch,
+    tmp_path,
+):
+    captured = {}
+    skill = (
+        tmp_path
+        / "workspace"
+        / ".agents"
+        / "skills"
+        / "dramaclaw-workflows"
+        / "SKILL.md"
+    )
+    skill.parent.mkdir(parents=True)
+    skill.write_text("# Workflow skill\n", encoding="utf-8")
+
+    class FakeCodexClient:
+        def __init__(self, **kwargs):
+            captured.update(kwargs)
+
+        def thread_start(self):
+            return "new-thread"
+
+    monkeypatch.setattr(
+        chat_service,
+        "ensure_user_codex_workspace",
+        lambda *_args, **_kwargs: (tmp_path / "workspace", tmp_path / "codex-home"),
+    )
+    monkeypatch.setattr(chat_service, "_build_codex_env", lambda *_args, **_kwargs: {})
+    monkeypatch.setattr(
+        chat_service,
+        "_codex_turn_gateway_credentials",
+        lambda _authorization: ("turn-key", "https://gateway.example/v1"),
+    )
+    gateway_options = []
+
+    def fake_gateway_overrides(_url, **kwargs):
+        gateway_options.append(kwargs)
+        return ()
+
+    monkeypatch.setattr(
+        chat_service, "_codex_gateway_config_overrides", fake_gateway_overrides
+    )
+    monkeypatch.setattr(
+        chat_service, "_codex_mcp_config_overrides", lambda _servers: ()
+    )
+    monkeypatch.setattr(
+        chat_service, "_get_codex_thread_id", lambda *_args, **_kwargs: None
+    )
+    monkeypatch.setattr(chat_service, "CodexClient", FakeCodexClient)
+
+    thread = chat_service._build_codex_thread(
+        "admin",
+        "project-a",
+        "agent-token",
+        authorization=None,
+        agent_profile="freezone:main",
+        tool_mode="freezone_canvas",
+        request_prompt=(
+            'Run the existing audio node named "Red Cup Showcase Background Music" on the current canvas: '
+            "update the music parameters first, then run generate_audio."
+        ),
+    )
+
+    assert thread == "new-thread"
+    assert gateway_options == [{"native_tool_search": True}]
+    assert captured["thread_config_overrides"] == ()
+
+
+def test_codex_exact_audio_planner_has_no_canvas_tools_and_uses_plan_schema(
+    monkeypatch, tmp_path
+):
+    captured = {}
+    mcp_inputs = []
+
+    class FakeCodexClient:
+        def __init__(self, **kwargs):
+            captured.update(kwargs)
+
+        def thread_start(self):
+            return "planner-thread"
+
+        def thread_resume(self, _thread_id):
+            pytest.fail("the stateless exact-audio planner must not resume a chat thread")
+
+    monkeypatch.setattr(
+        chat_service,
+        "ensure_user_codex_workspace",
+        lambda *_args, **_kwargs: (tmp_path / "workspace", tmp_path / "codex-home"),
+    )
+    monkeypatch.setattr(chat_service, "_build_codex_env", lambda *_args, **_kwargs: {})
+    monkeypatch.setattr(
+        chat_service,
+        "_codex_turn_gateway_credentials",
+        lambda _authorization: ("turn-key", "https://gateway.example/v1"),
+    )
+    monkeypatch.setattr(
+        chat_service, "_codex_gateway_config_overrides", lambda _url: ()
+    )
+
+    def fake_mcp_overrides(servers):
+        mcp_inputs.append(servers)
+        return ()
+
+    monkeypatch.setattr(
+        chat_service, "_codex_mcp_config_overrides", fake_mcp_overrides
+    )
+    monkeypatch.setattr(
+        chat_service, "_get_codex_thread_id", lambda *_args, **_kwargs: "old-thread"
+    )
+    monkeypatch.setattr(chat_service, "CodexClient", FakeCodexClient)
+
+    thread = chat_service._build_codex_thread(
+        "admin",
+        "project-a",
+        "agent-token",
+        authorization=None,
+        agent_profile="freezone:main",
+        tool_mode="freezone_canvas",
+        request_prompt="Run the existing node and run generate_audio",
+        exact_audio_action_plan=True,
+    )
+
+    assert thread == "planner-thread"
+    assert mcp_inputs == [{}]
+    assert (
+        captured["developer_instructions"]
+        == chat_service._CODEX_EXACT_AUDIO_ACTION_PLANNER_INSTRUCTIONS
+    )
+    assert captured["output_schema"] == chat_service._CODEX_EXACT_AUDIO_ACTION_PLAN_SCHEMA
+
+
+def test_named_recipe_distinguishes_existing_output_from_external_media_input():
     for instructions in (
         chat_service._codex_developer_instructions("freezone_canvas"),
         chat_service._FREEZONE_CANVAS_ASSISTANT_INSTRUCTIONS,
     ):
-        assert "generate content through a named Recipe" in instructions
+        assert (
+            "named Recipe already bound to an existing standalone output node"
+            in instructions
+        )
         assert "freezone_run_node_action" in instructions
         assert "never substitute freezone_update_node_data" in instructions
+        assert "existing media node is only the source or reference" in instructions
+        assert "external_inputs" in instructions
+        assert "reference_inputs" in instructions
+        assert "never use freezone_get_node_action_catalog" in instructions
+        assert "do not recreate" in instructions
+        assert "copy the source node" in instructions
 
 
 def test_explicit_standalone_node_edit_does_not_trigger_recipe_generation():
@@ -1605,6 +1885,7 @@ def test_codex_clarification_requires_successful_answer(container, outcome):
         "clarification_answered",
         "skill_saved",
         "read_only",
+        "false_read_only",
         "mixed",
         "wrong_scope",
         "preflight_retry",
@@ -1631,11 +1912,6 @@ async def test_codex_freezone_write_cannot_claim_success_without_tool_receipt(
 ):
     monkeypatch.setenv("NOVELVIDEO_STATE_DIR", str(tmp_path / "state"))
     monkeypatch.setenv("NOVELVIDEO_RUNTIME_DIR", str(tmp_path / "runtime"))
-    monkeypatch.setattr(
-        chat_service,
-        "_freezone_canvas_write_requested",
-        lambda *_: pytest.fail("Receipt enforcement must not classify user prose"),
-    )
     events = []
     revoked = []
 
@@ -2068,7 +2344,12 @@ async def test_codex_freezone_write_cannot_claim_success_without_tool_receipt(
                         structured=retry_structured,
                         error=None,
                     )
-            elif tool_outcome not in {"missing", "blocked", "read_only"}:
+            elif tool_outcome not in {
+                "missing",
+                "blocked",
+                "read_only",
+                "false_read_only",
+            }:
                 result_payload = (
                     {
                         "ok": True,
@@ -2128,6 +2409,11 @@ async def test_codex_freezone_write_cannot_claim_success_without_tool_receipt(
             )
             if tool_outcome == "read_only":
                 assistant_reply = "I suggest keeping the current node positions and checking the configuration first."
+            if tool_outcome == "false_read_only":
+                assistant_reply = (
+                    "Compiling the prompt through the node-bound drama-background-music Recipe and running "
+                    "generate_audio."
+                )
             if tool_outcome == "clarification_answered":
                 assistant_reply = "Parameters confirmed; no canvas operation has been performed yet."
             if tool_outcome.startswith("video_preflight"):
@@ -2169,7 +2455,12 @@ async def test_codex_freezone_write_cannot_claim_success_without_tool_receipt(
                     "mode": (
                         "read_only"
                         if tool_outcome
-                        in {"skill_saved", "read_only", "clarification_answered"}
+                        in {
+                            "skill_saved",
+                            "read_only",
+                            "false_read_only",
+                            "clarification_answered",
+                        }
                         else "blocked" if tool_outcome == "blocked" else "mutation"
                     ),
                     "canvas_receipts": receipts,
@@ -2210,6 +2501,13 @@ async def test_codex_freezone_write_cannot_claim_success_without_tool_receipt(
     )
     if tool_outcome == "read_only":
         request_prompt = "do not move the nodes, just give me layout suggestions"
+    elif tool_outcome == "false_read_only":
+        request_prompt = (
+            'Run the existing audio node named "Red Cup Showcase Background Music" on the current canvas, '
+            "and run generate_audio only once."
+        )
+    elif tool_outcome == "clarification_answered":
+        request_prompt = "Confirm the current parameters"
     elif tool_outcome == "missing":
         request_prompt = "make a coffee shop promo page"
     result = await chat_service._stream_assistant_reply_codex(
@@ -2289,6 +2587,11 @@ async def test_codex_freezone_write_cannot_claim_success_without_tool_receipt(
         assert assistant_deltas == [result["content"]]
     elif tool_outcome == "read_only":
         assert result["content"] == "I suggest keeping the current node positions and checking the configuration first."
+        assert assistant_deltas == [result["content"]]
+    elif tool_outcome == "false_read_only":
+        assert result["content"] == (
+            "Canvas operation incomplete: this turn has no verifiable canvas write receipt; please retry."
+        )
         assert assistant_deltas == [result["content"]]
     elif tool_outcome == "mixed":
         assert result["content"] == "Canvas operation incomplete: the second node was not saved"
@@ -3135,6 +3438,372 @@ def test_freezone_adds_independent_workflow_mcp_without_changing_default():
     }
 
 
+def test_freezone_existing_execution_uses_focused_mcp_tools():
+    servers = chat_service._dramaclaw_mcp_servers(
+        "freezone_canvas",
+        prompt='Run the existing audio node named "Red Cup Showcase Background Music" on the current canvas.',
+    )
+
+    assert set(servers) == {"dramaclaw"}
+    assert servers["dramaclaw"]["enabled_tools"] == [
+        "freezone_get_canvas_ontology",
+        "freezone_get_node_action_catalog",
+        "freezone_get_node_detail",
+        "freezone_get_workflow",
+        "freezone_observe_workflow_run",
+        "freezone_request_user_clarification",
+        "freezone_run_node_action",
+        "freezone_run_workflow",
+        "freezone_update_node_data",
+    ]
+
+
+def test_freezone_exact_node_action_uses_one_batch_write_tool():
+    servers = chat_service._dramaclaw_mcp_servers(
+        "freezone_canvas",
+        prompt=(
+            'Run the existing audio node named "Red Cup Showcase Background Music" on the current canvas: '
+            "update the music parameters first, then run generate_audio."
+        ),
+    )
+
+    assert set(servers) == {"dramaclaw"}
+    assert servers["dramaclaw"]["enabled_tools"] == ["freezone_emit_canvas_command"]
+
+
+def test_freezone_exact_audio_action_resolves_unique_node_from_canvas_summary():
+    user_text = (
+        'Run the existing audio node named "Red Cup Showcase Background Music" on the current canvas: '
+        "update the music parameters first, then run generate_audio only once."
+    )
+    prompt = (
+        user_text
+        + "\n\n[SUPERTALE_CANVAS_ONTOLOGY_SUMMARY]\n"
+        + json.dumps(
+            {
+                "schema_version": "canvas_ontology_summary.v1",
+                "canvas_id": "canvas-a",
+                "top_objects": [
+                    {
+                        "node_id": "rcp05-music-result",
+                        "node_type": "audioNode",
+                        "label": "Red Cup Showcase Background Music",
+                    },
+                    {
+                        "node_id": "other-audio",
+                        "node_type": "audioNode",
+                        "label": "Ending Music",
+                    },
+                ],
+            },
+            ensure_ascii=False,
+        )
+        + "\n[/SUPERTALE_CANVAS_ONTOLOGY_SUMMARY]"
+    )
+
+    assert chat_service._freezone_exact_audio_action_target(
+        prompt, route_prompt=user_text
+    ) == ("rcp05-music-result", "generate_audio", "Red Cup Showcase")
+
+
+def test_exact_audio_action_restores_target_subject_omitted_by_planner():
+    node_data = chat_service._exact_audio_action_node_data(
+        json.dumps(
+            {
+                "text": (
+                    "Light, warm showcase background music led by marimba and soft drum beats, "
+                    "purely instrumental, no vocals, no lyrics."
+                ),
+                "audio_kind": "music",
+                "force_instrumental": True,
+            },
+            ensure_ascii=False,
+        ),
+        required_subject="Red Cup Showcase",
+    )
+
+    assert node_data == {
+        "text": "Red Cup Showcase: Light, warm showcase background music led by marimba and soft drum beats, purely instrumental, no vocals, no lyrics.",
+        "audioKind": "music",
+        "forceInstrumental": True,
+    }
+
+
+@pytest.mark.anyio
+async def test_codex_exact_audio_plan_is_dispatched_as_one_protected_batch(
+    monkeypatch, tmp_path
+):
+    monkeypatch.setenv("NOVELVIDEO_STATE_DIR", str(tmp_path / "state"))
+    monkeypatch.setenv("NOVELVIDEO_RUNTIME_DIR", str(tmp_path / "runtime"))
+    events = []
+    prompts = []
+    build_kwargs = []
+    dispatched = []
+
+    async def fake_authorize(**_kwargs):
+        return None
+
+    async def fake_create_token(*_args, **_kwargs):
+        return "agent-token"
+
+    class FakeAuthPort:
+        async def revoke_agent_session(self, _token):
+            return None
+
+    class FakeThread:
+        async def stream(self, prompt):
+            prompts.append(prompt)
+            yield SimpleNamespace(
+                type="thread_started",
+                thread_id="codex-thread",
+                turn_id="codex-turn",
+            )
+            yield SimpleNamespace(
+                type="assistant_delta",
+                text=json.dumps(
+                    {
+                        "text": (
+                            "Generate a light, warm piece of background music for the Red Cup Showcase, "
+                            "led by marimba and soft drum beats, purely instrumental, no vocals, no lyrics."
+                        ),
+                        "audio_kind": "music",
+                        "force_instrumental": True,
+                    },
+                    ensure_ascii=False,
+                ),
+            )
+            yield SimpleNamespace(
+                type="turn_completed",
+                thread_id="codex-thread",
+                turn_id="codex-turn",
+                status="completed",
+                disposition="completed",
+                error=None,
+            )
+            yield SimpleNamespace(type="complete", thread_id="codex-thread", text="")
+
+    async def fake_dispatch(**kwargs):
+        dispatched.append(kwargs)
+        return {
+            "ok": True,
+            "tool_call_status": "completed",
+            "canvas_apply_status": "accepted",
+            "applied": True,
+            "bridge_key": "bridge-audio",
+            "project_id": "project-a",
+            "canvas_id": "canvas-a",
+        }
+
+    def fake_build_thread(*_args, **kwargs):
+        build_kwargs.append(kwargs)
+        return FakeThread()
+
+    monkeypatch.setattr(chat_service, "authorize_hermes_launch", fake_authorize)
+    monkeypatch.setattr(
+        chat_service, "_create_page_agent_session_token", fake_create_token
+    )
+    monkeypatch.setattr(chat_service, "_build_codex_thread", fake_build_thread)
+    monkeypatch.setattr(
+        chat_service, "_dispatch_exact_audio_node_action", fake_dispatch
+    )
+    monkeypatch.setattr(chat_service, "get_auth_session_port", lambda: FakeAuthPort())
+    monkeypatch.setattr(hermes_sdk, "_issue_turn_capability", lambda **_kwargs: None)
+
+    async def collect_event(event):
+        events.append(event)
+
+    user_text = (
+        'Run the existing audio node named "Red Cup Showcase Background Music" on the current canvas. '
+        "It is bound to the drama-background-music Recipe under the short-drama-quick Skill; "
+        "you must first compile the music prompt through that Recipe, then run generate_audio only once and complete the actual generation. "
+        "The music should be light and warm, led by marimba and soft drum beats, and must be purely instrumental with no vocals and no lyrics."
+    )
+    prompt = (
+        user_text
+        + "\n\n[SUPERTALE_CANVAS_ONTOLOGY_SUMMARY]\n"
+        + json.dumps(
+            {
+                "schema_version": "canvas_ontology_summary.v1",
+                "canvas_id": "canvas-a",
+                "top_objects": [
+                    {
+                        "node_id": "rcp05-music-result",
+                        "node_type": "audioNode",
+                        "label": "Red Cup Showcase Background Music",
+                    }
+                ],
+            },
+            ensure_ascii=False,
+        )
+        + "\n[/SUPERTALE_CANVAS_ONTOLOGY_SUMMARY]"
+    )
+    scope = ChatScope(
+        kind="project",
+        id="project-a",
+        surface="freezone",
+        canvas_id="canvas-a",
+        agent_id="main",
+        state_dir=str(tmp_path / "state" / "admin" / "project-a"),
+    )
+
+    result = await chat_service._stream_assistant_reply_codex(
+        "admin",
+        "project-a",
+        prompt,
+        collect_event,
+        project_state_dir=tmp_path / "state" / "admin" / "project-a",
+        tool_mode="freezone_canvas",
+        surface_context={"freezone_canvas_id": "canvas-a"},
+        store_scope=scope,
+        turn_id="business-turn",
+        route_prompt=user_text,
+    )
+
+    assert len(prompts) == 1
+    assert build_kwargs[0]["exact_audio_action_plan"] is True
+    assert dispatched == [
+        {
+            "username": "admin",
+            "project": "project-a",
+            "canvas_id": "canvas-a",
+            "agent_profile": "freezone:main",
+            "turn_id": "business-turn",
+            "project_state_dir": tmp_path / "state" / "admin" / "project-a",
+            "node_id": "rcp05-music-result",
+            "action": "generate_audio",
+            "node_data": {
+                "text": (
+                    "Generate a light, warm piece of background music for the Red Cup Showcase, "
+                    "led by marimba and soft drum beats, purely instrumental, no vocals, no lyrics."
+                ),
+                "audioKind": "music",
+                "forceInstrumental": True,
+            },
+        }
+    ]
+    assert result["content"] == "Updated the existing audio node and submitted generate_audio."
+    assert [event["text"] for event in events if event["type"] == "assistant_delta"] == [
+        result["content"]
+    ]
+
+
+@pytest.mark.anyio
+async def test_exact_audio_dispatch_publishes_once_and_waits_for_same_receipt(
+    monkeypatch, tmp_path
+):
+    from novelvideo.chat import hermes_pool, hermes_workspace
+    from novelvideo.freezone import canvas_command_bridge
+
+    published = []
+    waited = []
+    bridge_dir = tmp_path / "bridge"
+
+    monkeypatch.setattr(
+        hermes_workspace,
+        "ensure_user_hermes_workspace",
+        lambda *_args, **_kwargs: tmp_path / "hermes-home",
+    )
+    monkeypatch.setattr(
+        hermes_pool,
+        "canvas_bridge_dir_for_profile",
+        lambda _home, _profile: bridge_dir,
+    )
+    monkeypatch.setattr(
+        canvas_command_bridge,
+        "canvas_command_bridge_key",
+        lambda **_kwargs: "bridge-audio",
+    )
+
+    def fake_put(**kwargs):
+        published.append(kwargs)
+        return None
+
+    def fake_wait(key, timeout_seconds, **kwargs):
+        waited.append((key, timeout_seconds, kwargs))
+        return {
+            "ok": True,
+            "tool_call_status": "completed",
+            "canvas_apply_status": "accepted",
+            "applied": True,
+            "bridge_key": key,
+        }
+
+    monkeypatch.setattr(canvas_command_bridge, "put_pending_canvas_command", fake_put)
+    monkeypatch.setattr(canvas_command_bridge, "wait_canvas_command_result", fake_wait)
+
+    result = await chat_service._dispatch_exact_audio_node_action(
+        username="admin",
+        project="project-a",
+        canvas_id="canvas-a",
+        agent_profile="freezone:main",
+        turn_id="turn-a",
+        project_state_dir=tmp_path / "state",
+        node_id="rcp05-music-result",
+        action="generate_audio",
+        node_data={
+            "text": "Red Cup Showcase, marimba and soft drum beats, purely instrumental.",
+            "audioKind": "music",
+            "forceInstrumental": True,
+        },
+    )
+
+    commands = [
+        {
+            "type": "update_node_data",
+            "node_id": "rcp05-music-result",
+            "data": {
+                "text": "Red Cup Showcase, marimba and soft drum beats, purely instrumental.",
+                "audioKind": "music",
+                "forceInstrumental": True,
+            },
+        },
+        {
+            "type": "run_node_action",
+            "node_id": "rcp05-music-result",
+            "action": "generate_audio",
+        },
+    ]
+    assert len(published) == 1
+    assert published[0]["commands"] == commands
+    assert published[0]["envelope"] == {
+        "schema_version": "canvas_chat_commands.v1",
+        "project_id": "project-a",
+        "canvas_id": "canvas-a",
+        "commands": commands,
+        "agent_id": "main",
+        "external_mcp_command": True,
+        "turn_id": "turn-a",
+    }
+    assert published[0]["bridge_dir"] == bridge_dir
+    assert len(waited) == 1
+    assert waited[0][0] == "bridge-audio"
+    assert waited[0][2]["bridge_dir"] == bridge_dir
+    assert result["bridge_key"] == "bridge-audio"
+
+
+def test_freezone_non_execution_request_keeps_full_mcp_servers():
+    servers = chat_service._dramaclaw_mcp_servers(
+        "freezone_canvas",
+        prompt="Create three nodes and connect them into an image-to-video workflow.",
+    )
+
+    assert "enabled_tools" not in servers["dramaclaw"]
+    assert "dramaclaw_workflows" in servers
+
+
+def test_freezone_execution_instruction_forbids_progress_reply_before_tool():
+    instructions = chat_service._codex_developer_instructions("freezone_canvas")
+
+    assert "An assistant message ends the current agent turn" in instructions
+    assert (
+        "Do not send a progress or status message before that tool call" in instructions
+    )
+    assert (
+        "update_node_data + run_node_action in one freezone_emit_canvas_command"
+        in instructions
+    )
+
+
 def test_chat_agent_api_url_defaults_to_rest_listener(monkeypatch):
     for name in (
         "DRAMACLAW_API_URL",
@@ -3201,6 +3870,23 @@ def test_codex_client_carries_dramaclaw_mcp_servers(tmp_path):
     assert "mcp_servers.dramaclaw.env_vars" not in thread._thread_config
     assert thread._model == "DC-codex-agent-LLM"
     assert thread._model_provider == "dramaclaw_gateway"
+
+
+def test_codex_mcp_config_renders_enabled_tools():
+    servers = chat_service._dramaclaw_mcp_servers(
+        "freezone_canvas",
+        prompt="Run this existing node.",
+    )
+
+    overrides = chat_service._codex_mcp_config_overrides(servers)
+
+    assert (
+        'mcp_servers.dramaclaw.enabled_tools=["freezone_get_canvas_ontology",'
+        '"freezone_get_node_action_catalog","freezone_get_node_detail",'
+        '"freezone_get_workflow","freezone_observe_workflow_run",'
+        '"freezone_request_user_clarification","freezone_run_node_action",'
+        '"freezone_run_workflow","freezone_update_node_data"]'
+    ) in overrides
 
 
 def test_codex_client_carries_freezone_scope_into_mcp_process(tmp_path):
@@ -3380,6 +4066,58 @@ def test_codex_gateway_accepts_disabled_tool_search_for_chat_compat(
         item for item in overrides if item.startswith("model_catalog_json=")
     )
     assert Path(json.loads(catalog_override.split("=", 1)[1])) == catalog_path
+
+
+def test_default_codex_gateway_uses_concrete_mcp_tools(monkeypatch):
+    bundled = (
+        Path(chat_service.__file__).resolve().parents[3]
+        / "deploy"
+        / "codex"
+        / "dramaclaw-model-catalog.json"
+    )
+    monkeypatch.setenv("DRAMACLAW_CODEX_MODEL_CATALOG_FILE", str(bundled))
+
+    overrides = chat_service._codex_gateway_config_overrides(
+        "https://gateway.example/v1"
+    )
+
+    catalog_override = next(
+        item for item in overrides if item.startswith("model_catalog_json=")
+    )
+    configured_path = Path(json.loads(catalog_override.split("=", 1)[1]))
+    configured_catalog = json.loads(configured_path.read_text(encoding="utf-8"))
+
+    assert configured_path == bundled
+    assert {
+        model["slug"]: model["supports_search_tool"]
+        for model in configured_catalog["models"]
+    } == {"DC-codex-agent-LLM": False, "brainclaw": False}
+
+
+def test_exact_node_action_gateway_enables_native_tool_search(monkeypatch):
+    bundled = (
+        Path(chat_service.__file__).resolve().parents[3]
+        / "deploy"
+        / "codex"
+        / "dramaclaw-model-catalog.json"
+    )
+    monkeypatch.setenv("DRAMACLAW_CODEX_MODEL_CATALOG_FILE", str(bundled))
+
+    overrides = chat_service._codex_gateway_config_overrides(
+        "https://gateway.example/v1", native_tool_search=True
+    )
+
+    catalog_override = next(
+        item for item in overrides if item.startswith("model_catalog_json=")
+    )
+    configured_path = Path(json.loads(catalog_override.split("=", 1)[1]))
+    configured_catalog = json.loads(configured_path.read_text(encoding="utf-8"))
+
+    assert configured_path.name == "dramaclaw-model-catalog-tool-search.json"
+    assert {
+        model["slug"]: model["supports_search_tool"]
+        for model in configured_catalog["models"]
+    } == {"DC-codex-agent-LLM": True, "brainclaw": True}
 
 
 def test_codex_gateway_reasoning_effort_is_configurable(monkeypatch):
@@ -5351,6 +6089,83 @@ async def test_freezone_hermes_assistant_message_keeps_turn_id(monkeypatch, tmp_
 
 
 @pytest.mark.anyio
+async def test_freezone_hermes_turn_cancels_undelivered_agent_product_admission(
+    monkeypatch, tmp_path
+):
+    monkeypatch.setenv("NOVELVIDEO_STATE_DIR", str(tmp_path / "state"))
+    monkeypatch.setenv("NOVELVIDEO_OUTPUT_DIR", str(tmp_path / "output"))
+    monkeypatch.setenv("DRAMACLAW_CHAT_BACKEND", "hermes")
+    state_dir = tmp_path / "project-state"
+    operation_id = "agent_product_pending"
+    scope = ChatScope(
+        kind="project",
+        id="project-a",
+        surface="freezone",
+        canvas_id="canvas-a",
+        agent_id="agent-2",
+        state_dir=str(state_dir),
+    )
+
+    class FakeThread:
+        async def stream(self, _prompt, *, current_project=None, **_kwargs):
+            yield backend_sdk.ChatBackendEvent(
+                type="thread_started", thread_id="thread-a", turn_id="turn-a"
+            )
+            yield backend_sdk.ChatBackendEvent(
+                type="tool_updated",
+                name="dramaclaw.freezone_begin_agent_product_generation",
+                call_id="call-admit",
+                status="completed",
+                structured={
+                    "ok": True,
+                    # The live begin tool returns the durable operation state,
+                    # not a synthetic admission status.
+                    "status": "reserved",
+                    "operation_id": operation_id,
+                },
+                text="admitted",
+            )
+            yield backend_sdk.ChatBackendEvent(type="assistant_delta", text="Stopped.")
+            yield backend_sdk.ChatBackendEvent(type="complete", text="")
+
+    class FakePool:
+        async def get_for_user(self, *_args, **_kwargs):
+            return FakeThread()
+
+    cancelled = []
+
+    async def cancel_turn_operations(operation_ids, *, project_dir, ctx):
+        cancelled.append((set(operation_ids), project_dir, ctx.project_id))
+
+    async def on_event(_event):
+        return None
+
+    monkeypatch.setattr(
+        chat_service, "_write_hermes_tool_mode", lambda *_args, **_kwargs: None
+    )
+    monkeypatch.setattr(chat_service, "is_hermes_backend_available", lambda: True)
+    monkeypatch.setattr(
+        chat_service, "_cancel_turn_agent_product_operations", cancel_turn_operations
+    )
+    monkeypatch.setattr("novelvideo.chat.hermes_pool.pool", FakePool())
+
+    await chat_service.stream_assistant_reply(
+        "admin",
+        "project-a",
+        "prepare a workflow",
+        on_event,
+        project_state_dir=state_dir,
+        project_context=SimpleNamespace(project_id="project-a"),
+        surface="freezone",
+        surface_context={"canvasId": "canvas-a"},
+        store_scope=scope,
+        turn_id="turn-a",
+    )
+
+    assert cancelled == [({operation_id}, state_dir, "project-a")]
+
+
+@pytest.mark.anyio
 async def test_freezone_hermes_retries_once_when_cached_session_is_unavailable(
     monkeypatch,
     tmp_path,
@@ -7055,6 +7870,173 @@ _READ_ONLY_ANSWER = "The workflow failed; no video was generated."
 _FORMAT_FAILURE = "The reply did not pass operation result validation: No structured result was returned; please retry."
 
 
+def _completed_tool_event(name, *, call_id, tool_input, structured):
+    return backend_sdk.ChatBackendEvent(
+        type="tool_updated",
+        text=f"[mcp:completed] dramaclaw.{name}",
+        name=f"dramaclaw.{name}",
+        call_id=call_id,
+        turn_id="runtime-turn",
+        status="completed",
+        input=tool_input,
+        structured=structured,
+    )
+
+
+def _pending_workflow_clarification_tool_events(operation_id):
+    return [
+        _completed_tool_event(
+            "freezone_begin_agent_product_generation",
+            call_id="call-admit",
+            tool_input={"product_kind": "workflow_result"},
+            structured={
+                "ok": True,
+                "status": "reserved",
+                "operation_id": operation_id,
+            },
+        ),
+        _completed_tool_event(
+            "freezone_prepare_workflow_plan_draft",
+            call_id="call-prepare",
+            tool_input={"operation_id": operation_id, "plan": {}},
+            structured={
+                "ok": True,
+                "status": "video_model_clarification_required",
+                "draft_created": False,
+                "required_choice": "compatible_video_model",
+            },
+        ),
+        _completed_tool_event(
+            "freezone_request_user_clarification",
+            call_id="call-clarification",
+            tool_input={"clarification_id": "clarify-model"},
+            structured={
+                "ok": False,
+                "status": "clarification_frontend_timeout",
+                "clarification_status": "pending_user_input",
+                "clarification_id": "clarify-model",
+            },
+        ),
+    ]
+
+
+@pytest.mark.anyio
+async def test_codex_turn_cancels_undelivered_agent_product_admission(
+    monkeypatch, tmp_path
+):
+    monkeypatch.setenv("NOVELVIDEO_STATE_DIR", str(tmp_path / "state"))
+    monkeypatch.setenv("NOVELVIDEO_RUNTIME_DIR", str(tmp_path / "runtime"))
+    operation_id = "agent_product_pending"
+    admission = SimpleNamespace(
+        type="tool_updated",
+        text="[mcp:completed] dramaclaw.freezone_begin_agent_product_generation",
+        name="dramaclaw.freezone_begin_agent_product_generation",
+        call_id="call-admit",
+        status="completed",
+        input={"product_kind": "workflow_result"},
+        output={
+            "structuredContent": {
+                "ok": True,
+                # Mirror the actual MCP envelope returned by the begin tool.
+                "status": "reserved",
+                "operation_id": operation_id,
+            }
+        },
+        structured=None,
+        error=None,
+    )
+
+    class FakeThread:
+        async def stream(self, _prompt):
+            for event in _codex_turn_events(_READ_ONLY_ANSWER, tool=admission):
+                yield event
+
+    async def fake_create_token(*_args, **_kwargs):
+        return "agent-token"
+
+    class FakeAuthPort:
+        async def revoke_agent_session(self, _token):
+            return None
+
+    cancelled = []
+
+    async def cancel_turn_operations(operation_ids, *, project_dir, ctx):
+        cancelled.append((set(operation_ids), project_dir, ctx.project_id))
+
+    monkeypatch.setattr(
+        chat_service, "_create_page_agent_session_token", fake_create_token
+    )
+    monkeypatch.setattr(
+        chat_service, "_build_codex_thread", lambda *_args, **_kwargs: FakeThread()
+    )
+    monkeypatch.setattr(chat_service, "get_auth_session_port", lambda: FakeAuthPort())
+    monkeypatch.setattr(hermes_sdk, "_issue_turn_capability", lambda **_kwargs: None)
+    monkeypatch.setattr(
+        chat_service,
+        "_cancel_turn_agent_product_operations",
+        cancel_turn_operations,
+        raising=False,
+    )
+
+    async def collect_event(_event):
+        return None
+
+    state_dir = tmp_path / "project-state"
+    project_ctx = SimpleNamespace(project_id="project-a")
+    await chat_service._stream_assistant_reply_codex(
+        "admin",
+        "project-a",
+        "prepare a workflow",
+        collect_event,
+        project_state_dir=state_dir,
+        project_context=project_ctx,
+        tool_mode="freezone_canvas",
+        surface_context={"freezone_canvas_id": "canvas-a"},
+        store_scope=ChatScope(
+            kind="project",
+            id="project-a",
+            surface="freezone",
+            canvas_id="canvas-a",
+            agent_id="main",
+            state_dir=str(state_dir),
+        ),
+        turn_id="business-turn",
+        route_prompt="prepare a workflow",
+    )
+
+    assert cancelled == [({operation_id}, state_dir, "project-a")]
+
+
+@pytest.mark.parametrize(
+    "clarification_status",
+    ["video_model_clarification_required", "generation_mode_clarification_required"],
+)
+def test_pending_workflow_clarification_is_not_cancelled(clarification_status):
+    operation_id = "agent_product_pending_clarification"
+    unrelated_operation_id = "agent_product_unrelated"
+    events = _pending_workflow_clarification_tool_events(operation_id)
+    events[1].structured["status"] = clarification_status
+    events.insert(
+        1,
+        _completed_tool_event(
+            "freezone_begin_agent_product_generation",
+            call_id="call-admit-unrelated",
+            tool_input={"product_kind": "recipe_result"},
+            structured={
+                "ok": True,
+                "status": "reserved",
+                "operation_id": unrelated_operation_id,
+            },
+        ),
+    )
+    tracker = chat_service._TurnAgentProductOperationTracker()
+
+    for event in events:
+        tracker.observe(event)
+
+    assert tracker.cancellation_ids() == {unrelated_operation_id}
+
+
 @pytest.mark.anyio
 @pytest.mark.parametrize(
     ("repair", "expected"),
@@ -7098,6 +8080,7 @@ async def test_codex_freezone_read_only_plain_reply_is_repaired_once(
     monkeypatch.setenv("NOVELVIDEO_STATE_DIR", str(tmp_path / "state"))
     monkeypatch.setenv("NOVELVIDEO_RUNTIME_DIR", str(tmp_path / "runtime"))
     prompts = []
+    build_kwargs = []
     events = []
     revoked = []
 
@@ -7127,9 +8110,11 @@ async def test_codex_freezone_read_only_plain_reply_is_repaired_once(
     monkeypatch.setattr(
         chat_service, "_create_page_agent_session_token", fake_create_token
     )
-    monkeypatch.setattr(
-        chat_service, "_build_codex_thread", lambda *_args, **_kwargs: FakeThread()
-    )
+    def fake_build_thread(*_args, **kwargs):
+        build_kwargs.append(kwargs)
+        return FakeThread()
+
+    monkeypatch.setattr(chat_service, "_build_codex_thread", fake_build_thread)
     monkeypatch.setattr(chat_service, "get_auth_session_port", lambda: FakeAuthPort())
     monkeypatch.setattr(hermes_sdk, "_issue_turn_capability", lambda **_kwargs: None)
 
@@ -7159,6 +8144,7 @@ async def test_codex_freezone_read_only_plain_reply_is_repaired_once(
     )
 
     assert prompts[1:] == [chat_service.CANVAS_FORMAT_REPAIR_PROMPT]
+    assert build_kwargs[0]["request_prompt"] == request_prompt
     assert result["content"] == expected
     assert [
         event["text"] for event in events if event["type"] == "assistant_delta"

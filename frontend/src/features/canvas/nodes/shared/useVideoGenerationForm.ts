@@ -62,6 +62,8 @@ import {
   referenceDurationLimitsMs,
   resolveVideoKeyframeUrls,
   videoModeRequiresPrompt,
+  videoModeForModel,
+  videoNoUpstreamResetMode,
   videoModelReferenceDisabledReason,
   videoReferenceAutoSwitchAction,
   videoSubmitMediaRejectionReason,
@@ -538,8 +540,9 @@ export function useVideoGenerationForm(
   const isSeedance20Model = isSeedance2VideoModel(selectedVideoModelId);
   // The real-person asset review switch is now declared by the media catalog (#210): it used to be "shown for every Seedance 2.0",
   // and now whoever supports it is ticked in Admin. isSeedance20Model is still used for 2.0-only logic such as scene optimization.
-  const supportsHumanReview = selectedVideoModel?.humanReview === true;
-  const humanReview = Boolean(data.humanReview);
+  const supportsHumanReview =
+    genMode !== "textToVideo" && selectedVideoModel?.humanReview === true;
+  const humanReview = supportsHumanReview && Boolean(data.humanReview);
   const count: VideoGenCount = (data.count ?? 1) as VideoGenCount;
   const upstreamNodes = useUpstreamNodes(id);
   const videoInputBilling = useMemo(() => {
@@ -1100,16 +1103,16 @@ export function useVideoGenerationForm(
     updateNodeData,
   ]);
 
-  // When video is connected upstream, only "all reference" can consume it; other modes (text-to-video / image-to-video /
-  // first-last-frame / image reference) all discard the video. So whenever a video exists upstream, force-switch to
-  // allReference and lock it — the tab disabling rules below disable the other tabs along with it.
-  // Unlike the audio "0→≥1 transition", this corrects every time, ensuring the mode cannot be switched away while a video is present.
+  // Upstream video can be consumed by all-reference, video edit or video extend; keep the legal video mode the user already chose.
+  // When the model declares all-reference capability, other modes that do not consume video auto-switch to all-reference.
   useEffect(() => {
     if (upstreamCounts.videos === 0) return;
     if (videoModelsLoading) return;
     if (isHappyHorseModel) return;
-    if (!isSeedance20Model) return;
-    if (genMode === "allReference" || (genMode === "videoExtend" && isVideoModeSupportedByModel("videoExtend", selectedVideoModel))) return;
+    if (genMode === "videoEdit" && isVideoModeSupportedByModel("videoEdit", selectedVideoModel)) return;
+    if (genMode === "videoExtend" && isVideoModeSupportedByModel("videoExtend", selectedVideoModel)) return;
+    if (!isVideoModeSupportedByModel("allReference", selectedVideoModel)) return;
+    if (genMode === "allReference") return;
     updateNodeData(id, { genMode: "allReference" });
   }, [
     upstreamCounts.videos,
@@ -1156,8 +1159,23 @@ export function useVideoGenerationForm(
     if (isHappyHorseModel) return;
     if (genMode !== "firstLastFrame") return;
     if (upstreamCounts.images <= 2) return;
+    if (!isVideoModeSupportedByModel("allReference", selectedVideoModel)) return;
     updateNodeData(id, { genMode: "allReference" });
-  }, [genMode, isHappyHorseModel, upstreamCounts.images, id, updateNodeData]);
+  }, [genMode, isHappyHorseModel, selectedVideoModel, upstreamCounts.images, id, updateNodeData]);
+
+  // Restore catalog modes using their capabilities and connected inputs.
+  useEffect(() => {
+    if (videoModelsLoading || isHappyHorseModel || !selectedVideoModel?.supportedModes?.length) return;
+    const counts = {
+      ...upstreamTypeCounts,
+      hasOtherReference: Boolean(data.referenceFileUrl || data.referenceLink?.trim()),
+    };
+    const compatibleMode = videoModeForModel(genMode, selectedVideoModel, counts);
+    const target = videoNoUpstreamResetMode(compatibleMode, counts, selectedVideoModel)
+      ?? compatibleMode;
+    if (target !== genMode) updateNodeData(id, { genMode: target }, { recordHistory: false });
+  }, [data.referenceFileUrl, data.referenceLink, genMode, id, isHappyHorseModel,
+    selectedVideoModel, upstreamTypeCounts, updateNodeData, videoModelsLoading]);
 
   const hasPromptText = prompt.trim().length > 0 || upstreamTextJoined.length > 0;
   const hasRequiredMediaForMode =
@@ -1818,8 +1836,10 @@ export function useVideoGenerationForm(
         const diagnostics = resolveGenerationErrorDiagnostics(firstError, resolved.details);
         const haystack = `${displayErrorMessage}\n${diagnostics.details ?? ""}`;
         if (
-          haystack.includes("InputImageSensitiveContentDetected.PrivateInformation")
-          || haystack.includes("InputImageSensitiveContentDetected.PrivacyInformation")
+          supportsHumanReview &&
+          !humanReview &&
+          (haystack.includes("InputImageSensitiveContentDetected.PrivateInformation") ||
+            haystack.includes("InputImageSensitiveContentDetected.PrivacyInformation"))
         ) {
           // Assets containing a real face were blocked: guide the user to turn on "Real-person asset review" and retry.
           void showErrorDialog(
@@ -1890,31 +1910,28 @@ export function useVideoGenerationForm(
     upstreamTextJoined,
   ]);
 
-  // Switching models is not a pure patch, so it does not move down into the form component: when the new model does not support the current genMode
-  // (such as HappyHorse-only videoEdit switching to a regular model) reset to the generic safe value
-  // textToVideo, letting the state machine re-derive by the new model + upstream; otherwise a leftover mode would hit
-  // an unsupported endpoint on submit and be rejected with a backend 400 (while the UI is still on the wrong tab). Also remember this choice, so video
-  // nodes created later will inherit it.
+  // When switching models, also select a mode compatible with the input; we cannot assume every model supports text-to-video.
+  // Remember the user's choice so video nodes created later inherit it.
   const handleModelChange = useCallback(
     (nextModelId: string) => {
       // Pass the model object rather than a bare id: when the media catalog declares supportedModes they prevail,
       // and falling back to capability inference is only a fallback when nothing is configured.
-      const resetGenMode =
-        data.genMode != null &&
-        !isVideoModeSupportedByModel(
-          data.genMode,
-          availableVideoModels.find((item) => item.id === nextModelId),
-        );
+      const nextMode = videoModeForModel(
+        genMode,
+        availableVideoModels.find((item) => item.id === nextModelId),
+        { ...upstreamTypeCounts,
+          hasOtherReference: Boolean(data.referenceFileUrl || data.referenceLink?.trim()) },
+      );
       updateNodeData(id, {
         model: nextModelId,
         // Switching models must clear modelParams: the param table is declared per model, and keys left over from the previous model
         // would be sent to the backend as is — at best ignored, at worst rejected as invalid params.
         modelParams: {},
-        ...(resetGenMode ? { genMode: "textToVideo" as VideoGenMode } : {}),
+        genMode: nextMode,
       });
       writeLastVideoModel(nextModelId);
     },
-    [availableVideoModels, data.genMode, id, updateNodeData],
+    [availableVideoModels, data.referenceFileUrl, data.referenceLink, genMode, id, updateNodeData, upstreamTypeCounts],
   );
 
   // The form buttons only need `() => void`; async orchestration stays in this hook.
@@ -1936,7 +1953,10 @@ export function useVideoGenerationForm(
       genModeSupportedModes: selectedVideoModel?.supportedModes,
       // HappyHorse's selectable modes are decided by the upstream node type (including empty nodes with no image filled),
       // while other models still count by resolved asset URLs.
-      genModeUpstreamCounts: isHappyHorseModel ? upstreamTypeCounts : upstreamCounts,
+      genModeUpstreamCounts: {
+        ...(isHappyHorseModel ? upstreamTypeCounts : upstreamCounts),
+        hasOtherReference: Boolean(data.referenceFileUrl || data.referenceLink?.trim()),
+      },
       upstreamTextContents,
       onDetachUpstream: handleDetachUpstream,
       referenceMediaItems: referenceMediaCapInfo,

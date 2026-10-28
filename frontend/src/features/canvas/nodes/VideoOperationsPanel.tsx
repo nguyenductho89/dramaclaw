@@ -43,12 +43,17 @@ import {
 import { formatResolutionLabel } from "@/features/canvas/domain/mediaModelOptions";
 import {
   isHappyHorseVideoModel,
+  isSeedance25VideoModel,
   isVideoModeSupportedByModel,
   videoModeForcesAutomaticAspectRatio,
   videoModelDefaultGenerateAudio,
-  videoModelDefaultMode,
   videoModelReferenceDisabledReason,
+  videoOutputFollowsSourceVideo,
+  videoModeMissingInputReason,
+  videoModeForModel,
+  type VideoModeInputCounts,
 } from "@/features/canvas/nodes/shared/videoModelCapabilities";
+import { extendPromptPrefix } from "@/features/canvas/application/videoExtendClip";
 import { resolveImageDisplayUrl } from "@/features/canvas/application/imageData";
 import { VIDEO_FILE_ACCEPT } from "@/features/canvas/application/videoFileTypes";
 import { spawnExternalAssetNodes } from "@/features/canvas/application/spawnExternalAssets";
@@ -265,6 +270,11 @@ interface VideoOperationsPanelProps {
   selectedModelReferenceError: string | null;
   mediaRejectionReason: string | null;
   expanded: boolean;
+  /**
+   * Extra pixels the collapsed panel is shifted down. When something else is inserted between the node's bottom edge and the panel (the clip-reshoot
+   * time track), the caller passes it in so the two do not overlap. The expanded state is a centered dialog and is unaffected.
+   */
+  topOffset?: number;
   onExpandedChange: (expanded: boolean) => void;
   onSubmit: () => Promise<void>;
 }
@@ -308,6 +318,7 @@ export function VideoOperationsPanel({
   selectedModelReferenceError,
   mediaRejectionReason,
   expanded,
+  topOffset = 0,
   onExpandedChange,
   onSubmit,
 }: VideoOperationsPanelProps) {
@@ -480,6 +491,41 @@ export function VideoOperationsPanel({
       (videoBillingRuleMissing
         ? t("common.billingRuleNotConfiguredShort")
         : null);
+    // The two locks of "smart continuation": the model can only be Seedance 2.5, and the mode can only be all reference.
+    //
+    // Unlike clip reshoot, the selectors are not hidden here — a continuation node is meant to be edited further
+    // (change the prompt, generate another version); hiding the model/mode block entirely would make users think the node is a dead object.
+    // So they are shown as usual, with the other options grayed out + a reason given.
+    const isExtendMode = Boolean(data.isExtendMode);
+    const extendPrefixText =
+      isExtendMode &&
+      typeof data.extendStartMs === "number" &&
+      typeof data.extendEndMs === "number"
+        ? extendPromptPrefix(
+            typeof data.extendSourceName === "string" ? data.extendSourceName : "",
+            { startMs: data.extendStartMs, endMs: data.extendEndMs },
+          )
+        : null;
+    const extendPrefix = useMemo(() => {
+      if (!extendPrefixText) return null;
+      const sourceVideo = referenceMedia.find((item) => item.kind === "video");
+      return {
+        text: extendPrefixText,
+        // Both addresses are raw backend addresses; putting them straight into <img>/<video> would fail to open (the OSS default domain
+        // forces a download), so they go through the same resolve as the neighboring reference-material thumbnails. thumbUrl is generated lazily and
+        // is often empty — in that case fall back to the video itself to draw the first frame, same approach as ReferenceVideoChip.
+        thumbnailUrl:
+          sourceVideo && sourceVideo.kind === "video" && sourceVideo.thumbUrl
+            ? resolveImageDisplayUrl(sourceVideo.thumbUrl)
+            : null,
+        videoUrl:
+          sourceVideo && sourceVideo.kind === "video"
+            ? resolveImageDisplayUrl(sourceVideo.videoUrl)
+            : null,
+        title: extendPrefixText,
+      };
+    }, [extendPrefixText, referenceMedia]);
+
     // Add "same-type index + whether within the current mode's cap" to each referenceMedia entry.
     // When the current genMode has no entry in REFERENCE_CAPS_BY_MODE (such as textToVideo /
     // imageToVideo / imageReference), everything is treated as within=true; the downstream chip /
@@ -858,7 +904,7 @@ export function VideoOperationsPanel({
               onCollapse={() => onExpandedChange(false)}
               inlineClassName={`nodrag absolute z-30 flex flex-col rounded-[var(--node-radius)] ${CANVAS_NODE_OPS_PANEL_CLASS}`}
               inlineStyle={{
-                top: `calc(100% + ${OPERATIONS_PANEL_GAP}px)`,
+                top: `calc(100% + ${OPERATIONS_PANEL_GAP + topOffset}px)`,
                 left: showReferenceDocumentControls
                   ? `calc((100% - ${adaptivePanelWidth}) / 2)`
                   : -panelOverhang,
@@ -906,13 +952,19 @@ export function VideoOperationsPanel({
                 <div className="ml-3 flex shrink-0 items-center gap-3">
                   <GenModeSelect
                     value={genMode}
-                    modelId={selectedVideoModel?.apiModel ?? selectedVideoModel?.id ?? modelId}
+                    modelId={
+                      selectedVideoModel?.apiModel ?? selectedVideoModel?.id ?? modelId
+                    }
                     supportedModes={selectedVideoModel?.supportedModes}
                     // HappyHorse's selectable modes are decided by the upstream node type (including empty nodes with no image filled),
                     // while other models still count by resolved asset URLs.
-                    upstreamCounts={
-                      isHappyHorseModel ? upstreamTypeCounts : upstreamCounts
-                    }
+                    upstreamCounts={{
+                      ...(isHappyHorseModel ? upstreamTypeCounts : upstreamCounts),
+                      hasOtherReference: Boolean(data.referenceFileUrl || data.referenceLink?.trim()),
+                    }}
+                    restrictToMode={isExtendMode ? "allReference" : undefined}
+                    // The unified reason given when smart continuation pins the model / mode; shares one sentence with the model picker below.
+                    restrictReason={t("node.videoOps.extendLockReason")}
                     onChange={(nextMode) =>
                       updateNodeData(id, {
                         genMode: nextMode,
@@ -1004,7 +1056,8 @@ export function VideoOperationsPanel({
               </div>
 
               {/* Reference assets get their own row: the top row of feature chips is already full, and squeezing assets in would push out the input area. */}
-              {(upstreamTextContents.length > 0 || referenceMedia.length > 0) && (
+              {(upstreamTextContents.length > 0 ||
+                (!isExtendMode && referenceMedia.length > 0)) && (
                 <div className="nowheel flex shrink-0 items-center gap-3 overflow-x-auto px-3 pb-2">
                   {upstreamTextContents.map((content) => (
                     <ReferenceTextChip
@@ -1016,7 +1069,7 @@ export function VideoOperationsPanel({
                       onJump={handleJumpToReference}
                     />
                   ))}
-                  {referenceMedia.length > 0 && (
+                  {!isExtendMode && referenceMedia.length > 0 && (
                     <ReferenceMediaRow
                       items={referenceMediaCapInfo}
                       caps={referenceCaps}
@@ -1031,6 +1084,27 @@ export function VideoOperationsPanel({
                       }
                     />
                   )}
+                </div>
+              )}
+
+              {/* Smart continuation has only one reference, the original clip; crammed at the tail of the toolbar it would be pushed far away by the
+                  expand button on the right; put it on its own row against the left, aligned in a column with the prompt below. */}
+              {isExtendMode && referenceMedia.length > 0 && (
+                <div className="flex shrink-0 items-center overflow-x-auto px-3 pb-2">
+                  <ReferenceMediaRow
+                    items={referenceMediaCapInfo}
+                    caps={referenceCaps}
+                    genMode={genMode}
+                    mentionNames={mentionNameByNodeId}
+                    onFocus={(nodeId) => setSelectedNode(nodeId)}
+                    onMention={handleMentionReference}
+                    onJump={handleJumpToReference}
+                    onDetach={handleDetachUpstream}
+                    onReorder={(ids) =>
+                      updateNodeData(id, { referenceOrder: ids })
+                    }
+                    containerClassName=""
+                  />
                 </div>
               )}
 
@@ -1055,12 +1129,29 @@ export function VideoOperationsPanel({
                 candidates={mentionCandidates}
                 getMaterials={getMentionMaterials}
                 onAttachMaterial={handleAttachMaterial}
+                prefix={extendPrefix}
+                onPrefixRemove={
+                  extendPrefix
+                    ? () =>
+                        // The prefix is this node's continuation identity: deleting it reverts the node to a plain video
+                        // node (model / features unlocked together), instead of leaving an empty shell locked to 2.5 + all
+                        // reference with no continuation instruction at all.
+                        updateNodeData(id, {
+                          isExtendMode: false,
+                          extendSourceName: undefined,
+                          extendStartMs: undefined,
+                          extendEndMs: undefined,
+                        })
+                    : undefined
+                }
                 placeholder={
                   genMode === "multishot"
                     ? t("node.videoOps.multishot.overallDirection")
-                    : upstreamTextJoined.length > 0
-                      ? t("node.videoOps.upstreamPlaceholder")
-                      : t("node.videoNode.placeholder")
+                    : extendPrefix
+                      ? t("node.videoOps.extendPlaceholder")
+                      : upstreamTextJoined.length > 0
+                        ? t("node.videoOps.upstreamPlaceholder")
+                        : t("node.videoNode.placeholder")
                 }
                 className={
                   genMode === "multishot"
@@ -1098,26 +1189,15 @@ export function VideoOperationsPanel({
                       const nextModel = availableVideoModels.find(
                         (item) => item.id === nextModelId,
                       );
-                      // After switching models, if the current genMode is not supported by the new model (such as HappyHorse-only
-                      // videoEdit switching to a regular model), reset to a mode the NEW model actually supports —
-                      // letting the state machine re-derive by the new model + upstream; otherwise a leftover mode would hit
-                      // an unsupported endpoint on submit and be rejected with a backend 400 (while the UI is still on the wrong tab).
-                      // Previously this always reset to the hardcoded "textToVideo" — harmless for every model before
-                      // multishot (all of them support text-to-video), but would silently land a multishot-only model
-                      // (supportedModes === ["multishot"]) on a mode it cannot run at all.
-                      const resetGenMode =
-                        data.genMode != null &&
-                        !isVideoModeSupportedByModel(
-                          data.genMode,
-                          nextModel,
-                        );
+                      const nextMode = videoModeForModel(genMode, nextModel, {
+                        ...upstreamTypeCounts,
+                        hasOtherReference: Boolean(data.referenceFileUrl || data.referenceLink?.trim()),
+                      });
                       updateNodeData(id, {
                         model: nextModelId,
                         modelParams: {},
                         generateAudio: videoModelDefaultGenerateAudio(nextModel),
-                        ...(resetGenMode
-                          ? { genMode: videoModelDefaultMode(nextModel) }
-                          : {}),
+                        genMode: nextMode,
                       });
                       // Remember this choice; video nodes created later will inherit it.
                       writeLastVideoModel(nextModelId);
@@ -1125,6 +1205,12 @@ export function VideoOperationsPanel({
                     domain="video"
                     popoverPlacement="top"
                     getOptionDisabledReason={(model) =>
+                      // Smart continuation goes first: the timecode prefix is written for 2.5's all reference; switching to any
+                      // other model would make this node's work pointless, so the remaining items are grayed out directly with a reason.
+                      (isExtendMode &&
+                      !isSeedance25VideoModel(model.apiModel ?? model.id)
+                        ? t("node.videoOps.extendLockReason")
+                        : null) ??
                       // Pass the whole ModelOption, do not collapse it to an id — the capability basis is the supportedModes
                       // declared by the admin "Media models"; passing only an id falls back to heuristics and discards the catalog's
                       // changes entirely (for example, after the admin takes down HappyHorse's video edit, it is
@@ -1153,6 +1239,10 @@ export function VideoOperationsPanel({
                     sceneOptimizeOptions={sceneOptimizeOptions}
                     supportsGenerateAudio={supportsGenerateAudio}
                     generateAudio={generateAudio}
+                    followsSourceVideo={videoOutputFollowsSourceVideo(
+                      genMode,
+                      selectedVideoModel?.apiModel ?? selectedVideoModel?.id ?? modelId,
+                    )}
                     onChange={(patch) => updateNodeData(id, patch)}
                   />
                   <MediaModelParameterChip
@@ -1286,14 +1376,21 @@ interface GenModeSelectProps {
   value: VideoGenMode;
   modelId: string | null | undefined;
   supportedModes?: string[];
-  upstreamCounts: { videos: number; images: number; audios: number };
+  upstreamCounts: VideoModeInputCounts;
+  /**
+   * Allow only this one mode (used by smart continuation). All other items are grayed out with `restrictReason`,
+   * rather than computed from upstream material — the computed reason would say "not enough material", which does not match the real reason
+   * (this node only ever goes through this one mode).
+   */
+  restrictToMode?: VideoGenMode;
+  restrictReason?: string;
   onChange: (next: VideoGenMode) => void;
 }
 
 export function videoModeDisabledReason(
   mode: VideoGenMode,
   modelId: string | null | undefined,
-  upstreamCounts: { videos: number; images: number; audios: number },
+  upstreamCounts: VideoModeInputCounts,
   t: TFn,
   supportedModes?: string[],
 ): string | null {
@@ -1380,10 +1477,19 @@ export function videoModeDisabledReason(
   if (mode === "firstLastFrame" && upstreamCounts.images > 2) {
     return t("node.videoOps.modeDisabled.moreThanTwoImages");
   }
-  return null;
+  const missingInputReason = videoModeMissingInputReason(mode, upstreamCounts);
+  return missingInputReason ? t(missingInputReason) : null;
 }
 
-function GenModeSelect({ value, modelId, supportedModes, upstreamCounts, onChange }: GenModeSelectProps) {
+function GenModeSelect({
+  value,
+  modelId,
+  supportedModes,
+  upstreamCounts,
+  restrictToMode,
+  restrictReason,
+  onChange,
+}: GenModeSelectProps) {
   const { t } = useTranslation();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
@@ -1482,14 +1588,17 @@ function GenModeSelect({ value, modelId, supportedModes, upstreamCounts, onChang
         >
           {visibleTabs.map((tab) => {
             const isActive = tab.key === value;
-            const disabledReason = videoModeDisabledReason(
-              tab.key,
-              modelId,
-              upstreamCounts,
-              t,
-              supportedModes,
-            );
-            const isDisabled = disabledReason != null && !isActive;
+            const disabledReason =
+              restrictToMode && tab.key !== restrictToMode
+                ? (restrictReason ?? t("node.videoOps.modeRestrictedDefault"))
+                : videoModeDisabledReason(
+                    tab.key,
+                    modelId,
+                    upstreamCounts,
+                    t,
+                    supportedModes,
+                  );
+            const isDisabled = disabledReason != null;
             // A disabled button fires no mouse events in most browsers, so the hover hint hangs on the outer div;
             // the hint bubble is positioned to the right of the menu, consistent with the design.
             return (
@@ -1512,10 +1621,10 @@ function GenModeSelect({ value, modelId, supportedModes, upstreamCounts, onChang
                     setIsOpen(false);
                   }}
                   className={`block w-full rounded-[6px] px-3 py-1.5 text-left text-xs transition-colors ${
-                    isActive
-                      ? VIDEO_PARAM_ACTIVE_BUTTON_CLASS
-                      : isDisabled
-                        ? "cursor-not-allowed text-text-muted/40"
+                    isDisabled
+                      ? "cursor-not-allowed text-text-muted/40"
+                      : isActive
+                        ? VIDEO_PARAM_ACTIVE_BUTTON_CLASS
                         : "text-text-muted/95 hover:bg-white/[0.11] hover:text-text-dark"
                   }`}
                 >
@@ -1547,6 +1656,12 @@ interface VideoConfigChipProps {
   sceneOptimizeOptions: readonly Seedance2SceneOptimize[];
   supportsGenerateAudio: boolean;
   generateAudio: boolean;
+  /**
+   * The output ratio / duration follow the original clip (Seedance video edit). When true these two fields do not appear at all —
+   * the vendor does not accept these two parameters at all, and keeping them would only make people think they can set them. See
+   * [[videoOutputFollowsSourceVideo]].
+   */
+  followsSourceVideo?: boolean;
   onChange: (patch: Partial<VideoNodeData>) => void;
 }
 
@@ -1563,6 +1678,7 @@ function VideoConfigChip({
   sceneOptimizeOptions,
   supportsGenerateAudio,
   generateAudio,
+  followsSourceVideo = false,
   onChange,
 }: VideoConfigChipProps) {
   const { t } = useTranslation();
@@ -1630,11 +1746,15 @@ function VideoConfigChip({
         }}
         className={NODE_TEXT_CONTROL_TRIGGER_CLASS}
       >
-        <span>
-          {followInputAspectRatio || aspectRatio === "auto"
-            ? t("node.videoNode.aspect.auto")
-            : aspectRatio}
-        </span>
+        {followsSourceVideo ? (
+          <span>{t("node.videoNode.aspect.followsSource")}</span>
+        ) : (
+          <span>
+            {followInputAspectRatio || aspectRatio === "auto"
+              ? t("node.videoNode.aspect.auto")
+              : aspectRatio}
+          </span>
+        )}
         <span className="text-text-muted/80">·</span>
         <span>{formatResolutionLabel(quality)}</span>
         {!followInputDuration && (
@@ -1659,6 +1779,12 @@ function VideoConfigChip({
           onPointerDown={(event) => event.stopPropagation()}
           onClick={(event) => event.stopPropagation()}
         >
+          {followsSourceVideo && (
+            <div className="mb-3 rounded-md bg-white/[0.045] px-2.5 py-1.5 text-[11px] leading-5 text-text-muted/85">
+              {t("node.videoNode.videoEdit.followsSourceHint")}
+            </div>
+          )}
+
           {!followInputAspectRatio && (
             <>
               <div className={VIDEO_PARAM_LABEL_CLASS}>
@@ -2078,6 +2204,8 @@ interface ReferenceMediaRowProps {
   onDetach: (nodeId: string) => void;
   // After dragging a chip to reorder, pass back the new "list of upstream node ids in visual order".
   onReorder: (orderedNodeIds: string[]) => void;
+  /** Extra container class; reference rows now all take their own row against the left, with no outer margin by default. */
+  containerClassName?: string;
 }
 
 function ReferenceMediaRow({
@@ -2090,6 +2218,7 @@ function ReferenceMediaRow({
   onJump,
   onDetach,
   onReorder,
+  containerClassName = '',
 }: ReferenceMediaRowProps) {
   const { t } = useTranslation();
   // Also manages the "currently playing node" of the whole audio row — only one audio chip may
@@ -2123,7 +2252,7 @@ function ReferenceMediaRow({
   );
 
   return (
-    <div className="flex shrink-0 items-center gap-1.5">
+    <div className={`flex shrink-0 items-center gap-1.5 ${containerClassName}`}>
       {items.map((entry) => {
         const { item, typeIndex, withinCap } = entry;
         // "Beyond the current mode's cap" applies only to modes registered in REFERENCE_CAPS_BY_MODE.

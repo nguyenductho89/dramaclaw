@@ -3,6 +3,7 @@
 import { describe, expect, it } from "vitest";
 
 import { videoModeDisabledReason } from "@/features/canvas/nodes/VideoOperationsPanel";
+import { videoModeDisabledReason as sharedVideoModeDisabledReason } from "@/features/canvas/nodes/shared/VideoGenerationForm";
 import { enT } from "../../helpers/i18n-fixtures";
 
 const NONE = { videos: 0, images: 0, audios: 0 };
@@ -25,6 +26,26 @@ const WITHOUT_VIDEO_EDIT = [
   "image_reference",
 ];
 const WITH_VIDEO_EXTEND = [...WITHOUT_VIDEO_EDIT, "video_extend"];
+
+describe.each([videoModeDisabledReason, sharedVideoModeDisabledReason])("mode input requirements (%#)", (reason) => {
+  it("requires an image for image-based modes", () => {
+    for (const mode of ["firstFrame", "imageToVideo", "imageReference", "firstLastFrame"] as const) {
+      expect(reason(mode, "seedance-2.0", NONE, enT)).toBe("Connect an image node (exactly 1)");
+      expect(reason(mode, "seedance-2.0", { ...NONE, images: 1 }, enT)).toBeNull();
+    }
+  });
+  it("does not apply the new required-input rule to all-reference", () => {
+    expect(reason("allReference", "seedance-2.0", NONE, enT)).toBeNull();
+    expect(reason("allReference", "seedance-2.0", { ...NONE, hasOtherReference: true }, enT)).toBeNull();
+  });
+  it("keeps text generation available without media and blocks video-only modes", () => {
+    expect(reason("textToVideo", "seedance-2.0", NONE, enT)).toBeNull();
+    for (const mode of ["videoEdit", "videoExtend"] as const) {
+      expect(reason(mode, "Depth-Anything-Video", NONE, enT, ["video_edit", "video_extend"]))
+        .not.toBeNull();
+    }
+  });
+});
 
 describe("videoModeDisabledReason — mode availability when a video is connected upstream", () => {
   /**

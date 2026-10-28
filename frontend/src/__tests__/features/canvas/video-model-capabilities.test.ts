@@ -15,8 +15,11 @@ import {
   isHappyHorseVideoModel,
   isMultishotOnlyModel,
   isSeedance1xVideoModel,
+  isSeedance25VideoModel,
   isSeedance2VideoModel,
   isVideoModeSupportedByModel,
+  findSeedance25VideoModel,
+  videoOutputFollowsSourceVideo,
   referenceDurationLimitsMs,
   resolveVideoKeyframeUrls,
   videoEmptyStateCtaModes,
@@ -28,6 +31,8 @@ import {
   videoModelDefaultMode,
   videoModelSupportsGenerateAudio,
   videoModelReferenceDisabledReason,
+  videoModeForModel,
+  videoModeMissingInputReason,
   videoMultiImageAutoSwitchMode,
   videoNoUpstreamResetMode,
   videoReferenceAutoSwitchAction,
@@ -57,6 +62,49 @@ const SEEDANCE2_VALUE = "newapi_seedance-2.0-fast-value";
 const SEEDANCE10_PRO_FAST = "newapi_seedance-1.0-pro-fast";
 const SEEDANCE15_PRO = "newapi_seedance-1.5-pro";
 const HAPPYHORSE = "newapi_happyhorse-1.0";
+const SEEDANCE25 = "newapi_seedance-2.5";
+
+describe("catalog models requiring video input", () => {
+  const none = { images: 0, videos: 0, audios: 0 };
+  const depth = { id: "catalog-depth", apiModel: "Depth-Anything-Video", supportedModes: ["video_edit"] };
+
+  it("disables video-only models until a video node is connected", () => {
+    for (const supportedModes of [["video_edit"], ["video_extend"], ["video_edit", "video_extend"]]) {
+      expect(videoModelReferenceDisabledReason({ ...depth, supportedModes }, none))
+        .toBe("node.videoOps.modeDisabled.needOneVideo");
+      expect(videoModelReferenceDisabledReason({ ...depth, supportedModes }, { ...none, videos: 1 }))
+        .toBeNull();
+    }
+    expect(videoModelReferenceDisabledReason({ ...depth, supportedModes: ["text_to_video", "video_edit"] }, none))
+      .toBeNull();
+  });
+
+  it("switches to the supported mode and preserves it when the input is removed", () => {
+    expect(videoModeForModel("textToVideo", depth, { ...none, videos: 1 })).toBe("videoEdit");
+    expect(videoModeForModel("textToVideo", depth, none)).toBe("videoEdit");
+    expect(videoNoUpstreamResetMode("videoEdit", none, depth)).toBeNull();
+    expect(videoNoUpstreamResetMode("videoEdit", none, HAPPYHORSE)).toBe("textToVideo");
+  });
+
+  it("selects an input-compatible fallback without changing a supported explicit mode", () => {
+    const model = { supportedModes: ["text_to_video", "video_edit", "video_extend"] };
+    expect(videoModeForModel("firstFrame", model, none)).toBe("textToVideo");
+    expect(videoModeForModel("firstFrame", model, { ...none, videos: 1 })).toBe("videoEdit");
+    expect(videoModeForModel("textToVideo", model, { ...none, videos: 1 })).toBe("videoEdit");
+    expect(videoModeForModel("videoExtend", model, { ...none, videos: 1 })).toBe("videoExtend");
+  });
+
+  it("requires images for image modes without adding an all-reference restriction", () => {
+    for (const mode of ["firstFrame", "imageToVideo", "imageReference", "firstLastFrame"] as const) {
+      expect(videoModeMissingInputReason(mode, none)).toBe("node.videoOps.modeDisabled.needOneImage");
+      expect(videoModeMissingInputReason(mode, { ...none, images: 1 })).toBeNull();
+    }
+    expect(videoModeMissingInputReason("allReference", none)).toBeNull();
+    expect(videoModeMissingInputReason("allReference", { ...none, hasOtherReference: true })).toBeNull();
+    expect(videoNoUpstreamResetMode("allReference", { ...none, hasOtherReference: true }, SEEDANCE2_FAST)).toBeNull();
+    expect(videoModeMissingInputReason("textToVideo", none)).toBeNull();
+  });
+});
 
 describe("video model family detection", () => {
   it("classifies Seedance 2.0 variants (not 1.x)", () => {
@@ -88,6 +136,66 @@ describe("video model family detection", () => {
     }
     // Separator-insensitive: after normalize `seedance20` is still 2.0 and does not leak into 1.x.
     expect(isSeedance2VideoModel("SEEDANCE 2.0 FAST")).toBe(true);
+  });
+
+  it("singles out Seedance 2.5 without unsettling the 2.x family verdict", () => {
+    expect(isSeedance25VideoModel(SEEDANCE25)).toBe(true);
+    // 2.5 still belongs to the 2.x family (multi-image / video / audio capabilities share one source); this coarse verdict must not be narrowed because of it.
+    expect(isSeedance2VideoModel(SEEDANCE25)).toBe(true);
+    expect(isSeedance1xVideoModel(SEEDANCE25)).toBe(false);
+    // The whole 2.0 family must not be misjudged as 2.5 — the clip-reshoot entry relies on this to tell them apart.
+    for (const id of [SEEDANCE2_FAST, SEEDANCE2_VALUE, "seedance-2.0", HAPPYHORSE]) {
+      expect(isSeedance25VideoModel(id)).toBe(false);
+    }
+  });
+});
+
+describe("findSeedance25VideoModel — smart continuation only accepts Seedance 2.5", () => {
+  it("picks the 2.5 entry out of a mixed catalog by apiModel", () => {
+    const models = [
+      { id: "cat-fast", apiModel: SEEDANCE2_FAST },
+      { id: "cat-25", apiModel: SEEDANCE25 },
+      { id: "cat-hh", apiModel: HAPPYHORSE },
+    ];
+    // It returns the catalog entry itself (`id` is the value to write into VideoNodeData.model, not apiModel).
+    expect(findSeedance25VideoModel(models)?.id).toBe("cat-25");
+  });
+
+  it("falls back to id when the catalog entry carries no apiModel", () => {
+    expect(findSeedance25VideoModel([{ id: "seedance-2.5" }])?.id).toBe("seedance-2.5");
+  });
+
+  it("returns null when the project catalog has no 2.5 at all", () => {
+    // 2.5 is not in the catalog → the entry should be grayed out, not filled in with some arbitrary 2.0.
+    expect(
+      findSeedance25VideoModel([
+        { id: "cat-fast", apiModel: SEEDANCE2_FAST },
+        { id: "cat-hh", apiModel: HAPPYHORSE },
+      ]),
+    ).toBeNull();
+    expect(findSeedance25VideoModel([])).toBeNull();
+  });
+});
+
+// Vendor hard validation: Seedance video edit requires ratio adaptive and duration -1; specifying concrete values
+// rejects the whole order. The UI hides the ratio/duration knobs accordingly and the backend rewrites the sent values — one shared rule on both sides.
+describe("videoOutputFollowsSourceVideo — video edit must not carry ratio and duration", () => {
+  it("holds for Seedance video edit", () => {
+    expect(videoOutputFollowsSourceVideo("videoEdit", SEEDANCE25)).toBe(true);
+    expect(videoOutputFollowsSourceVideo("videoEdit", "seedance-2.0")).toBe(true);
+  });
+
+  it("leaves every other mode of the same model alone", () => {
+    // All reference with video assets still takes ratio and duration as usual — only video edit follows the source video.
+    for (const mode of ["allReference", "textToVideo", "imageToVideo"] as const) {
+      expect(videoOutputFollowsSourceVideo(mode, SEEDANCE25)).toBe(false);
+    }
+    expect(videoOutputFollowsSourceVideo(null, SEEDANCE25)).toBe(false);
+  });
+
+  it("excludes HappyHorse video edit — its parameter set still takes ratio and duration", () => {
+    expect(videoOutputFollowsSourceVideo("videoEdit", HAPPYHORSE)).toBe(false);
+    expect(videoOutputFollowsSourceVideo("videoEdit", null)).toBe(false);
   });
 });
 
@@ -1306,7 +1414,7 @@ describe("VideoNode wiring: assets emptied → text-to-video", () => {
     // upstreamCounts (resolved URLs) would count an image node just laid out by the empty-state CTA with no image yet as 0,
     // and using it would push the three CTAs straight back to text-to-video.
     expect(source).toContain(
-      "videoNoUpstreamResetMode(genMode, upstreamTypeCounts)",
+      "videoNoUpstreamResetMode(compatibleMode, counts, selectedVideoModel)",
     );
   });
 
@@ -1319,8 +1427,8 @@ describe("VideoNode wiring: assets emptied → text-to-video", () => {
   });
 
   it("the submit gate splits prompt and assets into two parallel checks", () => {
-    expect(source).toContain(
-      "(videoModeRequiresPrompt(genMode) && !hasPromptText) ||\n      (videoModeRequiresMedia(genMode) && !hasRequiredMediaForMode);",
+    expect(source).toMatch(
+      /\(videoModeRequiresPrompt\(genMode\)\s*&&\s*!hasPromptText\)\s*\|\|\s*\(videoModeRequiresMedia\(genMode\)\s*&&\s*!hasRequiredMediaForMode\);/,
     );
     // The old ternary: a mode that needs a prompt no longer looks at assets — so all reference slipped through.
     expect(source).not.toContain(

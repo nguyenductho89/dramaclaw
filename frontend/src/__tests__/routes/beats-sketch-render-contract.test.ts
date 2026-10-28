@@ -155,7 +155,7 @@ describe("beats sketch/render v2 contract", () => {
     );
 
     expect(sketchSection).toContain("episode.workbench.batch.autoCombine");
-    expect(sketchSection).toContain('defaultValue: "Batch redraw"');
+    expect(sketchSection).not.toContain("defaultValue");
     expect(sketchSection).not.toContain('defaultValue: "Auto group"');
   });
 

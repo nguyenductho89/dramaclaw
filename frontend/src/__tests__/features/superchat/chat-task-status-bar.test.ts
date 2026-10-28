@@ -25,6 +25,7 @@ import {
   type CanvasNode,
 } from "@/features/canvas/domain/canvasNodes";
 import type { TaskState } from "@/task-center/types";
+import { enT, viT } from "@/__tests__/helpers/i18n-fixtures";
 
 const NOW = Date.parse("2026-07-27T08:00:00.000Z");
 
@@ -88,6 +89,20 @@ function workflowRun(overrides: Partial<FreezoneWorkflowRun> = {}): FreezoneWork
 }
 
 describe("selectChatTaskItems", () => {
+  it("translates numbered default node names for the task bar but preserves custom names", () => {
+    const namedNode = node({
+      type: CANVAS_NODE_TYPES.imageGen,
+      data: { displayName: "Image node16", autoTitleIndex: 16, generationTaskKey: "task-1" },
+    });
+    expect(selectChatTaskItems([task()], [namedNode], "canvas-1", NOW, "canvas", enT)[0].nodeLabel)
+      .toBe("Image node16");
+    expect(selectChatTaskItems([task()], [namedNode], "canvas-1", NOW, "canvas", viT)[0].nodeLabel)
+      .toBe(`${viT("node.displayName.imageGenNode")}16`);
+    expect(selectChatTaskItems([task()], [node()], "canvas-1", NOW, "canvas", enT)[0].nodeLabel)
+      .toBe("Product main image");
+    expect(namedNode.data.displayName).toBe("Image node16");
+  });
+
   it("matches a task through the canvas node generation key", () => {
     const result = selectChatTaskItems([task()], [node()], "canvas-1", NOW);
 
@@ -218,7 +233,7 @@ describe("selectChatTaskItems", () => {
     expect(result[0].task).toMatchObject({
       status: "running",
       progress: 0.75,
-      current_task: "Batch progress 1/2 · 1 running",
+      current_task: "Batch progress 1/2 · Running 1",
     });
   });
 
@@ -236,9 +251,9 @@ describe("selectChatTaskItems", () => {
     const result = aggregateChatTaskBatchItems(items);
 
     expect(result).toHaveLength(1);
-    expect(result[0].task.current_task).toBe("Batch progress 0/9 · 3 running · 6 waiting");
+    expect(result[0].task.current_task).toBe("Batch progress 0/9 · Running 3 · Waiting 6");
     expect(chatTaskBatchStatusSummary(result)).toBe(
-      "Batch progress 0/9 · 3 running · 6 waiting",
+      "Batch progress 0/9 · Running 3 · Waiting 6",
     );
     expect(chatTaskBatchWaitingItems(items)).toMatchObject([{
       batchId: "first-frame-batch",
@@ -590,6 +605,16 @@ describe("workflowStatusCounts", () => {
 });
 
 describe("selectWorkflowActivityLabels", () => {
+  it("uses localized node names in workflow activity labels", () => {
+    expect(selectWorkflowActivityLabels(
+      [{ node_id: "node-1", action: "generate_image", status: "running", phase: "generating" }],
+      [node({ type: CANVAS_NODE_TYPES.imageGen, data: { displayName: "Image node16", autoTitleIndex: 16 } })],
+      (label) => label,
+      new Map(),
+      enT,
+    )).toEqual(["Image node16"]);
+  });
+
   it("returns active node names and excludes actions that are still waiting", () => {
     const actions: FreezoneWorkflowRun["actions"] = [
       {

@@ -2,6 +2,7 @@
 // Copyright (c) 2026 ClaymoreLab
 // The main-thread client of the matting Worker: a lazily loaded singleton worker, correlating requests <-> responses by id.
 // See the comment at the top of ./matteWorker.ts: the whole inference runs inside the worker, and the main thread (canvas) is not blocked.
+import { browserModelSource } from "@/lib/runtime-config";
 
 type OutboundMessage =
   | { type: "ready"; id: number }
@@ -50,7 +51,7 @@ function ensureWorker(): Worker {
 
 /** Idle warm-up: create the worker and preload the model, moving the one-time initialization to before the user clicks. */
 export function preloadMatteWorker(): void {
-  ensureWorker().postMessage({ type: "preload", id: 0 });
+  ensureWorker().postMessage({ type: "preload", id: 0, modelSource: browserModelSource() });
 }
 
 /** Matte inside the worker; the main thread is not blocked. Returns the background-removed PNG blob. */
@@ -59,6 +60,6 @@ export function matteInWorker(blob: Blob): Promise<Blob> {
   const id = nextRequestId++;
   return new Promise<Blob>((resolve, reject) => {
     pending.set(id, { resolve, reject });
-    target.postMessage({ type: "matte", id, blob });
+    target.postMessage({ type: "matte", id, blob, modelSource: browserModelSource() });
   });
 }

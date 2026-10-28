@@ -56,6 +56,7 @@ import {
   isAudioNode,
   isExportImageNode,
   isImageEditNode,
+  hasInlineMediaReplaceButton,
   isImageGenNode,
   isStoryboardGenNode,
   isUploadNode,
@@ -79,8 +80,10 @@ import {
   MAX_AUDIO_REFERENCE_TOTAL_DURATION_MS,
   MIN_AUDIO_REFERENCE_DURATION_MS,
   referenceDurationLimitsMs,
+  findSeedance25VideoModel,
   isHappyHorseVideoModel,
   isSeedance2VideoModel,
+  isSeedance25VideoModel,
   isVideoModeSupportedByModel,
   resolveVideoKeyframeUrls,
   videoEmptyStateCtaModes,
@@ -92,6 +95,7 @@ import {
   videoModelSupportsGenerateAudio,
   videoMultiImageAutoSwitchMode,
   videoNoUpstreamResetMode,
+  videoModeForModel,
   videoReferenceAutoSwitchAction,
   videoSubmitMediaRejectionReason,
   videoUpstreamImageDefaultMode,
@@ -113,6 +117,25 @@ import {
   FALLBACK_VIDEO_RESOLUTION_OPTIONS,
 } from "@/features/canvas/domain/mediaModelOptions";
 import { ensureWebSafeVideo } from "@/features/canvas/application/videoTranscode";
+import {
+  fitRatioBox,
+  initialCropBox,
+  resolveCropRatio,
+  toEvenSourceRect,
+  type CropBox,
+  type CropRatioId,
+} from "@/features/canvas/application/videoCrop/cropMath";
+import { VideoCropError, type VideoCropErrorCode } from "@/features/canvas/application/videoCrop/cropVideo";
+import { cropAndUploadVideo } from "@/features/canvas/application/videoCrop/runVideoCrop";
+import {
+  cancelVideoCrop,
+  clearVideoCropInFlight,
+  isVideoCropInFlight,
+  markVideoCropInFlight,
+  useVideoCropInFlight,
+} from "@/features/canvas/application/videoCrop/videoCropInFlight";
+import { VideoCropOverlay } from "@/features/canvas/nodes/VideoCropOverlay";
+import { VideoCropPanel } from "@/features/canvas/nodes/VideoCropPanel";
 import { isVideoFile, VIDEO_FILE_ACCEPT } from "@/features/canvas/application/videoFileTypes";
 import { localizeNodeDisplayName } from "@/features/canvas/domain/nodeDisplay";
 import { toast } from "sonner";
@@ -167,6 +190,7 @@ import {
   NodeContextBadges,
 } from "@/features/freezone/context/NodeContextBadges";
 import { RegenerateButton } from "@/features/canvas/ui/RegenerateButton";
+import { DepthCaptureBody } from "@/features/canvas/nodes/DepthCaptureBody";
 import {
   NODE_CREDIT_PILL_FLAT_CLASS,
   NODE_GENERATE_BUTTON_BASE_CLASS,
@@ -178,7 +202,20 @@ import {
   NODE_SIDE_ACTION_ICON_CLASS,
   NodeSideActionRail,
 } from "@/features/canvas/ui/NodeSideActionRail";
+import { NodeMediaReplaceButton } from "@/features/canvas/ui/NodeMediaReplaceButton";
+import {
+  useAssetCommitDragById,
+} from "@/features/canvas/ui/useAssetCommitDrag";
 import { VideoClipPanel } from "@/features/canvas/nodes/VideoClipPanel";
+import { VideoExtendPanel } from "@/features/canvas/nodes/VideoExtendPanel";
+import {
+  extendNodeDisplayName,
+  extendPromptPrefix,
+  extendPromptPrefixTrimmed,
+  extendRangeNeedsTrim,
+  type ExtendClipRange,
+} from "@/features/canvas/application/videoExtendClip";
+import { trimAndUploadExtendClip } from "@/features/canvas/application/videoExtendTrim";
 import {
   submitVideoUpscale,
   VIDEO_UPSCALE_RESOLUTIONS,
@@ -194,6 +231,8 @@ import { useCanvasStore, useIsBoxSelecting } from "@/stores/canvasStore";
 import { useCanvasPickStore } from "@/stores/canvasPickStore";
 import { commitVideoPickToNode } from "@/features/canvas/application/videoBreakdownLanding";
 import { ReferenceValidationDialog, referenceDurationIssues, referenceIssues, matchesReference, referenceIssueName, type ReferenceIssue } from "./shared/ReferenceValidationDialog";
+import { useCanvasPickStore } from "@/stores/canvasPickStore";
+import { commitVideoPickToNode } from "@/features/canvas/application/videoBreakdownLanding";
 import {
   fetchFreezoneJobResult,
   submitFreezoneVideoCompose,
@@ -243,6 +282,15 @@ type VideoNodeProps = NodeProps & {
 
 const DEFAULT_WIDTH = 580;
 export const DEFAULT_HEIGHT = 380;
+
+// "canceled" is not in this table: it is a user-initiated cancel and goes through a separate info notice, not handled as an error.
+const VIDEO_CROP_ERROR_KEYS: Record<Exclude<VideoCropErrorCode, "canceled">, string> = {
+  tooLarge: "node.videoNode.crop.errors.tooLarge",
+  noVideoTrack: "node.videoNode.crop.errors.noVideoTrack",
+  cannotDecode: "node.videoNode.crop.errors.cannotDecode",
+  fetchFailed: "node.videoNode.crop.errors.fetchFailed",
+  failed: "node.videoNode.crop.errors.failed",
+};
 /**
  * Billing feature key for video generation. Shared by the body (billing probe for error-state retry) and the operations panel (estimate
  * display + submit disabling); they must use the same basis — exported from the body, imported by the panel.
@@ -733,7 +781,12 @@ export const VideoNode = memo(
             VIDEO_GENERATION_ASPECT_RATIOS,
             "16:9",
           );
-    const followsInputAspectRatio = videoModeForcesAutomaticAspectRatio(genMode);
+    // Smart continuation is an all-reference mode, but Seedance recognizes it from the prompt as "video extend";
+    // such tasks hard-validate that the ratio must follow the source clip (`ratio` must be `adaptive`), and specifying a concrete ratio
+    // gets the whole order rejected. Duration is not constrained by this and uses the user's choice as usual. isExtendMode is only declared
+    // further below, so read data directly here to avoid a temporal dead zone.
+    const followsInputAspectRatio =
+      videoModeForcesAutomaticAspectRatio(genMode) || Boolean(data.isExtendMode);
     // The aspect of keyframe/video-edit follows the input assets; it only changes this request's value and does not overwrite the ratio saved on the node.
     // Other modes submit as is when the Admin config exists, and keep the old auto-derivation logic when it is not configured.
     const submitAspectRatio: FreezoneVideoAspectRatio =
@@ -806,8 +859,9 @@ export const VideoNode = memo(
     const videoEditAcceptsAudio =
       supportsVideoEdit &&
       (referenceCapsForMode(selectedVideoModel, "videoEdit")?.audio ?? 0) > 0;
-    const supportsHumanReview = selectedVideoModel?.humanReview === true;
-    const humanReview = Boolean(data.humanReview);
+    const supportsHumanReview =
+      genMode !== "textToVideo" && selectedVideoModel?.humanReview === true;
+    const humanReview = supportsHumanReview && Boolean(data.humanReview);
     const count: VideoGenCount = (data.count ?? 1) as VideoGenCount;
     const videoInputBilling = useMemo(() => {
       if (
@@ -834,6 +888,18 @@ export const VideoNode = memo(
           ? node.data.durationMs
           : null,
       );
+      // Before a continuation is submitted the selection is actually cut out to replace the first video material; the estimate is based on the cut segment.
+      if (
+        data.isExtendMode &&
+        typeof data.extendStartMs === "number" &&
+        typeof data.extendEndMs === "number" &&
+        extendRangeNeedsTrim(
+          { startMs: data.extendStartMs, endMs: data.extendEndMs },
+          durations[0],
+        )
+      ) {
+        durations[0] = data.extendEndMs - data.extendStartMs;
+      }
       const ready = durations.every((duration) => duration != null);
       return {
         present: true,
@@ -842,7 +908,15 @@ export const VideoNode = memo(
           ? durations.reduce((sum, duration) => sum + (duration ?? 0), 0) / 1000
           : 0,
       };
-    }, [data.referenceOrder, genMode, selectedVideoModel, upstreamNodes]);
+    }, [
+      data.extendEndMs,
+      data.extendStartMs,
+      data.isExtendMode,
+      data.referenceOrder,
+      genMode,
+      selectedVideoModel,
+      upstreamNodes,
+    ]);
     useEffect(() => {
       const patch: Partial<VideoNodeData> = {};
       if (data.quality !== quality) {
@@ -1133,6 +1207,127 @@ export const VideoNode = memo(
       () => localizeNodeDisplayName(CANVAS_NODE_TYPES.video, data, t),
       [data, t],
     );
+
+    // Smart continuation --------------------------------------------------------------
+    // One feature, two roles: on the source node isExtendPickMode is a transient state (the "pre-continuation
+    // video" is being cut, with a track below that lets you pick only one segment); on the produced downstream node isExtendMode is a
+    // persistent state (pins 2.5 + all reference, and attaches a read-only prefix to the prompt).
+    const isExtendPickMode = Boolean(data.isExtendPickMode);
+    const isExtendMode = Boolean(data.isExtendMode);
+    // The prefix is used only for rendering and for concatenation at submit time, and is **not written into data.prompt**: if it were, one backspace
+    // could chew off half of "Continue the 00:00-00:04 segment of X:", and the instruction the model receives would be broken.
+    const extendPrefixText =
+      isExtendMode &&
+      typeof data.extendStartMs === "number" &&
+      typeof data.extendEndMs === "number"
+        ? extendPromptPrefix(
+            typeof data.extendSourceName === "string"
+              ? data.extendSourceName
+              : "",
+            { startMs: data.extendStartMs, endMs: data.extendEndMs },
+          )
+        : null;
+
+    // The prefix that is actually concatenated into the prompt at submit time. When the selection is only part of the source video, that segment is
+    // cut out as material before submitting (see handleSubmit); the clip the model sees starts at 0s, so the timecodes no longer hold.
+    const extendRange: ExtendClipRange | null =
+      isExtendMode &&
+      typeof data.extendStartMs === "number" &&
+      typeof data.extendEndMs === "number"
+        ? { startMs: data.extendStartMs, endMs: data.extendEndMs }
+        : null;
+    const extendSourceDurationMs = useMemo(() => {
+      if (!extendRange) return null;
+      const source = sortUpstreamByReferenceOrder(
+        upstreamNodes,
+        data.referenceOrder,
+      ).find((node) => Boolean(referenceVideoUrl(node)));
+      const duration = source?.data.durationMs;
+      return typeof duration === "number" && duration > 0 ? duration : null;
+      // extendRange is a new object on every render; here we only care whether it exists.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [Boolean(extendRange), data.referenceOrder, upstreamNodes]);
+    const extendTrimRange =
+      extendRange && extendRangeNeedsTrim(extendRange, extendSourceDurationMs)
+        ? extendRange
+        : null;
+    const extendTrimStartMs = extendTrimRange?.startMs ?? null;
+    const extendTrimEndMs = extendTrimRange?.endMs ?? null;
+    const extendSubmitPrefix =
+      extendPrefixText !== null && extendTrimRange
+        ? extendPromptPrefixTrimmed(
+            typeof data.extendSourceName === "string" ? data.extendSourceName : "",
+          )
+        : extendPrefixText;
+
+    const handleExtendExit = useCallback(() => {
+      updateNodeData(id, { isExtendPickMode: false });
+    }, [id, updateNodeData]);
+
+    const handleExtendConfirm = useCallback(
+      (range: ExtendClipRange) => {
+        const store = useCanvasStore.getState();
+        const position = store.findNodePosition(
+          id,
+          DEFAULT_WIDTH,
+          DEFAULT_HEIGHT,
+        );
+        const extendModel = findSeedance25VideoModel(availableVideoModels);
+        const newNodeId = addNode(CANVAS_NODE_TYPES.video, position, {
+          displayName: extendNodeDisplayName(resolvedTitle),
+          isExtendMode: true,
+          extendSourceName: resolvedTitle,
+          extendStartMs: range.startMs,
+          extendEndMs: range.endMs,
+          // Pin these two when creating the node, so it does not first land on the first model in the catalog and then get corrected by the effect
+          // below (every correction pushes an extra canvas history entry).
+          genMode: "allReference",
+          ...(extendModel ? { model: extendModel.id } : {}),
+        });
+        // The source video becomes the new node's upstream reference material along this edge — all reference relies on it to get the preceding context.
+        addEdge(id, newNodeId);
+        updateNodeData(id, { isExtendPickMode: false });
+        // The selected state must also be changed in React Flow's own copy, otherwise the new node's action panel will not float up.
+        store.onNodesChange([
+          { id, type: "select", selected: false },
+          { id: newNodeId, type: "select", selected: true },
+        ]);
+        setSelectedNode(newNodeId);
+      },
+      [
+        addEdge,
+        addNode,
+        availableVideoModels,
+        id,
+        resolvedTitle,
+        setSelectedNode,
+        updateNodeData,
+      ],
+    );
+
+    // The **sole author** of the model / mode on the continuation node: in the panel
+    // other models and other modes are merely grayed out, not nonexistent, and when the catalog is revised or this entry is taken down, resolution
+    // falls back to the first model in the list, which must be corrected back here.
+    useEffect(() => {
+      if (!isExtendMode) return;
+      if (videoModelsLoading) return;
+      const patch: Record<string, unknown> = {};
+      if (genMode !== "allReference") patch.genMode = "allReference";
+      const extendModel = findSeedance25VideoModel(availableVideoModels);
+      if (extendModel && !isSeedance25VideoModel(selectedVideoModelId)) {
+        patch.model = extendModel.id;
+      }
+      if (Object.keys(patch).length === 0) return;
+      updateNodeData(id, patch);
+    }, [
+      availableVideoModels,
+      genMode,
+      id,
+      isExtendMode,
+      selectedVideoModelId,
+      updateNodeData,
+      videoModelsLoading,
+    ]);
 
     // "Pick from canvas" picking mode: when some node (frame-by-frame breakdown) is waiting for a video clip, this
     // node floats a clickable overlay; clicking it backfills itself to the requester and draws an edge.
@@ -1716,6 +1911,12 @@ export const VideoNode = memo(
     // Unlike the audio "0→≥1 transition", this corrects every time, ensuring the mode cannot be switched away while a video is present.
     // Whether video can be consumed is decided by the media catalog's all_reference capability; models that do not declare it are not forced,
     // so as not to push into a mode where submit is certain to 400.
+    //
+    // The clip-reshoot node is skipped entirely (regardless of model capability): its mode is pinned to videoEdit by the effect above
+    // on its own, and any condition here that could still reach `updateNodeData` would fight with it —
+    // measured: an old reshoot node whose model resolved to 2.0-fast (that id is not in the catalog, so it fell back to the first in the list),
+    // with supportsVideoEdit=false disabling the capability check above, had the two effects overwrite each other every frame,
+    // pushing the whole page into Maximum update depth. The same data can have only one author.
     useEffect(() => {
       if (upstreamCounts.videos === 0) return;
       if (isHappyHorseModel) return;
@@ -1820,10 +2021,23 @@ export const VideoNode = memo(
     // sees the asset still present and no longer rewrites it.
     useEffect(() => {
       if (isHappyHorseModel) return;
-      const target = videoNoUpstreamResetMode(genMode, upstreamTypeCounts);
-      if (!target) return;
+      if (videoModelsLoading) return;
+      const counts = {
+        ...upstreamTypeCounts,
+        hasOtherReference: Boolean(data.referenceFileUrl || data.referenceLink?.trim()),
+      };
+      const compatibleMode = selectedVideoModel?.supportedModes?.length
+        ? videoModeForModel(genMode, selectedVideoModel, counts)
+        : genMode;
+      const target = videoNoUpstreamResetMode(compatibleMode, counts, selectedVideoModel)
+        ?? compatibleMode;
+      if (target === genMode) return;
       updateNodeData(id, { genMode: target }, { recordHistory: false });
     }, [
+      data.referenceFileUrl,
+      data.referenceLink,
+      selectedVideoModel,
+      videoModelsLoading,
       genMode,
       isHappyHorseModel,
       upstreamTypeCounts,
@@ -1877,6 +2091,143 @@ export const VideoNode = memo(
       setHasMetadata(false);
       setVideoLoadError(false);
     }, [videoSource]);
+
+    // ---- frame crop ----------------------------------------------
+    // The box and ratio live only in the component: writing to the store at drag frequency would flush the undo stack; they re-initialize after exit / refresh.
+    const isCropMode = Boolean(data.isCropMode);
+    const [cropBox, setCropBox] = useState<CropBox | null>(null);
+    const [cropRatioId, setCropRatioId] = useState<CropRatioId>("free");
+    // In-flight state lives in a module-level registry rather than local state: it is not lost when the node is unmounted and remounted by
+    // onlyRenderVisibleElements, or when the toolbar switches to another mode; see videoCropInFlight.ts.
+    const isCropping = useVideoCropInFlight(id);
+    // <video> metadata is more trustworthy than widthPx/heightPx: the latter is a static value probed at upload time;
+    // once metadata has loaded prefer the actual frame size, and fall back to it when not loaded or an old node lacks the fields.
+    const hasLiveVideoDimensions = hasMetadata && (videoEl?.videoWidth ?? 0) > 0;
+    const cropSourceWidth = hasLiveVideoDimensions ? videoEl?.videoWidth ?? 0 : data.widthPx || 0;
+    const cropSourceHeight = hasLiveVideoDimensions ? videoEl?.videoHeight ?? 0 : data.heightPx || 0;
+    const cropRatio = resolveCropRatio(cropRatioId, cropSourceWidth, cropSourceHeight);
+    const cropRect = useMemo(
+      () =>
+        cropBox && cropSourceWidth > 0 && cropSourceHeight > 0
+          ? toEvenSourceRect(cropBox, cropSourceWidth, cropSourceHeight)
+          : null,
+      [cropBox, cropSourceHeight, cropSourceWidth],
+    );
+
+    useEffect(() => {
+      setCropRatioId("free");
+      if (!isCropMode || cropSourceWidth <= 0 || cropSourceHeight <= 0) {
+        setCropBox(null);
+        return;
+      }
+      setCropBox(initialCropBox(cropSourceWidth, cropSourceHeight));
+    }, [cropSourceHeight, cropSourceWidth, isCropMode]);
+
+    const handleCropRatioChange = useCallback(
+      (next: CropRatioId) => {
+        setCropRatioId(next);
+        const ratio = resolveCropRatio(next, cropSourceWidth, cropSourceHeight);
+        if (ratio === null) return;
+        setCropBox((prev) => (prev ? fitRatioBox(prev, ratio, cropSourceWidth, cropSourceHeight) : prev));
+      },
+      [cropSourceHeight, cropSourceWidth],
+    );
+
+    const handleCropExit = useCallback(() => {
+      if (isCropping) return;
+      updateNodeData(id, { isCropMode: false });
+    }, [id, isCropping, updateNodeData]);
+
+    const handleCropSubmit = useCallback(async () => {
+      // Read the module-level registry rather than isCropping: in the instant between unmount and remount React state may
+      // not have caught up yet; the registry is the only source of truth that is never lost, which prevents cropping twice.
+      if (isVideoCropInFlight(id) || !cropBox || !cropRect || !data.videoUrl) return;
+      const projectId = readUrl().project;
+      if (!projectId) {
+        toast.error(t("node.videoNode.crop.errors.noProject"));
+        return;
+      }
+      const toastId = toast.loading(t("node.videoNode.crop.processing"));
+      const signal = markVideoCropInFlight(id);
+      if (!signal) {
+        // Should be unreachable: isVideoCropInFlight above has already blocked once. This check is kept
+        // because we do not trust that no other call can slip in between the two registry reads and grab the registration — if grabbing fails, don't hold on to this
+        // loading toast.
+        toast.dismiss(toastId);
+        return;
+      }
+      try {
+        const result = await cropAndUploadVideo({
+          projectId,
+          videoUrl: data.videoUrl,
+          box: cropBox,
+          sourceWidth: cropSourceWidth,
+          sourceHeight: cropSourceHeight,
+          signal,
+        });
+        const state = useCanvasStore.getState();
+        // The source node may have been deleted during these tens of seconds of cropping: the result has nowhere to attach, so don't conjure an orphan node out of thin air.
+        if (!state.nodes.some((node) => node.id === id)) {
+          toast.dismiss(toastId);
+          return;
+        }
+        const position = state.findNodePosition(id, DEFAULT_WIDTH, DEFAULT_HEIGHT);
+        const newNodeId = addNode(CANVAS_NODE_TYPES.video, position, {
+          videoUrl: result.url,
+          widthPx: result.width,
+          heightPx: result.height,
+          durationMs: result.durationMs,
+          displayName: t("node.videoNode.crop.displayName", { name: resolvedTitle }),
+        });
+        addEdge(id, newNodeId);
+        updateNodeData(id, { isCropMode: false });
+        toast.success(t("node.videoNode.crop.success"), { id: toastId });
+      } catch (error) {
+        if (signal.aborted) {
+          // Check the signal itself first, not the error's type/code: cancellation during download / upload does not always
+          // map reliably to VideoCropError("canceled") (e.g. an AbortError wrapped by ky),
+          // and judging by type would misreport "the user clicked cancel" as "crop failed".
+          // The source node may have been deleted, which triggered the cancellation (see cancelVideoCrop called in
+          // canvasStore.deleteNodes) — in that case the node is gone and there is nowhere to hang a notice, so quietly dismiss the
+          // loading toast without showing "crop canceled".
+          if (!useCanvasStore.getState().nodes.some((node) => node.id === id)) {
+            toast.dismiss(toastId);
+            return;
+          }
+          // A user-initiated cancel is not a failure: show a neutral notice and do not exit crop mode; keep the box so it can be adjusted and resubmitted.
+          toast.info(t("node.videoNode.crop.canceled"), { id: toastId });
+          return;
+        }
+        console.error("[video-crop] crop failed", error);
+        const detail = error instanceof Error ? error.message : String(error);
+        // The code !== "canceled" branch should be unreachable (canceled is only thrown when signal.aborted,
+        // handled above); this just helps TS narrow error.code to exclude "canceled",
+        // so it matches the narrowed key type of VIDEO_CROP_ERROR_KEYS.
+        const key =
+          error instanceof VideoCropError && error.code !== "canceled"
+            ? VIDEO_CROP_ERROR_KEYS[error.code]
+            : VIDEO_CROP_ERROR_KEYS.failed;
+        toast.error(t(key, { detail }), { id: toastId });
+      } finally {
+        clearVideoCropInFlight(id);
+      }
+    }, [
+      addEdge,
+      addNode,
+      cropBox,
+      cropRect,
+      cropSourceHeight,
+      cropSourceWidth,
+      data.videoUrl,
+      id,
+      resolvedTitle,
+      t,
+      updateNodeData,
+    ]);
+
+    const handleCropAbort = useCallback(() => {
+      cancelVideoCrop(id);
+    }, [id]);
 
     // ---- subtitle erase mode (libtv-style smart subtitle removal) ------------------------
     const subtitleEraseMode = data.subtitleEraseMode ?? null;
@@ -2061,7 +2412,10 @@ export const VideoNode = memo(
     //   all reference needs ≥1 of any of image/video/audio) — aligned with the empty-asset early returns in each handleSubmit branch.
     // All reference is the only mode that needs both, so this cannot be written as "if it needs a prompt, only look at the prompt".
     const hasPromptText =
-      prompt.trim().length > 0 || upstreamTextJoined.length > 0;
+      prompt.trim().length > 0 ||
+      upstreamTextJoined.length > 0 ||
+      // The continuation node's read-only prefix is itself a complete instruction, so it can be submitted with an empty body.
+      extendPrefixText !== null;
     const hasRequiredMediaForMode =
       genMode === "videoEdit" || genMode === "videoExtend"
         ? upstreamCounts.videos > 0
@@ -2216,11 +2570,16 @@ export const VideoNode = memo(
       const userPrompt = [upstreamTextJoined, trimmedPrompt]
         .filter((s) => s.length > 0)
         .join("\n\n");
-      const fallbackPrompt = fragment
+      const composedPromptBody = fragment
         ? userPrompt
           ? `${fragment}, ${userPrompt}`
           : fragment
         : userPrompt;
+      // The continuation's timecode instruction is a read-only prefix the render layer attaches inside the input (not in data.prompt,
+      // so one backspace can't chew off half of it); it is only concatenated to the front at submit time, so the model knows which segment to continue from.
+      const fallbackPrompt = extendSubmitPrefix
+        ? `${extendSubmitPrefix}${composedPromptBody}`
+        : composedPromptBody;
       try {
         const composedPrompt = await compileWorkflowNodePrompt({
           nodeId: id,
@@ -2650,6 +3009,20 @@ export const VideoNode = memo(
             });
             return;
           }
+          // Smart continuation: when the selection is only part of the source video, actually cut that segment out to replace the whole source video.
+          // The source video is the first connected video material (the edge made when the continuation node was created). This goes before the duration
+          // validation — the validation should look at the cut segment, not the whole source video.
+          if (extendTrimStartMs !== null && extendTrimEndMs !== null && videoRefs.length > 0) {
+            const sourceRef = videoRefs[0];
+            const trimmed = await trimAndUploadExtendClip({
+              projectId,
+              videoUrl: sourceRef.url,
+              range: { startMs: extendTrimStartMs, endMs: extendTrimEndMs },
+            });
+            const reference = references.find((item) => item.type === "video");
+            if (reference) reference.url = trimmed.url;
+            videoRefs[0] = { ...sourceRef, url: trimmed.url, durationMs: trimmed.durationMs };
+          }
           if (!(await validateReferenceDurations("audio", audioRefs))) return;
           if (!(await validateReferenceDurations("video", videoRefs))) return;
           doSubmit = (targetId) =>
@@ -2663,6 +3036,8 @@ export const VideoNode = memo(
               generateAudio,
               model: selectedVideoModel?.catalogId ?? modelId,
               genMode,
+              // Smart continuation: the backend submits it as a video-extend task (task type and prompt requirements same as video extend).
+              continuation: isExtendMode,
               modelParams: data.modelParams,
               humanReview: supportsHumanReview && humanReview,
               sceneOptimize: sceneOptimize ?? null,
@@ -2962,6 +3337,8 @@ export const VideoNode = memo(
           const diagnostics = resolveGenerationErrorDiagnostics(firstError, resolved.details);
           const haystack = `${displayErrorMessage}\n${diagnostics.details ?? ""}`;
           if (
+            supportsHumanReview &&
+            !humanReview &&
             haystack.includes(
               "InputImageSensitiveContentDetected.PrivateInformation",
             )
@@ -3018,6 +3395,10 @@ export const VideoNode = memo(
       data.multishotShots,
       durationBounds,
       durationSec,
+      extendSubmitPrefix,
+      isExtendMode,
+      extendTrimEndMs,
+      extendTrimStartMs,
       generateAudio,
       genMode,
       humanReview,
@@ -3127,7 +3508,22 @@ export const VideoNode = memo(
     });
 
     const isUploading = Boolean(data.isUploading);
-    const isEmptyVideoBody = !videoSource && !isUploading && !isGenerating && !hasGenerationError;
+    // Fallback check for the crop overlay: the toolbar should already guarantee isCropMode is mutually exclusive with other modes; this
+    // blocks once more, so an entry that forgets to clear isCropMode does not stack with other overlays.
+    const showCropUi =
+      isCropMode &&
+      !isClipMode &&
+      !subtitleEraseMode &&
+      !isExtendPickMode &&
+      !isGenerating &&
+      !isUploading;
+    // Depth motion-capture output node: until videoUrl is available, DepthCaptureBody takes over the node body.
+    const depthCaptureState = data.videoUrl ? null : (data.depthCapture ?? null);
+    // The replace button inside the card also covers "press and drag to the left asset library" (the original AssetCommitHandle gesture).
+    const { canCommit: canCommitAsset, startDrag: startAssetCommitDrag } =
+      useAssetCommitDragById(id);
+    const isEmptyVideoBody =
+      !videoSource && !isUploading && !isGenerating && !hasGenerationError && !depthCaptureState;
     const bodySurfaceClass = isEmptyVideoBody
       ? CANVAS_NODE_INPUT_SURFACE_CLASS
       : CANVAS_NODE_PANEL_SURFACE_CLASS;
@@ -3141,6 +3537,9 @@ export const VideoNode = memo(
       !isBoxSelecting &&
       !albumExpanded &&
       !isClipMode &&
+      !isCropMode &&
+      // While cutting the "pre-continuation video" the area below is given to the continuation track, same reasoning as the clip bar.
+      !isExtendPickMode &&
       !subtitleEraseMode &&
       !data.referenceOnly &&
       // The video upscale node uses its own VideoUpscaleEditorOverlay config panel, not the regular generation panel.
@@ -3351,7 +3750,7 @@ export const VideoNode = memo(
           keepAspectRatio
         />
 
-        {!videoSource && !isUploading && !isGenerating && !data.isUpscaleNode && (
+        {!videoSource && !isUploading && !isGenerating && !data.isUpscaleNode && !depthCaptureState && (
           <NodeSideActionRail nodeId={id} autoHide selected={Boolean(selected)}>
             <button
               type="button"
@@ -3374,6 +3773,26 @@ export const VideoNode = memo(
             albumExpanded && hasAlbum ? "invisible" : ""
           }`}
         >
+          {/* The "replace" entry at the top-right inside the card: click to swap a local file — reuses the node's own
+              upload path (processFile, including HEVC transcoding + uploadFreezoneVideo landing on OSS);
+              after the swap onLoadedMetadata recomputes duration/pixels; press and drag to drop it into the left asset library.
+              Only for cards with allowLocalReplace (reference material produced by frame-by-frame breakdown) — other video nodes'
+              replace gesture goes through the AssetCommitHandle floating outside the node, see SelectedNodeOverlay.
+              Not shown in the empty state: the NodeSideActionRail upload button is already there then. */}
+          {canCommitAsset &&
+            videoSource &&
+            !isGenerating &&
+            !albumExpanded &&
+            hasInlineMediaReplaceButton(data) && (
+              <NodeMediaReplaceButton
+                accept={VIDEO_FILE_ACCEPT}
+                busy={isUploading}
+                title={t("node.videoNode.replace")}
+                onPick={processFile}
+                onCommitDragStart={startAssetCommitDrag}
+              />
+            )}
+
           {/* While generating/uploading show loading first: when regenerating in place videoUrl is still the previous result,
               and without this guard the old video would keep holding the place and the isGenerating branch would never be reached.
               On failure isGenerating returns to false and the old video reappears automatically (videoUrl was not cleared). */}
@@ -3449,6 +3868,8 @@ export const VideoNode = memo(
                 setVideoLoadError(true);
               }}
             />
+          ) : depthCaptureState ? (
+            <DepthCaptureBody nodeId={id} state={depthCaptureState} />
           ) : isUploading ? (
             <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-text-muted/85">
               <Loader2 className="h-7 w-7 animate-spin opacity-70" />
@@ -3595,6 +4016,7 @@ export const VideoNode = memo(
             !videoLoadError &&
             !isGenerating &&
             !isUploading &&
+            !isCropMode &&
             !subtitleEraseMode && (
               <VideoPlayerControls
                 videoEl={videoEl}
@@ -3645,6 +4067,19 @@ export const VideoNode = memo(
                 if (!final) return;
                 updateNodeData(id, { subtitleEraseBox: final });
               }}
+            />
+          )}
+
+          {videoSource && showCropUi && cropBox && cropSourceWidth > 0 && cropSourceHeight > 0 && (
+            <VideoCropOverlay
+              nodeId={id}
+              box={cropBox}
+              ratio={cropRatio}
+              sourceWidth={cropSourceWidth}
+              sourceHeight={cropSourceHeight}
+              disabled={isCropping}
+              onChange={setCropBox}
+              onEscape={handleCropExit}
             />
           )}
         </div>
@@ -3756,8 +4191,14 @@ export const VideoNode = memo(
 
         {isClipMode && videoSource && (
           <div
-            className="absolute left-0 right-0 z-10 flex flex-col gap-1"
-            style={{ top: `calc(100% + ${OPERATIONS_PANEL_GAP}px)` }}
+            // The clip bar's width is determined by the material duration (see VideoClipPanel's trackMinWidth),
+            // so left-0/right-0 cannot be locked here: use w-max so the panel expands by itself, centered below
+            // the node, then use min-width to match the action panel's width (extending a bit on each side).
+            className="absolute left-1/2 z-10 flex w-max -translate-x-1/2 flex-col gap-1"
+            style={{
+              top: `calc(100% + ${OPERATIONS_PANEL_GAP}px)`,
+              minWidth: `calc(100% + ${panelOverhang * 2}px)`,
+            }}
           >
             <VideoClipPanel
               videoUrl={videoSource}
@@ -3780,6 +4221,55 @@ export const VideoNode = memo(
                 {t("node.videoNode.clip.failed", { detail: clipError })}
               </div>
             )}
+          </div>
+        )}
+
+        {showCropUi && videoSource && (
+          <div
+            className="absolute left-1/2 z-10 flex w-max -translate-x-1/2"
+            style={{ top: `calc(100% + ${OPERATIONS_PANEL_GAP}px)` }}
+          >
+            <VideoCropPanel
+              ratioId={cropRatioId}
+              width={cropRect?.width ?? 0}
+              height={cropRect?.height ?? 0}
+              isSubmitting={isCropping}
+              canSubmit={Boolean(cropRect && data.videoUrl && hasLiveVideoDimensions)}
+              onRatioChange={handleCropRatioChange}
+              onCancel={handleCropExit}
+              onSubmit={() => {
+                void handleCropSubmit();
+              }}
+              onAbort={handleCropAbort}
+            />
+          </div>
+        )}
+
+        {/* Mounted only when selected: same reasoning as the reshoot track, a row of video nodes each dragging a track would overlap each other.
+            Exiting the cut only honors X (isExtendPickMode is not cleared on deselect), so the track is still there when clicking back. */}
+        {isExtendPickMode &&
+          selected &&
+          !isBoxSelecting &&
+          videoSource &&
+          !isClipMode &&
+          !isCropMode &&
+          !subtitleEraseMode &&
+          !albumExpanded && (
+          <div
+            // Same positioning as the clip bar: the width is determined by the material duration, so use w-max to let it expand by itself,
+            // centered below the node, then use min-width to match the action panel's width.
+            className="absolute left-1/2 z-10 flex w-max -translate-x-1/2 flex-col gap-1"
+            style={{
+              top: `calc(100% + ${OPERATIONS_PANEL_GAP}px)`,
+              minWidth: `calc(100% + ${panelOverhang * 2}px)`,
+            }}
+          >
+            <VideoExtendPanel
+              videoUrl={videoSource}
+              durationMs={durationMs}
+              onExit={handleExtendExit}
+              onConfirm={handleExtendConfirm}
+            />
           </div>
         )}
 
@@ -3832,6 +4322,10 @@ export const VideoNode = memo(
           !isBoxSelecting &&
           !albumExpanded &&
           !isClipMode &&
+          !isCropMode &&
+          // While cutting the "pre-continuation video" the track occupies the area below the node, and the history panel yields together with
+          // the action panel — it is pushed down by panelHeight, and would float in mid-air when the action panel is absent.
+          !isExtendPickMode &&
           !subtitleEraseMode &&
           !data.referenceOnly &&
           hasCompletedHistoryRecords(historyRecords) && (

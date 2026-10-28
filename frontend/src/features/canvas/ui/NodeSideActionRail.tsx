@@ -18,6 +18,13 @@ interface NodeSideActionRailProps {
   autoHide?: boolean;
   /** Whether the node is selected (used for "also show when selected" under autoHide). */
   selected?: boolean;
+  /**
+   * Anchor at the node's corner and expand downward, instead of lifting above the top edge. The right rail is lifted
+   * by default to dodge the spawn "+" centered on the right edge, but once lifted it collides with the top action toolbar,
+   * which also hangs above the node and is wider than it —
+   * buttons that only appear when selected (such as the replace-material handle) must hug the corner, otherwise they overlap the toolbar as soon as they are selected.
+   */
+  anchorAtCorner?: boolean;
 }
 
 // NodeToolbar is by default a constant screen size (not changing with zoom), so after tidying and zooming out the nodes become thumbnails
@@ -28,6 +35,10 @@ interface NodeSideActionRailProps {
 export const NODE_SIDE_ACTION_BUTTON_CLASS =
   'nodrag inline-flex h-8 items-center gap-1.5 rounded-[12px] border border-white/10 bg-[#242426]/95 px-3 text-xs font-medium text-text-dark backdrop-blur-xl transition-colors hover:border-white/18 hover:bg-[#29292b]/95 hover:text-white disabled:cursor-not-allowed disabled:opacity-50';
 
+/** Label-free version: square, drops the px-3/gap reserved for the label, holds only an icon. */
+export const NODE_SIDE_ACTION_ICON_BUTTON_CLASS =
+  'nodrag inline-flex h-8 w-8 items-center justify-center rounded-[12px] border border-white/10 bg-[#242426]/95 text-text-dark backdrop-blur-xl transition-colors hover:border-white/18 hover:bg-[#29292b]/95 hover:text-white disabled:cursor-not-allowed disabled:opacity-50';
+
 export const NODE_SIDE_ACTION_ICON_CLASS = 'h-3.5 w-3.5 text-text-muted/90';
 
 export function NodeSideActionRail({
@@ -36,8 +47,11 @@ export function NodeSideActionRail({
   children,
   autoHide = false,
   selected = false,
+  anchorAtCorner = false,
 }: NodeSideActionRailProps) {
   const isLeft = position === Position.Left;
+  // The left rail is never lifted (see the comment below); the right rail is lifted by default to dodge the centered "+", and anchorAtCorner turns that off.
+  const lifted = !isLeft && !anchorAtCorner;
   // The node hover maintained by Canvas (leaving has a 400ms delay, bridging the gap of "moving from the node to the buttons above");
   // railHovered further ensures that the bar is not hidden by that delay being cleared while the mouse rests on the button bar.
   const nodeHovered = useCanvasStore((state) => state.hoveredNodeId === nodeId);
@@ -66,22 +80,30 @@ export function NodeSideActionRail({
         nodes (audio) — worse now that the "+" scales with zoom. Anchoring above
         the top edge keeps it clear of the centered "+" at any zoom/height.
 
-        Left rail (replace material): do NOT lift above the top edge. This rail AND the
-        centered top action toolbar both now scale with zoom, so a lifted left
-        rail grows up into the toolbar's band and overlaps it at high zoom (the
-        toolbar's left end reaches the rail's column). Anchoring at the node's
-        top-left corner and growing downward keeps the rail below the toolbar —
-        which sits entirely above the node's top edge — at any zoom.
+        Left rail: never lifted. This rail AND the centered top action toolbar
+        both scale with zoom, so a lifted rail grows up into the toolbar's band
+        and overlaps it at high zoom (the toolbar is wider than the node, so its
+        ends reach past both side columns). Anchoring at the node's corner and
+        growing downward keeps the rail below the toolbar — which sits entirely
+        above the node's top edge — at any zoom.
+
+        anchorAtCorner opts a right rail out of the lift for that same reason —
+        used by the replace-material handle, which only appears on selection, i.e. exactly
+        when the toolbar is on screen. Safe only where the node is taller than
+        the rail (the centered "+" is what the lift exists to dodge).
       */}
       <div
-        style={isLeft ? undefined : { transform: "translateY(calc(-100% - 2px))" }}
+        style={lifted ? { transform: "translateY(calc(-100% - 2px))" } : undefined}
         onMouseEnter={() => setRailHovered(true)}
         onMouseLeave={() => setRailHovered(false)}
       >
         {/* Follows the canvas zoom, with the same logic as the top action toolbar. The anchor hugs the corner next to the node
-        (right rail bottom-left lifts upward, left rail top-right goes downward), expanding away from the
+        (the lifted right rail's bottom-left goes upward, the corner-anchored left/right rails' top-* go downward), expanding away from the
         node when scaling and always hugging the node corner. */}
-        <ZoomScaledToolbar origin={isLeft ? 'top right' : 'bottom left'} min={0.6}>
+        <ZoomScaledToolbar
+          origin={isLeft ? 'top right' : lifted ? 'bottom left' : 'top left'}
+          min={0.6}
+        >
           <div className={`flex flex-col gap-2 ${isLeft ? 'items-end' : 'items-start'}`}>
             {children}
           </div>

@@ -1801,6 +1801,14 @@ class FreezoneVideoOmniGenRequest(FreezoneWorkflowMediaLink):
         default="allReference",
         description="Fixed business mode of the omni-reference entry",
     )
+    continuation: bool = Field(
+        default=False,
+        description=(
+            'Canvas "smart continuation": still billed and validated as omni-reference, but '
+            "submitted to the model as a video-extension task (task type and prompt requirements "
+            "match video extension). Requires at least one video reference"
+        ),
+    )
     model_params: dict[str, Any] = Field(default_factory=dict)
 
 

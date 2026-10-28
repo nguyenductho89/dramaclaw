@@ -2,97 +2,56 @@
 // Copyright (c) 2026 ClaymoreLab
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Replace } from 'lucide-react';
+import { Upload } from 'lucide-react';
 import { Position } from '@xyflow/react';
 
-import {
-  deriveNodeDropInfo,
-  useAssetDropStore,
-} from '@/stores/assetDropStore';
 import type { CanvasNode } from '@/features/canvas/domain/canvasNodes';
 import {
-  NODE_SIDE_ACTION_BUTTON_CLASS,
+  NODE_SIDE_ACTION_ICON_BUTTON_CLASS,
   NODE_SIDE_ACTION_ICON_CLASS,
   NodeSideActionRail,
 } from '@/features/canvas/ui/NodeSideActionRail';
+import { useAssetCommitDrag } from '@/features/canvas/ui/useAssetCommitDrag';
 
 /**
- * The "drag to asset library to replace" handle on the left of the node. While pressing and dragging from the handle,
- * the node itself does not move on the canvas - we drive it ourselves with native pointer events,
- * and trigger replacement on release when it hits a same-type material on the left.
+ * The "drag to asset library to replace" handle at the top-right of the node. While pressing and dragging from the handle,
+ * the node itself does not move on the canvas — the gesture is driven by useAssetCommitDrag with native pointer events.
+ *
+ * Icon only, no label: this button appears only when selected and sits against the node corner, and a "Replace material" text
+ * pill would cover node content when zoomed; the semantics are carried by the title. The icon is unified with the replace button
+ * inside the node (NodeMediaReplaceButton) as an upload icon — to users they are the same thing.
+ *
+ * Nodes that already have that replace button inside the card (allowLocalReplace) do not mount this handle; the drag gesture is
+ * handled by the one inside the card, see SelectedNodeOverlay.
  */
 export function AssetCommitHandle({ node }: { node: CanvasNode }) {
   const { t } = useTranslation();
-  const dropInfo = deriveNodeDropInfo(node);
-  const sourceUrl = dropInfo?.sourceUrl ?? null;
+  const { canCommit, startDrag } = useAssetCommitDrag(node);
 
   const handlePointerDown = useCallback(
     (event: React.PointerEvent<HTMLButtonElement>) => {
-      if (!dropInfo || !sourceUrl || event.button !== 0) return;
+      if (event.button !== 0) return;
       // Prevent React Flow from taking over -> the node will not be dragged.
       event.preventDefault();
       event.stopPropagation();
-
-      useAssetDropStore.getState().beginDrag({
-        nodeId: node.id,
-        mediaType: dropInfo.mediaType,
-        sourceUrl,
-        thumbUrl: dropInfo.thumbUrl,
-        label: dropInfo.label,
-        directorControlBundle: dropInfo.directorControlBundle,
-      });
-
-      const prevUserSelect = document.body.style.userSelect;
-      const prevCursor = document.body.style.cursor;
-      document.body.style.userSelect = 'none';
-      document.body.style.cursor = 'grabbing';
-
-      const onMove = (e: PointerEvent) => {
-        const drag = useAssetDropStore.getState().activeDrag;
-        const elements = document.elementsFromPoint(e.clientX, e.clientY);
-        let hoverId: string | null = null;
-        for (const el of elements) {
-          const card = (el as Element).closest?.(
-            '[data-asset-id]',
-          ) as HTMLElement | null;
-          if (!card) continue;
-          const assetType = card.dataset.assetMediaType;
-          if (drag && assetType && assetType === drag.mediaType) {
-            hoverId = card.dataset.assetId ?? null;
-          }
-          break;
-        }
-        useAssetDropStore.getState().setHoverAsset(hoverId);
-      };
-
-      const onUp = () => {
-        window.removeEventListener('pointermove', onMove);
-        window.removeEventListener('pointerup', onUp);
-        document.body.style.userSelect = prevUserSelect;
-        document.body.style.cursor = prevCursor;
-        // If a valid material is hit, generate a replace request, consumed by the sidebar.
-        useAssetDropStore.getState().endDrag(true);
-      };
-
-      window.addEventListener('pointermove', onMove);
-      window.addEventListener('pointerup', onUp);
+      startDrag();
     },
-    [dropInfo, node.id, sourceUrl],
+    [startDrag],
   );
 
-  if (!dropInfo || !sourceUrl) return null;
+  if (!canCommit) return null;
 
   return (
-    <NodeSideActionRail nodeId={node.id} position={Position.Left}>
+    <NodeSideActionRail nodeId={node.id} position={Position.Right} anchorAtCorner>
       <button
         type="button"
         onPointerDown={handlePointerDown}
+        aria-label={t('canvas.assetReplace.handleLabel')}
         title={t('canvas.assetReplace.handleHint')}
-        className={`${NODE_SIDE_ACTION_BUTTON_CLASS} active:cursor-grabbing`}
+        className={`${NODE_SIDE_ACTION_ICON_BUTTON_CLASS} active:cursor-grabbing`}
         style={{ cursor: 'grab' }}
       >
-        <Replace className={NODE_SIDE_ACTION_ICON_CLASS} />
-        {t('canvas.assetReplace.handleLabel')}
+        <Upload className={NODE_SIDE_ACTION_ICON_CLASS} />
       </button>
     </NodeSideActionRail>
   );

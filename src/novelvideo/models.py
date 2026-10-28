@@ -840,6 +840,7 @@ class VisualBeat(BaseModel):
     beat_number: int = Field(description="Beat number (starting from 1)")
     narration_segment: str = Field(description="This segment of narration")
     visual_description: str = Field(description="Matching picture description (creative intent description)")
+    source_text_sha256: str = Field(default="", description="SHA256 of the text actually fed in when this shot was generated")
 
     time_of_day: str = Field(
         default="",
@@ -1418,6 +1419,7 @@ class NovelVisualBeat(BaseModel):
     episode_number: int = Field(..., description="Episode it belongs to")
     narration: str = Field(default="", description="TTS text (narration or dialogue, used for embedding index)")
     visual_description: str = Field(default="", description="Picture description (creative intent)")
+    source_text_sha256: str = Field(default="", description="SHA256 of the text actually fed in when this shot was generated")
 
     time_of_day: str = Field(
         default="",

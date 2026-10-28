@@ -20,25 +20,29 @@ function loadLocale(lng: string): Record<string, unknown> {
 export const enTranslation = loadLocale("en");
 export const viTranslation = loadLocale("vi");
 
-function lookup(table: unknown, key: string): string | undefined {
+function lookup(table: unknown, key: string): unknown {
   let cursor: unknown = table;
   for (const part of key.split(".")) {
     if (!cursor || typeof cursor !== "object") return undefined;
     cursor = (cursor as Record<string, unknown>)[part];
   }
-  return typeof cursor === "string" ? cursor : undefined;
+  return cursor;
 }
 
 function makeT(lang: "vi" | "en", table: unknown) {
   return ((key: string, options?: Record<string, unknown>) => {
-    const template = lookup(table, key);
-    if (template === undefined) {
-      // Dynamically built keys may legitimately miss; fall back to defaultValue like
-      // i18next does. A key with neither an entry nor a default is a missing translation.
+    const value = lookup(table, key);
+    if (value === undefined) {
+      // Dynamically built keys (e.g. `sourceKinds.${kind}`) may legitimately miss; fall back to
+      // defaultValue like i18next does. A key with neither an entry nor a default is a missing translation.
       if (options && typeof options.defaultValue === "string") return options.defaultValue;
       throw new Error(`${lang} translation.json has no key: ${key}`);
     }
-    return template.replace(/\{\{(\w+)\}\}/g, (whole, name: string) =>
+    if (options?.returnObjects === true) return value;
+    if (typeof value !== "string") {
+      throw new Error(`${lang} translation.json key is not a string: ${key}`);
+    }
+    return value.replace(/\{\{(\w+)\}\}/g, (whole, name: string) =>
       options && name in options ? String(options[name]) : whole,
     );
   }) as unknown as TFunction;

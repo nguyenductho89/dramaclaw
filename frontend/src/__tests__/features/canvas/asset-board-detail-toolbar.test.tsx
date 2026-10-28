@@ -123,7 +123,7 @@ function detailPanel() {
 // The three edit items (Upscale/Crop/Rotate) live in the "..." more menu -- expand it first.
 // (Grid templates are a standalone dropdown on the always-visible toolbar, not inside this menu.)
 function openMoreMenu(detail: HTMLElement) {
-  fireEvent.click(within(detail).getByRole('button', { name: 'More' }));
+  fireEvent.click(within(detail).getByRole('button', { name: 'More actions' }));
 }
 
 describe('AssetBoard detail toolbar (batch 1 assembly)', () => {
@@ -140,7 +140,7 @@ describe('AssetBoard detail toolbar (batch 1 assembly)', () => {
 
     const detail = detailPanel();
     // Always-visible items are directly visible (Grid templates moved from "..." to the always-visible dropdown).
-    for (const label of ['Download', 'Panorama', 'Multi-angle', 'Relight', 'Grid templates', 'More']) {
+    for (const label of ['Download', 'Panorama', 'Multi-angle', 'Relight', 'Grid', 'More actions']) {
       expect(within(detail).getByRole('button', { name: label })).toBeInTheDocument();
     }
     // The "Edit" dropdown was removed; its three items are now what lives in "...".
@@ -171,7 +171,7 @@ describe('AssetBoard detail toolbar (batch 1 assembly)', () => {
     // Sub-templates are not visible before expanding.
     expect(screen.queryByRole('menuitem', { name: /Multi-Camera 3x3/ })).not.toBeInTheDocument();
     // Click the always-visible "Grid templates" dropdown (the Radix menu portals to body and items use the menuitem role).
-    await user.click(within(detail).getByRole('button', { name: 'Grid templates' }));
+    await user.click(within(detail).getByRole('button', { name: 'Grid' }));
     for (const label of ['Multi-Camera 3x3', 'Plot Progression 2x2', '25-Cell Storyboard']) {
       expect(await screen.findByRole('menuitem', { name: new RegExp(label) })).toBeInTheDocument();
     }
@@ -253,7 +253,7 @@ describe('AssetBoard detail toolbar (batch 1 assembly)', () => {
 
     const detail = detailPanel();
     expect(within(detail).queryByRole('button', { name: 'Download' })).not.toBeInTheDocument();
-    expect(within(detail).queryByRole('button', { name: 'More' })).not.toBeInTheDocument();
+    expect(within(detail).queryByRole('button', { name: 'More actions' })).not.toBeInTheDocument();
   });
 
   it('failed video node: the toolbar does not render (all four operations need a media source; a row of grey buttons is just noise)', () => {

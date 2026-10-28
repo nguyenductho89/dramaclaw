@@ -15,7 +15,11 @@ import {
 } from "@/features/canvas/domain/mainlineNodeFlags";
 import { getFreezoneImageModelsSnapshot } from "@/features/canvas/hooks/useFreezoneImageModels";
 import { getFreezoneVideoModelsSnapshot } from "@/features/canvas/hooks/useFreezoneVideoModels";
-import { isVideoModeSupportedByModel } from "@/features/canvas/nodes/shared/videoModelCapabilities";
+import {
+  findSeedance25VideoModel,
+  isVideoModeSupportedByModel,
+} from "@/features/canvas/nodes/shared/videoModelCapabilities";
+import { DEPTH_MAX_DURATION_SEC } from "@/features/canvas/application/depthCapture/depthMath";
 import type { ModelOption } from "@/features/canvas/ui/ProviderModelPicker";
 import {
   VIDEO_UPSCALE_RESOLUTIONS,
@@ -1329,7 +1333,7 @@ function addFrontendNodeActions(
       action: "generate_audio",
       execution: "frontend_node",
       command_type: "run_node_action",
-      description: "Submit this audio node using its current text/upstream text and audioKind. Speech uses only an explicitly selected custom/reference voice; when none is selected, skip this node without failing the remaining workflow. Music uses the text-to-music flow. If the node already has uploaded or generated audio, the new result replaces it.",
+      description: "Submit this audio node using its current text/upstream text and audioKind. If the requested music text or settings differ from the current node data, submit update_node_data + run_node_action together through freezone_emit_canvas_command so generation reads the update without another model turn. Speech uses only an explicitly selected custom/reference voice; when none is selected, skip this node without failing the remaining workflow. Music uses the text-to-music flow. If the node already has uploaded or generated audio, the new result replaces it.",
       parameters: { node_id: node.id },
     });
     if ((node.data as { audioKind?: unknown }).audioKind !== "music") {
@@ -1524,6 +1528,39 @@ function addMediaActions(
         next_step:
           "Without auto_start, find the new videoBreakdownNode downstream of this video and run start_video_breakdown on it.",
       },
+    });
+    actions.push({
+      action: "open_video_crop_tool",
+      execution: "manual_ui",
+      command_type: "run_node_action",
+      description:
+        "Frame crop: enter crop mode for this video node. The user drags the crop box and confirms through the existing frontend crop UI; the cropped video lands as a new node.",
+      parameters: { node_id: node.id },
+    });
+    if (findSeedance25VideoModel(getFreezoneVideoModelsSnapshot().models)) {
+      actions.push({
+        action: "open_video_extend_tool",
+        execution: "manual_ui",
+        command_type: "run_node_action",
+        description:
+          "Smart extend: enter the range-pick mode on this video node. The user picks the leading segment to continue from and confirms; the frontend then creates a downstream Seedance 2.5 video node for the continuation. It does not generate anything by itself.",
+        parameters: { node_id: node.id },
+      });
+    }
+    const durationMs = (node.data as { durationMs?: unknown }).durationMs;
+    const depthTooLong =
+      typeof durationMs === "number" && durationMs > DEPTH_MAX_DURATION_SEC * 1000;
+    actions.push({
+      action: "run_video_depth_capture",
+      execution: "frontend_node",
+      command_type: "run_node_action",
+      description:
+        `Depth motion capture: compute a per-frame depth video in the browser and land it as a new downstream video node, matching the toolbar action. Runs locally (WebGPU preferred), takes a while, and only supports videos up to ${DEPTH_MAX_DURATION_SEC}s. The action returns once the task has started; progress shows on the new node.`,
+      can_run_now: !depthTooLong,
+      ...(depthTooLong
+        ? { blocked_reasons: [`video is longer than ${DEPTH_MAX_DURATION_SEC}s`] }
+        : {}),
+      parameters: { node_id: node.id },
     });
     actions.push({
       action: "run_audio_separate",

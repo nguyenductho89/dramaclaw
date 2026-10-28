@@ -23,14 +23,14 @@ SURFACE_DEFINITIONS: Final[tuple[dict[str, Any], ...]] = (
     {
         "surface_code": "assistant",
         "label": "Assistant",
-        "default_available": False,
+        "default_available": True,
         "default_unavailable_message": "The assistant feature is not available yet",
         "sort_order": 30,
     },
     {
         "surface_code": "freezone_assistant",
         "label": "Freezone Assistant",
-        "default_available": False,
+        "default_available": True,
         "default_unavailable_message": "The Freezone assistant is not available yet",
         "sort_order": 40,
     },
@@ -53,7 +53,7 @@ def _local_assistant_surfaces_enabled() -> bool:
 
 
 class LocalProductSurfaceAccess:
-    """CE defaults keep assistant surfaces hidden until explicitly enabled."""
+    """CE exposes its local product surfaces without a remote control plane."""
 
     async def get_effective_access(self, user_id: str) -> list[dict[str, Any]]:
         del user_id

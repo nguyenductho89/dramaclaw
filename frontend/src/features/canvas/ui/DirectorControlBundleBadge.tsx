@@ -28,10 +28,10 @@ export function DirectorControlBundleBadge({ bundle }: { bundle: unknown }) {
   return (
     <div
       className="pointer-events-none absolute left-3 top-3 z-10 inline-flex max-w-[calc(100%-1.5rem)] items-center gap-1.5 rounded-md border border-amber-200/40 bg-black/62 px-2 py-1 text-[11px] font-medium leading-none text-amber-100 shadow-[0_6px_18px_rgba(0,0,0,0.28)] backdrop-blur"
-      title={t("node.directorControlBundle.tooltip", { defaultValue: "Full director composite asset, containing the composite image, the plain background and metadata; the thumbnail shows the composite image" })}
+      title={t("node.directorControlBundle.tooltip")}
     >
       <Boxes className="size-3.5 shrink-0" />
-      <span className="truncate">{t("node.directorControlBundle.badge", { defaultValue: "Director composite" })}</span>
+      <span className="truncate">{t("node.directorControlBundle.badge")}</span>
     </div>
   );
 }

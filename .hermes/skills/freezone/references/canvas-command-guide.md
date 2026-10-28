@@ -395,6 +395,15 @@ Known low-risk UI actions include:
 - `open_rotate_tool`
 - `open_video_viewer`
 
+Toolbar actions on a video node (one that already has a `videoUrl`) are also invoked through `run_node_action`. Mapping from what the user says to the action:
+
+- "Video breakdown" (shot-by-shot analysis) -> `run_video_breakdown`: creates a breakdown node (`videoBreakdownNode`) downstream. By default it only creates the node; when the user explicitly asks to run the breakdown now, pass `parameters.auto_start=true`, with an optional `parameters.dimensions` (a subset of `storyboard` / `motion` / `music`). Breakdown is a billed task that runs for several minutes; the results land downstream of the breakdown node as storyboard groups / motion camera clips / music clips.
+- "Start breakdown" on a breakdown node -> `start_video_breakdown`: runs an existing breakdown node, with an optional `parameters.dimensions`. The action returns once the task is submitted and does not wait for results.
+- "Clip trim" -> `open_video_clip_tool`: enters trim mode, where the user adjusts the range and confirms.
+- "Crop frame" -> `open_video_crop_tool`: enters crop mode, where the user drags the crop box and confirms.
+- "Smart continuation" -> `open_video_extend_tool`: enters range-selection mode; the continuation node is created only after the user picks the preceding clip and confirms. It appears only when the project has Seedance 2.5 enabled.
+- "Depth motion capture" -> `run_video_depth_capture`: computes the depth video locally in the browser and lands it as a new downstream video node; only videos up to 60 seconds are supported, and do not call it when `can_run_now=false`.
+
 For `execution="manual_ui"`, `run_node_action` opens a UI or a confirmation entry. For `execution="frontend_node"`, it runs the node's own frontend behavior, such as running `generate_image` on an `imageGenNode`.
 
 Mainline write-back is an exception: `commit_node` and `sync_beat_context_to_mainline` are not Agent-discoverable or Agent-executable actions. Even if the user asks for it in conversation, supplies a hand-written command or replays an old command, you must not call them; you can only ask the user to use the manual Commit/sync entry in the canvas.

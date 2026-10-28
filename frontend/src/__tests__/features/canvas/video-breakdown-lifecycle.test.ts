@@ -64,6 +64,33 @@ describe("breakdown in-progress state resets on hydration", () => {
   });
 });
 
+describe("frame crop resets on hydration", () => {
+  it("clears isCropMode but leaves isClipMode untouched", () => {
+    // Like breakdown it has no resume mechanism; the box/ratio only live in component-local state, so a persisted
+    // isCropMode: true would, once reopened, have neither a box nor a way to reconnect to the in-flight request.
+    useCanvasStore.getState().setCanvasData(
+      [
+        {
+          ...SOURCE_VIDEO,
+          data: { ...SOURCE_VIDEO.data, isCropMode: true, isClipMode: true },
+        },
+      ],
+      [],
+    );
+
+    const node = useCanvasStore.getState().nodes.find((item) => item.id === "v1");
+    expect(node?.data.isCropMode).toBe(false);
+    expect(node?.data.isClipMode).toBe(true);
+  });
+
+  it("leaves an idle node untouched", () => {
+    useCanvasStore.getState().setCanvasData([SOURCE_VIDEO], []);
+
+    const node = useCanvasStore.getState().nodes.find((item) => item.id === "v1");
+    expect(node?.data.isCropMode ?? false).toBe(false);
+  });
+});
+
 describe("picking a video from the canvas", () => {
   beforeEach(() => {
     useCanvasStore.setState({ nodes: [SOURCE_VIDEO, BREAKDOWN_NODE()], edges: [] });

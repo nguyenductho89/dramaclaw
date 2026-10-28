@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
 import { useCallback, useEffect, useMemo, useState } from "react";
-import i18n from "i18next";
 import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import {
   AlertCircle,
   CheckCircle2,
@@ -26,7 +26,7 @@ import {
   WORKFLOW_RUN_UPDATED_EVENT,
   type WorkflowRunUpdatedDetail,
 } from "@/features/canvas/application/workflowExecutionActivity";
-import { resolveNodeDisplayName } from "@/features/canvas/domain/nodeDisplay";
+import { localizeNodeDisplayName, resolveNodeDisplayName } from "@/features/canvas/domain/nodeDisplay";
 import type { CanvasNode } from "@/features/canvas/domain/canvasNodes";
 import {
   applyCanvasChatCommandsAsync,
@@ -71,7 +71,30 @@ export interface ChatTaskBatchWaitingItem {
   representative: ChatTaskItem;
 }
 
-function aggregateChatTaskBatch(items: ChatTaskItem[]): ChatTaskItem {
+type BatchTranslate = (
+  key: string,
+  values: Record<string, number>,
+) => string;
+
+const defaultBatchTranslate: BatchTranslate = (key, values) => {
+  switch (key) {
+    case "taskCenter.batchProgress":
+      return `Batch progress ${values.settled}/${values.expected}`;
+    case "taskCenter.runningCount":
+      return `Running ${values.count}`;
+    case "taskCenter.waitingCount":
+      return `Waiting ${values.count}`;
+    case "taskCenter.batchFailed":
+      return `${values.failed}/${values.expected} tasks failed`;
+    default:
+      return key;
+  }
+};
+
+function aggregateChatTaskBatch(
+  items: ChatTaskItem[],
+  t: BatchTranslate,
+): ChatTaskItem {
   const expected = Math.max(...items.map(({ task }) => taskBatchSize(task)));
   const representative = items[0];
   const active = items.filter(({ task }) => isActive(task));
@@ -101,16 +124,21 @@ function aggregateChatTaskBatch(items: ChatTaskItem[]): ChatTaskItem {
       status,
       progress,
       current_task: [
-        i18n.t("superchat.panel.batch.progress", { settled, expected }),
-        active.length > 0 ? i18n.t("superchat.panel.batch.running", { count: active.length }) : "",
-        waiting > 0 ? i18n.t("superchat.panel.batch.waiting", { count: waiting }) : "",
+        t("taskCenter.batchProgress", { settled, expected }),
+        active.length > 0 ? t("taskCenter.runningCount", { count: active.length }) : "",
+        waiting > 0 ? t("taskCenter.waitingCount", { count: waiting }) : "",
       ].filter(Boolean).join(" · "),
-      error: failed > 0 ? i18n.t("superchat.panel.batch.failed", { failed, expected }) : representative.task.error,
+      error: failed > 0
+        ? t("taskCenter.batchFailed", { failed, expected })
+        : representative.task.error,
     },
   };
 }
 
-export function aggregateChatTaskBatchItems(items: ChatTaskItem[]): ChatTaskItem[] {
+export function aggregateChatTaskBatchItems(
+  items: ChatTaskItem[],
+  t: BatchTranslate = defaultBatchTranslate,
+): ChatTaskItem[] {
   const standalone: ChatTaskItem[] = [];
   const batches = new Map<string, ChatTaskItem[]>();
   for (const item of items) {
@@ -125,7 +153,7 @@ export function aggregateChatTaskBatchItems(items: ChatTaskItem[]): ChatTaskItem
   }
   return [
     ...standalone,
-    ...[...batches.values()].map(aggregateChatTaskBatch),
+    ...[...batches.values()].map((batch) => aggregateChatTaskBatch(batch, t)),
   ].sort((left, right) => {
     const activeDelta = Number(isActive(right.task)) - Number(isActive(left.task));
     if (activeDelta) return activeDelta;
@@ -156,7 +184,7 @@ export function chatTaskBatchWaitingItems(
   return [...batches.entries()].flatMap(([batchId, batch]) => {
     const expected = Math.max(...batch.map(({ task }) => taskBatchSize(task)));
     const waiting = Math.max(expected - batch.length, 0);
-    if (waiting === 0 || !isActive(aggregateChatTaskBatch(batch).task)) return [];
+    if (waiting === 0 || !isActive(aggregateChatTaskBatch(batch, defaultBatchTranslate).task)) return [];
     return [{
       batchId,
       expected,
@@ -385,6 +413,7 @@ export function selectWorkflowActivityLabels(
     phase: FreezoneWorkflowRunAction["phase"],
   ) => string = (nodeLabel) => nodeLabel,
   tasksByKey: ReadonlyMap<string, TaskState> = new Map(),
+  t?: TFunction,
 ): string[] {
   const nodesById = new Map(nodes.map((node) => [node.id, node]));
   return [...new Set(
@@ -397,7 +426,10 @@ export function selectWorkflowActivityLabels(
       ) return [];
       const node = nodesById.get(action.node_id);
       if (!node?.type) return [];
-      return [formatLabel(resolveNodeDisplayName(node.type, node.data), action.phase)];
+      const label = t
+        ? localizeNodeDisplayName(node.type, node.data, t)
+        : resolveNodeDisplayName(node.type, node.data);
+      return [formatLabel(label, action.phase)];
     }),
   )];
 }
@@ -408,6 +440,7 @@ export function selectChatTaskItems(
   canvasId: string | null,
   now = Date.now(),
   scope: ChatTaskStatusScope = "canvas",
+  t?: TFunction,
 ): ChatTaskItem[] {
   if (scope === "canvas" && !canvasId) return [];
 
@@ -483,7 +516,9 @@ export function selectChatTaskItems(
       nodeId: node?.id ?? null,
       nodeLabel:
         node && node.type
-          ? resolveNodeDisplayName(node.type, node.data)
+          ? t
+            ? localizeNodeDisplayName(node.type, node.data, t)
+            : resolveNodeDisplayName(node.type, node.data)
           : null,
     });
   }
@@ -534,13 +569,14 @@ export function ChatTaskStatusBar({
         canvasId,
         now,
         scope,
+        t,
       );
     },
-    [tasks, taskProjectId, nodes, canvasId, now, projectId, scope],
+    [tasks, taskProjectId, nodes, canvasId, now, projectId, scope, t],
   );
   const items = useMemo(
-    () => aggregateChatTaskBatchItems(taskItems),
-    [taskItems],
+    () => aggregateChatTaskBatchItems(taskItems, t),
+    [taskItems, t],
   );
   const selectedWorkflowRun = useMemo(
     () => selectChatWorkflowRun(workflowRuns, now),
@@ -589,6 +625,7 @@ export function ChatTaskStatusBar({
         { name: nodeLabel },
       ),
       workflowTasksByKey,
+      t,
     ),
     [nodes, t, workflowRun, workflowTasksByKey],
   );
@@ -697,7 +734,7 @@ export function ChatTaskStatusBar({
   const workflowNodeLabel = (action: FreezoneWorkflowRunAction | null): string | null => {
     if (!action) return null;
     const node = nodeById.get(action.node_id);
-    return node?.type ? resolveNodeDisplayName(node.type, node.data) : null;
+    return node?.type ? localizeNodeDisplayName(node.type, node.data, t) : null;
   };
   const workflowActionLabel = (action: FreezoneWorkflowRunAction): string => {
     if (action.status === "completed") return t("taskCenter.chatStatus.workflowPhase.completed");
@@ -799,9 +836,11 @@ export function ChatTaskStatusBar({
       });
       toast.success(t("taskCenter.cancel.submitted"));
     } catch (error) {
-      toast.error(t("taskCenter.cancel.failed", {
-        error: error instanceof Error ? error.message : String(error),
-      }));
+      toast.error(
+        t("taskCenter.cancel.failed", {
+          error: error instanceof Error ? error.message : String(error),
+        }),
+      );
     } finally {
       setCancelling(false);
     }
@@ -813,9 +852,7 @@ export function ChatTaskStatusBar({
     if (count === 0 || cancelling) return;
     const confirmed = await confirmDialog({
       title: t("taskCenter.cancelAll.title"),
-      description: t("taskCenter.cancelAll.description", {
-        count,
-      }),
+      description: t("taskCenter.cancelAll.description", { count }),
       confirmText: t("taskCenter.cancelAll.confirm"),
       cancelText: t("taskCenter.cancel.keep"),
       confirmVariant: "destructive",
@@ -829,28 +866,30 @@ export function ChatTaskStatusBar({
         });
       }
       const results = await Promise.allSettled(
-        activeStandaloneTasks.map((task) => cancelTask.mutateAsync({
-          type: task.task_type,
-          project: projectId ?? task.project_id ?? task.project,
-          episode: task.episode,
-          beatNum: task.beat_num ?? undefined,
-          scope: task.scope ?? undefined,
-          confirmed: true,
-        })),
+        activeStandaloneTasks.map((task) =>
+          cancelTask.mutateAsync({
+            type: task.task_type,
+            project: projectId ?? task.project_id ?? task.project,
+            episode: task.episode,
+            beatNum: task.beat_num ?? undefined,
+            scope: task.scope ?? undefined,
+            confirmed: true,
+          }),
+        ),
       );
       const failed = results.filter((result) => result.status === "rejected").length;
       if (failed > 0) {
-        toast.error(t("taskCenter.cancelAll.partialFailure", {
-          count: failed,
-        }));
+        toast.error(t("taskCenter.cancelAll.partialFailure", { count: failed }));
       } else {
         toast.success(t("taskCenter.cancelAll.submitted"));
       }
       await refreshWorkflowRuns();
     } catch (error) {
-      toast.error(t("taskCenter.cancel.failed", {
-        error: error instanceof Error ? error.message : String(error),
-      }));
+      toast.error(
+        t("taskCenter.cancel.failed", {
+          error: error instanceof Error ? error.message : String(error),
+        }),
+      );
     } finally {
       setCancelling(false);
     }

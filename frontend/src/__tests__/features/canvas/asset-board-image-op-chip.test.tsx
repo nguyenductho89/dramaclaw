@@ -103,7 +103,7 @@ async function pickGridOp(label: string) {
   useCanvasStore.getState().setCanvasData([SOURCE_NODE], []);
   render(<AssetBoardView visible onLocateNode={() => {}} />);
   fireEvent.click(screen.getByRole('button', { name: 'Source image' }));
-  await user.click(within(detailPanel()).getByRole('button', { name: 'Grid templates' }));
+  await user.click(within(detailPanel()).getByRole('button', { name: 'Grid' }));
   await user.click(await screen.findByRole('menuitem', { name: new RegExp(label) }));
   return user;
 }

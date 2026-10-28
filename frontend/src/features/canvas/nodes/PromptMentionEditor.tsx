@@ -44,11 +44,29 @@ export interface MentionCandidate {
   displayName?: string | null;
 }
 
+/**
+ * The non-editable lead-in at the very front of the input (currently only used by "smart continuation").
+ *
+ * It is not part of `value`: the prefix is the node's **identity** (which segment of which material is being
+ * continued). Mixed into the body, one backspace could delete half of it and the model would receive a broken
+ * fragment. So it is only rendered, never serialized; the caller prepends it to the final prompt at submit time.
+ */
+export interface PromptEditorPrefix {
+  text: string;
+  thumbnailUrl?: string | null;
+  /** Fallback when there is no static thumbnail: draw its first frame (same approach as the reference-material chip). */
+  videoUrl?: string | null;
+  title?: string;
+}
+
 interface PromptMentionEditorProps {
   value: string;
   onChange: (next: string) => void;
   candidates: MentionCandidate[];
   placeholder?: string;
+  prefix?: PromptEditorPrefix | null;
+  /** If provided, a delete button is attached to the left of the prefix chip (replaces the thumbnail on hover); otherwise the prefix is read-only. */
+  onPrefixRemove?: () => void;
   className?: string;
   onCompositionStart?: () => void;
   onCompositionEnd?: (next: string) => void;
@@ -185,6 +203,76 @@ function buildChipElement(candidate: MentionCandidate): HTMLElement {
   return span;
 }
 
+function buildPrefixElement(prefix: PromptEditorPrefix, removable: boolean): HTMLElement {
+  const span = document.createElement('span');
+  span.contentEditable = 'false';
+  span.dataset.promptPrefix = '';
+  span.className = 'prompt-prefix-chip';
+  if (prefix.title) span.title = prefix.title;
+
+  // The thumbnail and the delete button share the slot on the left: the thumbnail normally, × on hover (per the design).
+  // Prefer a static image for the thumbnail; otherwise attach a muted, paused <video> to draw the first frame —
+  // a video node's thumbUrl is generated lazily and is often empty, and a missing image makes the chip look half-empty.
+  const slot = document.createElement('span');
+  slot.className = 'prompt-prefix-chip-slot';
+  if (prefix.thumbnailUrl) {
+    const img = document.createElement('img');
+    img.src = prefix.thumbnailUrl;
+    img.alt = '';
+    img.draggable = false;
+    slot.appendChild(img);
+  } else if (prefix.videoUrl) {
+    const video = document.createElement('video');
+    video.src = prefix.videoUrl;
+    video.muted = true;
+    video.playsInline = true;
+    video.preload = 'metadata';
+    video.draggable = false;
+    slot.appendChild(video);
+  }
+  if (removable) {
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.contentEditable = 'false';
+    remove.dataset.promptPrefixRemove = '';
+    remove.className = 'prompt-prefix-chip-remove';
+    remove.setAttribute('aria-label', i18n.t('canvas.mentionChip.removePrefix'));
+    remove.title = i18n.t('common.delete');
+    remove.innerHTML =
+      '<svg viewBox="0 0 12 12" aria-hidden="true" focusable="false">' +
+      '<path d="M3.2 3.2 8.8 8.8M8.8 3.2 3.2 8.8" fill="none" stroke="currentColor" ' +
+      'stroke-width="1.5" stroke-linecap="round"/></svg>';
+    slot.appendChild(remove);
+  }
+  // With neither a thumbnail nor a delete button the slot is empty; don't reserve space for it.
+  if (slot.childElementCount > 0) span.appendChild(slot);
+
+  const labelEl = document.createElement('span');
+  labelEl.className = 'prompt-prefix-chip-label';
+  labelEl.textContent = prefix.text;
+  span.appendChild(labelEl);
+  return span;
+}
+
+/** Whether the caret sits right after the prefix chip. */
+function adjacentPrefixChip(): HTMLElement | null {
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0 || !selection.isCollapsed) return null;
+  const range = selection.getRangeAt(0);
+  const node = range.startContainer;
+  const offset = range.startOffset;
+  let target: Node | null = null;
+  if (node.nodeType === Node.TEXT_NODE) {
+    if (offset !== 0) return null;
+    target = node.previousSibling;
+  } else {
+    target = node.childNodes[offset - 1] ?? null;
+  }
+  return target instanceof HTMLElement && target.dataset.promptPrefix !== undefined
+    ? target
+    : null;
+}
+
 function appendTextWithLineBreaks(root: HTMLElement, text: string): void {
   const parts = text.split('\n');
   parts.forEach((part, idx) => {
@@ -245,10 +333,17 @@ function insertPlainTextAtRange(range: Range, text: string): Range {
   return after;
 }
 
-function rebuildDOM(root: HTMLElement, text: string, candidates: MentionCandidate[]): void {
+function rebuildDOM(
+  root: HTMLElement,
+  text: string,
+  candidates: MentionCandidate[],
+  prefix?: PromptEditorPrefix | null,
+  prefixRemovable = false,
+): void {
   while (root.firstChild) {
     root.removeChild(root.firstChild);
   }
+  if (prefix) root.appendChild(buildPrefixElement(prefix, prefixRemovable));
   if (!text) return;
   const names = candidates
     .map((c) => c.name)
@@ -294,6 +389,9 @@ function serialize(root: HTMLElement): string {
       out += '@' + (el.dataset.name ?? '');
       return;
     }
+    // The prefix is rendered only, never stored: the caller prepends it at submit time; if it were serialized into value
+    // it would be treated as user input and saved back to the node, duplicating the rendered one.
+    if (el.dataset.promptPrefix !== undefined) return;
     if (el.tagName === 'BR') {
       out += '\n';
       return;
@@ -388,6 +486,8 @@ export const PromptMentionEditor = forwardRef<PromptMentionEditorHandle, PromptM
       onChange,
       candidates,
       placeholder,
+      prefix,
+      onPrefixRemove,
       className,
       onCompositionStart,
       onCompositionEnd,
@@ -449,14 +549,22 @@ export const PromptMentionEditor = forwardRef<PromptMentionEditorHandle, PromptM
     // External value → DOM sync. Only re-render if the incoming value
     // differs from our own last-emitted serialization, otherwise we'd
     // wipe the caret on every keystroke.
+    // Rebuild when the prefix changes too (rename / different range), even if value is untouched —
+    // otherwise the input still shows the previous segment's timecode, which no longer matches what is submitted.
+    const lastPrefixRef = useRef<string | null>(null);
+    const prefixRemovable = Boolean(onPrefixRemove);
+    const prefixKey = prefix
+      ? `${prefix.thumbnailUrl ?? ''}|${prefix.videoUrl ?? ''}|${prefixRemovable}|${prefix.text}`
+      : null;
     useLayoutEffect(() => {
       const el = editorRef.current;
       if (!el) return;
-      if (value === lastSerializedRef.current) return;
-      rebuildDOM(el, value, candidates);
+      if (value === lastSerializedRef.current && prefixKey === lastPrefixRef.current) return;
+      rebuildDOM(el, value, candidates, prefix, prefixRemovable);
       lastSerializedRef.current = value;
+      lastPrefixRef.current = prefixKey;
       ensureLeadHost(); // The rebuild cleared the host too; insert it back at the very start of the body
-    }, [value, candidates, ensureLeadHost]);
+    }, [value, candidates, prefix, prefixKey, prefixRemovable, ensureLeadHost]);
 
     useLayoutEffect(() => {
       setLeadHost(ensureLeadHost());
@@ -794,6 +902,12 @@ export const PromptMentionEditor = forwardRef<PromptMentionEditorHandle, PromptM
         if (event.key === 'Escape') {
           setHover(null);
         }
+        // The prefix must not be deleted: in the DOM it is an inline block with contenteditable=false, and browsers
+        // handle backspace over such blocks inconsistently; once deleted, value does not contain it, so a rebuild cannot restore it.
+        if (event.key === 'Backspace' && adjacentPrefixChip()) {
+          event.preventDefault();
+          return;
+        }
         onKeyDown?.(event);
       },
       [
@@ -803,6 +917,7 @@ export const PromptMentionEditor = forwardRef<PromptMentionEditorHandle, PromptM
         activeIdx,
         insertChip,
         replaceChip,
+        commitChange,
         onKeyDown,
         hasLeadingChip,
         onLeadingChipDelete,
@@ -821,7 +936,15 @@ export const PromptMentionEditor = forwardRef<PromptMentionEditorHandle, PromptM
           }
           return;
         }
-        const playEl = (event.target as HTMLElement | null)?.closest('[data-audio-play]');
+        const target = event.target as HTMLElement | null;
+        if (target?.closest('[data-prompt-prefix-remove]')) {
+          // preventDefault: this button lives inside a contenteditable=false chip; letting the default
+          // behavior run would put the caret inside the chip and leave a stray insertion point after deleting.
+          event.preventDefault();
+          onPrefixRemove?.();
+          return;
+        }
+        const playEl = target?.closest('[data-audio-play]');
         if (!playEl) return;
         const chip = playEl.closest('.mention-chip');
         if (chip instanceof HTMLElement) {
@@ -829,7 +952,7 @@ export const PromptMentionEditor = forwardRef<PromptMentionEditorHandle, PromptM
           toggleAudio(chip);
         }
       },
-      [openReplaceFor, toggleAudio],
+      [openReplaceFor, onPrefixRemove, toggleAudio],
     );
 
     const handleMouseOver = useCallback((event: ReactMouseEvent<HTMLDivElement>) => {
@@ -892,6 +1015,9 @@ export const PromptMentionEditor = forwardRef<PromptMentionEditorHandle, PromptM
           // When there is a leading chip the editor is no longer :empty and the placeholder CSS stops working — add a marker
           // so the placeholder text is shown by ::after on the same line after the chip (matching liblib).
           {...(hasLeadingChip && value.length === 0 ? { 'data-text-empty': '' } : {})}
+          // With a prefix attached the root is never :empty, so the original placeholder rule stops working. When the text is
+          // empty, the placeholder is added via ::after to the right of the prefix, on the same line as "prefix + gray hint" in the design.
+          data-prefix-placeholder={prefix && value.length === 0 ? (placeholder ?? '') : ''}
           spellCheck={false}
           onInput={handleInput}
           onPaste={handlePaste}

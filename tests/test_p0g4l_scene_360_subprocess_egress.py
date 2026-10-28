@@ -10,8 +10,8 @@ The parent process claims + resolves the organization credential (reusing OI-52'
 `_complete_organization_image_egress`) and hands it to the subprocess through a process-local env; the subprocess carries a mode flag and
 fails closed, never falling back to the platform Key in settings.db; the trace comes back through the manifest to complete the claim.
 
-The two OpenRouter-direct VLM side subprocesses (`scene_overlap_analyzer` /
-`scene_spatial_contract`) have no corresponding gateway capability bit, so under an organization they take their existing skip branch.
+The two optional scene-analysis subprocesses (`scene_overlap_analyzer` /
+`scene_spatial_contract`) are not yet individually wired into organization operation admission, so under an organization they keep the skip branch.
 """
 
 from __future__ import annotations
@@ -404,7 +404,7 @@ def test_platform_pano_launches_without_any_organization_env(
     assert harness.pano_launch()["env"] is None
 
 
-# --- Two OpenRouter side subprocesses: under an organization they take the existing skip branch --------
+# --- The two gateway analysis subprocesses: under an organization they take the existing skip branch --------
 
 
 def _master_pair(tmp_path: Path) -> dict[str, Path]:
@@ -417,16 +417,16 @@ def _master_pair(tmp_path: Path) -> dict[str, Path]:
     return {"master": master, "reverse": reverse}
 
 
-def test_organization_skips_the_openrouter_vlm_children(
+def test_organization_skips_the_scene_analysis_children(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """Under an organization, even if OPENROUTER_API_KEY is present, the two VLM side subprocesses must not start.
+    """Configured platform analysis must not bypass organization admission."""
 
-    They are OpenRouter-direct with no corresponding gateway capability bit; on the platform they only run when a Key is configured
-    and silently skip when not, so organizations reuse this well-worn branch and the 360 main flow still produces images as usual.
-    """
+    from novelvideo.director_world import scene_analysis_gateway
 
-    monkeypatch.setenv("OPENROUTER_API_KEY", "openrouter-present")
+    monkeypatch.setattr(
+        scene_analysis_gateway, "scene_analysis_gateway_configured", lambda: True
+    )
     pair = _master_pair(tmp_path)
     context = _egress_context(kind="organization")
     harness = _SceneHarness(monkeypatch, context)
@@ -442,12 +442,17 @@ def test_organization_skips_the_openrouter_vlm_children(
     assert harness.modules_launched() == ["scene_360_builder"]
 
 
-def test_platform_still_launches_the_openrouter_vlm_children(
+def test_platform_launches_scene_analysis_with_gateway_only(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """The skip applies only to organizations - with a platform Key the two side processes start as before."""
+    """No legacy OpenRouter key is needed to launch the gateway analyses."""
 
-    monkeypatch.setenv("OPENROUTER_API_KEY", "openrouter-present")
+    from novelvideo.director_world import scene_analysis_gateway
+
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+    monkeypatch.setattr(
+        scene_analysis_gateway, "scene_analysis_gateway_configured", lambda: True
+    )
     pair = _master_pair(tmp_path)
     harness = _SceneHarness(monkeypatch, None)
 
@@ -462,6 +467,82 @@ def test_platform_still_launches_the_openrouter_vlm_children(
     assert "scene_overlap_analyzer" in launched
     assert "scene_spatial_contract" in launched
     assert "scene_360_builder" in launched
+
+
+def test_platform_skips_analysis_without_gateway_even_with_legacy_key(
+    monkeypatch, tmp_path
+):
+    from novelvideo.director_world import scene_analysis_gateway
+
+    monkeypatch.setenv("OPENROUTER_API_KEY", "legacy-key")
+    monkeypatch.setattr(
+        scene_analysis_gateway, "scene_analysis_gateway_configured", lambda: False
+    )
+    pair = _master_pair(tmp_path)
+    harness = _SceneHarness(monkeypatch, None)
+    result = _run_pano(
+        tmp_path,
+        source="master",
+        master_path_override=pair["master"],
+        reverse_master_path_override=pair["reverse"],
+    )
+    assert result["ok"]
+    assert harness.modules_launched() == ["scene_360_builder"]
+
+
+def test_cached_analyses_are_reused_and_failures_do_not_block_pano(
+    monkeypatch, tmp_path
+):
+    from novelvideo import stage_asset_tasks
+    from novelvideo.director_world import scene_analysis_gateway
+
+    monkeypatch.setattr(
+        scene_analysis_gateway, "scene_analysis_gateway_configured", lambda: True
+    )
+    pair = _master_pair(tmp_path)
+    harness = _SceneHarness(monkeypatch, None)
+    analysis = (
+        pair["master"].parent
+        / "overlap_continuation_test"
+        / "overlap_continuation_analysis.json"
+    )
+    contract = (
+        pair["master"].parent / "scene_spatial_contract" / "scene_spatial_contract.json"
+    )
+    for path in (analysis, contract):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            json.dumps(
+                {"schema_version": stage_asset_tasks.SPATIAL_CONTRACT_SCHEMA_VERSION}
+            )
+        )
+    kwargs = dict(
+        source="master",
+        master_path_override=pair["master"],
+        reverse_master_path_override=pair["reverse"],
+    )
+    assert _run_pano(tmp_path, **kwargs)["ok"]
+    assert harness.modules_launched() == ["scene_360_builder"]
+
+    analysis.unlink()
+    contract.unlink()
+    original_run = stage_asset_tasks.run_project_subprocess
+
+    def fail_analysis(cmd, **options):
+        result = original_run(cmd, **options)
+        if not cmd[2].endswith("scene_360_builder"):
+            return SimpleNamespace(
+                returncode=1, stdout="", stderr="403: Model access denied"
+            )
+        return result
+
+    monkeypatch.setattr(stage_asset_tasks, "run_project_subprocess", fail_analysis)
+    assert _run_pano(tmp_path, **kwargs)["ok"]
+    assert harness.modules_launched()[-3:] == [
+        "scene_overlap_analyzer",
+        "scene_spatial_contract",
+        "scene_360_builder",
+    ]
 
 
 # --- Subprocess side: fail-closed, never fall back to the platform Key --------------------

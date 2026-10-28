@@ -36,6 +36,7 @@ import {
   DEFAULT_NODE_WIDTH,
   EXPORT_RESULT_NODE_DEFAULT_WIDTH,
   EXPORT_RESULT_NODE_LAYOUT_HEIGHT,
+  hasInlineMediaReplaceButton,
   isExportImageNode,
   isImageEditNode,
   isImageGenNode,
@@ -70,11 +71,30 @@ import {
 } from '@/features/canvas/ui/ProviderModelPicker';
 import { OutpaintEditorOverlay } from './OutpaintEditorOverlay';
 import { RotateEditorOverlay } from './RotateEditorOverlay';
+import { ImageResizeOverlay } from './ImageResizeOverlay';
 import type { GridActionKey } from '@/features/canvas/application/gridTemplateAction';
 import type { GridActionRequest } from './NodeActionToolbar';
 import { spawnAssetBoardImageOpNode } from '@/features/canvas/application/assetBoardImageOps';
 import { readUrl } from '@/lib/url-params';
 import { inheritMainlineFields } from '../domain/inheritMainlineFields';
+
+// 这些类型的卡片**有可能**在右上角自带「替换」按钮（NodeMediaReplaceButton），
+// 拖到素材库的手势由那颗一并承接，因此不再挂外侧的 AssetCommitHandle。
+const NODE_TYPES_WITH_INLINE_COMMIT_BUTTON = new Set<string>([
+  CANVAS_NODE_TYPES.exportImage,
+  CANVAS_NODE_TYPES.video,
+  CANVAS_NODE_TYPES.audio,
+]);
+
+/**
+ * 卡内那颗替换按钮只长在逐帧拉片的产出上（allowLocalReplace），所以判定要连 data
+ * 一起看：同样是视频节点，拉片产出的那张走卡内按钮，普通生成结果没有卡内按钮 ——
+ * 这里要是只按 type 排除，那些节点就连外侧抓手也一起丢了，替换素材彻底没入口。
+ */
+export function hasInlineCommitButton(node: CanvasNode): boolean {
+  if (!NODE_TYPES_WITH_INLINE_COMMIT_BUTTON.has(node.type ?? '')) return false;
+  return hasInlineMediaReplaceButton(node.data as { allowLocalReplace?: boolean });
+}
 
 // Image/video nodes only need the floating action toolbar once they actually
 // have a resource to act on. While the node is empty (no upload, no generated
@@ -232,6 +252,19 @@ export const SelectedNodeOverlay = memo(() => {
   const [eraseNodeId, setEraseNodeId] = useState<string | null>(null);
   const [outpaintNodeId, setOutpaintNodeId] = useState<string | null>(null);
   const [rotateNodeId, setRotateNodeId] = useState<string | null>(null);
+  const [resizeNodeId, setResizeNodeId] = useState<string | null>(null);
+  const resizeNode = nodes.find((node) => node.id === resizeNodeId) ?? null;
+  const resizeImageSource = resolveNodeSourceImageUrl(resizeNode);
+  const handleOpenResize = useCallback((nodeId: string) => {
+    setResizeNodeId(nodeId);
+    clearFlowSelection();
+    setSelectedNode(null);
+  }, [clearFlowSelection, setSelectedNode]);
+  const handleCloseResize = useCallback(() => setResizeNodeId(null), []);
+  useEffect(() => {
+    if (resizeNodeId && !resizeNode) setResizeNodeId(null);
+  }, [resizeNodeId, resizeNode]);
+
 
   const selectedNode = useMemo(() => {
     if (!selectedNodeId) {
@@ -945,6 +978,7 @@ export const SelectedNodeOverlay = memo(() => {
     ?? eraseNodeId
     ?? outpaintNodeId
     ?? rotateNodeId
+    ?? resizeNodeId
     ?? null;
 
   useEffect(() => {
@@ -1002,11 +1036,19 @@ export const SelectedNodeOverlay = memo(() => {
           onOpenRedraw={handleOpenRedraw}
           onOpenErase={handleOpenErase}
           onOpenRotate={handleOpenRotate}
+          onOpenResize={handleOpenResize}
         />
       )}
-      {selectedNode && !rotateNodeId && !effectiveOverlayNodeId && (
-        <AssetCommitHandle node={selectedNode} />
-      )}
+      {/* 逐帧拉片产出的图片/视频/音频卡片把这颗按钮画在卡片内右上角
+          （NodeMediaReplaceButton），手势一并由它承接 —— 这里再挂一条外挂抓手就会在
+          同一个角上摞出两个一样的上传图标。其余节点（普通生成结果、imageGen /
+          upload / 3D / 全景 …）没有卡内位置，仍然走这条浮在节点外侧的抓手。 */}
+      {selectedNode &&
+        !rotateNodeId &&
+        !effectiveOverlayNodeId &&
+        !hasInlineCommitButton(selectedNode) && (
+          <AssetCommitHandle node={selectedNode} />
+        )}
       {multiAngleNode && multiAngleImageSource && (
         <MultiAngleEditorOverlay
           node={multiAngleNode}
@@ -1048,6 +1090,10 @@ export const SelectedNodeOverlay = memo(() => {
           imageSource={outpaintImageSource}
           onClose={handleCloseOutpaint}
         />
+      )}
+      {resizeNode && resizeImageSource && (
+        <ImageResizeOverlay node={resizeNode} imageSource={resizeImageSource}
+          onClose={handleCloseResize} onCreated={selectAndFocusCanvasNode} />
       )}
       {rotateNode && rotateImageSource && (
         <RotateEditorOverlay

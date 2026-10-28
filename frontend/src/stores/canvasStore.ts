@@ -76,11 +76,6 @@ import {
 } from '@/features/canvas/domain/videoReferenceLimits';
 import { videoReferenceEnvelopeForNode } from '@/features/canvas/application/videoReferenceEnvelope';
 import {
-  planVideoBreakdownGroups,
-  type PlanVideoBreakdownGroupsOptions,
-  type VideoBreakdownResultLike,
-} from '@/features/canvas/application/videoBreakdownGroups';
-import {
   type ViewportBookmark,
   type ViewportBookmarks,
   BOOKMARK_SLOT_COUNT,

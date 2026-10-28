@@ -10167,7 +10167,6 @@ function CanvasNodeReferenceThumb({
   node: CanvasNodeReferencePreview;
   onRemove?: () => void;
 }) {
-  const { t } = useTranslation();
   const thumbRef = useRef<HTMLDivElement | null>(null);
   const [previewPosition, setPreviewPosition] = useState<{ left: number; top: number } | null>(null);
   const mediaSrc = canvasReferenceResolvedUrl(node.sourceUrl);

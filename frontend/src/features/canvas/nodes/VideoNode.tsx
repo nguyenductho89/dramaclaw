@@ -228,8 +228,6 @@ import {
 import { useFreezoneVideoCameraTemplates } from "@/features/canvas/hooks/useFreezoneVideoCameraTemplates";
 import { useFreezoneVideoModels } from "@/features/canvas/hooks/useFreezoneVideoModels";
 import { useCanvasStore, useIsBoxSelecting } from "@/stores/canvasStore";
-import { useCanvasPickStore } from "@/stores/canvasPickStore";
-import { commitVideoPickToNode } from "@/features/canvas/application/videoBreakdownLanding";
 import { ReferenceValidationDialog, referenceDurationIssues, referenceIssues, matchesReference, referenceIssueName, type ReferenceIssue } from "./shared/ReferenceValidationDialog";
 import { useCanvasPickStore } from "@/stores/canvasPickStore";
 import { commitVideoPickToNode } from "@/features/canvas/application/videoBreakdownLanding";

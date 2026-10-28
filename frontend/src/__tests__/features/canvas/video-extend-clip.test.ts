@@ -133,7 +133,7 @@ describe('prefix and node name', () => {
 });
 
 describe('extendRangeNeedsTrim', () => {
-  it('source is 30.08s with only 25-30s selected: must trim, otherwise sending the whole clip exceeds the model's 30s cap', () => {
+  it('source is 30.08s with only 25-30s selected: must trim, otherwise sending the whole clip exceeds the 30s model cap', () => {
     expect(extendRangeNeedsTrim({ startMs: 25_000, endMs: 30_000 }, 30_080)).toBe(true);
   });
 

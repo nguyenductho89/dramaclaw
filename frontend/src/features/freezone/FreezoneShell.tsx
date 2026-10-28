@@ -3180,7 +3180,6 @@ function FreezoneAgentHistoryPanel({
   onSelect: (agentId: string) => void;
   onAdd: () => void;
 }) {
-  const { t } = useTranslation();
   const normalizedSearch = search.trim().toLowerCase();
   const visibleAgents = agents
     .filter((agent) => {

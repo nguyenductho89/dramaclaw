@@ -3,7 +3,6 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Check, X } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
 
 import type { FreezoneStyleTemplate } from '@/api/ops';
 import { useFreezoneStyleTemplates } from '@/features/canvas/hooks/useFreezoneStyleTemplates';

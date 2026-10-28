@@ -19,6 +19,7 @@ function loadLocale(lng: string): Record<string, unknown> {
 
 export const enTranslation = loadLocale("en");
 export const viTranslation = loadLocale("vi");
+export const zhTranslation = loadLocale("zh");
 
 function lookup(table: unknown, key: string): unknown {
   let cursor: unknown = table;
@@ -29,7 +30,7 @@ function lookup(table: unknown, key: string): unknown {
   return cursor;
 }
 
-function makeT(lang: "vi" | "en", table: unknown) {
+function makeT(lang: "vi" | "en" | "zh", table: unknown) {
   return ((key: string, options?: Record<string, unknown>) => {
     const value = lookup(table, key);
     if (value === undefined) {
@@ -50,3 +51,4 @@ function makeT(lang: "vi" | "en", table: unknown) {
 
 export const enT = makeT("en", enTranslation);
 export const viT = makeT("vi", viTranslation);
+export const zhT = makeT("zh", zhTranslation);

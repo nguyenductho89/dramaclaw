@@ -82,7 +82,9 @@ def _build_agent() -> Agent:
     rules = _load_rules()
     return Agent(
         get_newapi_text_pydantic_model(
-            "QWEN_EDIT_RENDER_PROMPT_MODEL", default_model="DC-render-qwen-edit-prompt-LLM"
+            "QWEN_EDIT_RENDER_PROMPT_MODEL",
+            default_model="DC-render-qwen-edit-prompt-LLM",
+            capability="text.generate.agent",
         ),
         system_prompt=rules,
         # NativeOutput (JSON-schema structured output), not plain

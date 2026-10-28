@@ -298,7 +298,9 @@ def _build_agent() -> Agent:
     )
     return Agent(
         get_newapi_text_pydantic_model(
-            "MINIMAX_H3_PROMPT_MODEL", default_model="DC-video-h3-prompt-LLM"
+            "MINIMAX_H3_PROMPT_MODEL",
+            default_model="DC-video-h3-prompt-LLM",
+            capability="text.generate.agent",
         ),
         system_prompt=system_prompt,
         # `NativeOutput` (JSON-schema structured output via `response_format`),

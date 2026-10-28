@@ -80,7 +80,9 @@ def _build_agent() -> Agent:
     rules = _load_rules()
     return Agent(
         get_newapi_text_pydantic_model(
-            "QWEN21_RENDER_PROMPT_MODEL", default_model="DC-render-qwen-edit-prompt-LLM"
+            "QWEN21_RENDER_PROMPT_MODEL",
+            default_model="DC-render-qwen-edit-prompt-LLM",
+            capability="text.generate.agent",
         ),
         system_prompt=rules,
         # Plain text output, not NativeOutput/forced tool-calling — matches

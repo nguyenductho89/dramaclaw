@@ -388,7 +388,11 @@ def _build_agent() -> Agent:
         "exactly.\n\n" + rules
     )
     return Agent(
-        get_newapi_text_pydantic_model("SCENE_STAGING_PLANNER_MODEL", default_model="DC-scene-staging-LLM"),
+        get_newapi_text_pydantic_model(
+            "SCENE_STAGING_PLANNER_MODEL",
+            default_model="DC-scene-staging-LLM",
+            capability="text.generate.agent",
+        ),
         system_prompt=system_prompt,
         output_type=StagingPlanLLMOutput,
         model_settings={**get_newapi_structured_output_model_settings(), "max_tokens": 4000},

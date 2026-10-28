@@ -78,6 +78,7 @@ def _selected_background_path(project_dir):
 
 
 @pytest.mark.m09
+@pytest.mark.usefixtures("no_dev_image_providers")
 def test_render_settings_returns_current_selection_and_options(monkeypatch, tmp_path):
     client, _saved = _client(
         monkeypatch,
@@ -159,6 +160,7 @@ def test_render_settings_patch_rejects_unknown_selection(monkeypatch, tmp_path):
     assert saved == []
 
 
+@pytest.mark.usefixtures("no_dev_image_providers")
 def test_sketch_settings_returns_current_selection_and_options(monkeypatch, tmp_path):
     client, _saved = _client(
         monkeypatch,

@@ -181,6 +181,10 @@ def test_generated_config_never_leaks_key_material_in_repr(ce_env):
     assert repr(config.keyring[config.active_key_id]) not in rendered
 
 
+@pytest.mark.skipif(
+    hasattr(os, "geteuid") and os.geteuid() == 0,
+    reason="root ignores directory permission bits, so the directory is never unwritable",
+)
 def test_unwritable_state_dir_still_boots_ce(ce_env, monkeypatch):
     """A read-only volume must not brick a CE install; the key is ephemeral
     but producer and consumer share one process, so inline delivery works."""

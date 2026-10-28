@@ -8413,6 +8413,7 @@ async def test_get_node_generation_history_uses_project_context_path(
 
 
 @pytest.mark.asyncio
+@pytest.mark.usefixtures("no_dev_image_providers")
 async def test_freezone_image_models_returns_selection_keys(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

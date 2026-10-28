@@ -308,7 +308,11 @@ def _build_agent() -> Agent:
         "generation, following the rules below exactly.\n\n" + rules
     )
     return Agent(
-        get_newapi_text_pydantic_model("SEGMENT_PLANNER_MODEL", default_model="DC-segment-planner-LLM"),
+        get_newapi_text_pydantic_model(
+            "SEGMENT_PLANNER_MODEL",
+            default_model="DC-segment-planner-LLM",
+            capability="text.generate.agent",
+        ),
         system_prompt=system_prompt,
         output_type=SegmentPlanLLMOutput,
         model_settings={**get_newapi_structured_output_model_settings(), "max_tokens": 3000},

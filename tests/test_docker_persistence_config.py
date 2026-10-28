@@ -43,7 +43,9 @@ def test_repository_ships_source_release_and_explicit_evidence_compose_files() -
     )
     assert variants == [
         "docker-compose.brainclaw-evidence.yml",
+        "docker-compose.langfuse.yml",
         "docker-compose.release.yml",
+        "docker-compose.web-local.yml",
         "docker-compose.yml",
     ]
 

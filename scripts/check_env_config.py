@@ -155,6 +155,16 @@ COMMON_REVERSE_ENV_ALLOWLIST: tuple[tuple[re.Pattern[str], str], ...] = (
 )
 CE_REVERSE_ENV_ALLOWLIST: tuple[tuple[re.Pattern[str], str], ...] = (
     (
+        re.compile(
+            r"^(?:RUNPOD_[A-Z0-9_]+|R2_(?:ACCESS_KEY_ID|BUCKET|ENDPOINT|SECRET_ACCESS_KEY)|"
+            r"QWEN(?:21)?_[A-Z0-9_]+|MINIMAX_H3_PROMPT_MODEL|SEGMENT_PLANNER_MODEL|"
+            r"SCENE_STAGING_PLANNER_MODEL)$"
+        ),
+        "Dev-only image/video providers (RunPod, Qwen/DashScope, R2) and their planner "
+        "models are configured in a developer's local .env and are intentionally absent "
+        "from the curated CE template.",
+    ),
+    (
         re.compile(r"^ST_MEDIA_ARCHIVE_COPY_ENABLED$"),
         "EE-only archive copy switch checked by shared CE delivery code; "
         "CE does not expose it as operator configuration.",

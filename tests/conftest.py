@@ -78,3 +78,19 @@ def app_client(request, monkeypatch):
         monkeypatch.delenv("ST_CONTROL_PLANE_DSN", raising=False)
         monkeypatch.setenv("ST_EDITION", "ce")
     return {"mode": mode}
+
+
+@pytest.fixture
+def no_dev_image_providers(monkeypatch):
+    """Hide every dev-only image provider, whatever the host environment exports.
+
+    The menu of image-generation selections grows when GOOGLE_AI_API_KEY, QWEN_API_KEY,
+    the Gemini web cookie or the RunPod credentials are set, so tests that pin the
+    production menu must not inherit a developer machine's credentials.
+    """
+    from novelvideo import config
+
+    monkeypatch.setattr(config, "GEMINI_WEBAI_COOKIE_FILE", "")
+    monkeypatch.setattr(config, "GOOGLE_AI_API_KEY", None)
+    monkeypatch.setattr(config, "QWEN_API_KEY", "")
+    monkeypatch.setattr(config, "RUNPOD_API_KEY", "")

@@ -49,8 +49,18 @@ import {
   type SingleVideoRequestBody,
   type VideoBackendOption,
   type VideoInputCropTarget,
+  type VideoReviewData,
 } from "@/lib/queries/video";
 import { VideoReviewDialog } from "@/components/episode/beat-workbench/video-review-dialog";
+import { H3InputSection } from "@/components/episode/beat-workbench/h3-input-section";
+import {
+  H3PromptPreview,
+  buildH3PictureMap,
+} from "@/components/episode/beat-workbench/h3-prompt-preview";
+import {
+  h3InputsToBody,
+  type H3Inputs,
+} from "@/components/episode/beat-workbench/h3-input-picker";
 import {
   backendErrorToastMessage,
   BillingRuleNotConfiguredError,
@@ -327,6 +337,20 @@ export function VideoPane({
   // than silently falling back to whatever the server's .env happens to
   // have right now.
   const [h3TwoStage, setH3TwoStage] = useState(false);
+  // Mode / first-frame / reference choices for the current beat (H3 only),
+  // shared by the in-panel picker, the review dialog and "Generate prompt".
+  // `h3InputsBeat` tags which beat they belong to so a beat switch cannot
+  // leak one beat's selection into another's request.
+  const [h3InputsState, setH3InputsState] = useState<{
+    beat: number;
+    inputs: H3Inputs;
+  } | null>(null);
+  // Set when the user changed the picker after the prompt was written: the
+  // prompt still numbers the old picture set.
+  const [h3PromptStale, setH3PromptStale] = useState(false);
+  // Latest dry-run for this beat (from the in-panel picker); the prompt
+  // preview resolves `<Picture N>` against it.
+  const [h3Review, setH3Review] = useState<VideoReviewData | null>(null);
   const [h3AudioRefine, setH3AudioRefine] = useState(false);
   const [seedance2CropIntent, setSeedance2CropIntent] =
     useState<Seedance2CropIntent | null>(null);
@@ -391,6 +415,10 @@ export function VideoPane({
   // (prompt_guidance/final_prompt textareas + autosave) as-is, and regen goes
   // through the H3-specific review dialog instead of the plain AlertDialog.
   const showRunpodH3Config = selectedBackend?.is_runpod_h3 === true;
+  const h3Inputs =
+    h3InputsState && h3InputsState.beat === beat.beat_number
+      ? h3InputsState.inputs
+      : undefined;
   const showPromptConfig =
     showSeedance2Config ||
     showHappyHorseConfig ||
@@ -1062,6 +1090,10 @@ export function VideoPane({
         beatNum: triggeredBeatNumber,
         duration: seedance2Draft.duration,
         promptGuidance: seedance2Draft.prompt_guidance,
+        inputs: {
+          ...h3InputsToBody(h3Inputs ?? {}),
+          use_director_render: false,
+        },
       });
       if (!res.ok) {
         toast.error(res.error || t("episode.workbench.video.seedance2PromptGenerateFailed"));
@@ -1082,6 +1114,7 @@ export function VideoPane({
       };
       seedance2DraftRef.current = next;
       setSeedance2Draft(next);
+      setH3PromptStale(false);
       void seedance2Status.refetch?.();
       toast.success(
         t("episode.workbench.video.seedance2PromptGenerated"),
@@ -1115,7 +1148,9 @@ export function VideoPane({
     maps: Seedance2LabelIdentityMaps;
   } | null>(null);
   useEffect(() => {
-    if (!showPromptConfig) return;
+    // H3 has no @image N mentions (its `<Picture N>` numbering comes from the
+    // Video input picker), so this remap must never touch an H3 prompt.
+    if (!showPromptConfig || showRunpodH3Config) return;
     const prev = prevSeedance2LabelIdentityRef.current;
     prevSeedance2LabelIdentityRef.current = {
       beatNumber: beat.beat_number,
@@ -1143,7 +1178,7 @@ export function VideoPane({
     }
     // updateSeedance2Draft / seedance2DraftRef are stable references inside the component, so no need to put them in the dependency list.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [seedance2LabelIdentity, beat.beat_number, showPromptConfig]);
+  }, [seedance2LabelIdentity, beat.beat_number, showPromptConfig, showRunpodH3Config]);
   const insertSeedance2Reference = (
     field: Seedance2ReferenceField,
     label: string,
@@ -1995,8 +2030,12 @@ export function VideoPane({
                 ? t("episode.workbench.video.grokVideoInspector")
                 : showHappyHorseConfig
                 ? t("episode.workbench.video.happyHorseInspector")
+                : showRunpodH3Config
+                ? t("episode.workbench.video.h3Inspector")
                 : t("episode.workbench.video.seedance2Inspector")}
             </Label>
+            {!showRunpodH3Config && (
+            <>
             <Seedance2SummaryPill
               active={seedance2StatusData?.media.render_ready ?? !!beat.frame_url}
               label={t("episode.workbench.video.renderReady")}
@@ -2026,6 +2065,8 @@ export function VideoPane({
                 missing: seedance2StatusData?.assets.missing ?? 0,
               })}
             </span>
+            </>
+            )}
             <span className="inline-flex h-5 max-w-full items-center rounded-full border border-white/[0.075] bg-white/[0.025] px-2 text-[11px] leading-none text-muted-foreground/78">
               {t("episode.workbench.video.videoVersions", {
                 count: candidates.length,
@@ -2033,6 +2074,7 @@ export function VideoPane({
             </span>
           </div>
 
+          {!showRunpodH3Config && (
           <div className="rounded-[10px] border border-white/[0.055] bg-white/[0.012]">
             <div className="flex items-center gap-2 px-3 py-2">
               <Button
@@ -2266,8 +2308,45 @@ export function VideoPane({
               </div>
             )}
           </div>
+          )}
 
-          <div className="grid gap-3 rounded-[10px] border border-white/[0.055] bg-white/[0.012] p-3 md:grid-cols-[1.2fr_0.8fr_0.8fr_0.8fr]">
+          {showRunpodH3Config && (
+            <>
+              <H3InputSection
+                project={project}
+                episode={episode}
+                beatNum={beat.beat_number}
+                reviewBody={{
+                  videoBackend: defaultBackend,
+                  duration: seedance2Draft.duration,
+                  ratio: seedance2Draft.ratio,
+                  seedance2ConfigJson: JSON.stringify(
+                    serializeSeedance2Config(seedance2Draft, seedance2Config),
+                  ),
+                }}
+                inputs={h3Inputs}
+                onReviewChange={setH3Review}
+                onInputsChange={(next, userChanged) => {
+                  setH3InputsState({ beat: beat.beat_number, inputs: next });
+                  if (userChanged) setH3PromptStale(true);
+                }}
+              />
+              {h3PromptStale && (
+                <p className="px-1 text-[11px] text-amber-600 dark:text-amber-400">
+                  {t("episode.workbench.video.h3PromptStale")}
+                </p>
+              )}
+            </>
+          )}
+          <div
+            className={cn(
+              "grid gap-3 rounded-[10px] border border-white/[0.055] bg-white/[0.012] p-3",
+              showRunpodH3Config
+                ? "md:grid-cols-3"
+                : "md:grid-cols-[1.2fr_0.8fr_0.8fr_0.8fr]",
+            )}
+          >
+            {!showRunpodH3Config && (
             <Seedance2Field
               label={t("episode.workbench.video.mode")}
               htmlFor={`${seedance2Id}-mode`}
@@ -2316,6 +2395,7 @@ export function VideoPane({
                 </SelectContent>
               </Select>
             </Seedance2Field>
+            )}
             <Seedance2Field
               label={t("episode.workbench.video.duration")}
               htmlFor={`${seedance2Id}-duration`}
@@ -2534,6 +2614,16 @@ export function VideoPane({
                 label={t("episode.workbench.video.seedance2PromptGuidance")}
                 htmlFor={`${seedance2Id}-prompt-guidance`}
               >
+                {showRunpodH3Config ? (
+                <Textarea
+                  id={`${seedance2Id}-prompt-guidance`}
+                  aria-label={t("episode.workbench.video.seedance2PromptGuidance")}
+                  value={seedance2Draft.prompt_guidance}
+                  onChange={(e) => updateSeedance2Draft("prompt_guidance", e.target.value)}
+                  rows={2}
+                  className={cn("min-h-[72px]", SEEDANCE2_TEXTAREA_CLASS)}
+                />
+                ) : (
                 <MentionTextarea
                   id={`${seedance2Id}-prompt-guidance`}
                   aria-label={t("episode.workbench.video.seedance2PromptGuidance")}
@@ -2583,8 +2673,10 @@ export function VideoPane({
                   rows={2}
                   className={cn("min-h-[72px]", SEEDANCE2_TEXTAREA_CLASS)}
                 />
+                )}
               </Seedance2Field>
-              {renderSeedance2ReferenceControls("prompt_guidance")}
+              {!showRunpodH3Config && renderSeedance2ReferenceControls("prompt_guidance")}
+              {!showRunpodH3Config && (
               <div className="flex flex-wrap gap-1.5">
                 {SEEDANCE2_PROMPT_GUIDANCE_TEMPLATES.map((template) => (
                   <Button
@@ -2605,6 +2697,7 @@ export function VideoPane({
                   </Button>
                 ))}
               </div>
+              )}
               <div className="min-w-0 space-y-2">
                 <div className="flex flex-wrap items-center gap-2">
                   <Label
@@ -2620,6 +2713,16 @@ export function VideoPane({
                       : t("episode.workbench.video.seedance2Prompt")}
                   </Label>
                 </div>
+                {showRunpodH3Config ? (
+                <Textarea
+                  id={`${seedance2Id}-prompt`}
+                  aria-label={t("episode.workbench.video.h3PromptLabel")}
+                  value={seedance2Draft.final_prompt}
+                  onChange={(e) => updateSeedance2Draft("final_prompt", e.target.value)}
+                  rows={8}
+                  className={cn("min-h-[72px]", SEEDANCE2_TEXTAREA_CLASS)}
+                />
+                ) : (
                 <MentionTextarea
                   id={`${seedance2Id}-prompt`}
                   aria-label={t("episode.workbench.video.seedance2Prompt")}
@@ -2663,7 +2766,40 @@ export function VideoPane({
                   rows={2}
                   className={cn("min-h-[72px]", SEEDANCE2_TEXTAREA_CLASS)}
                 />
-                {renderSeedance2ReferenceControls("final_prompt")}
+                )}
+                {!showRunpodH3Config && renderSeedance2ReferenceControls("final_prompt")}
+                {showRunpodH3Config &&
+                  h3Review &&
+                  seedance2Draft.final_prompt.trim() && (
+                    <div className="space-y-1">
+                      <span className="text-[10px] uppercase tracking-wide text-muted-foreground/70">
+                        {t("episode.workbench.videoReview.previewLabel")}
+                      </span>
+                      <H3PromptPreview
+                        prompt={seedance2Draft.final_prompt}
+                        map={buildH3PictureMap({
+                          firstFrame:
+                            h3Review.first_frame_used && h3Review.frame_path
+                              ? {
+                                  name: t("episode.workbench.videoReview.frame"),
+                                  src: h3Review.frame_path,
+                                }
+                              : null,
+                          lastFrame: h3Review.last_frame_path
+                            ? {
+                                name: t("episode.workbench.videoReview.lastFrame"),
+                                src: h3Review.last_frame_path,
+                              }
+                            : null,
+                          references: h3Review.references.map((r) => ({
+                            kind: r.kind,
+                            name: r.name,
+                            src: r.path || null,
+                          })),
+                        })}
+                      />
+                    </div>
+                  )}
               </div>
               <div className="flex flex-wrap justify-start gap-2 pt-1">
                 <Button
@@ -2822,6 +2958,11 @@ export function VideoPane({
             audio_refine: h3AudioRefine,
           }}
           onConfirm={handleH3Confirm}
+          initialInputs={h3Inputs}
+          onInputsChange={(next) => {
+            setH3InputsState({ beat: beat.beat_number, inputs: next });
+            setH3PromptStale(false);
+          }}
         />
       )}
     </div>

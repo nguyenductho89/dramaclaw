@@ -4208,7 +4208,9 @@
         "h3TwoStage": "Hai giai đoạn (upscale + vẽ lại)",
         "h3AudioRefine": "Tinh chỉnh âm thanh",
         "seedance2CropTitleWithAspect": "Cắt {{aspect}}",
-        "seedance2CropDragHandle": "Di chuyển vùng cắt"
+        "seedance2CropDragHandle": "Di chuyển vùng cắt",
+        "h3PromptStale": "Đầu vào đã đổi — hãy tạo lại prompt MiniMax H3 để khớp với các ảnh đã chọn.",
+        "h3Inspector": "MiniMax H3"
       },
       "videoReview": {
         "title": "Xem trước video H3",

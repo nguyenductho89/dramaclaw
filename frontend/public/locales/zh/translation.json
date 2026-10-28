@@ -4323,7 +4323,9 @@
         "h3PromptLabel": "MiniMax H3 提示词",
         "generateH3Prompt": "生成 MiniMax H3 提示词",
         "h3TwoStage": "两阶段（放大 + 重绘）",
-        "h3AudioRefine": "音频精修"
+        "h3AudioRefine": "音频精修",
+        "h3PromptStale": "Inputs changed — generate the MiniMax H3 prompt again.",
+        "h3Inspector": "MiniMax H3"
       },
       "sketch": {
         "switched": "已切换草图",

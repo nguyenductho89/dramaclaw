@@ -4322,7 +4322,9 @@
         "seedance2GuidanceLightingTemplate": "Lighting: Describe the key light, tonal layers, color temperature, and atmosphere while avoiding unintended flicker.",
         "seedance2GuidanceCameraTemplate": "Camera: Specify shot size, viewpoint, movement speed, and direction so the camera move is clear and executable.",
         "seedance2GuidanceStyleTemplate": "Style: Define visual texture, period, color direction, and realism to prevent style drift.",
-        "seedance2GuidanceNoSubtitleTemplate": "No subtitles: Do not generate any text or subtitles; keep the frame visually clean."
+        "seedance2GuidanceNoSubtitleTemplate": "No subtitles: Do not generate any text or subtitles; keep the frame visually clean.",
+        "h3PromptStale": "Inputs changed — generate the MiniMax H3 prompt again so it matches the selected images.",
+        "h3Inspector": "MiniMax H3"
       },
       "videoReview": {
         "title": "H3 video review",

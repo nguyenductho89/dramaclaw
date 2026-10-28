@@ -5,11 +5,9 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import {
   AlertTriangle,
-  Check,
   Image as ImageIcon,
   Loader2,
   Play,
-  Plus,
   WandSparkles,
 } from "lucide-react";
 
@@ -32,36 +30,20 @@ import { backendErrorToastMessage } from "@/lib/api-errors";
 import {
   useGenerateMiniMaxH3Prompt,
   useVideoReview,
-  type H3InputMode,
   type SingleVideoRequestBody,
 } from "@/lib/queries/video";
+import {
+  H3InputPicker,
+  h3InputsFromReview,
+  h3InputsToBody,
+  useStickyReview,
+  type H3Inputs,
+} from "./h3-input-picker";
 import { H3PromptPreview, buildH3PictureMap } from "./h3-prompt-preview";
 import {
   useRunpodWorkerStatus,
   useStartRunpodWorker,
 } from "@/lib/queries/runpod-worker";
-
-const H3_MODES: H3InputMode[] = ["auto", "t2va", "fl2va", "flf2va", "ref2va"];
-
-/** What the user picked in the dialog; sent with every review / rewrite /
- * confirm so all three number `<Picture N>` for the same picture set. */
-interface H3Inputs {
-  mode?: H3InputMode;
-  firstFrame?: "render" | "none";
-  keys?: string[];
-}
-
-function h3InputsToBody(inputs: H3Inputs): Partial<SingleVideoRequestBody> {
-  return {
-    ...(inputs.mode ? { h3_mode: inputs.mode } : {}),
-    ...(inputs.firstFrame ? { h3_first_frame: inputs.firstFrame } : {}),
-    ...(inputs.keys ? { h3_reference_keys: inputs.keys } : {}),
-  };
-}
-
-/** How long to wait after the last input change before asking the LLM to
- * rewrite the prompt for the new picture set (avoids one call per click). */
-const REWRITE_DEBOUNCE_MS = 900;
 
 export interface VideoReviewDialogProps {
   open: boolean;
@@ -78,6 +60,12 @@ export interface VideoReviewDialogProps {
    * the actual regenerate.mutateAsync + task tracking, exactly as it does
    * today for every other backend. */
   onConfirm: (finalBody: SingleVideoRequestBody) => void;
+  /** Inputs the Video panel already holds for this beat; when given they
+   * seed the dialog instead of the review's own defaults. */
+  initialInputs?: H3Inputs;
+  /** Called whenever the user changes mode / first frame / references here,
+   * so the Video panel stays in sync. */
+  onInputsChange?: (inputs: H3Inputs) => void;
 }
 
 /**
@@ -97,6 +85,8 @@ export function VideoReviewDialog({
   beatNum,
   reviewBody,
   onConfirm,
+  initialInputs,
+  onInputsChange,
 }: VideoReviewDialogProps) {
   const { t } = useTranslation();
   const reviewMutation = useVideoReview(project, episode);
@@ -117,14 +107,11 @@ export function VideoReviewDialog({
   // dialog-open/beat-switch, even though the review this depends on can
   // itself re-fire (e.g. after `fetchReview(res.prompt)` below).
   const autoRewriteFiredRef = useRef(false);
-  const [h3Mode, setH3Mode] = useState<H3InputMode | undefined>();
-  const [firstFrame, setFirstFrame] = useState<"render" | "none" | undefined>();
-  const [selectedKeys, setSelectedKeys] = useState<string[] | undefined>();
+  const [h3Inputs, setH3Inputs] = useState<H3Inputs>({});
   // The inputs are seeded from the first review of each dialog-open, then
   // owned by the user — later reviews must not overwrite their choices.
   const inputsSeededRef = useRef(false);
-  const rewriteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const currentInputs = (): H3Inputs => ({ mode: h3Mode, firstFrame, keys: selectedKeys });
+  const currentInputs = (): H3Inputs => h3Inputs;
 
   // `reviewBody.seedance2ConfigJson` is a snapshot of the parent's local
   // draft state taken whenever `video-pane.tsx` last rendered — it does NOT
@@ -151,12 +138,9 @@ export function VideoReviewDialog({
     promptSeededRef.current = false;
     autoRewriteFiredRef.current = false;
     inputsSeededRef.current = false;
-    setH3Mode(undefined);
-    setFirstFrame(undefined);
-    setSelectedKeys(undefined);
-    if (rewriteTimerRef.current) clearTimeout(rewriteTimerRef.current);
+    setH3Inputs(initialInputs ?? {});
     if (!open) return;
-    fetchReview(undefined, {});
+    fetchReview(undefined, initialInputs ?? {});
     // Re-fetch only on a genuine open transition (including a re-open after
     // `input_stale`) or a beat switch — not on every render where the
     // caller hands us a structurally-equal-but-new `reviewBody` object.
@@ -164,53 +148,45 @@ export function VideoReviewDialog({
   }, [open, beatNum]);
 
   const reviewData = reviewMutation.data;
-  const review = reviewData?.ok === true ? reviewData : null;
+  // `freshReview` is what the server last answered (cleared while a new dry
+  // run is in flight) and drives the one-time seeding below; `review` also
+  // keeps the previous answer on screen during a refetch so the picker does
+  // not unmount on every click.
+  const freshReview = reviewData?.ok === true ? reviewData : null;
+  const review = useStickyReview(freshReview, beatNum);
   const reviewError = reviewData?.ok === false ? reviewData.error : null;
 
   useEffect(() => {
-    if (!open || promptSeededRef.current || !review) return;
-    setEditedPrompt(review.prompt);
+    if (!open || promptSeededRef.current || !freshReview) return;
+    setEditedPrompt(freshReview.prompt);
     promptSeededRef.current = true;
-  }, [open, review]);
+  }, [open, freshReview]);
 
   useEffect(() => {
-    if (!open || inputsSeededRef.current || !review) return;
+    if (!open || inputsSeededRef.current || !freshReview) return;
     inputsSeededRef.current = true;
-    setH3Mode((review.requested_mode as H3InputMode | undefined) || "auto");
-    setFirstFrame(review.first_frame_used ? "render" : "none");
-    setSelectedKeys(
-      (review.candidates ?? []).filter((c) => c.selected).map((c) => c.key),
-    );
-  }, [open, review]);
+    if (initialInputs?.mode) return; // the panel's choices are already in state
+    const seeded = h3InputsFromReview(freshReview);
+    setH3Inputs(seeded);
+    onInputsChange?.(seeded);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, freshReview]);
 
   // The user changed mode / first-frame / reference selection: re-check the
-  // new combination right away (cheap, no LLM) and, once they stop clicking,
-  // rewrite the prompt for it — the old text numbers a different picture set.
+  // new combination right away (cheap, no LLM). The prompt is NOT rewritten
+  // behind their back — the lint flags a prompt that numbers a different
+  // picture set and they choose when to run "AI rewrite".
   const applyInputs = (next: H3Inputs) => {
-    setH3Mode(next.mode);
-    setFirstFrame(next.firstFrame);
-    setSelectedKeys(next.keys);
+    setH3Inputs(next);
+    onInputsChange?.(next);
     fetchReview(editedPrompt, next);
-    if (rewriteTimerRef.current) clearTimeout(rewriteTimerRef.current);
-    rewriteTimerRef.current = setTimeout(() => {
-      void handleAiRewrite(next);
-    }, REWRITE_DEBOUNCE_MS);
   };
 
   useEffect(
     () => () => {
-      if (rewriteTimerRef.current) clearTimeout(rewriteTimerRef.current);
-    },
+      },
     [],
   );
-
-  const toggleReference = (key: string) => {
-    const keys = selectedKeys ?? [];
-    applyInputs({
-      ...currentInputs(),
-      keys: keys.includes(key) ? keys.filter((k) => k !== key) : [...keys, key],
-    });
-  };
 
   const handleAiRewrite = async (inputs: H3Inputs = currentInputs()) => {
     try {
@@ -254,17 +230,10 @@ export function VideoReviewDialog({
   // rewrite themselves every single time, generate one automatically as
   // soon as the review confirms there isn't a usable H3 prompt yet.
   useEffect(() => {
-    const staleForInputs = Boolean(
-      review?.lint.some(
-        (item) =>
-          item.severity === "error" &&
-          (item.code === "picture_tags_mismatch" || item.code === "missing_alignment_line"),
-      ),
-    );
     if (
       !open ||
       !inputsSeededRef.current ||
-      !(review?.needs_h3_prompt || staleForInputs) ||
+      !review?.needs_h3_prompt ||
       review?.plan_error ||
       autoRewriteFiredRef.current ||
       aiRewriteMutation.isPending
@@ -274,7 +243,7 @@ export function VideoReviewDialog({
     autoRewriteFiredRef.current = true;
     void handleAiRewrite();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, review?.needs_h3_prompt, review?.lint, h3Mode]);
+  }, [open, review?.needs_h3_prompt]);
 
   const handleStartWorker = async () => {
     try {
@@ -302,10 +271,6 @@ export function VideoReviewDialog({
   const lintErrors = review?.lint.filter((item) => item.severity === "error") ?? [];
   const lintWarnings = review?.lint.filter((item) => item.severity === "warning") ?? [];
   const frameSrc = review?.frame_path ? resolveMediaUrl(review.frame_path) : null;
-  const candidateTiles = review?.candidates ?? [];
-  // References only enter the request in reference mode (or auto, which
-  // resolves to it); fl2va / first+last / text-to-video ignore them.
-  const referencesUsed = h3Mode === undefined || h3Mode === "auto" || h3Mode === "ref2va";
   const pictureMap = buildH3PictureMap({
     firstFrame:
       review?.first_frame_used && review.frame_path
@@ -391,61 +356,7 @@ export function VideoReviewDialog({
               )}
 
               {review.candidates !== undefined && (
-                <div className="space-y-1.5" data-testid="h3-mode-selector">
-                  <span className="text-xs font-medium text-muted-foreground">
-                    {t("episode.workbench.videoReview.inputModeLabel")}
-                  </span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {H3_MODES.map((m) => {
-                      const reason = m === "auto" ? null : (review.available_modes?.[m] ?? null);
-                      const active = (h3Mode ?? "auto") === m;
-                      return (
-                        <Button
-                          key={m}
-                          type="button"
-                          size="xs"
-                          variant={active ? "default" : "outline"}
-                          disabled={Boolean(reason)}
-                          title={
-                            reason
-                              ? t(`episode.workbench.videoReview.modeUnavailable.${reason}`, {
-                                  defaultValue: reason,
-                                })
-                              : t(`episode.workbench.videoReview.modeHint.${m}`)
-                          }
-                          onClick={() => applyInputs({ ...currentInputs(), mode: m })}
-                        >
-                          {t(`episode.workbench.videoReview.modeName.${m}`)}
-                        </Button>
-                      );
-                    })}
-                  </div>
-                  {(h3Mode === "ref2va" || h3Mode === "auto" || h3Mode === undefined) && (
-                    <label className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <input
-                        type="checkbox"
-                        checked={firstFrame !== "none" && Boolean(review.render_exists)}
-                        disabled={!review.render_exists || h3Mode === "auto" || h3Mode === undefined}
-                        onChange={(e) =>
-                          applyInputs({
-                            ...currentInputs(),
-                            firstFrame: e.target.checked ? "render" : "none",
-                          })
-                        }
-                      />
-                      {review.render_exists
-                        ? t("episode.workbench.videoReview.useRenderAsFirstFrame")
-                        : t("episode.workbench.videoReview.noRenderYet")}
-                    </label>
-                  )}
-                  {review.plan_error && (
-                    <div className="rounded-[6px] border border-destructive/35 bg-destructive/[0.08] px-2 py-1 text-xs text-destructive">
-                      {t(`episode.workbench.videoReview.modeUnavailable.${review.plan_error}`, {
-                        defaultValue: review.plan_error,
-                      })}
-                    </div>
-                  )}
-                </div>
+                <H3InputPicker review={review} inputs={h3Inputs} onChange={applyInputs} />
               )}
 
               <div className="grid gap-3 sm:grid-cols-[160px_1fr]">
@@ -525,78 +436,15 @@ export function VideoReviewDialog({
                 )}
               </div>
 
-              <div className="space-y-1.5">
-                <span className="text-xs font-medium text-muted-foreground">
-                  {t("episode.workbench.videoReview.referencesHeader")}
-                </span>
-                {candidateTiles.length > 0 ? (
-                  <>
-                    <div className="grid grid-cols-[repeat(auto-fill,minmax(6.5rem,6.5rem))] gap-2">
-                      {candidateTiles.map((c) => {
-                        const src = c.path ? resolveMediaUrl(c.path) : null;
-                        const refTag = review.references.find((r) => r.key === c.key)?.tag;
-                        return (
-                          <button
-                            type="button"
-                            key={c.key}
-                            data-testid={`h3-candidate-${c.key}`}
-                            aria-pressed={c.selected}
-                            disabled={!referencesUsed}
-                            onClick={() => toggleReference(c.key)}
-                            title={c.appearance_details || c.name}
-                            className={cn(
-                              "overflow-hidden rounded-[7px] border bg-white/[0.018] text-left transition",
-                              c.selected && referencesUsed
-                                ? "border-sky-500/60 ring-1 ring-sky-500/40"
-                                : "border-white/[0.075] opacity-55",
-                              !referencesUsed && "cursor-not-allowed",
-                            )}
-                          >
-                            <div className="relative aspect-square w-full bg-white/[0.02]">
-                              {src ? (
-                                <img
-                                  src={src}
-                                  alt={c.name}
-                                  className="absolute inset-0 h-full w-full object-cover"
-                                />
-                              ) : (
-                                <ImageIcon className="absolute inset-0 m-auto size-5 text-muted-foreground/60" />
-                              )}
-                              <span className="absolute right-1 top-1 flex size-4 items-center justify-center rounded-full bg-black/60 text-white">
-                                {c.selected && referencesUsed ? (
-                                  <Check className="size-3" />
-                                ) : (
-                                  <Plus className="size-3" />
-                                )}
-                              </span>
-                            </div>
-                            <div className="px-1.5 py-1">
-                              <div className="truncate text-[10px] font-medium">
-                                {refTag ? `${refTag} · ` : ""}
-                                {c.name}
-                              </div>
-                              <div className="truncate text-[9px] text-muted-foreground">
-                                {t(`episode.workbench.videoReview.kind.${c.kind}`, {
-                                  defaultValue: c.kind,
-                                })}
-                              </div>
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                    <p className="text-[10px] text-muted-foreground">
-                      {referencesUsed
-                        ? t("episode.workbench.videoReview.referencesToggleHint")
-                        : t("episode.workbench.videoReview.referencesUnusedHint")}
-                    </p>
-                  </>
-                ) : (
-                  <p className="text-xs text-muted-foreground">
-                    {t("episode.workbench.videoReview.referencesEmpty")}
-                  </p>
-                )}
-              </div>
+              {lintErrors.some(
+                (item) =>
+                  item.code === "picture_tags_mismatch" ||
+                  item.code === "missing_alignment_line",
+              ) && (
+                <p className="text-xs text-amber-600 dark:text-amber-400">
+                  {t("episode.workbench.video.h3PromptStale")}
+                </p>
+              )}
 
               {lintErrors.length > 0 && (
                 <div className="space-y-1">

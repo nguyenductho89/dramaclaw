@@ -191,6 +191,28 @@ Thiết kế cuối cùng khác với dự kiến ban đầu ở 1 điểm quan 
 
 ---
 
+## 8. Tăng tốc worker H3: torch cu130 + Sage attention (2026-10-28)
+
+Đo trên endpoint `h3-i2v-ref2va` (`a31613hf7l83r5`), A40, graph ref2va + PDD 8 bước, 768×1344, 141 khung (~5.9s), cùng seed/input cho mọi lượt (job baseline `0179590c…`).
+
+| Biến thể | Image / cờ (`COMFY_EXTRA_ARGS`) | `executionTime` | Sampling |
+| --- | --- | --- | --- |
+| Baseline | `h3only-0.37.2` (torch cu128) | 718s | ~640s (80s/bước) |
+| V1 | `h3only-0.37.2-cu130`, không cờ | 417s | ~346s (43s/bước) |
+| V2 | V1 + `--enable-triton-backend` | 417s | không nhanh thêm |
+| **V3 (đang dùng)** | V1 + `--use-sage-attention` | **382s** | — |
+
+- **Nguyên nhân chậm:** ComfyUI 0.37.2 (`comfy/quant_ops.py`) tắt backend `cuda` của comfy_kitchen khi `torch.version.cuda < 13`, nên DiT `int8_convrot` chạy bằng backend `eager`. Chỉ đổi base image + torch sang cu130 (cùng `torch 2.11.0`, `triton 3.6.0`) là giảm 42%. Log worker mới: `comfy_kitchen backend cuda: disabled False`.
+- **Triton (`--enable-triton-backend`): không giúp** khi backend `cuda` đã bật, không dùng.
+- **Sage (`--use-sage-attention`): giảm thêm ~8%.** `sageattention==1.0.6` là wheel Python thuần (kernel Triton JIT), không gắn ABI với torch. Lỗi cũ "Failed to find C compiler" đã hết nhờ `gcc python3.12-dev` trong image. Log: `Using sage attention`, không có `Error running sage attention`.
+- **Chất lượng:** 5 khung then chốt giữa baseline/V1/V3 giống nhau (mặt đúng ảnh tham chiếu, tay đủ ngón, nền không vỡ). SSIM V1 so baseline 0.964 (PSNR 32.6 dB), V3 so baseline 0.972 (PSNR 34.3 dB); mọi kiểm tra tự động (141 khung, 768×1344, độ sáng, audio, SSIM khung đầu ≥ 0.90) đều đạt. Cảnh test không có chữ trong hình nên chưa kiểm text.
+- **Cấu hình endpoint hiện tại:** image `ghcr.io/nguyenductho89/photoreal-h3-worker:h3only-0.37.2-cu130`, `gpu.minCudaVersion=13.0`, env `COMFY_EXTRA_ARGS=--use-sage-attention` (giữ nguyên 4 biến R2). Image build từ nhánh `tesla` của `photoreal-short-drama-generator`, commit `e4e0e44` (`runpod/Dockerfile`: base `nvidia/cuda:13.0.3`, torch cu130, `gcc`; `runpod/start.sh`: nối `${COMFY_EXTRA_ARGS}`).
+- **Rollback:** đổi image về `h3only-0.37.2`, `minCudaVersion` về `12.0`, xoá `COMFY_EXTRA_ARGS`. Chỉ tắt Sage: xoá `COMFY_EXTRA_ARGS` (vẫn giữ cu130).
+- **`RUNPOD_H3_SAGE_ATTENTION` trong `.env` giữ trống:** Sage giờ bật bằng cờ toàn cục của ComfyUI trên worker, không cần node KJ `PathchSageAttentionKJ` (`generators/comfy_sage.py`). Chỉ dùng được vì image H3 đã tách riêng khỏi Qwen.
+- **Endpoint này dùng chung với project `comfy-trends`:** họ cũng chạy trên image cu130 + Sage từ nay.
+- **Chưa làm:** endpoint multishot `u0hkrms7k1xeua` (image `comfy-trends-h3-multishot`) vẫn torch cu128; chưa đo PDD 4/6 bước, `two_stage`, profile `draft`, và chưa đo encoder `int8_convrot` sau cu130 (encode ~29s).
+- Cold start worker mới sau khi đổi image/env ~6 phút (kéo image + nạp model).
+
 ## 6. Global Volume — chưa làm, để sau (quyết định của user 2026-10-19)
 
 RunPod Global Volume (beta): object-backed, eventually-consistent, không hỗ trợ file lock/atomic rename/hardlink, tối đa 1 volume/endpoint, không dùng song song với network volume trên cùng endpoint, billing theo storage + request (Class A write $0.005/1k request, Class B read $0.0005/1k request); GPU-only (không CPU); balance $0 → xoá sau 15 ngày.

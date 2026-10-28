@@ -30,6 +30,7 @@ const freezoneAgentConfigMocks = vi.hoisted(() => ({
 
 vi.mock("@/lib/runtime-config", () => ({
   isCeRuntime: () => runtimeState.isCeRuntime,
+  runpodWorkerControlEnabled: () => false,
 }));
 
 vi.mock("@/lib/queries/freezone-agent-config", () => ({

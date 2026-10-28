@@ -218,6 +218,7 @@ const videoQueryMockState = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/queries/video", () => ({
+  useGenerateMiniMaxH3Prompt: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useRegenerateBeatVideo: () => ({
     mutateAsync: regenerateMock,
     isPending: false,

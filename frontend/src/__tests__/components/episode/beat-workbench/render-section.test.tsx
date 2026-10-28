@@ -108,6 +108,8 @@ vi.mock("@/lib/queries/sketches", async (importOriginal) => {
   return {
     ...actual,
     usePoolSelect: () => ({ mutateAsync: poolSelectMock, isPending: false }),
+    useRenderReview: () => ({ mutateAsync: vi.fn(), isPending: false }),
+    useGenerateQwenEditPrompt: () => ({ mutateAsync: vi.fn(), isPending: false }),
     useBeatBackgroundAnchors: () => backgroundAnchorsMock(),
     useBeatDirectorStageManifest: () => ({
       data: {
@@ -177,6 +179,11 @@ vi.mock("@/lib/queries/scenes", () => ({
       ? { ok: true, data: scenePlatePreviewState.data }
       : undefined,
   }),
+}));
+
+vi.mock("@/lib/queries/runpod-worker", () => ({
+  useRunpodWorkerStatus: () => ({ data: undefined, isLoading: false }),
+  useStartRunpodWorker: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 
 vi.mock("@/lib/queries/generation-credit-cost", () => ({

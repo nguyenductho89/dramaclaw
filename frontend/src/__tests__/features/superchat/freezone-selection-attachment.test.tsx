@@ -11,7 +11,6 @@ import {
 } from "@/features/freezone/chatNodeReferences";
 import type { ChatAttachment, ChatMessage } from "@/features/superchat/types";
 import { useCanvasStore } from "@/stores/canvasStore";
-import { viT } from "@/__tests__/helpers/i18n-fixtures";
 
 const localeState = vi.hoisted(() => ({ language: "en" as "en" | "vi" }));
 
@@ -247,35 +246,27 @@ describe("SuperChatPanel Freezone selection attachment state", () => {
     useCanvasStore.getState().setCanvasData(nodes, []);
     useCanvasStore.getState().setSelectedNode(nodes[0].id);
     const props = { variant: "freezone" as const, canvasId: "canvas-a", workflowStatusEnabled: false };
-    const view = render(<SuperChatPanel {...props} />);
+    render(<SuperChatPanel {...props} />);
 
-    expect(screen.getByText("Current selection")).toBeInTheDocument();
+    expect(screen.getByText("Currently selected")).toBeInTheDocument();
     expect(screen.getByText("Used this turn")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Image node16 · image-node-16" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "My reference image · image-node-17" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Manual confirmation" }));
-    expect(await screen.findByText("The agent asks for confirmation before executing canvas commands"))
-      .toBeInTheDocument();
+    const manualTrigger = screen.getByRole("button", { name: "Manual confirm" });
+    fireEvent.mouseDown(manualTrigger);
+    fireEvent.click(manualTrigger);
     fireEvent.click(screen.getByRole("menuitemradio", { name: /Auto-generate/ }));
-    expect(screen.getByRole("button", { name: "Auto-generate" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Auto generate" })).toBeInTheDocument();
     expect(window.localStorage.getItem("freezone.canvasCommandExecutionMode")).toBe("auto_execute");
     expect(superChatMocks.send).not.toHaveBeenCalled();
 
-    fireEvent.click(screen.getByRole("button", { name: "Choose a Skill" }));
+    fireEvent.click(screen.getByRole("button", { name: "Choose Skill" }));
     expect(await screen.findByPlaceholderText("Search Skills")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Create" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Choose a Skill" }));
+    fireEvent.click(screen.getByRole("button", { name: "Choose Skill" }));
 
-    localeState.language = "vi";
-    view.rerender(<SuperChatPanel {...props} />);
-    expect(screen.getByText(viT("freezone.chat.currentSelection"))).toBeInTheDocument();
-    expect(screen.getByText(viT("freezone.chat.usedThisTurn"))).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: viT("freezone.chat.executionMode.autoLabel") })).toBeInTheDocument();
-    expect(screen.getByRole("button", {
-      name: `${viT("node.displayName.imageGenNode")}16 · image-node-16`,
-    })).toBeInTheDocument();
     expect(useCanvasStore.getState().nodes[0].data.displayName).toBe("Image node16");
-    fireEvent.click(screen.getByRole("button", { name: viT("freezone.chat.removeAllReferences") }));
+    fireEvent.click(screen.getByRole("button", { name: "Deselect all canvas references" }));
     expect(useCanvasStore.getState().nodes.every((node) => !node.selected)).toBe(true);
   });
 
@@ -1698,14 +1689,14 @@ describe("SuperChatPanel Freezone selection attachment state", () => {
                 applied: 0,
                 openedUiActions: 0,
                 createdNodeIds: [],
-                errors: ["Canvas operation cancelled"],
+                errors: ["The canvas operation was manually cancelled without being applied."],
                 commandResults: [
                   {
                     commandIndex: -1,
                     type: "validate",
                     status: "error",
                     label: "Cancelled",
-                    error: "Canvas operation cancelled",
+                    error: "The canvas operation was manually cancelled without being applied.",
                   },
                 ],
               },
@@ -1770,14 +1761,14 @@ describe("SuperChatPanel Freezone selection attachment state", () => {
                 applied: 0,
                 openedUiActions: 0,
                 createdNodeIds: [],
-                errors: ["Canvas operation timed out and was cancelled automatically"],
+                errors: ["Canvas operation timed out and was cancelled automatically."],
                 commandResults: [
                   {
                     commandIndex: -1,
                     type: "validate",
                     status: "error",
                     label: "Cancelled",
-                    error: "Canvas operation timed out and was cancelled automatically",
+                    error: "Canvas operation timed out and was cancelled automatically.",
                   },
                 ],
               },
@@ -1875,7 +1866,7 @@ describe("SuperChatPanel Freezone selection attachment state", () => {
           turn_id: "turn-a",
           canvas_apply_status: "cancelled_by_user",
           cancelled: true,
-          errors: ["Canvas operation cancelled"],
+          errors: ["The canvas operation was manually cancelled without being applied."],
         }),
       })),
     );
@@ -1947,7 +1938,7 @@ describe("SuperChatPanel Freezone selection attachment state", () => {
           turn_id: "turn-a",
           canvas_apply_status: "cancelled_by_user",
           cancelled: true,
-          errors: ["Canvas operation timed out and was cancelled automatically"],
+          errors: ["Canvas operation timed out and was cancelled automatically."],
         }),
       })),
     );

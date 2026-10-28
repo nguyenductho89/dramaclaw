@@ -1050,7 +1050,10 @@
       "resumeDownstream": "继续下游",
       "dismiss": "暂时忽略",
       "resumeFailed": "恢复执行失败",
-      "retryFailed": "节点重试失败"
+      "retryFailed": "节点重试失败",
+      "title": "未完成的工作流",
+      "continueDownstream": "继续下游",
+      "retryNodeFailed": "节点重试失败"
     },
     "canvases": {
       "defaultSection": "默认画布",
@@ -1494,7 +1497,20 @@
       },
       "loading": "正在加载画布...",
       "syncFailed": "画布同步失败",
-      "retry": "重试"
+      "retry": "重试",
+      "commandValidation": "命令校验",
+      "viewSwitch": "切换画布视图",
+      "resizeChat": "调整对话宽度",
+      "invalidCanvasCommand": "无效的画布指令",
+      "newAgent": "新建智能体",
+      "resizeAgentHistory": "调整智能体历史记录宽度",
+      "externalAgent": "外部智能体",
+      "hideAgentHistory": "隐藏智能体历史",
+      "searchSessions": "搜索会话...",
+      "validateCanvasCommand": "校验画布指令",
+      "canvasContext": "画布上下文",
+      "showAgentHistory": "显示智能体历史",
+      "noMatchingAgent": "没有匹配的智能体"
     },
     "assetBrowser": {
       "loading": "加载中…",
@@ -1553,6 +1569,99 @@
       "resizeHistoryWidth": "调整历史 Agent 宽度",
       "searchSessions": "搜索会话...",
       "noMatches": "没有匹配的 Agent"
+    },
+    "cmd": {
+      "createNode": "创建节点",
+      "clearCanvas": "清空画布",
+      "createGroup": "创建分组",
+      "reversePrompt": "图片反推提示词",
+      "generateImage": "生成图片",
+      "runSkill": "运行技能",
+      "generate3gs": "生成 3GS 世界",
+      "outpaint": "扩图",
+      "gridFaceThreeView": "生成人脸三视图",
+      "gridCharacterThreeView": "生成角色三视图",
+      "openVideoViewer": "打开视频",
+      "analyzeVideoStory": "分析视频",
+      "subtitleEraseBox": "框选去除字幕",
+      "downloadImage": "下载图片",
+      "openNodeAction": "打开节点操作",
+      "validateCanvasCommand": "校验画布命令",
+      "invalidConnectionSkipped": "已跳过无效连线",
+      "skippedAlreadyDone": "{{label}}（已有结果，已跳过）",
+      "addNextNode": "添加下游节点",
+      "disconnect": "断开连接",
+      "moveNode": "移动节点",
+      "textToVideo": "文生视频",
+      "generateAudio": "生成音频",
+      "openVideoCompose": "打开视频合成",
+      "openSplitStoryboard": "打开分镜提取",
+      "scene360": "生成 360° 全景",
+      "gridProductThreeView": "生成产品三视图",
+      "gridSceneSettingSheet": "生成场景设定图",
+      "downloadVideo": "下载视频",
+      "audioSeparate": "音视频分离",
+      "capturePanoCurrent": "截取当前 360° 视角",
+      "panoSetBackground": "设为当前背景",
+      "openMainlineProjection": "打开主线画布",
+      "workflowAlreadyRunning": "工作流已在运行，已忽略重复启动",
+      "workflowCompletedNoRegen": "工作流已完成，未重新生成",
+      "updateNode": "更新节点",
+      "connect": "创建连线",
+      "selectNode": "选择节点",
+      "storyScript": "生成故事脚本",
+      "openVoicePicker": "打开音色选择器",
+      "autoComposeVideo": "自动合成视频",
+      "matting": "抠图",
+      "gridMultiCamera": "生成多机位九宫格",
+      "gridSerialStoryboard25": "生成25帧连续分镜",
+      "gridProjection3sLater": "推演3秒后的画面",
+      "openVideoClip": "打开视频片段",
+      "downloadAudio": "下载音频",
+      "capturePano2x2": "截取360°四视图",
+      "resetPanoView": "重置360°视角",
+      "runWorkflow": "运行工作流",
+      "workflowExistsSkipped": "工作流已存在，已跳过重复创建",
+      "workflowGroup": "工作流分组",
+      "deleteNode": "删除节点",
+      "arrangeLayout": "整理布局",
+      "translateText": "翻译文本",
+      "openUploadPicker": "打开上传选择器",
+      "generateVideo": "生成视频",
+      "openDirectorWorld": "打开导演世界",
+      "upscale": "放大",
+      "gridPlotFour": "生成四宫格剧情",
+      "gridCinematicLight": "生成电影级光影校正",
+      "gridProjection5sEarlier": "推演 5 秒前的画面",
+      "openVideoUpscale": "打开视频放大",
+      "subtitleEraseSmart": "智能去除字幕",
+      "capturePano4x3": "截取 360° 十二视图",
+      "syncBeatContext": "同步镜头上下文",
+      "canvasOperation": "画布操作",
+      "workflowNodeReused": "已复用现有工作流节点",
+      "prevShotTailFrame": "上一镜头尾帧"
+    },
+    "voiceLabel": {
+      "ageGroup": "年龄段",
+      "identityOwn": "{{name}}（自带声音）",
+      "projectNarrator": "项目旁白",
+      "identity": "身份",
+      "identityResolved": "{{name}}（已解析音色）",
+      "customVoice": "自定义音色",
+      "voice": "音色",
+      "character": "角色",
+      "characterDefault": "{{name}}（默认声音）"
+    },
+    "cmdMsg": {
+      "cancelled": "画布操作已取消，未对画布做任何更改。",
+      "nodeNotFound": "我找不到要操作的节点。请先选中一个节点，或告诉我是哪一个。",
+      "modelUnavailable": "所选生成模型不可用。请选择当前画布支持的模型之一，我会据此修改。",
+      "notEditable": "此节点的部分内容无法直接修改，我将使用它支持的编辑方式。",
+      "incomplete": "画布操作未完成，我会换一种方式再试。",
+      "textNeedsPromptLink": "需要先将文本作为生成提示词连接到图片节点，我会使用可执行的提示词来源来处理。",
+      "protocolDetail": "画布操作未完成，我会根据当前画布规则换一种可执行的方式再试。",
+      "recipeTimeout": "配方文本生成超时：模型未在规定时间内返回结果，请稍后重试。本轮下游节点未执行。",
+      "cannotConnect": "这两个节点无法以该方式连接，我将改用画布支持的连接类型。"
     }
   },
   "theme": {
@@ -2247,7 +2356,8 @@
     },
     "genders": {
       "male": "男",
-      "female": "女"
+      "female": "女",
+      "other": "其他"
     },
     "roles": {
       "lead": "主角",
@@ -2283,7 +2393,8 @@
       "homeAttire": "居家装束",
       "casualWear": "便装",
       "formalWear": "正装",
-      "courtDress": "宫装"
+      "courtDress": "宫装",
+      "default": "默认"
     }
   },
   "auth": {
@@ -3931,7 +4042,14 @@
         "selectionHint": "选择beat可进行草图、渲染图重抽",
         "batchRegenSketch": "重抽草图",
         "batchRegenRender": "重抽渲染图",
-        "dragToResize": "拖动调节左右宽度占比"
+        "dragToResize": "拖动调节左右宽度占比",
+        "groupMultishotNeedsConsecutive": "请选择 2 个及以上连续的分镜进行分组",
+        "groupMultishot": "合并为多镜头",
+        "groupMultishotSuccess": "已将分镜合并为多镜头链",
+        "ungroupMultishot": "取消分组",
+        "groupMultishotFailed": "分镜分组失败",
+        "reviewMultishot": "审核多镜头",
+        "ungroupMultishotSuccess": "已将分镜从多镜头链中移除"
       },
       "text": {
         "narration": "台词",
@@ -4201,7 +4319,11 @@
         "seedance2GuidanceLightingTemplate": "光影：描述主光源、明暗层次、色温和氛围，避免忽明忽暗。",
         "seedance2GuidanceCameraTemplate": "镜头：说明景别、视角、运镜速度和运动方向，保持镜头运动清晰可执行。",
         "seedance2GuidanceStyleTemplate": "风格：限定画面质感、时代感、色彩倾向和真实度，避免风格漂移。",
-        "seedance2GuidanceNoSubtitleTemplate": "无字幕：避免生成任何文字或字幕，保持画面纯净。"
+        "seedance2GuidanceNoSubtitleTemplate": "无字幕：避免生成任何文字或字幕，保持画面纯净。",
+        "h3PromptLabel": "MiniMax H3 提示词",
+        "generateH3Prompt": "生成 MiniMax H3 提示词",
+        "h3TwoStage": "两阶段（放大 + 重绘）",
+        "h3AudioRefine": "音频精修"
       },
       "sketch": {
         "switched": "已切换草图",
@@ -4509,6 +4631,104 @@
         "episodeFreezoneTooltip": "在虾画中打开本集素材",
         "episodeFreezoneOpened": "已打开本集虾画",
         "episodeFreezoneOpenFailed": "打开本集虾画失败"
+      },
+      "videoReview": {
+        "title": "H3 视频审核",
+        "frameMissing": "缺少首帧",
+        "durationLabel": "时长",
+        "aiRewriting": "重写中…",
+        "lintErrorsHeader": "错误",
+        "startingWorker": "启动中…",
+        "loading": "正在加载审核…",
+        "generatingInitialPrompt": "此分镜还没有 MiniMax H3 提示词，正在生成…",
+        "ratioLabel": "比例",
+        "aiRewriteSuccess": "提示词已改写（{{count}} 个 lint 问题）",
+        "lintWarningsHeader": "警告",
+        "confirm": "确认",
+        "reviewFailed": "审核失败",
+        "backendLabel": "后端",
+        "promptLabel": "提示词",
+        "referencesHeader": "参考图",
+        "workerOff": "RunPod 工作节点已关闭",
+        "cancel": "取消",
+        "frame": "首帧",
+        "modeLabel": "模式",
+        "aiRewrite": "AI 改写（H3 格式）",
+        "referencesEmpty": "无参考图",
+        "startWorker": "启动 Worker"
+      },
+      "renderReview": {
+        "loading": "正在加载审核…",
+        "selectionLabel": "图片来源",
+        "scenePromptLabel": "场景提示词（第 1 轮）",
+        "aiRewriting": "重写中…",
+        "lintWarningsHeader": "警告",
+        "cancel": "取消",
+        "reviewFailed": "审核失败",
+        "estimateLabel": "预计耗时",
+        "identitiesHeader": "身份（第 2 遍，每个角色一次）",
+        "aiRewriteSuccess": "提示词已改写（{{count}} 个 lint 问题）",
+        "workerOff": "RunPod worker 已关闭",
+        "unsupported": "此图像来源不使用渲染审核界面——确认后将直接重新生成。",
+        "estimateValue": "约 {{minutes}} 分钟",
+        "maskMissing": "草图中未找到该颜色——将跳过此角色身份",
+        "referencesHeader": "参考图",
+        "startWorker": "启动工作节点",
+        "title": "{{model}} 渲染审核",
+        "modeLabel": "模式",
+        "promptLabel": "提示词",
+        "aiRewrite": "AI 改写（{{model}} 官方格式）",
+        "lintErrorsHeader": "错误",
+        "confirm": "确认"
+      },
+      "multishotReview": {
+        "startWorker": "启动 Worker",
+        "durationLabel": "总时长",
+        "promptReady": "提示词已就绪",
+        "confirm": "确认",
+        "title": "多镜头审核",
+        "shotCountLabel": "镜头数",
+        "shotsLabel": "镜头",
+        "promptMissing": "缺少提示词",
+        "inputStale": "自上次审核后内容已变更，正在刷新…",
+        "loading": "正在加载审核…",
+        "checkpointLabel": "检查点",
+        "beatLabel": "分镜 {{n}}",
+        "referencesLabel": "参考图",
+        "enqueueFailed": "加入队列失败",
+        "workerOff": "RunPod Worker 已关闭",
+        "resolutionLabel": "分辨率",
+        "dialogue": "对白",
+        "scriptPreviewLabel": "脚本预览",
+        "enqueued": "多镜头视频已加入队列"
+      },
+      "segments": {
+        "title": "分段（多镜头）",
+        "planPreviewTitle": "建议的分段（{{count}}）",
+        "replan": "重新规划",
+        "generateFrame": "生成",
+        "framesStarted": "已开始生成画面",
+        "noApprovedSegments": "请先在第 1 阶段批准至少一个分段的画面。",
+        "autoStopWatching": "正在 {{key}} 上生成画面——队列清空后将自动停止该 Worker",
+        "openButton": "分段",
+        "planFallbackWarning": "AI 分组不可用，已改用自动分组",
+        "beatRangeLabel": "分镜 {{from}}-{{to}}",
+        "regenerateFrame": "重新生成",
+        "framesPartialFailure": "{{count}} 个分段启动失败",
+        "generateSelectedVideos": "生成视频（{{count}}）",
+        "autoStoppedWorker": "所有待处理帧已完成，已自动停止 {{key}} worker",
+        "planEmptyDesc": "暂无分段。AI 会将本集的分镜归并为较短（10-15秒）的分段，每段将成为一个连续的多镜头视频任务。",
+        "planApply": "应用",
+        "framesTitle": "阶段 1 — 首帧",
+        "approveFrame": "通过",
+        "videoSectionTitle": "阶段 2 — 批量生成视频",
+        "videosQueued": "已加入 {{count}} 个视频任务",
+        "planButton": "规划分段（AI）",
+        "planApplied": "已应用分段",
+        "generateAllFrames": "生成所有待处理帧",
+        "frameApprovedToast": "帧已通过",
+        "reviewVideos": "审核（已通过 {{count}} 个）",
+        "videosPartialFailure": "{{count}} 个视频任务入队失败"
       }
     },
     "state": {
@@ -5511,7 +5731,32 @@
       "arrangeVertical": "纵向排列",
       "commitHint": "把当前节点的内容写回主流程资产",
       "recipeFallbackTitle": "Recipe 模型编译超时，本次已使用稳定降级提示词继续生成",
-      "recipeFallbackLabel": "Recipe 已降级编译"
+      "recipeFallbackLabel": "Recipe 已降级编译",
+      "workflowNothingToRun": "此工作流已没有可运行的节点",
+      "noDownloadableAudio": "当前节点没有可下载的音频",
+      "noMattableImage": "当前节点没有可抠图的图片",
+      "workflowRunningTitle": "工作流运行中",
+      "waitingForCurrent": "等待当前节点",
+      "rerunAllTitle": "重新运行所有工作流节点",
+      "workflowStopped": "已停止启动后续节点",
+      "audioFormatUnsupported": "当前音频不支持此下载格式",
+      "recipeDegradedTitle": "Recipe 模型编译超时，已使用稳定的备用提示词继续生成",
+      "followupStopped": "后续节点已停止",
+      "stopFollowup": "停止后续节点",
+      "rerunAll": "全部重新运行",
+      "workflowRunFailed": "工作流执行失败",
+      "noDownloadableImage": "当前节点没有可下载的图片",
+      "upscaleNodeFailed": "无法创建视频放大节点",
+      "recipeDegraded": "配方已以降级模式编译",
+      "running": "运行中",
+      "workflowCompleted": "工作流已完成",
+      "selectedNothingToRun": "所选工作流中没有可运行的节点",
+      "workflowStarted": "工作流已启动",
+      "noOperableVideo": "当前节点没有可操作的视频",
+      "videoAnalyzeFailed": "无法启动视频分析",
+      "matteFailed": "抠除背景失败",
+      "stopFollowupTitle": "停止启动后续工作流节点",
+      "runWorkflow": "运行工作流"
     },
     "style": {
       "chip": "风格",
@@ -5584,7 +5829,9 @@
       "submit": "提交截取",
       "retryExtract": "重新提取画面帧",
       "startHandle": "截取起点",
-      "endHandle": "截取终点"
+      "endHandle": "截取终点",
+      "defaultTitle": "片段",
+      "noUrl": "片段已完成，但未返回视频地址"
     },
     "mentionReplace": {
       "empty": "没有可替换的素材",
@@ -5790,6 +6037,275 @@
       "endHandle": "续写片段终点",
       "tooShort": "视频不足 {{seconds}} 秒，无法续写",
       "confirm": "确认续写"
+    },
+    "assetBoard": {
+      "keyElement": {
+        "clear": "移除关键元素",
+        "labelWithCategory": "关键元素 · {{category}}",
+        "barTab": "关键元素 · {{filter}}",
+        "set": "设为关键元素",
+        "emptyCategory": "此分类下暂无关键元素",
+        "current": "当前"
+      },
+      "detailToolbar": {
+        "moreActions": "更多操作",
+        "gridTemplates": "网格模板",
+        "edit": "编辑",
+        "upscaleTitle": "提高分辨率（会在画布上创建放大结果节点）",
+        "submitUpscale": "提交放大",
+        "download": "下载",
+        "gridTemplatesTitle": "使用宫格/多视角模板基于此图生成",
+        "editNeedsTwo": "至少需要 2 个就绪的上游视频素材",
+        "fullscreen": "全屏",
+        "submitUpscaleTitle": "在画布上创建放大结果节点并提交任务",
+        "regenerate": "重新生成",
+        "composedVideo": "合成视频",
+        "editOpen": "打开视频合成时间线",
+        "fullscreenTitle": "全屏播放",
+        "more": "更多",
+        "regenerateTitle": "重新提交本次生成（失败后重试）",
+        "upscaleName": "放大（{{resolution}}）",
+        "upscale": "放大",
+        "resolution": "分辨率"
+      },
+      "detail": {
+        "zoomView": "放大查看",
+        "assetDetail": "素材详情",
+        "delete": "删除",
+        "prompt": "提示词",
+        "back": "返回",
+        "closeDetail": "关闭详情",
+        "referenceAssets": "参考素材",
+        "generatingPercent": "生成中 {{percent}}%...",
+        "nodeActions": "节点操作",
+        "nodeGone": "该节点已不存在",
+        "durationSec": "{{count}} 秒",
+        "generating": "生成中",
+        "duplicate": "创建副本"
+      },
+      "filter": {
+        "final": "最终",
+        "clip": "片段",
+        "all": "全部"
+      },
+      "column": {
+        "video": "视频",
+        "audio": "音频",
+        "text": "文本",
+        "image": "图片"
+      },
+      "empty": {
+        "video": "画布上还没有视频节点",
+        "videoNoMatch": "没有符合当前筛选条件的视频",
+        "text": "画布上暂无文本节点",
+        "image": "画布上还没有图片节点"
+      },
+      "expand": "展开",
+      "generating": "生成中",
+      "pendingConfirm": "确认后生成",
+      "imageOps": {
+        "upscale": "放大",
+        "panoNodeName": "360° 全景图",
+        "panoTitle": "基于此图生成 360° 全景图（并附带全景查看节点）",
+        "category": {
+          "space": "空间与镜头",
+          "setting": "设定图",
+          "texture": "质感调整",
+          "narrative": "分镜叙事"
+        },
+        "feature": {
+          "plotFourGrid": {
+            "description": "点击生成：直接基于当前图片推演 4 格剧情；可通过文字补充剧情走向。",
+            "summary": "由一张图推演四宫格剧情"
+          },
+          "frameProjection3sLater": {
+            "description": "点击生成：推演当前画面 3 秒后的样子；可通过文字指定动作或事件。",
+            "summary": "预测 3 秒后的画面"
+          },
+          "multiCameraGrid": {
+            "description": "点击生成：直接基于当前图片排布九个机位角度；可通过文字指定镜头语言。",
+            "summary": "一次生成九个机位角度"
+          },
+          "characterThreeView": {
+            "description": "点击生成：直接基于当前图片创建完整的角色三视图；支持文字/参考图。",
+            "summary": "角色全身三视图"
+          },
+          "productThreeView": {
+            "description": "点击生成：直接基于当前图片创建产品三视图；可通过文字补充材质和细节。",
+            "summary": "产品正面/侧面/背面视图"
+          },
+          "cinematicLightCorrection": {
+            "description": "点击生成：将当前图片的光线调为电影级；可通过文字指定色调方向。",
+            "summary": "将光影调至电影级水准"
+          },
+          "serialStoryboard25": {
+            "summary": "连贯的长分镜",
+            "description": "点击生成：直接基于当前图片创建连贯的25格分镜；可通过文字描述节奏。"
+          },
+          "frameProjection5sEarlier": {
+            "summary": "重建 5 秒前的画面",
+            "description": "点击生成：还原当前画面5秒前的样子；可通过文字说明此前发生的事件。"
+          },
+          "scene360": {
+            "summary": "扩展为 360° 全景",
+            "description": "点击生成：将当前图片扩展为360°全景图；比例固定为 2:1 / 21:9。"
+          },
+          "faceThreeView": {
+            "summary": "面部细节三视图",
+            "description": "点击生成：直接基于当前图片创建角色面部三视图；可通过文字补充面部特征。"
+          },
+          "sceneSettingSheet": {
+            "summary": "场景美术设定图",
+            "description": "点击生成：直接基于当前图片创建场景设定图；可通过文字补充场景背景。"
+          }
+        },
+        "upscaleNode": "放大",
+        "crop": "裁剪",
+        "pano": "全景",
+        "multiAngleTitle": "打开多角度编辑器（球面角度选择 + 画质 + 提示词）",
+        "missingProject": "缺少项目上下文，无法提交",
+        "cropResult": "裁剪结果",
+        "rotate": "旋转",
+        "multiAngle": "多角度",
+        "relightTitle": "打开光照编辑器（方向 + 亮度/色温 + 智能模式）",
+        "missingSource": "未找到源图片，无法提交",
+        "rotateResult": "旋转结果",
+        "panoConfirm": "基于此图生成 360° 全景图？",
+        "relight": "重新打光",
+        "chipTitle": "{{label}} · 点击切换功能，按 Backspace 移除"
+      },
+      "audioForm": {
+        "musicDescription": "音乐描述",
+        "toneOptional": "音色（可选）",
+        "voice": "声音",
+        "forceInstrumental": "强制纯音乐",
+        "voiceSettingsTitle": "声音设置（当前：{{voice}}）",
+        "fillTextFirst": "请先填写要合成的文本",
+        "textToSynthesize": "待合成文本",
+        "tonePlaceholder": "例如：紧张、压低声音、带一丝恐惧",
+        "voiceNotSelected": "未选择（生成时跳过）",
+        "respectSections": "遵循段落时长",
+        "voiceNotSelectedShort": "未选择",
+        "regenerate": "重新生成",
+        "musicPlaceholder": "描述你想要的音乐：风格、乐器、节奏、情绪...",
+        "chooseCustomVoice": "选择自定义音色",
+        "customVoice": "自定义音色",
+        "modeMusic": "文字生成音乐",
+        "advancedSettings": "高级设置",
+        "generate": "生成",
+        "textPlaceholder": "输入要合成的文本",
+        "changeCustomVoice": "更换自定义声音",
+        "musicDuration": "音乐时长",
+        "modeNarration": "自定义声音旁白",
+        "fillMusicFirst": "请先填写音乐描述"
+      },
+      "storyboardTableSummary": "分镜表 · {{count}} 个镜头",
+      "audioChip": {
+        "downloadLabel": "下载 {{title}}",
+        "notM4a": "源文件不是 m4a，无法转换为 m4a",
+        "downloadTitle": "下载 / 转换格式",
+        "downloadFailed": "音频下载失败",
+        "downloadAs": "下载为 {{format}}",
+        "generationFailed": "生成失败",
+        "m4aOnly": "仅有 m4a 源文件"
+      },
+      "imageGenForm": {
+        "ownReference": "节点自带的参考图",
+        "referenceAlt": "参考图",
+        "removeReference": "移除参考图"
+      },
+      "textBody": {
+        "noText": "暂无文本内容",
+        "colShotNo": "镜头",
+        "colSummary": "内容摘要",
+        "noScript": "暂无剧本内容",
+        "colDuration": "时长",
+        "noShotRows": "暂无镜头行",
+        "colVisual": "画面描述",
+        "clickToEdit": "点击编辑",
+        "noContent": "暂无内容",
+        "colDialogue": "对白"
+      },
+      "dropHint": "将素材、图片或视频拖到这里，添加为参考",
+      "collapse": "收起",
+      "generatingPercent": "生成中 {{percent}}%...",
+      "referenceMenu": {
+        "actions": "{{label}}操作",
+        "edit": "编辑",
+        "locate": "定位"
+      },
+      "resizeColumns": "调整列宽",
+      "filterVideos": "筛选视频",
+      "finalBadge": "定稿",
+      "durationSec": "{{count}}秒",
+      "multiAngleEditor": "多维度编辑器",
+      "switchColumn": "切换列",
+      "failed": "失败",
+      "locateOnCanvas": "在画布上定位",
+      "referenceImage": "参考图",
+      "lightEditor": "光效编辑器"
+    },
+    "keyElement": {
+      "character": "角色",
+      "scene": "场景",
+      "object": "物体",
+      "other": "其他"
+    },
+    "selectedOverlay": {
+      "noRotateImage": "目标节点没有可旋转的图片",
+      "noGenerateImage": "目标节点没有可用于生成的图片",
+      "noOutpaintImage": "目标节点没有可扩图的图片",
+      "missingProject": "当前 URL 中没有项目，无法提交生成",
+      "noUpscaleImage": "目标节点没有可放大的图片"
+    },
+    "spawnGroup": {
+      "cloneAudio": "克隆音频分组",
+      "textToVideo": "文生视频组",
+      "imageToPrompt": "图片反推提示词分组",
+      "textToMusic": "文生音乐组"
+    },
+    "errors": {
+      "noDownstreamVideoNode": "没有可承接结果的下游视频节点",
+      "missingProjectParam": "当前 URL 中没有 project 参数",
+      "noUpstreamImageForPrompt": "没有可反推提示词的上游图片"
+    },
+    "h3Templates": {
+      "confirmReplace": "用此模板替换当前提示词？",
+      "confirmConnected": "此视频节点已连接图片；新增输入会使它们的 <Picture N> 编号错位。是否继续？",
+      "inputs": "请按此顺序连接",
+      "seconds": "{{count}} 秒",
+      "categories": {
+        "cinematic": "电影感",
+        "animation": "动画与风格",
+        "brand": "品牌与 TVC",
+        "motion": "动态与海报",
+        "ecommerce": "电商",
+        "ui": "游戏与网页 UI",
+        "drama": "短剧",
+        "audio": "音频驱动"
+      },
+      "apply": "使用模板",
+      "needsAudioUpload": "需要音频文件：请先创建节点，再上传音频。",
+      "modeFirstFrame": "仅首帧",
+      "placeholderHint": "已填入示例。@image1 = <Picture 1>（首帧），@image2 = <Picture 2>…；每个图片输入都有可编辑的图片提示词，也可以上传自己的图片。",
+      "title": "H3 模板",
+      "createNodes": "创建节点",
+      "nodesCreated": "输入节点已创建。请上传图片或运行分组。",
+      "modeFirstLastFrame": "首帧 + 尾帧",
+      "sources": {
+        "fal": "fal.ai 指南",
+        "pixo": "pixo.video"
+      },
+      "hint": "MiniMax-H3 快速入门提示词（改编自 fal.ai 指南和 pixo.video 示例）",
+      "createAndRun": "创建并运行",
+      "edgeRejected": "部分输入无法连接到此视频节点（已达参考图上限）。",
+      "modeReference": "首帧 + 参考图"
+    },
+    "addToChat": {
+      "label": "添加到对话"
+    },
+    "matte": {
+      "defaultTitle": "抠像"
     }
   },
   "tool": {
@@ -6420,7 +6936,8 @@
         "firstLastFrame": "首尾帧",
         "imageReference": "图片参考",
         "videoEdit": "视频编辑",
-        "videoExtend": "视频延长"
+        "videoExtend": "视频延长",
+        "multishot": "多镜头"
       },
       "placeholder": "根据文字描述生成视频。",
       "submit": "提交",
@@ -6515,7 +7032,8 @@
         "imageReference": "图片参考",
         "firstFrame": "首帧生成视频",
         "imageToVideo": "图生视频",
-        "firstLastFrame": "首尾帧生成视频"
+        "firstLastFrame": "首尾帧生成视频",
+        "multishot": "多镜头视频"
       },
       "spawn": {
         "firstFrame": "首帧",
@@ -6525,7 +7043,8 @@
         "firstFrameGroup": "首帧生成视频组",
         "imageToVideoGroup": "图生视频组",
         "allReferenceGroup": "全能参考组",
-        "firstLastFrameGroup": "首尾帧生成视频组"
+        "firstLastFrameGroup": "首尾帧生成视频组",
+        "multishotGroup": "多镜头分组"
       },
       "crop": {
         "displayName": "{{name}}_裁剪",
@@ -6691,7 +7210,8 @@
         "maxImages": "该模型最多支持 {{count}} 张图片素材",
         "maxVideos": "该模型最多支持 {{count}} 个视频素材",
         "maxAudios": "该模型最多支持 {{count}} 个音频素材",
-        "videoExtendSourceOnly": "视频延长仅支持连接 1 个源视频，不接受图片或音频素材"
+        "videoExtendSourceOnly": "视频延长仅支持连接 1 个源视频，不接受图片或音频素材",
+        "multishotTooManyImages": "多镜头图片过多：仅允许 1 张起始帧加数量有限的共享参考图"
       }
     },
     "scriptNode": {
@@ -6943,7 +7463,8 @@
         "videoEdit": "视频编辑",
         "videoExtend": "视频延长",
         "allReference": "全能参考",
-        "current": "当前模式"
+        "current": "当前模式",
+        "multishot": "多镜头"
       },
       "refKind": {
         "image": "图片",
@@ -6986,12 +7507,41 @@
         "videoUpstreamAllRefOrEdit": "上游含视频素材时只能用「全能参考」或「视频编辑」",
         "videoUpstreamAllRefOnly": "上游含视频素材时只能用「全能参考」",
         "hasImageOrAudioRefs": "已引用图片/音频素材时不可用",
-        "moreThanTwoImages": "上游图片超过 2 张时不可用"
+        "moreThanTwoImages": "上游图片超过 2 张时不可用",
+        "multishotCanvasOnly": "多镜头仅可在画布视频节点中使用，此面板不支持"
       },
       "extendLockReason": "智能续写固定使用 Seedance 2.5，不能切换模型或模式",
       "extendPlaceholder": "请输入需要续写的内容",
       "modeRestrictedDefault": "该节点不支持切换生成模式",
-      "externalMedia": "外部素材"
+      "externalMedia": "外部素材",
+      "multishot": {
+        "addShot": "添加镜头",
+        "emptyShot": "描述这个镜头中发生了什么…",
+        "totalDuration": "{{count}} 个镜头 × {{seconds}} 秒",
+        "confirmGenerate": "确认并生成",
+        "shotSecondsLabel": "每镜头秒数",
+        "fallbackUsed": "AI 重写失败——已使用基础模板",
+        "removeShot": "移除镜头",
+        "overallDirection": "整体导向（可选）——应用于每个镜头的风格/氛围说明",
+        "reviewTitle": "审核 MiniMax H3 多镜头",
+        "costWarning": "{{shots}} 个镜头，共约 {{seconds}} 秒——这是一个耗时较长的 RunPod 付费任务。确认前请检查每条提示词。",
+        "totalSecondsLabel": "总秒数",
+        "workerOff": "RunPod 多镜头 worker 已关闭，请先启动再生成。",
+        "startFrameLabel": "起始帧",
+        "moveUp": "上移",
+        "minShots": "至少需要 {{min}} 个带文本的镜头",
+        "reviewLoading": "正在解析参考图并为每个镜头撰写提示词…",
+        "backendLabel": "检查点",
+        "referencesHeader": "共用参考图",
+        "startWorker": "启动工作节点",
+        "shotLabel": "镜头 {{n}}",
+        "moveDown": "下移",
+        "maxShotsReached": "此服务器最多支持 {{max}} 个镜头",
+        "cancel": "取消",
+        "shotsLabel": "镜头",
+        "promptsHeader": "镜头提示词",
+        "inputStale": "审核后内容已有变动，请重新审核后再生成。"
+      }
     },
     "threeDWorld": {
       "upstreamNodeFallback": "上游节点",
@@ -7716,7 +8266,45 @@
         "rawJsonCopied": "Recipe JSON 已复制",
         "rawJsonCopyFailed": "复制失败，请手动复制"
       },
-      "customizedShort": "定制"
+      "customizedShort": "定制",
+      "nodeScopes": {
+        "textGeneration": "文本生成",
+        "imageGeneration": "图片生成",
+        "videoGeneration": "视频生成",
+        "audioGeneration": "音频生成"
+      },
+      "tags": {
+        "edit": "编辑 {{tag}}",
+        "remove": "删除 {{tag}}"
+      },
+      "recipeLinks": {
+        "linkedSummary": "已关联 {{count}} 个 Recipe",
+        "missingConfig": "未找到本地 Recipe 配置。保存时仍会保留已关联的 ID。",
+        "recipeIdPlaceholder": "输入 Recipe ID",
+        "noRecipesToAdd": "没有可添加的 Recipe",
+        "description": "描述",
+        "linkedSummaryMissing": "已关联 {{count}} 个 Recipe，其中 {{missing}} 个未找到配置",
+        "view": "查看",
+        "add": "添加",
+        "close": "关闭",
+        "resultSummary": "结果摘要",
+        "collapse": "收起关联的配方",
+        "none": "此技能尚未关联任何配方",
+        "removeRecipe": "移除 {{id}}",
+        "searchRecipe": "搜索配方",
+        "closeDetailBackdrop": "关闭配方详情遮罩",
+        "planningHint": "规划提示",
+        "expand": "展开关联的配方",
+        "addRecipe": "添加配方",
+        "manualAddId": "按 ID 添加",
+        "noDescription": "无描述",
+        "closeDetail": "关闭配方详情",
+        "mustInclude": "必须包含"
+      },
+      "mine": "我的",
+      "noSkillsHere": "这里还没有 Skill",
+      "noSkillsHint": "可以先让虾导演总结当前画布，或描述一个工作流来创建你自己的技能。",
+      "use": "使用"
     },
     "modelConfig": {
       "title": "模型配置",
@@ -8265,6 +8853,22 @@
       },
       "mineTab": "我的",
       "use": "使用"
+    },
+    "runpodWorker": {
+      "title": "RunPod Qwen Image 2.1 Worker",
+      "statusRunning": "运行中",
+      "startButton": "启动",
+      "startErrorFallback": "启动 RunPod Worker 失败",
+      "badge": "仅开发",
+      "statusStopped": "已停止",
+      "stopButton": "停止",
+      "stopErrorFallback": "停止 RunPod worker 失败",
+      "description": "“Qwen Image 2.1 RunPod”图像来源使用的共享 GPU 工作节点。默认处于停止状态，不会按小时计费——生成前请启动，用完后请停止。",
+      "liveLabel": "工作节点",
+      "startedToast": "RunPod 工作节点已启动",
+      "statusLabel": "状态",
+      "liveSummary": "空闲 {{idle}} · 启动中 {{initializing}} · 忙碌 {{running}}",
+      "stoppedToast": "RunPod Worker 已停止"
     }
   },
   "pricing": {
@@ -8581,6 +9185,562 @@
     "nodeSuggestions": {
       "title": "节点",
       "noMatches": "没有匹配的节点"
+    },
+    "panel": {
+      "mentionType": {
+        "video": "视频",
+        "audio": "音频",
+        "text": "文本",
+        "reference": "参考图",
+        "image": "图片"
+      },
+      "nodeMenu": {
+        "empty": "没有匹配的节点",
+        "title": "节点"
+      },
+      "skillEmpty": {
+        "create": {
+          "prompt": "帮我创建一个技能：",
+          "label": "用智能体创建技能"
+        },
+        "summarize": {
+          "label": "将画布总结为 Skill",
+          "prompt": "将当前画布总结为可复用的技能"
+        }
+      },
+      "batch": {
+        "failed": "{{failed}}/{{expected}} 个任务失败",
+        "progress": "批量进度 {{settled}}/{{expected}}",
+        "running": "{{count}} 个运行中",
+        "waiting": "{{count}} 个等待中"
+      },
+      "taskBatch": {
+        "label": {
+          "video_other": "视频",
+          "sketchGrid_other": "草图网格",
+          "firstFrame_one": "首帧",
+          "task_one": "任务",
+          "firstFrame_other": "首帧",
+          "task_other": "任务",
+          "video_one": "视频",
+          "sketchGrid_one": "草图网格"
+        },
+        "completedOf": "已完成 {{completed}}/{{total}}",
+        "failedCount": "{{count}} 个失败",
+        "episode": "第 {{episode}} 集",
+        "cancelledCount": "{{count}} 个已取消",
+        "allDone": "✅ {{prefix}}全部 {{count}} 个{{label}}已生成完毕。你可以让我审阅结果，或继续下一步。",
+        "ended": "{{prefix}}{{label}}批量任务已结束：{{details}}。继续之前请到任务中心查看详情。"
+      },
+      "tools": {
+        "freezone_emit_canvas_command": {
+          "title": "准备画布操作",
+          "description": "生成可执行的画布修改指令"
+        },
+        "freezone_add_next_node": {
+          "title": "追加节点",
+          "description": "准备在某个节点后创建下游节点"
+        },
+        "freezone_create_edge": {
+          "title": "创建连线",
+          "description": "准备连接两个画布节点"
+        },
+        "freezone_clear_canvas": {
+          "title": "清空画布",
+          "description": "准备清除普通画布节点和连线"
+        },
+        "freezone_move_nodes": {
+          "title": "移动节点",
+          "description": "准备移动画布节点"
+        },
+        "freezone_group_nodes": {
+          "title": "创建分组",
+          "description": "准备将节点放入可视化分组"
+        },
+        "freezone_run_node_action": {
+          "title": "运行节点操作",
+          "description": "准备运行节点前端操作"
+        },
+        "freezone_get_canvas_snapshot": {
+          "title": "读取画布",
+          "description": "获取当前画布的节点和连线"
+        },
+        "freezone_get_node_detail": {
+          "title": "读取节点",
+          "description": "获取单个节点的详情"
+        },
+        "freezone_get_node_action_catalog": {
+          "title": "读取节点能力",
+          "description": "获取单个节点可用的操作"
+        },
+        "freezone_get_audio_voice_options": {
+          "title": "读取声音",
+          "description": "获取音频节点的音色选项"
+        },
+        "freezone_get_mainline_projection_assets": {
+          "title": "读取主线素材",
+          "description": "获取可映射到画布的主线素材"
+        },
+        "freezone_get_canvas_command_catalog": {
+          "title": "读取命令规则",
+          "description": "获取批量画布指令的字段规则"
+        },
+        "freezone_validate_canvas_commands": {
+          "title": "校验画布命令",
+          "description": "预校验 canvas_chat_commands"
+        },
+        "freezone_create_node": {
+          "title": "创建节点",
+          "description": "准备创建画布节点"
+        },
+        "freezone_update_node_data": {
+          "title": "更新节点",
+          "description": "准备修改节点数据"
+        },
+        "freezone_delete_nodes": {
+          "title": "删除节点",
+          "description": "准备删除画布节点"
+        },
+        "freezone_delete_edges": {
+          "title": "移除连线",
+          "description": "准备断开画布连线"
+        },
+        "freezone_layout_nodes": {
+          "title": "整理布局",
+          "description": "准备整理画布节点布局"
+        },
+        "freezone_select_nodes": {
+          "title": "选择节点",
+          "description": "准备选中或聚焦画布节点"
+        },
+        "freezone_get_canvas_ontology": {
+          "title": "读取画布本体",
+          "description": "获取当前画布的详细本体结构"
+        },
+        "freezone_get_selection": {
+          "title": "读取选区",
+          "description": "获取当前选中的画布节点"
+        },
+        "freezone_get_neighbor_graph": {
+          "title": "读取上下游",
+          "description": "获取节点的相邻关系"
+        },
+        "freezone_get_node_create_schema": {
+          "title": "读取创建参数",
+          "description": "获取节点创建参数"
+        },
+        "freezone_get_slot_candidates": {
+          "title": "读取插槽",
+          "description": "获取当前可提交的插槽"
+        },
+        "freezone_get_canvas_action_catalog": {
+          "title": "查询画布能力",
+          "description": "获取画布级操作目录"
+        },
+        "freezone_get_link_type_catalog": {
+          "title": "读取连线类型",
+          "description": "获取普通节点的连线类型"
+        },
+        "freezone_summarize_canvas": {
+          "title": "总结画布",
+          "description": "准备当前画布结构的摘要"
+        }
+      },
+      "toolTitles": {
+        "skill": "加载技能",
+        "freezone_confirm_workflow_draft": "提交到画布",
+        "freezone_get_saved_recipe": "读取 Recipe 配置",
+        "freezone_put_agent_catalog_recipe": "生成 Recipe 配置",
+        "list_workflows": "读取可用工作流",
+        "freezone_request_user_clarification": "确认生成参数",
+        "freezone_put_agent_catalog_draft_outline": "规划 Skill 大纲",
+        "freezone_patch_agent_catalog_draft": "调整 Skill 草稿",
+        "freezone_get_workflow_skill": "加载工作流技能",
+        "freezone_list_agent_catalog": "读取技能 / 配方列表",
+        "freezone_begin_agent_catalog_draft": "创建技能草稿",
+        "freezone_finish_agent_catalog_draft": "显示技能草稿",
+        "freezone_prepare_workflow_draft": "生成工作流草稿",
+        "freezone_get_saved_skill": "读取技能配置",
+        "freezone_put_agent_catalog_skill": "生成技能配置",
+        "fallback": "运行工具"
+      },
+      "toolMeta": {
+        "project": "项目",
+        "read": "读取：{{label}}",
+        "canvas": "画布",
+        "validate": "校验：{{label}}",
+        "nodes": "节点",
+        "entry": "{{name}}：{{value}}",
+        "links": "连线"
+      },
+      "copyFailed": "复制失败",
+      "canvasContext": {
+        "validated": "画布命令已校验",
+        "thinking": "思考中...",
+        "fallback": "画布上下文",
+        "reading": "正在读取 {{label}}",
+        "validating": "正在校验画布指令",
+        "readFailed": "读取{{label}}失败",
+        "validateFailed": "画布指令校验失败",
+        "readDone": "已读取{{label}}"
+      },
+      "contextUsage": "上下文用量",
+      "toolRuntime": {
+        "retryWorkflowDraft": "需要重新生成工作流草稿",
+        "clarificationRequired": "等待生成参数",
+        "running": "运行中：{{title}}",
+        "clarificationPaused": "等待回答已暂停",
+        "failed": "{{title}}失败",
+        "retryOutline": "技能方案需要重新梳理",
+        "done": "{{title}}完成"
+      },
+      "thinking": {
+        "active": "思考中",
+        "done": "思考过程"
+      },
+      "analyzing": "正在分析当前信息",
+      "approval": {
+        "videoParams": "视频参数：{{aspectRatio}} · {{quality}} · {{duration}} 秒 · {{audio}}",
+        "planSummary": "Agent 计划执行 {{count}} 项操作，需经你确认后才会应用到画布。",
+        "writtenAfterConfirm": "确认后一并写入节点",
+        "image": "图片",
+        "imageResolution": "图片分辨率",
+        "videoModel": "视频模型",
+        "autoCancelIn": "{{seconds}} 秒后自动取消",
+        "noOption": "Agent 没有提供可用的审批选项",
+        "aspectRatio": "画幅比例",
+        "badgeExecuting": "运行中",
+        "humanReviewTitle": "输入图片可能包含真人",
+        "imageModel": "图片模型",
+        "imageCount": "图片数量",
+        "videoCount": "视频数量",
+        "cancel": "取消",
+        "expired": "审批请求已过期，请让虾导演重新执行该操作",
+        "defaultRecipeLabel": "工作流复制配方",
+        "quality": "质量",
+        "badgeConfirm": "确认",
+        "humanReviewDesc": "检测到 {{count}} 个图生视频节点。若模型支持，确认后将启用人工审核。",
+        "imageAspect": "图片宽高比",
+        "imageCountOption": "{{count}}",
+        "videoCountOption": "{{count}}",
+        "pendingTitle": "待确认的画布操作",
+        "defaultVoiceLabel": "项目默认声音",
+        "videoDuration": "视频时长",
+        "generationSettings": "生成设置",
+        "humanReview": "人工审核",
+        "autoAspect": "自动比例",
+        "video": "视频",
+        "upscaleResolution": "高清分辨率",
+        "required": "需要批准操作"
+      },
+      "canvas": {
+        "cancelled": "画布操作已取消",
+        "timeoutAutoCancelled": "画布操作超时，已自动取消",
+        "executedCount": "已完成 {{count}} 项",
+        "appliedCount": "已应用 {{count}} 项画布操作",
+        "cancelledMessageFallback": "画布命令已取消",
+        "generateImageFailed": "图片生成失败",
+        "executionDone": "画布执行完成，共 {{count}} 项",
+        "newNode": "新节点：{{id}}",
+        "rerun": "再次运行",
+        "expired": "画布操作已过期",
+        "generateVideoFailed": "视频生成失败",
+        "execution": "画布执行",
+        "node": "节点：{{id}}",
+        "executionError": "画布指令执行出错：{{message}}",
+        "cancelledStep": "已取消",
+        "failed": "画布操作失败",
+        "collapse": "收起",
+        "action": "操作：{{action}}",
+        "executionErrorLabel": "画布执行错误"
+      },
+      "plan": {
+        "nodeType": {
+          "text": "文本节点",
+          "node": "节点",
+          "audio": "音频节点",
+          "image": "图片节点",
+          "script": "脚本节点",
+          "video": "视频节点"
+        },
+        "addNextNode": "添加下游{{type}}",
+        "createEdge": "创建连线",
+        "selectNodes": "选择节点",
+        "autoComposeVideo": "自动合成视频",
+        "canvasOperation": "画布操作",
+        "detail": {
+          "upstream": "上游：{{id}}",
+          "scope": "范围：{{scope}}",
+          "mode": "模式：{{mode}}",
+          "autoConnect": "自动连线",
+          "episode": "剧集：{{episode}}",
+          "count": "数量：{{count}}",
+          "kv": "{{key}}：{{value}}",
+          "target": "目标：{{target}}",
+          "allNodes": "范围：当前画布上的所有节点",
+          "position": "位置：{{x}}，{{y}}",
+          "action": "操作：{{action}}",
+          "assetKind": "资产类型：{{kind}}",
+          "name": "名称：{{name}}"
+        },
+        "updateNodeData": "更新节点参数",
+        "layoutNodes": "整理布局",
+        "generateImage": "生成图片",
+        "openVideoViewer": "打开视频",
+        "primary": {
+          "mainlineAsset": "主线素材",
+          "currentCanvas": "当前画布"
+        },
+        "deleteNodes": "删除节点",
+        "groupNodes": "创建普通分组",
+        "generateVideo": "生成视频",
+        "runNodeAction": "运行节点操作",
+        "createNode": "创建{{type}}",
+        "deleteEdges": "断开连线",
+        "moveNodes": "移动节点",
+        "openVideoCompose": "打开视频合成",
+        "openMainline": "打开主线虾画布"
+      },
+      "skillFields": {
+        "skill": {
+          "keywords": "触发关键词",
+          "promptStyleGuide": "风格指南",
+          "ratingBands": "评级区间",
+          "inputParameters": "启动前选项",
+          "behaviorRules": "行为规则",
+          "visualReviewItems": "视觉审核项",
+          "node_scopes": "节点类型",
+          "passingScore": "及格分",
+          "textReviewItems": "文案审核项",
+          "metaPlanningHints": "规划提示",
+          "domainRules": "领域规则"
+        },
+        "recipe": {
+          "output_kind": "输出类型",
+          "result_summary": "输出摘要",
+          "skip_detail_check": "跳过细节检查",
+          "action_keys": "操作类型",
+          "requires_source_media": "需要上游多模态输入",
+          "must_have_items": "必备元素",
+          "enabled": "已启用",
+          "name": "名称",
+          "planning_prompt": "规划提示词",
+          "force_enhancement": "强制增强"
+        }
+      },
+      "inputType": {
+        "boolean": "开关",
+        "single": "单选",
+        "text": "文本",
+        "multi": "多选",
+        "fallback": "参数",
+        "number": "数字"
+      },
+      "skillDraft": {
+        "deleteItem": "删除{{item}}",
+        "skipped": "已跳过",
+        "footer": {
+          "cancelled": "已取消；此草稿不会被保存",
+          "revisionPending": "AI 正在调整；请在后续提问中补充修改方向",
+          "default": "保存前可展开每一项进行微调",
+          "submitted": "已添加到虾画布技能 / 配方"
+        },
+        "studioChoice": "Skill Studio 选择",
+        "skillMissing": "缺少技能基础配置。",
+        "finalMissing": "缺少最终草稿整理。",
+        "routing": "正在梳理技能方向...",
+        "unnamedOption": "未命名选项",
+        "usedRecommended": "已使用推荐配置",
+        "submitted": "已提交",
+        "recipesPartial": "已生成 Recipe {{count}} / {{expected}}，缺少 {{missing}} 个。",
+        "incompleteSummary": "Skill 草稿不完整",
+        "supplement": "补充：{{text}}",
+        "questionN": "问题 {{index}}",
+        "partial": "智能体提交了部分内容，但本轮已结束，草稿暂时无法保存。",
+        "recipesReady": "已生成 {{count}} 个配方。",
+        "skillConfig": "技能基础配置",
+        "editItem": "编辑{{item}}",
+        "notSelected": "未选择",
+        "answerSubmitted": "已提交回答 · {{answered}} / {{total}}",
+        "skillReady": "技能基础配置已生成。",
+        "recipesNone": "本轮未提交新配方。",
+        "finalTidy": "最终草稿整理"
+      },
+      "questions": {
+        "continueWithCurrent": "按当前选择继续",
+        "hintSingle": "选择一个方向；也可以补充更多",
+        "noQuestions": "没有可选择的问题",
+        "answerTitle": "问题回答",
+        "jsonInvalidAdjust": "JSON 格式无效，请检查后再调整",
+        "completed": "已完成",
+        "basicInfo": "基本信息",
+        "required": "必填",
+        "listPlaceholder": "用逗号或换行分隔",
+        "reusedRecipes": "复用的 Recipe（{{count}}）",
+        "type": "类型",
+        "noActionType": "未匹配到操作类型",
+        "noResultSummary": "未匹配到结果摘要",
+        "incompleteNotSaved": "草稿不完整；本轮不会保存",
+        "submittedNoConfig": "已提交；未包含可显示的问题配置。",
+        "needInfo": "我们需要你补充一些信息",
+        "multiple": "多选",
+        "selectedCount": "已选 {{selected}} · {{answered}} / {{total}}",
+        "completeAll": "请完成所有选择",
+        "draftTitle": "Skill / Recipe 草稿",
+        "missing": "缺失",
+        "keywordPlaceholder": "输入关键词并按回车",
+        "planningStrategy": "规划策略",
+        "scorePlaceholder": "例如 8：风格统一，文化元素准确",
+        "readOnly": "只读",
+        "recipeIdMissing": "在当前本地 Recipe 列表中未找到此 ID；保存前请确认该配置存在。",
+        "noSystemPrompt": "未匹配到系统提示词",
+        "typePlaceholder": "输入类型并按回车",
+        "aiAdjust": "让 AI 调整",
+        "next": "下一题",
+        "previous": "上一题",
+        "optionN": "选项 {{index}}",
+        "skip": "跳过",
+        "jsonInvalidSubmit": "JSON 格式无效，请检查后再提交",
+        "modeEdit": "编辑",
+        "continueChat": "继续对话后，智能体可以根据当前草稿补全缺失的部分。",
+        "optionCount": "{{count}} 个选项",
+        "rulePlaceholder": "输入规则后按回车",
+        "visualItemPlaceholder": "例如：风格一致性（0.35）：是否符合视觉风格",
+        "notFound": "未找到",
+        "noName": "没有匹配的名称",
+        "noMustHave": "没有匹配的必备项",
+        "elementPlaceholder": "输入元素后按回车",
+        "confirmAdd": "确认并添加",
+        "submitChoices": "提交所选项",
+        "hintMultiple": "可多选，也可补充更多",
+        "otherPlaceholder": "其他补充...",
+        "useRecommended": "使用推荐配置",
+        "jsonMustBeObject": "草稿必须是 JSON 对象",
+        "modeNew": "新建",
+        "noDescription": "无描述",
+        "defaultValue": "默认 {{value}}",
+        "evaluationCriteria": "评估标准",
+        "textItemPlaceholder": "例如：文案传播度（0.4）：标题是否令人印象深刻",
+        "htmlPage": "HTML 页面",
+        "noType": "没有匹配的类型",
+        "noPlanningPrompt": "没有匹配的规划提示词",
+        "viewRawJson": "查看原始 JSON",
+        "enteringStudio": "正在进入技能工坊..."
+      },
+      "waitingForReply": "等待你的回复",
+      "contextLabels": {
+        "canvas_action_catalog": "画布能力",
+        "node_action_catalog": "节点能力",
+        "audio_voice_options": "声音选项",
+        "link_type_catalog": "链接类型",
+        "canvas_command_catalog": "指令规则",
+        "action_catalog": "节点能力",
+        "slot_candidates": "可提交的槽位",
+        "validate_canvas_commands": "指令校验",
+        "canvas_ontology": "画布本体",
+        "node_detail": "节点详情",
+        "action_catalog_by_id": "能力详情",
+        "mainline_projection_assets": "主线素材",
+        "canvas_summary": "画布摘要",
+        "neighbor_graph": "上下游关系",
+        "node_create_schema": "节点参数",
+        "selection_detail": "当前选中"
+      },
+      "runMode": {
+        "auto": {
+          "label": "剧集自动",
+          "description": "二次确认后，剧集将自动推进；失败或终剪完成时停止"
+        },
+        "manual": {
+          "label": "手动模式",
+          "description": "每个生成步骤运行前由你确认"
+        }
+      },
+      "execMode": {
+        "auto": {
+          "label": "自动生成",
+          "description": "智能体自动运行安全指令并汇报结果"
+        },
+        "manual": {
+          "label": "手动确认",
+          "description": "智能体运行画布指令前会先请求确认"
+        }
+      },
+      "billing": {
+        "dialogTitle": "虾导演 Agent 积分参考",
+        "colBilling": "Agent 计费",
+        "defaultNote": "常规对话和画布操作免费；仅高级智能体能力的交付内容会计费。",
+        "loading": "正在加载计费参考…",
+        "loadFailed": "暂时无法加载虾导演计费参考",
+        "colTask": "任务",
+        "footnote": "表中的区间用于提前了解费用规模；最终收费以系统中配置的功能价格和成功交付的数量为准。图片、音频、视频等模型生成费用不包含在此表中，仍由 NewAPI 按现有规则单独结算。工具重试和内部多步调用不会重复产生智能体交付费用。",
+        "title": "虾导演计费参考",
+        "colIncludes": "包含"
+      },
+      "auto": {
+        "episodeDone": "第 {{episode}} 集已自动制作完成",
+        "manualPauseFailed": "已切换为手动模式，但暂停后台自动运行的请求未能送达",
+        "running": "剧集自动正在运行，并会根据任务状态持续推进",
+        "currentEpisode": "当前",
+        "startFailed": "无法启动剧集自动模式：{{error}}",
+        "badgeRunning": "剧集自动 · 运行中",
+        "paused": "整集自动模式已暂停",
+        "requestFailed": "后端请求失败",
+        "badgeAwaitingChange": "整集自动 · 等待确认修改",
+        "pausedAwaitingConfirm": "剧集自动模式已暂停推进，等待你确认是否进行更改",
+        "selected": "已选择剧集自动模式；发送开始指令后，需再确认一次才会运行",
+        "started": "剧集自动模式已启动，正在检查当前进度",
+        "badgeAwaitingConfirm": "剧集自动 · 等待确认"
+      },
+      "taskNotice": {
+        "completed": "✅ {{label}}已完成。你可以让我检查结果，或继续下一步。",
+        "failed": "{{label}}失败：{{error}}\n请根据错误修复前置条件后再继续。",
+        "noReason": "未提供具体的错误原因"
+      },
+      "toast": {
+        "bridgeMissing": "缺少 Skill Studio 桥接信息，请重试",
+        "recommendedInvalid": "推荐配置缺少有效参数，请重新选择或刷新后重试",
+        "addFailedWithReason": "添加技能 / Recipe 失败：{{error}}",
+        "connectionNotReady": "Skill Studio 连接尚未就绪，请重试",
+        "clarificationConnectionNotReady": "补充信息连接尚未就绪，请重试",
+        "addFailed": "添加 Skill / Recipe 失败，请检查必填字段后重试",
+        "submitSelectionFailed": "提交技能工坊的选择失败，请重试",
+        "submitClarificationFailed": "提交补充信息失败，请重试",
+        "startRevisionFailed": "启动草稿修订失败，请重试",
+        "turnEnded": "本轮已结束，无法再提交此问题",
+        "clarificationBridgeMissing": "补充信息通道缺失，请重试",
+        "saveNotConfirmed": "后端未确认保存"
+      },
+      "skills": {
+        "title": "技能",
+        "create": "创建",
+        "noneHint2": "你可以让 Agent 把当前画布总结成一个技能，或描述你的工作流来创建专属技能。",
+        "none": "暂无可用技能",
+        "search": "搜索 Skill",
+        "noneHint": "你可以让智能体将当前画布总结为技能，或直接描述你的工作流，让它为你创建专属技能。",
+        "noMatch": "没有匹配的技能",
+        "pick": "选择技能",
+        "noneHere": "这里还没有技能"
+      },
+      "selection": {
+        "cancelAll": "全部取消",
+        "current": "当前选中",
+        "usedThisTurn": "本轮已使用",
+        "deselectAll": "取消选择所有画布引用"
+      },
+      "emptyAgentReply": "本轮未收到虾导演的有效回复，请稍后重试。",
+      "status": {
+        "running": "进行中",
+        "failed": "失败",
+        "done": "完成"
+      },
+      "moreOperations": "确认后将一并执行另外 {{count}} 项操作",
+      "removeCanvasReference": "移除画布引用",
+      "turnFailed": "本轮失败：{{error}}\n\n请按提示处理错误后重试。",
+      "executionPlan": "执行计划",
+      "copied": "已复制",
+      "stepN": "第 {{index}} 步",
+      "backToBottom": "回到底部"
     }
   },
   "productSurface": {
@@ -8871,6 +10031,48 @@
       "enterSpeechFirst": "先填写要合成的文本",
       "regenerate": "重新生成",
       "generate": "生成"
+    }
+  },
+  "promptPreview": {
+    "toggle": "提示词预览",
+    "copy": "复制",
+    "loading": "加载中…",
+    "noTargets": "此步骤暂无可预览的内容。",
+    "tab": {
+      "lastSent": "上次发送",
+      "inputs": "输入",
+      "preview": "将发送"
+    },
+    "close": "关闭提示词预览",
+    "step": "流水线步骤",
+    "loadFailed": "无法加载提示词预览。",
+    "empty": "暂时无法构建提示词。",
+    "title": "提示词预览",
+    "resize": "拖动调整大小",
+    "target": "目标",
+    "unsupported": "此步骤暂不支持预览。",
+    "noLastSent": "此步骤尚未发送过提示词。",
+    "description": "预览流水线每一步将发送的提示词。",
+    "refresh": "刷新",
+    "soon": "暂不可用",
+    "needsEpisode": "请打开一集以预览此步骤。"
+  },
+  "canvasNodes": {
+    "stylePicker": {
+      "clear": "清除",
+      "close": "关闭",
+      "other": "其他",
+      "loading": "加载中…",
+      "title": "风格",
+      "empty": "暂无风格模板"
+    },
+    "imageForm": {
+      "style": "风格"
+    },
+    "videoForm": {
+      "multipleVideosUnavailable": "存在多个上游视频时不可用",
+      "cameraMovement": "运镜",
+      "externalMaterial": "外部素材"
     }
   }
 }

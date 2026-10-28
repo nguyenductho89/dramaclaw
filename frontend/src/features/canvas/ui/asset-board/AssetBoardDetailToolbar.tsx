@@ -222,7 +222,7 @@ export function keyElementMenuEntry(
 export function DetailMoreMenu({
   entries,
   triggerClassName,
-  triggerLabel = i18n.t('canvas.assetBoard.detailToolbar.more'),
+  triggerLabel = i18n.t('canvas.assetBoard.detailToolbar.moreActions'),
 }: {
   entries: MoreMenuEntry[];
   /** Trigger style: the default toolbar button; the one in the detail header passes the header icon button's class. */
@@ -549,7 +549,7 @@ export function AssetBoardImageDetailToolbar({
                 className={DETAIL_TOOLBAR_BUTTON_CLASS}
               >
                 <LayoutGrid className="h-3.5 w-3.5" />
-                {i18n.t('canvas.assetBoard.detailToolbar.gridTemplates')}
+                {i18n.t('nodeToolbar.gridMenu.trigger')}
                 <ChevronDown className="h-3 w-3" />
               </button>
             </DropdownMenuTrigger>

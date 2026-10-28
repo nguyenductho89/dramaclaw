@@ -13,12 +13,12 @@ import { enT, zhT } from '@/__tests__/helpers/i18n-fixtures';
 
 describe('numbered node title localization', () => {
   it.each([
-    [CANVAS_NODE_TYPES.textAnnotation, '文本7', 7, 'Text7'], // no-cjk-exempt: legacy saved Chinese titles
-    [CANVAS_NODE_TYPES.imageGen, '图片节点16', 16, 'Image node16'], // no-cjk-exempt: legacy saved Chinese titles
-  ])('localizes the default %s title without changing saved data', (type, displayName, index, english) => {
+    [CANVAS_NODE_TYPES.textAnnotation, 'Text7', 7, 'Text7', '文本7'], // no-cjk-exempt: zh display name
+    [CANVAS_NODE_TYPES.imageGen, 'Image node16', 16, 'Image node16', '图片节点16'], // no-cjk-exempt: zh display name
+  ])('localizes the default %s title without changing saved data', (type, displayName, index, english, chinese) => {
     const data = { displayName: String(displayName), autoTitleIndex: Number(index) };
     expect(localizeNodeDisplayName(type as typeof CANVAS_NODE_TYPES.imageGen, data, enT)).toBe(english);
-    expect(localizeNodeDisplayName(type as typeof CANVAS_NODE_TYPES.imageGen, data, zhT)).toBe(displayName);
+    expect(localizeNodeDisplayName(type as typeof CANVAS_NODE_TYPES.imageGen, data, zhT)).toBe(chinese);
     expect(data.displayName).toBe(displayName);
   });
 

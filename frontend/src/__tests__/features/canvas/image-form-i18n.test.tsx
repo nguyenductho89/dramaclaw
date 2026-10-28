@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: Elastic-2.0
 // Copyright (c) 2026 ClaymoreLab
 import { act, fireEvent, render, screen } from '@testing-library/react';
-import { createInstance } from 'i18next';
-import { I18nextProvider } from 'react-i18next';
+import i18next from 'i18next';
 import { describe, expect, it, vi } from 'vitest';
 
-import { enTranslation, zhTranslation } from '@/__tests__/helpers/i18n-fixtures';
+import { zhTranslation } from '@/__tests__/helpers/i18n-fixtures';
 import { ImageGenerationForm, type ImageGenerationFormProps } from '@/features/canvas/nodes/shared/ImageGenerationForm';
 import { NodeIdBadge } from '@/features/canvas/ui/NodeIdBadge';
 
@@ -70,21 +69,21 @@ function formProps(patch: Partial<ImageGenerationFormProps> = {}): ImageGenerati
   };
 }
 
+// The form mixes useTranslation with the global i18n singleton, so exercise the shared default instance
+// (initialised in setup.ts with en) and add zh on demand.
 async function mount(props = formProps()) {
-  const i18n = createInstance();
-  await i18n.init({
-    lng: 'en',
-    fallbackLng: 'zh',
-    resources: { en: { translation: enTranslation }, zh: { translation: zhTranslation } },
-    interpolation: { escapeValue: false },
-  });
-  render(
-    <I18nextProvider i18n={i18n}>
+  i18next.addResourceBundle('zh', 'translation', zhTranslation, true, true);
+  await i18next.changeLanguage('en');
+  const tree = () => (
+    <>
       <ImageGenerationForm {...props} />
       <NodeIdBadge nodeId="image-16" />
-    </I18nextProvider>,
+    </>
   );
-  return i18n;
+  const view = render(tree());
+  // Parts of the form read the global i18n singleton instead of useTranslation, so they only pick up a
+  // language change on the next render pass.
+  return Object.assign(i18next, { rerenderAll: () => view.rerender(tree()) });
 }
 
 describe('image node form localization', () => {
@@ -101,6 +100,7 @@ describe('image node form localization', () => {
     expect(screen.getByTitle('Translate prompt (Chinese ↔ English)')).toBeInTheDocument();
 
     await act(async () => { await i18n.changeLanguage('zh'); });
+    i18n.rerenderAll();
     expect(screen.getByRole('button', { name: '风格' })).toBeInTheDocument();  // no-cjk-exempt
     expect(screen.getByText('资产库')).toBeInTheDocument();  // no-cjk-exempt
     expect(screen.getByRole('button', { name: '摄像机' })).toBeInTheDocument();  // no-cjk-exempt

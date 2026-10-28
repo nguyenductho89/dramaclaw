@@ -734,12 +734,10 @@ export function BatchPanel({
                 onClick={() => {
                   askConfirm(
                     t("episode.workbench.batch.regenSketchSingleTitle", {
-                      count,
-                      defaultValue: "Redraw single sketch",
+                      count
                     }),
                     t("episode.workbench.batch.regenSketchSingleDesc", {
-                      beats: beatList.join(", #"),
-                      defaultValue: "Split the selected beats into 1x1 sketch tasks using the current aspect ratio.",
+                      beats: beatList.join(", #")
                     }),
                     handleDispatchSingleSketches,
                   );
@@ -747,9 +745,7 @@ export function BatchPanel({
                 className="h-7 gap-1 px-2 text-[11px]"
               >
                 <Square className="size-3" />
-                {t("episode.workbench.batch.singleRegen", {
-                  defaultValue: "Single redraw",
-                })}
+                {t("episode.workbench.batch.singleRegen")}
               </Button>
               <Button
                 variant="outline"
@@ -759,9 +755,7 @@ export function BatchPanel({
                 className="relative h-7 gap-1 rounded-[8px] border-[3px] border-[#007A87] px-2 pr-9 text-[11px] transition-transform hover:border-[#007A87] hover:bg-transparent active:scale-95 dark:border-[#007A87] dark:hover:border-[#007A87]"
               >
                 <Grid2X2 className="size-3" />
-                {t("episode.workbench.batch.autoCombine", {
-                  defaultValue: "Batch redraw",
-                })}
+                {t("episode.workbench.batch.autoCombine")}
                 <CreditCostInline
                   display={sketchPlanCostDisplay}
                   promotion={sketchPlanCost.promotion}
@@ -814,9 +808,7 @@ export function BatchPanel({
                       </div>
                       <div className="truncate text-[10px] text-muted-foreground">
                         {lockedSketchItemIds.has(item.id)
-                          ? t("episode.workbench.batch.sketchGroupRunning", {
-                              defaultValue: "The same sketch group is already running",
-                            })
+                          ? t("episode.workbench.batch.sketchGroupRunning")
                           : item.modeLabel}
                       </div>
                     </div>
@@ -875,9 +867,7 @@ export function BatchPanel({
                 className="h-7 gap-1 px-2 text-[11px]"
               >
                 <Grid2X2 className="size-3" />
-                {t("episode.workbench.batch.autoCombine", {
-                  defaultValue: "Auto group",
-                })}
+                {t("episode.workbench.batch.autoCombine")}
               </Button>
             </div>
           </div>

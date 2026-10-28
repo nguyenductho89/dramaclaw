@@ -2740,8 +2740,8 @@ function FreezoneChatDock({
           variant="ghost"
           size="icon-sm"
           onClick={handleHeaderAddAgent}
-          aria-label={t("freezone.shell.newAgent")}
-          title={t("freezone.shell.newAgent")}
+          aria-label={t("freezone.agent.create")}
+          title={t("freezone.agent.create")}
           className="text-muted-foreground hover:bg-white/[0.08] hover:text-foreground"
         >
           <Plus className="size-4" />
@@ -2754,8 +2754,8 @@ function FreezoneChatDock({
           size="icon-sm"
           onClick={() => setAgentHistoryOpen((value) => !value)}
           aria-pressed={agentHistoryOpen}
-          aria-label={agentHistoryOpen ? t("freezone.shell.hideAgentHistory") : t("freezone.shell.showAgentHistory")}
-          title={agentHistoryOpen ? t("freezone.shell.hideAgentHistory") : t("freezone.shell.showAgentHistory")}
+          aria-label={agentHistoryOpen ? t("freezone.agent.collapseHistory") : t("freezone.agent.expandHistory")}
+          title={agentHistoryOpen ? t("freezone.agent.collapseHistory") : t("freezone.agent.expandHistory")}
           className={cn(
             "text-muted-foreground hover:bg-white/[0.08] hover:text-foreground",
             agentHistoryOpen && "bg-white/[0.08] text-foreground",
@@ -3247,7 +3247,7 @@ function FreezoneAgentHistoryPanel({
           onClick={onAdd}
         >
           <Plus className="mr-1.5 size-4" />
-          {i18n.t("freezone.shell.newAgent")}
+          {i18n.t("freezone.agent.create")}
         </Button>
       )}
     </div>

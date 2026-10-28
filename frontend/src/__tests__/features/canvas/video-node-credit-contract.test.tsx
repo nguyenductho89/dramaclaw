@@ -25,8 +25,8 @@ class ResizeObserverMock {
 vi.stubGlobal("ResizeObserver", ResizeObserverMock);
 
 vi.mock("react-i18next", async () => {
-  const { zhT } = await import("@/__tests__/helpers/i18n-fixtures");
-  return { useTranslation: () => ({ t: zhT }) };
+  const { enT } = await import("@/__tests__/helpers/i18n-fixtures");
+  return { useTranslation: () => ({ t: enT }) };
 });
 
 // Replace only the hook, keeping the real BillingRuleNotConfiguredError — the assertions depend on instanceof.

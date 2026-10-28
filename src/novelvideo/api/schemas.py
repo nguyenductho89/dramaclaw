@@ -204,6 +204,13 @@ class MiniMaxH3PromptGenerateRequest(BaseModel):
     # (the same field other video backends call `prompt_guidance`) — passed
     # through to `MiniMaxH3BeatContext.director_guidance`. Advisory only.
     prompt_guidance: Optional[str] = None
+    # Same input choices the review dialog sends to `/video/review` — the
+    # rewrite must number `<Picture N>` for exactly the set that will be sent.
+    h3_mode: Optional[Literal["auto", "t2va", "fl2va", "flf2va", "ref2va"]] = None
+    h3_first_frame: Optional[Literal["render", "none"]] = None
+    h3_last_frame: Optional[Literal["none", "next_render"]] = None
+    h3_reference_keys: Optional[list[str]] = None
+    use_director_render: bool = False
 
 
 class MultishotVideoRequest(BaseModel):
@@ -515,6 +522,11 @@ class SingleVideoRequest(BaseModel):
     review_fingerprint: Optional[str] = None
     h3_profile: Optional[Literal["formal", "draft"]] = None
     h3_reference_keys: Optional[list[str]] = None
+    # H3 input mode (see `_h3_plan_inputs` in api/routes/generation.py).
+    # None/"auto" = legacy behavior (render as first frame + references).
+    h3_mode: Optional[Literal["auto", "t2va", "fl2va", "flf2va", "ref2va"]] = None
+    h3_first_frame: Optional[Literal["render", "none"]] = None
+    h3_last_frame: Optional[Literal["none", "next_render"]] = None
     # Per-generation override for `runpod_minimax_h3`'s env-gated two-stage
     # (upscale + redraw pass) / audio-refine passes — None means "use the
     # RUNPOD_H3_TWO_STAGE_ENABLED/RUNPOD_H3_AUDIO_REFINE_ENABLED .env

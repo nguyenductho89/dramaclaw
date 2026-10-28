@@ -4929,7 +4929,7 @@ async def generate_single_video(
         beat_num,
         use_director_render=bool(body.use_director_render),
     )
-    if not frame_path.exists():
+    if not is_runpod_h3 and not frame_path.exists():
         return {"ok": False, "error": f"Beat {beat_num} first frame does not exist. Generate a preview first"}
 
     # Video mode and prompt
@@ -5123,21 +5123,51 @@ async def generate_single_video(
                 "ok": False,
                 "error": f"Beat {beat_num} is missing the MiniMax H3 prompt. Generate/edit it in the video preview first.",
             }
+        # Re-resolve the exact picture set from the beat + the user's choices
+        # — never from `reference_image_paths`, a field the other backends
+        # also write and a stale draft can carry.
+        h3_plan = await _h3_beat_plan(
+            store=store,
+            beats=beats,
+            beat=beat,
+            username=username,
+            project_name=project_name,
+            episode_num=episode_num,
+            output_dir=output_dir,
+            use_director_render=bool(body.use_director_render),
+            h3_config=h3_config,
+            mode=body.h3_mode,
+            first_frame=body.h3_first_frame,
+            last_frame=body.h3_last_frame,
+            reference_keys=body.h3_reference_keys,
+        )
+        if h3_plan["error"]:
+            return {
+                "ok": False,
+                "error": _h3_plan_error_message(h3_plan["error"], beat_num),
+                "plan_error": h3_plan["error"],
+            }
+        resolved_refs = h3_plan["references"]
+        h3_mode = h3_plan["mode"]
+        h3_use_first = bool(h3_plan["use_first_frame"])
+        h3_last_path = str(h3_plan["next_frame_path"]) if h3_plan["use_last_frame"] else None
+        h3_config.reference_image_paths = [r["path"] for r in resolved_refs]
+        h3_config.h3_mode = h3_plan["requested_mode"] if h3_plan["requested_mode"] != "auto" else ""
+        h3_config.h3_first_frame = "render" if h3_use_first else "none"
+        h3_config.h3_last_frame = "next_render" if h3_last_path else "none"
+        h3_config.h3_reference_keys = [r["key"] for r in resolved_refs]
+        frame_path = frame_path if h3_use_first else None
+        last_frame_path = h3_last_path
         if body.review_fingerprint:
-            character_map = await _build_character_map(
-                store, beats, username, project_name, episode_num=episode_num
-            )
-            resolved_refs = _h3_identity_references(character_map, beat)
-            if body.h3_reference_keys is not None:
-                wanted = set(body.h3_reference_keys)
-                resolved_refs = [r for r in resolved_refs if r["identity_id"] in wanted]
             current_fingerprint = _video_review_fingerprint(
                 video_backend=body.video_backend,
                 prompt=prompt,
                 duration=float(video_duration),
                 ratio=h3_config.ratio or "9:16",
                 reference_paths=[r["path"] for r in resolved_refs],
-                frame_path=str(frame_path) if frame_path.exists() else None,
+                frame_path=str(frame_path) if frame_path else None,
+                mode=h3_mode,
+                last_frame_path=h3_last_path,
             )
             if current_fingerprint != body.review_fingerprint:
                 return {
@@ -5205,6 +5235,7 @@ async def generate_single_video(
         config["references"] = grok_video_references
     if is_runpod_h3:
         config["ratio"] = h3_config.ratio or "9:16"
+        config["h3_mode"] = h3_mode
         config["references"] = [
             {"type": "image", "path": p, "role": "character/scene/prop reference"}
             for p in h3_config.reference_image_paths
@@ -5434,6 +5465,247 @@ def _h3_identity_references(character_map: dict, beat: dict) -> list[dict[str, s
     return out
 
 
+_H3_MODES = ("auto", "t2va", "fl2va", "flf2va", "ref2va")
+# `MiniMaxH3ReferenceToVideo.ref_images` accepts at most 9 images in total
+# (first frame included, it is just `ref_image_0`).
+_H3_MAX_PICTURES = 9
+
+
+def _h3_identity_label(identity_id: str, char_name: str) -> str:
+    """`Yui (modern schoolgirl)` — the prompt must tell two looks of one
+    character apart, so the identity label is part of the display name."""
+    suffix = identity_id[len(char_name) + 1 :] if identity_id.startswith(f"{char_name}_") else ""
+    suffix = suffix.replace("_", " ").strip()
+    return f"{char_name} ({suffix})" if suffix else char_name
+
+
+def _h3_beat_reference_candidates(
+    character_map: dict,
+    beat: dict,
+    *,
+    output_dir: str | Path,
+    episode_num: int,
+) -> list[dict[str, str]]:
+    """Every image a MiniMax H3 prompt could reference for this beat, each
+    with a stable `key` (`identity:<id>` / `prop:<name>` / `scene:<name>`):
+    the beat's tagged identities, its tagged props (3-view sheet) and its
+    scene master. Order is characters, props, scene."""
+    from novelvideo.seedance2_i2v.assets import (
+        _beat_scene_asset,
+        _prop_asset_path,
+        resolve_beat_prop_ids,
+    )
+
+    out: list[dict[str, str]] = []
+    for r in _h3_identity_references(character_map, beat):
+        out.append(
+            {
+                "key": f"identity:{r['identity_id']}",
+                "kind": "character",
+                "identity_id": r["identity_id"],
+                "name": _h3_identity_label(r["identity_id"], r["name"]),
+                "path": r["path"],
+                "appearance_details": r["appearance_details"],
+            }
+        )
+    project_dir = Path(output_dir)
+    try:
+        prop_ids = resolve_beat_prop_ids(beat, project_output=project_dir, episode=episode_num)
+    except Exception:  # noqa: BLE001 - fall back to the beat's own tags
+        prop_ids = [str(p) for p in beat.get("detected_props") or []]
+    for prop_id in prop_ids:
+        prop_path = _prop_asset_path(project_dir, prop_id)
+        if prop_path.exists():
+            out.append(
+                {
+                    "key": f"prop:{prop_id}",
+                    "kind": "prop",
+                    "identity_id": "",
+                    "name": prop_id,
+                    "path": str(prop_path),
+                    "appearance_details": "",
+                }
+            )
+    try:
+        scene_label, scene_path = _beat_scene_asset(project_dir, beat)
+    except Exception:  # noqa: BLE001
+        scene_label, scene_path = "", Path("")
+    if scene_label and str(scene_path) and Path(scene_path).exists():
+        out.append(
+            {
+                "key": f"scene:{scene_label}",
+                "kind": "scene",
+                "identity_id": "",
+                "name": scene_label,
+                "path": str(scene_path),
+                "appearance_details": "",
+            }
+        )
+    return out
+
+
+def _h3_select_references(
+    candidates: list[dict[str, str]], keys: list[str] | None, *, has_first_frame: bool
+) -> list[dict[str, str]]:
+    """Apply the user's chosen keys. `None` = default selection: every
+    character and prop, plus the scene only when there is no first frame to
+    carry the location. A bare identity id (the legacy key format) matches
+    too."""
+    if keys is None:
+        chosen = [
+            c for c in candidates if c["kind"] != "scene" or not has_first_frame
+        ]
+    else:
+        wanted = set(keys)
+        chosen = [
+            c for c in candidates if c["key"] in wanted or (c["identity_id"] and c["identity_id"] in wanted)
+        ]
+    limit = _H3_MAX_PICTURES - (1 if has_first_frame else 0)
+    return chosen[:limit]
+
+
+def _h3_plan_inputs(
+    *,
+    requested_mode: str | None,
+    first_frame_choice: str | None,
+    last_frame_choice: str | None,
+    frame_path: Path | None,
+    next_frame_path: Path | None,
+    candidates: list[dict[str, str]],
+    keys: list[str] | None,
+) -> dict[str, Any]:
+    """Decide which H3 graph runs and exactly which images go in, in
+    `<Picture N>` order. Review, prompt generation and generation all call
+    this so they cannot disagree. Returns `{mode, use_first_frame,
+    use_last_frame, references, error, available_modes}`; `error` is set
+    when the requested combination cannot run."""
+    frame_exists = bool(frame_path and Path(frame_path).exists())
+    last_exists = bool(next_frame_path and Path(next_frame_path).exists())
+    req = requested_mode if requested_mode in _H3_MODES else "auto"
+
+    available: dict[str, str | None] = {
+        "t2va": None,
+        "fl2va": None if frame_exists else "no_render",
+        "flf2va": (
+            None
+            if frame_exists and last_exists
+            else ("no_render" if not frame_exists else "no_next_render")
+        ),
+        "ref2va": None if candidates else "no_references",
+    }
+
+    def result(mode: str, use_first: bool, use_last: bool, refs: list, error: str = "") -> dict:
+        return {
+            "mode": mode,
+            "requested_mode": req,
+            "use_first_frame": use_first,
+            "use_last_frame": use_last,
+            "references": refs,
+            "error": error,
+            "available_modes": available,
+        }
+
+    if req == "t2va":
+        return result("t2va", False, False, [])
+    if req == "fl2va":
+        if not frame_exists:
+            return result("fl2va", False, False, [], "no_render")
+        return result("fl2va", True, False, [])
+    if req == "flf2va":
+        if not frame_exists:
+            return result("flf2va", False, False, [], "no_render")
+        if not last_exists:
+            return result("flf2va", True, False, [], "no_next_render")
+        return result("flf2va", True, True, [])
+    if req == "ref2va":
+        want_first = (first_frame_choice == "render") if first_frame_choice else frame_exists
+        if want_first and not frame_exists:
+            return result("ref2va", False, False, [], "no_render")
+        refs = _h3_select_references(candidates, keys, has_first_frame=want_first)
+        if not refs:
+            return result("ref2va", want_first, False, [], "no_references")
+        return result("ref2va", want_first, False, refs)
+
+    # auto — what the route always did when a render exists (references
+    # present -> ref2va, none -> fl2va); without a render it now falls back
+    # to reference-only / text-only instead of failing.
+    refs = _h3_select_references(candidates, keys, has_first_frame=frame_exists)
+    if frame_exists:
+        return result("ref2va" if refs else "fl2va", True, False, refs)
+    if refs:
+        return result("ref2va", False, False, refs)
+    return result("t2va", False, False, [])
+
+
+def _h3_plan_error_message(code: str, beat_num: int) -> str:
+    return {
+        "no_render": f"Beat {beat_num} has no rendered frame. Render it first, or pick Text→Video / Reference without a first frame.",
+        "no_next_render": f"The beat after Beat {beat_num} has no rendered frame, so First+Last frame cannot run.",
+        "no_references": f"Beat {beat_num} has no reference selected. Select at least one character, prop or scene.",
+    }.get(code, f"H3 input combination is not available ({code})")
+
+
+def _h3_picture_count(plan: dict[str, Any]) -> int:
+    return (
+        len(plan["references"])
+        + (1 if plan["use_first_frame"] else 0)
+        + (1 if plan["use_last_frame"] else 0)
+    )
+
+
+async def _h3_beat_plan(
+    *,
+    store: Any,
+    beats: list[dict],
+    beat: dict,
+    username: str,
+    project_name: str,
+    episode_num: int,
+    output_dir: str | Path,
+    use_director_render: bool,
+    h3_config: Any,
+    mode: str | None,
+    first_frame: str | None,
+    last_frame: str | None,
+    reference_keys: list[str] | None,
+) -> dict[str, Any]:
+    """Resolve frames + candidates + the input plan for one beat. Request
+    values win over what the beat last saved (`h3_config`)."""
+    from novelvideo.utils.path_resolver import PathResolver
+
+    beat_num = int(beat.get("beat_number") or 0)
+    paths = PathResolver(output_dir, episode_num)
+    frame_path = paths.first_frame_for_video(beat_num, use_director_render=use_director_render)
+    next_frame_path = paths.first_frame_for_video(
+        beat_num + 1, use_director_render=use_director_render
+    )
+    character_map = await _build_character_map(
+        store, beats, username, project_name, episode_num=episode_num
+    )
+    candidates = _h3_beat_reference_candidates(
+        character_map, beat, output_dir=output_dir, episode_num=episode_num
+    )
+    plan = _h3_plan_inputs(
+        requested_mode=mode if mode is not None else (h3_config.h3_mode or None),
+        first_frame_choice=first_frame if first_frame is not None else (h3_config.h3_first_frame or None),
+        last_frame_choice=last_frame if last_frame is not None else (h3_config.h3_last_frame or None),
+        frame_path=frame_path,
+        next_frame_path=next_frame_path,
+        candidates=candidates,
+        keys=reference_keys if reference_keys is not None else h3_config.h3_reference_keys,
+    )
+    plan.update(
+        {
+            "character_map": character_map,
+            "candidates": candidates,
+            "frame_path": frame_path,
+            "frame_exists": frame_path.exists(),
+            "next_frame_path": next_frame_path,
+        }
+    )
+    return plan
+
+
 def _h3_display_url(ctx: Any, output_dir: str | Path, abs_path: str | None) -> str | None:
     """Convert an absolute filesystem path under `output_dir` into the
     browser-servable `/static/projects/{id}/...` URL the frontend's
@@ -5459,6 +5731,8 @@ def _video_review_fingerprint(
     ratio: str,
     reference_paths: list[str],
     frame_path: str | None,
+    mode: str = "",
+    last_frame_path: str | None = None,
 ) -> str:
     """Cheap change-detection digest for the review → generate round trip.
     Mtimes of referenced files are folded in so a regenerated portrait or
@@ -5469,6 +5743,10 @@ def _video_review_fingerprint(
     import hashlib
 
     parts = [video_backend, prompt, f"{duration:.2f}", ratio, frame_path or ""]
+    if mode:
+        parts.append(f"mode={mode}")
+    if last_frame_path:
+        parts.append(f"last={last_frame_path}")
     for p in reference_paths:
         try:
             parts.append(f"{p}:{Path(p).stat().st_mtime_ns}")
@@ -5534,6 +5812,13 @@ async def review_single_video(
     prompt_source = ""
     worker_status: dict[str, Any] | None = None
     needs_h3_prompt = False
+    h3_candidates_out: list[dict[str, Any]] = []
+    h3_plan_error = ""
+    h3_available_modes: dict[str, Any] = {}
+    h3_requested_mode = ""
+    render_exists = frame_exists
+    h3_first_used = True
+    h3_last_frame_path: str | None = None
 
     if is_runpod_h3:
         from novelvideo.agents.minimax_h3_prompt_lint import lint_minimax_h3_prompt
@@ -5548,19 +5833,44 @@ async def review_single_video(
         ratio = h3_config.ratio or ratio
         prompt_source = h3_config.prompt_source
 
-        character_map = await _build_character_map(
-            store, beats, username, project_name, episode_num=episode_num
+        h3_plan = await _h3_beat_plan(
+            store=store,
+            beats=beats,
+            beat=beat,
+            username=username,
+            project_name=project_name,
+            episode_num=episode_num,
+            output_dir=output_dir,
+            use_director_render=bool(body.use_director_render),
+            h3_config=h3_config,
+            mode=body.h3_mode,
+            first_frame=body.h3_first_frame,
+            last_frame=body.h3_last_frame,
+            reference_keys=body.h3_reference_keys,
         )
-        resolved_refs = _h3_identity_references(character_map, beat)
-        if body.h3_reference_keys is not None:
-            wanted = set(body.h3_reference_keys)
-            resolved_refs = [r for r in resolved_refs if r["identity_id"] in wanted]
-        reference_paths = [r["path"] for r in resolved_refs]
+        mode = h3_plan["mode"]
+        h3_first_used = h3_plan["use_first_frame"]
+        h3_last_used = h3_plan["use_last_frame"]
+        selected_refs = h3_plan["references"]
+        offset = 2 if h3_first_used else 1
+        reference_paths = [r["path"] for r in selected_refs]
         references_out = [
-            {"tag": f"<Picture {i + 2}>", "kind": "character", **r}
-            for i, r in enumerate(resolved_refs)
+            {"tag": f"<Picture {i + offset}>", **r} for i, r in enumerate(selected_refs)
         ]
-        mode = "ref2va" if references_out else "fl2va"
+        selected_keys = {r["key"] for r in selected_refs}
+        h3_candidates_out = [
+            {**c, "selected": c["key"] in selected_keys} for c in h3_plan["candidates"]
+        ]
+        h3_plan_error = h3_plan["error"]
+        h3_available_modes = h3_plan["available_modes"]
+        h3_requested_mode = h3_plan["requested_mode"]
+        if h3_last_used:
+            h3_last_frame_path = str(h3_plan["next_frame_path"])
+        # The first frame / last frame are only part of the submission (and
+        # the fingerprint) when the chosen mode actually uses them.
+        if not h3_first_used:
+            frame_path = Path("")
+            frame_exists = False
 
         # The stored `final_prompt` is a shared field with every other
         # video backend (Seedance2/HappyHorse/Grok) — whatever is sitting
@@ -5576,7 +5886,7 @@ async def review_single_video(
             lint = lint_minimax_h3_prompt(
                 prompt,
                 mode=mode,
-                reference_count=len(references_out) + 1,
+                reference_count=_h3_picture_count(h3_plan),
                 duration_seconds=video_duration,
                 expects_dialogue=str(beat.get("audio_type") or "") == "dialogue",
             )
@@ -5607,6 +5917,8 @@ async def review_single_video(
         ratio=ratio,
         reference_paths=reference_paths,
         frame_path=str(frame_path) if frame_exists else None,
+        mode=mode if is_runpod_h3 else "",
+        last_frame_path=h3_last_frame_path,
     )
 
     references_display = [
@@ -5624,12 +5936,25 @@ async def review_single_video(
         "frame_path": _h3_display_url(
             ctx, output_dir, str(frame_path) if frame_exists else None
         ),
-        "frame_missing": not frame_exists,
+        "frame_missing": (h3_plan_error == "no_render") if is_runpod_h3 else (not frame_exists),
         "references": references_display,
         "lint": lint_issues,
         "worker_status": worker_status,
         "input_fingerprint": fingerprint,
         "needs_h3_prompt": needs_h3_prompt,
+        # H3 input choices (see `_h3_plan_inputs`): every candidate image the
+        # beat could use with its `selected` flag, which modes can run, and
+        # why the current combination is blocked, if it is.
+        "candidates": [
+            {**c, "path": _h3_display_url(ctx, output_dir, c.get("path"))}
+            for c in h3_candidates_out
+        ],
+        "available_modes": h3_available_modes,
+        "plan_error": h3_plan_error,
+        "requested_mode": h3_requested_mode,
+        "render_exists": render_exists,
+        "first_frame_used": bool(frame_exists) if is_runpod_h3 else True,
+        "last_frame_path": _h3_display_url(ctx, output_dir, h3_last_frame_path),
     }
 
 
@@ -5722,17 +6047,31 @@ async def generate_minimax_h3_prompt(
     from novelvideo.utils.path_resolver import PathResolver
     from novelvideo.video_duration import video_duration_bounds_for_backend
 
-    paths = PathResolver(output_dir, episode_num)
-    frame_path = paths.first_frame_for_video(beat_num)
-    if not frame_path.exists():
-        # The rewriter now looks at the actual first-frame image rather
-        # than describing it from `visual_description` text alone — same
-        # prerequisite `/video/review` already enforces before submission,
-        # just surfaced here too since this route can be called on its own.
+    existing_h3_config = parse_seedance2_config(beat.get("seedance2_config_json"))
+    h3_plan = await _h3_beat_plan(
+        store=store,
+        beats=beats,
+        beat=beat,
+        username=username,
+        project_name=project_name,
+        episode_num=episode_num,
+        output_dir=output_dir,
+        use_director_render=bool(body.use_director_render),
+        h3_config=existing_h3_config,
+        mode=body.h3_mode,
+        first_frame=body.h3_first_frame,
+        last_frame=body.h3_last_frame,
+        reference_keys=body.h3_reference_keys,
+    )
+    if h3_plan["error"]:
+        # The chosen mode cannot run (e.g. fl2va without a render, ref2va
+        # with nothing selected) — same prerequisites `/video/review` shows.
         return {
             "ok": False,
-            "error": f"Beat {beat_num} first frame does not exist. Generate a preview before writing the MiniMax H3 prompt.",
+            "error": _h3_plan_error_message(h3_plan["error"], beat_num),
+            "plan_error": h3_plan["error"],
         }
+    frame_path = h3_plan["frame_path"]
     if body.duration is not None:
         video_duration = float(body.duration)
     else:
@@ -5752,14 +6091,13 @@ async def generate_minimax_h3_prompt(
     prev_beat = beats[beat_index - 1] if beat_index > 0 else None
     next_beat = beats[beat_index + 1] if beat_index + 1 < len(beats) else None
 
-    character_map = await _build_character_map(
-        store, beats, username, project_name, episode_num=episode_num
-    )
-    resolved_refs = _h3_identity_references(character_map, beat)
+    character_map = h3_plan["character_map"]
+    resolved_refs = h3_plan["references"]
+    picture_offset = 2 if h3_plan["use_first_frame"] else 1
     references = [
         MiniMaxH3Reference(
-            tag=f"<Picture {i + 2}>",
-            kind="character",
+            tag=f"<Picture {i + picture_offset}>",
+            kind=r["kind"],
             name=r["name"],
             appearance_details=r["appearance_details"],
             image_path=r["path"],
@@ -5798,7 +6136,9 @@ async def generate_minimax_h3_prompt(
             dialogue_line = _h3_strip_redundant_speaker_label(dialogue_line, clean_speaker_name)
 
     context = MiniMaxH3BeatContext(
-        mode="ref2va" if references else "fl2va",
+        mode=h3_plan["mode"],
+        has_first_frame=bool(h3_plan["use_first_frame"]),
+        last_frame_path=str(h3_plan["next_frame_path"]) if h3_plan["use_last_frame"] else "",
         visual_description=_h3_replace_identity_markers(
             str(beat.get("visual_description") or ""), character_map
         ),
@@ -5823,7 +6163,7 @@ async def generate_minimax_h3_prompt(
             beat, beat.get("video_mode", "first_frame")
         ),
         director_guidance=str(body.prompt_guidance or ""),
-        first_frame_path=str(frame_path),
+        first_frame_path=str(frame_path) if h3_plan["use_first_frame"] else "",
         references=references,
     )
 
@@ -5840,15 +6180,21 @@ async def generate_minimax_h3_prompt(
     # docstring for the full rationale.
     result, lint_issues, fallback_used = await _generate_h3_prompt_result(
         context,
-        reference_count=len(references) + 1,
+        reference_count=_h3_picture_count(h3_plan),
         duration_seconds=video_duration,
         expects_dialogue=audio_type == "dialogue",
     )
 
-    h3_config = parse_seedance2_config(beat.get("seedance2_config_json"))
+    h3_config = existing_h3_config
     h3_config.final_prompt = result.final_prompt
     h3_config.prompt_source = "minimax_h3"
     h3_config.reference_image_paths = [r["path"] for r in resolved_refs]
+    # Remember the choices this prompt was written for, so the dialog
+    # reopens with them and generation sends exactly this picture set.
+    h3_config.h3_mode = h3_plan["requested_mode"] if h3_plan["requested_mode"] != "auto" else ""
+    h3_config.h3_first_frame = "render" if h3_plan["use_first_frame"] else "none"
+    h3_config.h3_last_frame = "next_render" if h3_plan["use_last_frame"] else "none"
+    h3_config.h3_reference_keys = [r["key"] for r in resolved_refs]
     h3_config.ratio = context.aspect_ratio
     if hasattr(store, "update_beat_asset"):
         await store.update_beat_asset(
@@ -5864,7 +6210,7 @@ async def generate_minimax_h3_prompt(
         "lint": lint_issues,
         "mode": context.mode,
         "references": [
-            {"tag": r.tag, "name": r.name, "appearance_details": r.appearance_details}
+            {"tag": r.tag, "kind": r.kind, "name": r.name, "appearance_details": r.appearance_details}
             for r in references
         ],
     }

@@ -30,6 +30,7 @@ from novelvideo.cognee.screenplay_normalizer import (
     normalize_time_of_day,
 )
 from novelvideo.utils.derived_scenes import compose_derived_scene_name
+from novelvideo.utils.screenplay_scene_parser import norm_scene_key
 from novelvideo.workflows.literal_script_writing import (
     LiteralScriptWritingWorkflow,
     SceneBlock,
@@ -1716,11 +1717,16 @@ Episode {getattr(episode, "number", "")} {getattr(episode, "title", "") or ""}
             if str(getattr(item, "name", "") or "").strip()
             and not str(getattr(item, "base_scene_id", "") or "").strip()
         ]
+        name_key = norm_scene_key(name)
         for item in base_candidates:
-            if name in item.aliases:
+            if name_key == norm_scene_key(item.name):
                 return item
         for item in base_candidates:
-            if name in item.name or item.name in name:
+            if name in item.aliases or name_key in {norm_scene_key(a) for a in item.aliases}:
+                return item
+        for item in base_candidates:
+            item_key = norm_scene_key(item.name)
+            if name_key and (name_key in item_key or item_key in name_key):
                 return item
 
         return None

@@ -5,9 +5,11 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import {
   AlertTriangle,
+  Check,
   Image as ImageIcon,
   Loader2,
   Play,
+  Plus,
   WandSparkles,
 } from "lucide-react";
 
@@ -30,12 +32,36 @@ import { backendErrorToastMessage } from "@/lib/api-errors";
 import {
   useGenerateMiniMaxH3Prompt,
   useVideoReview,
+  type H3InputMode,
   type SingleVideoRequestBody,
 } from "@/lib/queries/video";
+import { H3PromptPreview, buildH3PictureMap } from "./h3-prompt-preview";
 import {
   useRunpodWorkerStatus,
   useStartRunpodWorker,
 } from "@/lib/queries/runpod-worker";
+
+const H3_MODES: H3InputMode[] = ["auto", "t2va", "fl2va", "flf2va", "ref2va"];
+
+/** What the user picked in the dialog; sent with every review / rewrite /
+ * confirm so all three number `<Picture N>` for the same picture set. */
+interface H3Inputs {
+  mode?: H3InputMode;
+  firstFrame?: "render" | "none";
+  keys?: string[];
+}
+
+function h3InputsToBody(inputs: H3Inputs): Partial<SingleVideoRequestBody> {
+  return {
+    ...(inputs.mode ? { h3_mode: inputs.mode } : {}),
+    ...(inputs.firstFrame ? { h3_first_frame: inputs.firstFrame } : {}),
+    ...(inputs.keys ? { h3_reference_keys: inputs.keys } : {}),
+  };
+}
+
+/** How long to wait after the last input change before asking the LLM to
+ * rewrite the prompt for the new picture set (avoids one call per click). */
+const REWRITE_DEBOUNCE_MS = 900;
 
 export interface VideoReviewDialogProps {
   open: boolean;
@@ -91,6 +117,14 @@ export function VideoReviewDialog({
   // dialog-open/beat-switch, even though the review this depends on can
   // itself re-fire (e.g. after `fetchReview(res.prompt)` below).
   const autoRewriteFiredRef = useRef(false);
+  const [h3Mode, setH3Mode] = useState<H3InputMode | undefined>();
+  const [firstFrame, setFirstFrame] = useState<"render" | "none" | undefined>();
+  const [selectedKeys, setSelectedKeys] = useState<string[] | undefined>();
+  // The inputs are seeded from the first review of each dialog-open, then
+  // owned by the user — later reviews must not overwrite their choices.
+  const inputsSeededRef = useRef(false);
+  const rewriteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const currentInputs = (): H3Inputs => ({ mode: h3Mode, firstFrame, keys: selectedKeys });
 
   // `reviewBody.seedance2ConfigJson` is a snapshot of the parent's local
   // draft state taken whenever `video-pane.tsx` last rendered — it does NOT
@@ -102,21 +136,27 @@ export function VideoReviewDialog({
   // textarea above it already shows the new one. `promptOverride` lets a
   // caller force the review to check a specific prompt text instead of
   // whatever `reviewBody` currently snapshots.
-  const fetchReview = (promptOverride?: string) => {
+  const fetchReview = (promptOverride?: string, inputs: H3Inputs = currentInputs()) => {
     reviewMutation.mutate({
       beatNum,
-      body:
-        promptOverride !== undefined
-          ? { ...reviewBody, final_prompt: promptOverride }
-          : reviewBody,
+      body: {
+        ...reviewBody,
+        ...h3InputsToBody(inputs),
+        ...(promptOverride !== undefined ? { final_prompt: promptOverride } : {}),
+      },
     });
   };
 
   useEffect(() => {
     promptSeededRef.current = false;
     autoRewriteFiredRef.current = false;
+    inputsSeededRef.current = false;
+    setH3Mode(undefined);
+    setFirstFrame(undefined);
+    setSelectedKeys(undefined);
+    if (rewriteTimerRef.current) clearTimeout(rewriteTimerRef.current);
     if (!open) return;
-    fetchReview();
+    fetchReview(undefined, {});
     // Re-fetch only on a genuine open transition (including a re-open after
     // `input_stale`) or a beat switch — not on every render where the
     // caller hands us a structurally-equal-but-new `reviewBody` object.
@@ -133,7 +173,46 @@ export function VideoReviewDialog({
     promptSeededRef.current = true;
   }, [open, review]);
 
-  const handleAiRewrite = async () => {
+  useEffect(() => {
+    if (!open || inputsSeededRef.current || !review) return;
+    inputsSeededRef.current = true;
+    setH3Mode((review.requested_mode as H3InputMode | undefined) || "auto");
+    setFirstFrame(review.first_frame_used ? "render" : "none");
+    setSelectedKeys(
+      (review.candidates ?? []).filter((c) => c.selected).map((c) => c.key),
+    );
+  }, [open, review]);
+
+  // The user changed mode / first-frame / reference selection: re-check the
+  // new combination right away (cheap, no LLM) and, once they stop clicking,
+  // rewrite the prompt for it — the old text numbers a different picture set.
+  const applyInputs = (next: H3Inputs) => {
+    setH3Mode(next.mode);
+    setFirstFrame(next.firstFrame);
+    setSelectedKeys(next.keys);
+    fetchReview(editedPrompt, next);
+    if (rewriteTimerRef.current) clearTimeout(rewriteTimerRef.current);
+    rewriteTimerRef.current = setTimeout(() => {
+      void handleAiRewrite(next);
+    }, REWRITE_DEBOUNCE_MS);
+  };
+
+  useEffect(
+    () => () => {
+      if (rewriteTimerRef.current) clearTimeout(rewriteTimerRef.current);
+    },
+    [],
+  );
+
+  const toggleReference = (key: string) => {
+    const keys = selectedKeys ?? [];
+    applyInputs({
+      ...currentInputs(),
+      keys: keys.includes(key) ? keys.filter((k) => k !== key) : [...keys, key],
+    });
+  };
+
+  const handleAiRewrite = async (inputs: H3Inputs = currentInputs()) => {
     try {
       // Pass whatever duration the review is currently showing (itself
       // `reviewBody.duration` if the caller set one, else the beat's own
@@ -142,6 +221,10 @@ export function VideoReviewDialog({
       const res = await aiRewriteMutation.mutateAsync({
         beatNum,
         duration: review?.duration,
+        inputs: {
+          ...h3InputsToBody(inputs),
+          use_director_render: reviewBody.use_director_render,
+        },
       });
       if (!res.ok) {
         toast.error(res.error || t("episode.workbench.videoReview.reviewFailed"));
@@ -156,7 +239,7 @@ export function VideoReviewDialog({
       );
       // Re-lint against the prompt we just got back, explicitly — not the
       // stale `reviewBody` snapshot (see `fetchReview`'s comment above).
-      fetchReview(res.prompt);
+      fetchReview(res.prompt, inputs);
     } catch (err) {
       toast.error(backendErrorToastMessage(err, t));
     }
@@ -171,9 +254,18 @@ export function VideoReviewDialog({
   // rewrite themselves every single time, generate one automatically as
   // soon as the review confirms there isn't a usable H3 prompt yet.
   useEffect(() => {
+    const staleForInputs = Boolean(
+      review?.lint.some(
+        (item) =>
+          item.severity === "error" &&
+          (item.code === "picture_tags_mismatch" || item.code === "missing_alignment_line"),
+      ),
+    );
     if (
       !open ||
-      !review?.needs_h3_prompt ||
+      !inputsSeededRef.current ||
+      !(review?.needs_h3_prompt || staleForInputs) ||
+      review?.plan_error ||
       autoRewriteFiredRef.current ||
       aiRewriteMutation.isPending
     ) {
@@ -182,7 +274,7 @@ export function VideoReviewDialog({
     autoRewriteFiredRef.current = true;
     void handleAiRewrite();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, review?.needs_h3_prompt]);
+  }, [open, review?.needs_h3_prompt, review?.lint, h3Mode]);
 
   const handleStartWorker = async () => {
     try {
@@ -200,6 +292,7 @@ export function VideoReviewDialog({
     onOpenChange(false);
     onConfirm({
       ...reviewBody,
+      ...h3InputsToBody(currentInputs()),
       final_prompt: editedPrompt,
       review_fingerprint: review.input_fingerprint,
     });
@@ -209,6 +302,24 @@ export function VideoReviewDialog({
   const lintErrors = review?.lint.filter((item) => item.severity === "error") ?? [];
   const lintWarnings = review?.lint.filter((item) => item.severity === "warning") ?? [];
   const frameSrc = review?.frame_path ? resolveMediaUrl(review.frame_path) : null;
+  const candidateTiles = review?.candidates ?? [];
+  // References only enter the request in reference mode (or auto, which
+  // resolves to it); fl2va / first+last / text-to-video ignore them.
+  const referencesUsed = h3Mode === undefined || h3Mode === "auto" || h3Mode === "ref2va";
+  const pictureMap = buildH3PictureMap({
+    firstFrame:
+      review?.first_frame_used && review.frame_path
+        ? { name: t("episode.workbench.videoReview.frame"), src: review.frame_path }
+        : null,
+    lastFrame: review?.last_frame_path
+      ? { name: t("episode.workbench.videoReview.lastFrame"), src: review.last_frame_path }
+      : null,
+    references: (review?.references ?? []).map((r) => ({
+      kind: r.kind,
+      name: r.name,
+      src: r.path || null,
+    })),
+  });
   const workerData = workerStatus.data?.data;
   const workerOff = Boolean(workerData && workerData.configured && !workerData.running);
   // True while the auto-rewrite-on-open effect above is generating the
@@ -279,6 +390,64 @@ export function VideoReviewDialog({
                 </div>
               )}
 
+              {review.candidates !== undefined && (
+                <div className="space-y-1.5" data-testid="h3-mode-selector">
+                  <span className="text-xs font-medium text-muted-foreground">
+                    {t("episode.workbench.videoReview.inputModeLabel")}
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {H3_MODES.map((m) => {
+                      const reason = m === "auto" ? null : (review.available_modes?.[m] ?? null);
+                      const active = (h3Mode ?? "auto") === m;
+                      return (
+                        <Button
+                          key={m}
+                          type="button"
+                          size="xs"
+                          variant={active ? "default" : "outline"}
+                          disabled={Boolean(reason)}
+                          title={
+                            reason
+                              ? t(`episode.workbench.videoReview.modeUnavailable.${reason}`, {
+                                  defaultValue: reason,
+                                })
+                              : t(`episode.workbench.videoReview.modeHint.${m}`)
+                          }
+                          onClick={() => applyInputs({ ...currentInputs(), mode: m })}
+                        >
+                          {t(`episode.workbench.videoReview.modeName.${m}`)}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                  {(h3Mode === "ref2va" || h3Mode === "auto" || h3Mode === undefined) && (
+                    <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <input
+                        type="checkbox"
+                        checked={firstFrame !== "none" && Boolean(review.render_exists)}
+                        disabled={!review.render_exists || h3Mode === "auto" || h3Mode === undefined}
+                        onChange={(e) =>
+                          applyInputs({
+                            ...currentInputs(),
+                            firstFrame: e.target.checked ? "render" : "none",
+                          })
+                        }
+                      />
+                      {review.render_exists
+                        ? t("episode.workbench.videoReview.useRenderAsFirstFrame")
+                        : t("episode.workbench.videoReview.noRenderYet")}
+                    </label>
+                  )}
+                  {review.plan_error && (
+                    <div className="rounded-[6px] border border-destructive/35 bg-destructive/[0.08] px-2 py-1 text-xs text-destructive">
+                      {t(`episode.workbench.videoReview.modeUnavailable.${review.plan_error}`, {
+                        defaultValue: review.plan_error,
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="grid gap-3 sm:grid-cols-[160px_1fr]">
                 <div
                   className="relative flex aspect-video w-full items-center justify-center overflow-hidden rounded-[8px] border border-white/[0.075] bg-white/[0.02] sm:w-[160px]"
@@ -343,46 +512,85 @@ export function VideoReviewDialog({
                   rows={5}
                   className="resize-none text-sm"
                 />
+                {editedPrompt.trim() && (
+                  <div className="space-y-1">
+                    <span className="text-[10px] uppercase tracking-wide text-muted-foreground/70">
+                      {t("episode.workbench.videoReview.previewLabel")}
+                    </span>
+                    <H3PromptPreview
+                      prompt={editedPrompt}
+                      map={pictureMap}
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="space-y-1.5">
                 <span className="text-xs font-medium text-muted-foreground">
                   {t("episode.workbench.videoReview.referencesHeader")}
                 </span>
-                {review.references.length > 0 ? (
-                  <div className="grid grid-cols-[repeat(auto-fill,minmax(6.5rem,6.5rem))] gap-2">
-                    {review.references.map((ref, i) => {
-                      const refSrc = ref.path ? resolveMediaUrl(ref.path) : null;
-                      return (
-                        <div
-                          key={`${ref.tag}:${i}`}
-                          className="overflow-hidden rounded-[7px] border border-white/[0.075] bg-white/[0.018]"
-                          title={ref.appearance_details}
-                        >
-                          <div className="relative aspect-square w-full bg-white/[0.02]">
-                            {refSrc ? (
-                              <img
-                                src={refSrc}
-                                alt={ref.name}
-                                className="absolute inset-0 h-full w-full object-cover"
-                              />
-                            ) : (
-                              <div className="absolute inset-0 flex items-center justify-center p-1">
-                                <span className="break-all text-center text-[9px] text-muted-foreground">
-                                  {ref.path}
-                                </span>
-                              </div>
+                {candidateTiles.length > 0 ? (
+                  <>
+                    <div className="grid grid-cols-[repeat(auto-fill,minmax(6.5rem,6.5rem))] gap-2">
+                      {candidateTiles.map((c) => {
+                        const src = c.path ? resolveMediaUrl(c.path) : null;
+                        const refTag = review.references.find((r) => r.key === c.key)?.tag;
+                        return (
+                          <button
+                            type="button"
+                            key={c.key}
+                            data-testid={`h3-candidate-${c.key}`}
+                            aria-pressed={c.selected}
+                            disabled={!referencesUsed}
+                            onClick={() => toggleReference(c.key)}
+                            title={c.appearance_details || c.name}
+                            className={cn(
+                              "overflow-hidden rounded-[7px] border bg-white/[0.018] text-left transition",
+                              c.selected && referencesUsed
+                                ? "border-sky-500/60 ring-1 ring-sky-500/40"
+                                : "border-white/[0.075] opacity-55",
+                              !referencesUsed && "cursor-not-allowed",
                             )}
-                          </div>
-                          <div className="px-1.5 py-1">
-                            <div className="truncate text-[10px] font-medium">
-                              {ref.tag} · {ref.name}
+                          >
+                            <div className="relative aspect-square w-full bg-white/[0.02]">
+                              {src ? (
+                                <img
+                                  src={src}
+                                  alt={c.name}
+                                  className="absolute inset-0 h-full w-full object-cover"
+                                />
+                              ) : (
+                                <ImageIcon className="absolute inset-0 m-auto size-5 text-muted-foreground/60" />
+                              )}
+                              <span className="absolute right-1 top-1 flex size-4 items-center justify-center rounded-full bg-black/60 text-white">
+                                {c.selected && referencesUsed ? (
+                                  <Check className="size-3" />
+                                ) : (
+                                  <Plus className="size-3" />
+                                )}
+                              </span>
                             </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                            <div className="px-1.5 py-1">
+                              <div className="truncate text-[10px] font-medium">
+                                {refTag ? `${refTag} · ` : ""}
+                                {c.name}
+                              </div>
+                              <div className="truncate text-[9px] text-muted-foreground">
+                                {t(`episode.workbench.videoReview.kind.${c.kind}`, {
+                                  defaultValue: c.kind,
+                                })}
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">
+                      {referencesUsed
+                        ? t("episode.workbench.videoReview.referencesToggleHint")
+                        : t("episode.workbench.videoReview.referencesUnusedHint")}
+                    </p>
+                  </>
                 ) : (
                   <p className="text-xs text-muted-foreground">
                     {t("episode.workbench.videoReview.referencesEmpty")}
@@ -437,6 +645,7 @@ export function VideoReviewDialog({
             disabled={
               loading ||
               !review ||
+              Boolean(review.plan_error) ||
               lintErrors.length > 0 ||
               generatingInitialPrompt ||
               aiRewriteMutation.isPending

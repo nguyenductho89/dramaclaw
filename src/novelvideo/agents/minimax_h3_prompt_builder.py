@@ -104,7 +104,14 @@ class MiniMaxH3BeatContext(BaseModel):
     """Everything the rewriter needs about one beat. Assembled by the
     caller from the beat/episode data — this module has no store access."""
 
-    mode: Literal["ref2va", "fl2va"] = "ref2va"
+    mode: Literal["ref2va", "fl2va", "flf2va", "t2va"] = "ref2va"
+    # Whether `<Picture 1>` is a real first frame pinned at t=0. False for
+    # text-to-video and for reference-only generation (no render needed):
+    # the references then start at `<Picture 1>`.
+    has_first_frame: bool = True
+    # flf2va: the last frame is the picture right after the references
+    # (fl2va has none), pinned at the final frame.
+    last_frame_path: str = ""
     visual_description: str = ""
     narration_segment: str = ""
     # The beat's actual spoken line(s), verbatim — assembled into the
@@ -275,10 +282,12 @@ def _build_agent() -> Agent:
         "will be given one beat's context (visual description, narration, "
         "duration, aspect ratio, any director guidance) as text, and the "
         "actual first frame plus any character/scene/prop reference images "
-        "as attached images, each labeled with its tag (<Picture 1> is "
-        "always the first frame; <Picture 2>, <Picture 3>, ... are "
-        "references, in the order listed, each corresponding 1:1 to the "
-        "`subjects` list you return). Describe what you genuinely see in "
+        "as attached images, each labeled with its tag (when the beat has a "
+        "first frame, <Picture 1> is the first frame and <Picture 2>, "
+        "<Picture 3>, ... are references; when it has none, the references "
+        "start at <Picture 1>. References are in the order listed, each "
+        "corresponding 1:1 to the `subjects` list you return; a reference "
+        "of kind scene is a location, a prop is an object). Describe what you genuinely see in "
         "those images — hair, face, clothing, the scene itself — rather "
         "than any text hint that comes with a reference; a text hint is "
         "only ever supplementary, and the image always wins if the two "
@@ -331,6 +340,18 @@ def get_minimax_h3_prompt_agent() -> Agent:
     return _agent
 
 
+def _picture_order_note(context: MiniMaxH3BeatContext) -> str:
+    if context.has_first_frame:
+        return (
+            "<Picture 1> is the first frame — its image follows this text, then each "
+            "reference's image in the order listed below"
+        )
+    return (
+        "there is NO first frame; the reference images follow this text in the order "
+        "listed below, starting at <Picture 1>"
+    )
+
+
 def _format_references(context: MiniMaxH3BeatContext) -> str:
     lines = []
     for i, ref in enumerate(context.references, start=1):
@@ -340,7 +361,9 @@ def _format_references(context: MiniMaxH3BeatContext) -> str:
         lines.append(
             f"- subjects[{i - 1}] <- {ref.tag} ({ref.kind}){f' — {ref.name}' if ref.name else ''}{attached_note}{hint}"
         )
-    return "\n".join(lines) if lines else "(no references beyond the first frame — this is an fl2va beat)"
+    if lines:
+        return "\n".join(lines)
+    return "(no reference images — describe everything from the text)"
 
 
 def _build_user_prompt(context: MiniMaxH3BeatContext) -> str:
@@ -377,7 +400,7 @@ Next beat: {context.next_beat_narration or "(none)"}
 ## Dialogue
 {dialogue_note}
 
-## References (subjects[i] corresponds to this list's entry i, in order; <Picture 1> is always the first frame — its image follows this text, then each reference's image in the order listed below)
+## References (subjects[i] corresponds to this list's entry i, in order; {_picture_order_note(context)})
 {_format_references(context)}
 
 ## Existing motion hint (optional, may be stale — treat only as a hint, not authoritative)
@@ -568,7 +591,10 @@ def assemble_minimax_h3_prompt(context: MiniMaxH3BeatContext, content: MiniMaxH3
     string is sanitized before insertion — see module docstring."""
     duration = max(float(context.duration_seconds or 5.0), 0.1)
     references = context.references
-    mode = context.mode if references else "fl2va"
+    mode = context.mode
+    if mode == "ref2va" and not references:
+        mode = "fl2va" if context.has_first_frame else "t2va"
+    has_first_frame = context.has_first_frame and mode != "t2va"
     character_count = sum(1 for ref in references if ref.kind == "character")
 
     first_frame_desc = _sanitize(content.first_frame_description) or "the scene and subjects as shown"
@@ -587,8 +613,20 @@ def assemble_minimax_h3_prompt(context: MiniMaxH3BeatContext, content: MiniMaxH3
     )
     dialogue_sentence = _dialogue_block(context, content)
 
+    opening = (
+        f"[Shot 1] The shot begins from <Picture 1>: {framing}."
+        if has_first_frame
+        else f"[Shot 1] {framing[:1].upper()}{framing[1:]}."
+    )
+    if mode == "flf2va":
+        closing = (
+            f"The camera holds this framing until the final frame. At {duration:.2f} seconds, "
+            f"the shot settles into the composition of <Picture 2> and holds to the end."
+        )
+    else:
+        closing = f"The camera holds this framing until the final frame. At {duration:.2f} seconds, {end_state}."
     body_parts = [
-        f"[Shot 1] The shot begins from <Picture 1>: {framing}.",
+        opening,
         camera_sentence,
         action_sentences,
         dialogue_sentence,
@@ -597,18 +635,26 @@ def assemble_minimax_h3_prompt(context: MiniMaxH3BeatContext, content: MiniMaxH3
             "changes, particles, fog, or environmental effects. All motion "
             "happens at natural real-time speed, not slow motion."
         ),
-        f"The camera holds this framing until the final frame. At {duration:.2f} seconds, {end_state}.",
+        closing,
         "There are no subtitles, captions, on-screen text, logos or watermarks anywhere in frame.",
     ]
     description_body = style_line + "\n" + " ".join(p for p in body_parts if p)
 
-    if mode == "fl2va":
-        alignment = (
-            "For the target video, at 0.00 seconds into the target video, "
-            "<Picture 1> (from [Shot 1]) is fully referenced."
-        )
+    if mode in ("fl2va", "flf2va", "t2va"):
+        alignment = ""
+        if mode != "t2va":
+            alignment = (
+                "For the target video, at 0.00 seconds into the target video, "
+                "<Picture 1> (from [Shot 1]) is fully referenced."
+            )
+            if mode == "flf2va":
+                alignment += (
+                    f" At {duration:.2f} seconds, <Picture 2> (from [Shot 1]) is fully "
+                    "referenced as the last frame."
+                )
+            alignment += "\n\n"
         return (
-            f"{alignment}\n\n"
+            f"{alignment}"
             f"integrated_multimodal_description:\n{description_body}\n\n"
             f"overall_soundscape:\n{soundscape}\n\n"
             f"non_diegetic_music:\n{music}"
@@ -616,41 +662,42 @@ def assemble_minimax_h3_prompt(context: MiniMaxH3BeatContext, content: MiniMaxH3
 
     # ref2va
     subject_lines: list[str] = []
+    retention_lines: list[str] = []
+    subject_no = 0
     for i, ref in enumerate(references, start=1):
         subject_content = content.subjects[i - 1] if i - 1 < len(content.subjects) else None
         anchor = _sanitize(subject_content.anchor) if subject_content else ""
+        display_name = _sanitize(ref.name) or f"the subject in {ref.tag}"
+        if ref.kind == "scene":
+            # A location, not a cast member: no <Subject N>, just a setting line.
+            anchor = anchor or "matching the reference image closely"
+            subject_lines.append(f"{ref.tag} shows the setting {display_name}, with {anchor}.")
+            retention_lines.append(
+                f"{ref.tag} (setting): partially_preserved - {anchor}, used as the location for the whole video."
+            )
+            continue
+        subject_no += 1
         if not anchor:
             anchor = "matching the reference image closely, with no changes"
-        kind_label = {"character": "character", "scene": "scene", "prop": "prop"}.get(
-            ref.kind, "reference"
+        noun = f"the prop {display_name}" if ref.kind == "prop" else display_name
+        subject_lines.append(f"<Subject {subject_no}> is {noun}, shown in {ref.tag}, with {anchor}.")
+        retention_lines.append(
+            f"<Subject {subject_no}> (appears in [Shot 1]): fully_preserved - {anchor}, consistent for the whole video."
         )
-        display_name = ref.name.strip() or f"the subject in {ref.tag}"
-        subject_lines.append(
-            f"<Subject {i}> is {display_name}, on the {kind_label} sheet {ref.tag}, with {anchor}."
+    if has_first_frame:
+        subject_lines.append(f"<Picture 1> is the first frame of [Shot 1], showing {first_frame_desc}.")
+        retention_lines.append(
+            "<Picture 1> ([Shot 1] first frame): fully_preserved - the video starts exactly from its framing, pose and lighting."
         )
-    subject_lines.append(f"<Picture 1> is the first frame of [Shot 1], showing {first_frame_desc}.")
     subject_definitions = "\n".join(subject_lines)
 
     summary_action = (
         _sanitize(content.summary_action) or "The subject performs the described action."
     )
+    summary_start = " that begins from <Picture 1>." if has_first_frame else "."
     summary = (
-        f"A {duration:.0f}-second {context.aspect_ratio} {framing} shot that begins from "
-        f"<Picture 1>. {summary_action} Ends with {end_state}."
-    )
-
-    retention_lines: list[str] = []
-    for i, ref in enumerate(references, start=1):
-        subject_content = content.subjects[i - 1] if i - 1 < len(content.subjects) else None
-        anchor = _sanitize(subject_content.anchor) if subject_content else ""
-        if not anchor:
-            anchor = "its appearance from the reference image"
-        preservation = "partially_preserved" if ref.kind == "scene" else "fully_preserved"
-        retention_lines.append(
-            f"<Subject {i}> (appears in [Shot 1]): {preservation} - {anchor}, consistent for the whole video."
-        )
-    retention_lines.append(
-        "<Picture 1> ([Shot 1] first frame): fully_preserved - the video starts exactly from its framing, pose and lighting."
+        f"A {duration:.0f}-second {context.aspect_ratio} {framing} shot{summary_start} "
+        f"{summary_action} Ends with {end_state}."
     )
     if character_count == 1:
         retention_lines.append("No costume change, no face change, no second person.")
@@ -722,6 +769,10 @@ async def build_minimax_h3_prompt(context: MiniMaxH3BeatContext) -> MiniMaxH3Pro
     first_frame_content = _load_reference_image_content(context.first_frame_path)
     if first_frame_content is not None:
         user_prompt.append(first_frame_content)
+    if context.last_frame_path:
+        last_frame_content = _load_reference_image_content(context.last_frame_path)
+        if last_frame_content is not None:
+            user_prompt.append(last_frame_content)
     for ref in context.references:
         ref_content = _load_reference_image_content(ref.image_path)
         if ref_content is not None:

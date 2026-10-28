@@ -233,6 +233,8 @@ async def _run_single_video_async(
     if is_seedance2_backend:
         generate_kwargs["seedance2_config"] = seedance2_config
     if backend_str == "runpod_minimax_h3":
+        if config.get("h3_mode"):
+            generate_kwargs["h3_mode"] = str(config["h3_mode"])
         if config.get("profile"):
             generate_kwargs["profile"] = str(config["profile"])
         # Per-generation override of the env-gated two-stage/audio-refine

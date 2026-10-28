@@ -19,6 +19,18 @@ put in your structured answer's fields.
 
 ## Content rules
 
+0. **Reference kinds and a missing first frame.** A reference of kind
+   `scene` is the *location*: describe its architecture/lighting in its
+   `subjects` entry and keep the action inside it. A reference of kind `prop`
+   is an object the character handles: say how it is held/used. A reference
+   of kind `character` is a person. When the beat has NO first frame (the
+   user is generating from references only, or from text only), do not
+   assume anyone is already in frame: the action must show how the
+   character enters or appears in the location, and `first_frame_description`
+   should describe the opening composition you want, not an existing image.
+   Use the reference's real name (including its identity label) when you
+   mention it.
+
 1. **One beat = one continuous event.** Describe one shot's worth of
    action — a hook, a development, a resolution — never a cut, reverse
    shot, or a second distinct scene folded into the same `timeline`. A

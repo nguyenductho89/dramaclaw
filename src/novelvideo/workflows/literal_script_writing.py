@@ -29,6 +29,7 @@ from novelvideo.sqlite_store import load_episode_planning_content
 from novelvideo.time_of_day import normalize_time_of_day
 from novelvideo.utils.screenplay_quality import check_screenplay_import_quality
 from novelvideo.utils.screenplay_scene_parser import (
+    norm_scene_key,
     parse_character_line,
     parse_location_header,
     parse_scene_blocks,
@@ -999,7 +1000,7 @@ Complete the beat metadata for the current line of the script of episode {episod
             if scene.name not in base_ids:
                 continue
             for alias in scene.aliases or []:
-                key = " ".join(str(alias or "").replace("\u3000", " ").lower().split())
+                key = norm_scene_key(alias)
                 if key:
                     self._scene_aliases.setdefault(key, set()).add(scene.name)
 
@@ -1470,13 +1471,19 @@ Complete the beat metadata for the current line of the script of episode {episod
         for scene_id in base_ids:
             if scene_id == location:
                 return scene_id
-        alias_key = " ".join(location.replace("\u3000", " ").lower().split())
-        alias_matches = self._scene_aliases.get(alias_key, set())
+        location_key = norm_scene_key(location)
+        name_matches = {
+            scene_id for scene_id in base_ids if norm_scene_key(scene_id) == location_key
+        }
+        if len(name_matches) == 1:
+            return next(iter(name_matches))
+        alias_matches = self._scene_aliases.get(location_key, set())
         if alias_matches:
             return next(iter(alias_matches)) if len(alias_matches) == 1 else ""
         partial_matches = {
             scene_id for scene_id in base_ids
-            if location in scene_id or scene_id in location
+            if location_key in norm_scene_key(scene_id)
+            or norm_scene_key(scene_id) in location_key
         }
         if len(partial_matches) == 1:
             return next(iter(partial_matches))

@@ -21,6 +21,11 @@ from novelvideo.time_of_day import (
 )
 
 
+def norm_scene_key(value: str) -> str:
+    """Case/whitespace-insensitive key for matching a script heading to a scene name."""
+    return " ".join(str(value or "").replace("\u3000", " ").casefold().split())
+
+
 # Time words accepted in scene headings: exactly the seven documented English words
 # plus their Vietnamese equivalents. Anything else makes the whole heading unrecognizable.
 # Longest first so the alternation prefers "bình minh" over a shorter prefix.

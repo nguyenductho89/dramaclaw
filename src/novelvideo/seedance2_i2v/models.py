@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from enum import Enum
-from typing import Any
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -44,6 +44,17 @@ class Seedance2VideoConfig(BaseModel):
     reference_audio_paths: list[str] = Field(default_factory=list)
     text_overlay: dict[str, Any] = Field(default_factory=dict)
     selected_asset_keys: list[str] = Field(default_factory=list)
+    # MiniMax H3 (`runpod_minimax_h3`) per-beat input choices, persisted so the
+    # review dialog reopens with what the user picked: requested mode
+    # ("" / auto / t2va / fl2va / flf2va / ref2va), whether the rendered
+    # frame is pinned as `<Picture 1>` ("render" / "none"), whether the next
+    # beat's frame is the last frame ("next_render" / "none"), and the chosen
+    # reference keys (`identity:<id>` / `prop:<name>` / `scene:<name>`);
+    # None = use the default selection.
+    h3_mode: str = ""
+    h3_first_frame: str = ""
+    h3_last_frame: str = ""
+    h3_reference_keys: Optional[list[str]] = None
 
     @field_validator(
         "final_prompt",

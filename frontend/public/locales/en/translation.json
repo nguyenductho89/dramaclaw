@@ -4347,7 +4347,38 @@
         "startWorker": "Start worker",
         "startingWorker": "Starting…",
         "confirm": "Confirm",
-        "cancel": "Cancel"
+        "cancel": "Cancel",
+        "inputModeLabel": "Video input",
+        "modeName": {
+          "auto": "Auto",
+          "t2va": "Text → Video",
+          "fl2va": "First frame",
+          "flf2va": "First + last frame",
+          "ref2va": "Reference"
+        },
+        "modeHint": {
+          "auto": "Render as first frame plus the selected references (falls back to references only when there is no render)",
+          "t2va": "Text only — no images",
+          "fl2va": "Animate the rendered frame",
+          "flf2va": "Rendered frame to the next beat's rendered frame",
+          "ref2va": "Characters, props and scene as references; the render is optional"
+        },
+        "modeUnavailable": {
+          "no_render": "This beat has no rendered frame",
+          "no_next_render": "The next beat has no rendered frame",
+          "no_references": "Select at least one reference"
+        },
+        "useRenderAsFirstFrame": "Use the rendered frame as the first frame",
+        "noRenderYet": "No rendered frame — references only",
+        "previewLabel": "Prompt preview (hover a tag to see its image)",
+        "lastFrame": "Last frame",
+        "kind": {
+          "character": "Character",
+          "prop": "Prop",
+          "scene": "Scene"
+        },
+        "referencesToggleHint": "Click an image to add or remove it. The prompt is rewritten for the selected set.",
+        "referencesUnusedHint": "The selected mode does not use references. Switch to Auto or Reference to choose them."
       },
       "renderReview": {
         "title": "{{model}} render review",

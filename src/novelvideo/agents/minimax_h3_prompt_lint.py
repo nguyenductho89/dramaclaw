@@ -25,7 +25,8 @@ BASE_SECTIONS = ("integrated_multimodal_description", "overall_soundscape", "non
 
 FL2VA_ALIGNMENT_RE = re.compile(
     r"^For the target video, at 0\.00 seconds into the target video, "
-    r"<Picture 1> \(from \[Shot 1\]\) is fully referenced\.$",
+    r"<Picture 1> \(from \[Shot 1\]\) is fully referenced\."
+    r"(?: At \d+\.\d{2} seconds, <Picture 2> \(from \[Shot 1\]\) is fully referenced as the last frame\.)?$",
     re.MULTILINE,
 )
 PICTURE_TAG_RE = re.compile(r"<Picture (\d+)>")
@@ -120,7 +121,8 @@ def lint_minimax_h3_prompt(
     expects_dialogue: bool = False,
 ) -> LintResult:
     """`reference_count` is the total number of `<Picture N>` tags expected
-    (first frame counts as 1). `duration_seconds`, if given, checks the
+    (first frame counts as 1; 0 for text-to-video). `mode` is one of
+    ref2va / fl2va / flf2va / t2va. `duration_seconds`, if given, checks the
     last timestamp against it. `expects_dialogue=True` means the beat's
     `audio_type` is `dialogue` — a prompt with no `<d>` tag at all in that
     case silently drops the character's line (seen in a real run: the
@@ -148,9 +150,9 @@ def lint_minimax_h3_prompt(
         )
 
     sections = REF_SECTIONS if mode == "ref2va" else BASE_SECTIONS
-    if mode == "fl2va" and not FL2VA_ALIGNMENT_RE.search(text):
+    if mode in ("fl2va", "flf2va") and not FL2VA_ALIGNMENT_RE.search(text):
         result.issues.append(
-            LintIssue("error", "missing_alignment_line", "fl2va is missing the official alignment sentence (verbatim)")
+            LintIssue("error", "missing_alignment_line", f"{mode} is missing the official alignment sentence (verbatim)")
         )
     missing = [name for name in sections if _section_body(text, name) is None]
     if missing:
@@ -166,7 +168,7 @@ def lint_minimax_h3_prompt(
             result.issues.append(LintIssue("error", "missing_music_field", "The non_diegetic_music section is empty"))
 
     picture_numbers = [int(n) for n in PICTURE_TAG_RE.findall(text)]
-    expected = list(range(1, max(reference_count, 1) + 1))
+    expected = list(range(1, max(reference_count, 0) + 1))
     if sorted(set(picture_numbers)) != expected:
         result.issues.append(
             LintIssue(

@@ -192,11 +192,16 @@ def build_h3_ref2va_graph(
     audio_refine_steps: int = 4,
     audio_refine_cfg: float = 1.0,
     audio_refine_denoise: float = 0.5,
+    pin_first_frame: bool = True,
 ) -> dict[str, Any]:
-    """`MiniMaxH3ReferenceToVideo` + PDD 8-step acceleration. `image_names[0]`
-    is always the first frame (`<Picture 1>`, pinned at frame 0 via
-    `MiniMaxH3AddGuide`); `image_names[1:]` are character/scene/prop
-    reference images (`<Picture 2>`, `<Picture 3>`, ...); `audio_names` are
+    """`MiniMaxH3ReferenceToVideo` + PDD 8-step acceleration. With
+    `pin_first_frame` (default) `image_names[0]` is the first frame
+    (`<Picture 1>`, pinned at frame 0 via `MiniMaxH3AddGuide`) and
+    `image_names[1:]` are character/scene/prop reference images
+    (`<Picture 2>`, `<Picture 3>`, ...). With `pin_first_frame=False`
+    (reference-only, no render needed) every entry of `image_names` is a
+    plain reference (`<Picture 1>`, `<Picture 2>`, ...) and nothing is pinned
+    at frame 0; `audio_names` are
     voice-timbre reference clips (`<Audio 1>`, ...). `end_frame_name`, if
     given, is appended as one more `ref_image` and pinned at the last frame
     (`frame_idx=-1`) for keyframe (first+last frame) mode.
@@ -340,7 +345,7 @@ def build_h3_ref2va_graph(
         graph[str(200 + k)] = {"class_type": "LoadAudio", "inputs": {"audio": name}}
         graph["7"]["inputs"][f"ref_audios.ref_audio_{k}"] = [str(200 + k), 0]
 
-    chain: list[tuple[str, int]] = [("100", 0)]  # pin the first frame at frame 0
+    chain: list[tuple[str, int]] = [("100", 0)] if (pin_first_frame and image_names) else []
     if end_frame_name:
         chain.append((str(100 + len(all_image_names) - 1), -1))
     _chain_guides(
@@ -439,7 +444,7 @@ def build_h3_ref2va_graph(
 def build_h3_fl2va_graph(
     *,
     prompt: str,
-    first_frame_name: str,
+    first_frame_name: str | None,
     seed: int,
     width: int,
     height: int,
@@ -450,8 +455,10 @@ def build_h3_fl2va_graph(
     pdd_file: str = "",
     pdd_steps: int = 8,
 ) -> dict[str, Any]:
-    """`MiniMaxH3ImageToVideo` — first frame only (no character/scene/prop
-    reference images, no voice-timbre audio).
+    """`MiniMaxH3ImageToVideo` — first frame (and optional last frame) only,
+    no character/scene/prop reference images, no voice-timbre audio. With
+    neither `first_frame_name` nor `last_frame_name` this is plain
+    text-to-video (both frame inputs are optional on the node).
 
     Base model 20-step res_multistep by default. With `pdd_file` (the
     official FL2VA PDD file, `RUNPOD_H3_PDD_FL2VA`) it uses the same
@@ -532,8 +539,9 @@ def build_h3_fl2va_graph(
                 "codec": "auto",
             },
         },
-        "100": {"class_type": "LoadImage", "inputs": {"image": first_frame_name}},
     }
+    if first_frame_name:
+        graph["100"] = {"class_type": "LoadImage", "inputs": {"image": first_frame_name}}
     if pdd_file:
         graph["40"] = {
             "class_type": "MiniMaxH3SigmaShift",
@@ -554,7 +562,8 @@ def build_h3_fl2va_graph(
         graph["27"]["inputs"]["sampler_name"] = "euler"
         graph["29"]["inputs"]["sigmas"] = ["41", 1]
         del graph["28"]
-    graph["24"]["inputs"]["first_frame"] = ["100", 0]
+    if first_frame_name:
+        graph["24"]["inputs"]["first_frame"] = ["100", 0]
     if last_frame_name:
         graph["101"] = {"class_type": "LoadImage", "inputs": {"image": last_frame_name}}
         graph["24"]["inputs"]["last_frame"] = ["101", 0]
@@ -587,6 +596,7 @@ class RunPodMiniMaxH3VideoGenerator(VideoGeneratorBase):
         pdd_steps: int = 8,
         two_stage: bool | None = None,
         audio_refine: bool | None = None,
+        h3_mode: str = "auto",
         on_log: Any = None,
         on_progress: Any = None,
         **_kwargs: Any,
@@ -623,8 +633,19 @@ class RunPodMiniMaxH3VideoGenerator(VideoGeneratorBase):
             return VideoGenResult(
                 status=VideoGenStatus.FAILED, error="RUNPOD_H3_VIDEO_ENDPOINT_ID is missing"
             )
-        if not image_path:
+        h3_mode = (h3_mode or "auto").strip().lower()
+        if h3_mode not in ("auto", "t2va", "fl2va", "flf2va", "ref2va"):
+            return VideoGenResult(status=VideoGenStatus.FAILED, error=f"Unknown H3 mode: {h3_mode}")
+        if h3_mode == "auto" and not image_path:
             return VideoGenResult(status=VideoGenStatus.FAILED, error="H3 requires a first-frame image")
+        if h3_mode in ("fl2va", "flf2va") and not image_path:
+            return VideoGenResult(status=VideoGenStatus.FAILED, error=f"H3 {h3_mode} requires a first-frame image")
+        if h3_mode == "flf2va" and not last_frame_path:
+            return VideoGenResult(status=VideoGenStatus.FAILED, error="H3 flf2va requires a last-frame image")
+        if h3_mode == "t2va":
+            image_path = None
+            last_frame_path = None
+            references = []
         if not str(prompt or "").strip():
             return VideoGenResult(status=VideoGenStatus.FAILED, error="H3 prompt is empty")
 
@@ -637,10 +658,12 @@ class RunPodMiniMaxH3VideoGenerator(VideoGeneratorBase):
         def _read(path: str) -> bytes:
             return Path(path).read_bytes()
 
-        first_frame_raw = await asyncio.to_thread(_read, image_path)
-        first_frame_png = await asyncio.to_thread(
-            _fit_canvas_bytes, first_frame_raw, width, height
-        )
+        first_frame_png: bytes | None = None
+        if image_path:
+            first_frame_raw = await asyncio.to_thread(_read, image_path)
+            first_frame_png = await asyncio.to_thread(
+                _fit_canvas_bytes, first_frame_raw, width, height
+            )
 
         # Freezone passes its full reference list, first (and last) frame
         # included — drop those so the first frame isn't uploaded twice and
@@ -653,9 +676,10 @@ class RunPodMiniMaxH3VideoGenerator(VideoGeneratorBase):
         ]
         audio_refs = [item for item in (references or []) if item.type == "audio"]
 
-        image_payloads: list[tuple[str, bytes, str]] = [
-            ("h3_first_frame.png", first_frame_png, "image/png")
-        ]
+        image_payloads: list[tuple[str, bytes, str]] = (
+            [("h3_first_frame.png", first_frame_png, "image/png")] if first_frame_png else []
+        )
+        has_first_frame = bool(image_payloads)
         for idx, ref in enumerate(image_refs):
             try:
                 data = await asyncio.to_thread(_read, ref.path)
@@ -685,7 +709,17 @@ class RunPodMiniMaxH3VideoGenerator(VideoGeneratorBase):
                 log(f"Skipping unreadable last frame {last_frame_path}: {exc}")
 
         seed = uuid.uuid4().int & 0xFFFFFFFF
-        mode = "ref2va" if (len(image_payloads) > 1 or audio_payloads) else "fl2va"
+        if h3_mode == "auto":
+            mode = "ref2va" if (len(image_payloads) > 1 or audio_payloads) else "fl2va"
+        elif h3_mode == "ref2va":
+            mode = "ref2va"
+            if not image_payloads and not audio_payloads:
+                return VideoGenResult(
+                    status=VideoGenStatus.FAILED,
+                    error="H3 reference mode needs at least one reference image or audio",
+                )
+        else:
+            mode = "fl2va"  # t2va / fl2va / flf2va all use MiniMaxH3ImageToVideo
 
         if mode == "ref2va":
             image_names = [name for name, _d, _m in image_payloads]
@@ -709,6 +743,7 @@ class RunPodMiniMaxH3VideoGenerator(VideoGeneratorBase):
                 audio_refine_steps=RUNPOD_H3_AUDIO_REFINE_STEPS,
                 audio_refine_cfg=RUNPOD_H3_AUDIO_REFINE_CFG,
                 audio_refine_denoise=RUNPOD_H3_AUDIO_REFINE_DENOISE,
+                pin_first_frame=has_first_frame,
             )
             upload_payloads = list(image_payloads) + ([end_frame_payload] if end_frame_payload else []) + audio_payloads
         else:
@@ -717,7 +752,7 @@ class RunPodMiniMaxH3VideoGenerator(VideoGeneratorBase):
             # flags are on.
             graph = build_h3_fl2va_graph(
                 prompt=prompt,
-                first_frame_name=image_payloads[0][0],
+                first_frame_name=image_payloads[0][0] if has_first_frame else None,
                 seed=seed,
                 width=width,
                 height=height,
@@ -726,7 +761,7 @@ class RunPodMiniMaxH3VideoGenerator(VideoGeneratorBase):
                 pdd_file=RUNPOD_H3_PDD_FL2VA,
                 pdd_steps=pdd_steps,
             )
-            upload_payloads = [image_payloads[0]] + ([end_frame_payload] if end_frame_payload else [])
+            upload_payloads = list(image_payloads[:1]) + ([end_frame_payload] if end_frame_payload else [])
 
         stage_note = ""
         if mode == "ref2va" and (two_stage or audio_refine):

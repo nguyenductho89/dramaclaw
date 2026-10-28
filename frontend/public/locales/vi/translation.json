@@ -4233,7 +4233,38 @@
         "startWorker": "Bật worker",
         "startingWorker": "Đang bật…",
         "confirm": "Xác nhận",
-        "cancel": "Hủy"
+        "cancel": "Hủy",
+        "inputModeLabel": "Đầu vào video",
+        "modeName": {
+          "auto": "Tự động",
+          "t2va": "Text → Video",
+          "fl2va": "Khung đầu",
+          "flf2va": "Khung đầu + cuối",
+          "ref2va": "Tham chiếu"
+        },
+        "modeHint": {
+          "auto": "Render làm khung đầu cộng các tham chiếu đã chọn (không có render thì chỉ dùng tham chiếu)",
+          "t2va": "Chỉ văn bản — không dùng ảnh",
+          "fl2va": "Làm động khung đã render",
+          "flf2va": "Từ khung đã render tới khung đã render của beat kế tiếp",
+          "ref2va": "Nhân vật, đạo cụ và bối cảnh làm tham chiếu; render là tùy chọn"
+        },
+        "modeUnavailable": {
+          "no_render": "Beat này chưa có khung đã render",
+          "no_next_render": "Beat kế tiếp chưa có khung đã render",
+          "no_references": "Hãy chọn ít nhất một tham chiếu"
+        },
+        "useRenderAsFirstFrame": "Dùng khung đã render làm khung đầu",
+        "noRenderYet": "Chưa có render — chỉ dùng tham chiếu",
+        "previewLabel": "Xem trước prompt (rê chuột vào thẻ để xem ảnh)",
+        "lastFrame": "Khung cuối",
+        "kind": {
+          "character": "Nhân vật",
+          "prop": "Đạo cụ",
+          "scene": "Bối cảnh"
+        },
+        "referencesToggleHint": "Bấm vào ảnh để thêm hoặc bỏ. Prompt sẽ được viết lại theo bộ ảnh đã chọn.",
+        "referencesUnusedHint": "Chế độ đang chọn không dùng tham chiếu. Chuyển sang Tự động hoặc Tham chiếu để chọn."
       },
       "renderReview": {
         "title": "Xem trước Render {{model}}",

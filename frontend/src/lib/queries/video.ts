@@ -717,6 +717,8 @@ export function useGenerateBeatVideoPrompt(project: string, episode: number) {
 // (`POST .../beats/{beatNum}/video/review`) — the review endpoint is
 // explicitly documented as taking "the same shape" plus the three
 // `h3_*`/`review_fingerprint` fields below (dev-only, MiniMax H3 backend).
+export type H3InputMode = "auto" | "t2va" | "fl2va" | "flf2va" | "ref2va";
+
 export interface SingleVideoRequestBody {
   videoBackend?: string;
   use_director_render?: boolean;
@@ -732,7 +734,14 @@ export interface SingleVideoRequestBody {
   /** H3 review flow: ties a regen request back to the `/video/review` call it was confirmed from. */
   review_fingerprint?: string;
   h3_profile?: "formal" | "draft";
+  /** Reference keys (`identity:<id>` / `prop:<name>` / `scene:<name>`) the
+   * user kept selected in the review dialog; omitted = server default. */
   h3_reference_keys?: string[];
+  /** H3 input mode; `auto` (or omitted) = render as first frame + references. */
+  h3_mode?: H3InputMode;
+  /** Whether the rendered frame is pinned as `<Picture 1>` (reference mode). */
+  h3_first_frame?: "render" | "none";
+  h3_last_frame?: "none" | "next_render";
   /** Per-generation override of the env-gated H3 two-stage
    * (upscale+redraw) / audio-refine passes — `undefined` means "use the
    * server's .env default", not "off". See `generators/runpod_minimax_h3_video.py`. */
@@ -760,6 +769,9 @@ function buildSingleVideoRequestJson(body: SingleVideoRequestBody) {
     ...(body.h3_reference_keys !== undefined
       ? { h3_reference_keys: body.h3_reference_keys }
       : {}),
+    ...(body.h3_mode !== undefined ? { h3_mode: body.h3_mode } : {}),
+    ...(body.h3_first_frame !== undefined ? { h3_first_frame: body.h3_first_frame } : {}),
+    ...(body.h3_last_frame !== undefined ? { h3_last_frame: body.h3_last_frame } : {}),
     ...(body.two_stage !== undefined ? { two_stage: body.two_stage } : {}),
     ...(body.audio_refine !== undefined ? { audio_refine: body.audio_refine } : {}),
   };
@@ -797,10 +809,23 @@ export function useRegenerateBeatVideo(project: string, episode: number) {
 export interface VideoReviewReference {
   tag: string;
   kind: string;
+  /** Stable selection key: `identity:<id>` / `prop:<name>` / `scene:<name>`. */
+  key: string;
   identity_id: string;
   name: string;
   path: string;
   appearance_details: string;
+}
+
+/** One image the beat could attach to an H3 prompt, selected or not. */
+export interface VideoReviewCandidate {
+  key: string;
+  kind: "character" | "prop" | "scene" | string;
+  identity_id: string;
+  name: string;
+  path: string | null;
+  appearance_details: string;
+  selected: boolean;
 }
 
 export interface VideoReviewLintItem {
@@ -830,6 +855,17 @@ export interface VideoReviewData {
    * text that was never meant to be H3. The review dialog should generate
    * one (AI rewrite) instead of showing it as broken. */
   needs_h3_prompt?: boolean;
+  /** All images this beat could use (H3 only), each with a `selected` flag. */
+  candidates?: VideoReviewCandidate[];
+  /** Per H3 mode: `null` = can run, otherwise why not (`no_render` ...). */
+  available_modes?: Partial<Record<H3InputMode, string | null>>;
+  /** Set when the current combination cannot run (`no_render` ...). */
+  plan_error?: string;
+  requested_mode?: string;
+  /** A rendered frame exists for this beat (independent of whether it is used). */
+  render_exists?: boolean;
+  first_frame_used?: boolean;
+  last_frame_path?: string | null;
 }
 
 export type VideoReviewResponse = VideoReviewData | ErrorResponse;
@@ -863,7 +899,7 @@ export interface MiniMaxH3PromptResult {
   plan: Record<string, unknown>;
   lint: VideoReviewLintItem[];
   mode: string;
-  references: Array<{ tag: string; name: string; appearance_details: string }>;
+  references: Array<{ tag: string; kind?: string; name: string; appearance_details: string }>;
 }
 
 export type MiniMaxH3PromptResponse = MiniMaxH3PromptResult | ErrorResponse;
@@ -876,8 +912,15 @@ export function useGenerateMiniMaxH3Prompt(project: string, episode: number) {
       beatNum,
       duration,
       promptGuidance,
+      inputs,
     }: {
       beatNum: number;
+      /** The same input choices `/video/review` was called with, so the
+       * rewrite numbers `<Picture N>` for exactly that picture set. */
+      inputs?: Pick<
+        SingleVideoRequestBody,
+        "h3_mode" | "h3_first_frame" | "h3_last_frame" | "h3_reference_keys" | "use_director_render"
+      >;
       // Matches whatever duration `/video/review` is currently showing, so
       // the rewritten prompt's own timestamps describe the same clip
       // length that will actually be submitted — otherwise this route's
@@ -896,6 +939,19 @@ export function useGenerateMiniMaxH3Prompt(project: string, episode: number) {
               ...(duration !== undefined ? { duration } : {}),
               ...(promptGuidance !== undefined
                 ? { prompt_guidance: promptGuidance }
+                : {}),
+              ...(inputs?.h3_mode !== undefined ? { h3_mode: inputs.h3_mode } : {}),
+              ...(inputs?.h3_first_frame !== undefined
+                ? { h3_first_frame: inputs.h3_first_frame }
+                : {}),
+              ...(inputs?.h3_last_frame !== undefined
+                ? { h3_last_frame: inputs.h3_last_frame }
+                : {}),
+              ...(inputs?.h3_reference_keys !== undefined
+                ? { h3_reference_keys: inputs.h3_reference_keys }
+                : {}),
+              ...(inputs?.use_director_render !== undefined
+                ? { use_director_render: inputs.use_director_render }
                 : {}),
             },
             throwHttpErrors: false,

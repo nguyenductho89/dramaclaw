@@ -230,6 +230,28 @@ Thiết kế cuối cùng khác với dự kiến ban đầu ở 1 điểm quan 
 - **Rollback:** đổi image về `0.37.2-ms2.7.2`, `minCudaVersion` về `12.0`, xoá `COMFY_EXTRA_ARGS`.
 - Cold start worker mới sau khi đổi image/env ~6 phút (kéo image + nạp model).
 
+### 8c. Benchmark độ dài / RAM trên A40 sau cu130 + Sage (2026-10-28)
+
+Cấu hình chung: A40 48 GB (RAM container 46,57 GiB), ref2va, PDD 8 bước, 768×1344, 24 fps, `--use-sage-attention`, worker đã ấm (trừ cold start ghi riêng). Endpoint chính = `a31613hf7l83r5`, multishot = `u0hkrms7k1xeua`. RAM lấy từ log hệ thống của worker (lấy mẫu mỗi ~30s, nên đỉnh thật có thể cao hơn số ghi).
+
+| Kịch bản | Endpoint | Khung / độ dài video | `executionTime` | RAM đỉnh quan sát | Kết quả |
+|---|---|---|---|---|---|
+| 1 shot 141 khung | chính | 141 / 5,9s | 382s | không ghi | OK |
+| 1 shot 243 khung | chính | 243 / 10,1s | 869s | 96% (44,75 GiB) lúc VAE decode | OK, không OOM |
+| 2 shot × 124 khung | multishot | 247 / 10,3s | 631s | 96% | OK |
+| 3 shot × 124 khung | multishot | 370 / 15,4s | 958s (~320s/shot) | 96% (44,73 GiB) | OK, không OOM |
+| 6 shot × 124 khung | multishot | 739 / 30,8s | 1897s (~316s/shot) | ≥94% (44,2 GiB) quan sát được | OK, không OOM |
+
+Nhận xét:
+- Thời gian tuyến tính theo số shot (~316–320s/shot, 124 khung); không có bước nhảy nào ở 6 shot.
+- RAM đỉnh không tăng theo số shot: sampler decode từng shot rồi để timeline fp16 trên RAM máy (~6,2 MB/khung, tổng vài GB cho 30s). Baseline ~93% là do model được nạp sẵn.
+- Số khung = N × 124 − (N − 1) vì mỗi shot sau cắt 1 khung trùng ở chỗ nối.
+- Giới hạn chưa thử: shot 243 khung × nhiều shot, > 6 shot, độ phân giải cao hơn, ref2va có `ref_video`, và ca fl2va 14 bước base của 18/10. Đỉnh RAM chỉ sát trần (96%) chứ chưa chạm; một cấu hình nặng hơn có thể vượt.
+- Chưa đánh giá chất lượng hình/nhất quán nhân vật qua chuỗi 6 shot (chưa tải video về xem). Prompt test là cảnh mưa đêm lặp lại 6 hành động đơn giản.
+- Mp4 lưu ở R2 bucket `photoreal-drama-jobs`: `jobs/c4dd3b09-…/h3_ms3x124_00001_.mp4`, `jobs/30c80449-…/h3_ms6x124_00001_.mp4`, `jobs/42ac901b-…/h3_oom243_00001_.mp4`.
+
+Khuyến nghị: giữ mỗi shot ≤124 khung ở 768×1344 khi nối chuỗi dài; chuỗi 30s đã chạy được trên A40. Cần RAM lớn hơn chỉ khi tăng khung/shot hoặc độ phân giải.
+
 ## 6. Global Volume — chưa làm, để sau (quyết định của user 2026-10-19)
 
 RunPod Global Volume (beta): object-backed, eventually-consistent, không hỗ trợ file lock/atomic rename/hardlink, tối đa 1 volume/endpoint, không dùng song song với network volume trên cùng endpoint, billing theo storage + request (Class A write $0.005/1k request, Class B read $0.0005/1k request); GPU-only (không CPU); balance $0 → xoá sau 15 ngày.

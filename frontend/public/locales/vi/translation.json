@@ -4210,7 +4210,8 @@
         "seedance2CropTitleWithAspect": "Cắt {{aspect}}",
         "seedance2CropDragHandle": "Di chuyển vùng cắt",
         "h3PromptStale": "Đầu vào đã đổi — hãy tạo lại prompt MiniMax H3 để khớp với các ảnh đã chọn.",
-        "h3Inspector": "MiniMax H3"
+        "h3Inspector": "MiniMax H3",
+        "h3PromptFallback": "Lệnh AI bị lỗi nên đã dùng bản template thô. Bấm Generate lại (xem log API để biết nguyên nhân)."
       },
       "videoReview": {
         "title": "Xem trước video H3",

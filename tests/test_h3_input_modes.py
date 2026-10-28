@@ -274,3 +274,29 @@ def test_generator_flf2va_needs_both_frames(tmp_path, monkeypatch):
 def test_generator_auto_without_frame_keeps_old_error(tmp_path, monkeypatch):
     result, _ = _gen(tmp_path, monkeypatch, image_path=None, h3_mode="auto", references=[])
     assert "first-frame" in (result.error or "")
+
+
+def test_marker_replacement_keeps_spaces_and_unwraps_props():
+    from novelvideo.api.routes.generation import _h3_replace_identity_markers
+
+    out = _h3_replace_identity_markers(
+        "{{Yui_modern_schoolgirl}} walks in, holding [[phone]] up.",
+        {"Yui": {"identities": []}},
+    )
+    assert out == "Yui walks in, holding phone up."
+
+
+def test_no_first_frame_embeds_the_beat_description_verbatim():
+    refs = [_ref("<Picture 1>", "Yui (modern schoolgirl)")]
+    ctx = MiniMaxH3BeatContext(
+        mode="ref2va", has_first_frame=False, duration_seconds=6.0, references=refs,
+        visual_description="Yui walks into frame, holding phone up, moving through a crowd of Edo-period townspeople and samurai",
+    )
+    prompt = assemble_minimax_h3_prompt(ctx, _content(1))
+    assert "Scene premise: Yui walks into frame, holding phone up, moving through a crowd of Edo-period townspeople and samurai." in prompt
+    assert _errors(prompt, "ref2va", 1) == []
+
+
+def test_with_first_frame_no_premise_is_added():
+    ctx = MiniMaxH3BeatContext(mode="fl2va", duration_seconds=6.0, visual_description="anything")
+    assert "Scene premise" not in assemble_minimax_h3_prompt(ctx, _content(0))

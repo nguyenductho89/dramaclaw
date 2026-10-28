@@ -19,6 +19,15 @@ put in your structured answer's fields.
 
 ## Content rules
 
+00. **Stay faithful to the beat's visual description.** Every concrete
+   element it names must survive into your `timeline`/`summary_action`:
+   the era or period and who fills the space (e.g. Edo-period townspeople
+   and samurai), each prop and how it is held, the direction of movement
+   (walks INTO frame from the edge), and who is where. Do not invent a
+   camera position the description never gives ("from behind", "facing away
+   from the camera"), do not empty a place the description says is crowded,
+   and do not drop a prop the description mentions.
+
 0. **Reference kinds and a missing first frame.** A reference of kind
    `scene` is the *location*: describe its architecture/lighting in its
    `subjects` entry and keep the action inside it. A reference of kind `prop`

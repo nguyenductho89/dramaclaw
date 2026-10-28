@@ -351,6 +351,13 @@ export function VideoPane({
   // Latest dry-run for this beat (from the in-panel picker); the prompt
   // preview resolves `<Picture N>` against it.
   const [h3Review, setH3Review] = useState<VideoReviewData | null>(null);
+  // Lint answer from the last "Generate MiniMax H3 prompt" run, tagged with
+  // its beat — includes the `fallback_template` warning when the AI call
+  // failed and the plain template was used instead.
+  const [h3GenLint, setH3GenLint] = useState<{
+    beat: number;
+    items: Array<{ severity: "error" | "warning"; code: string; message: string }>;
+  } | null>(null);
   const [h3AudioRefine, setH3AudioRefine] = useState(false);
   const [seedance2CropIntent, setSeedance2CropIntent] =
     useState<Seedance2CropIntent | null>(null);
@@ -1115,6 +1122,12 @@ export function VideoPane({
       seedance2DraftRef.current = next;
       setSeedance2Draft(next);
       setH3PromptStale(false);
+      const lintItems = res.lint ?? [];
+      setH3GenLint({ beat: triggeredBeatNumber, items: lintItems });
+      if (lintItems.some((item) => item.code === "fallback_template")) {
+        toast.warning(t("episode.workbench.video.h3PromptFallback"));
+        return;
+      }
       void seedance2Status.refetch?.();
       toast.success(
         t("episode.workbench.video.seedance2PromptGenerated"),
@@ -2768,6 +2781,26 @@ export function VideoPane({
                 />
                 )}
                 {!showRunpodH3Config && renderSeedance2ReferenceControls("final_prompt")}
+                {showRunpodH3Config &&
+                  h3GenLint &&
+                  h3GenLint.beat === beat.beat_number &&
+                  h3GenLint.items.length > 0 && (
+                    <ul className="space-y-1" data-testid="h3-gen-lint">
+                      {h3GenLint.items.map((item, i) => (
+                        <li
+                          key={`${item.code}:${i}`}
+                          className={cn(
+                            "rounded-[6px] border px-2 py-1 text-xs",
+                            item.severity === "error"
+                              ? "border-destructive/35 bg-destructive/[0.08] text-destructive"
+                              : "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300",
+                          )}
+                        >
+                          {item.message}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 {showRunpodH3Config &&
                   h3Review &&
                   seedance2Draft.final_prompt.trim() && (

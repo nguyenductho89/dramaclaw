@@ -4324,7 +4324,8 @@
         "seedance2GuidanceStyleTemplate": "Style: Define visual texture, period, color direction, and realism to prevent style drift.",
         "seedance2GuidanceNoSubtitleTemplate": "No subtitles: Do not generate any text or subtitles; keep the frame visually clean.",
         "h3PromptStale": "Inputs changed — generate the MiniMax H3 prompt again so it matches the selected images.",
-        "h3Inspector": "MiniMax H3"
+        "h3Inspector": "MiniMax H3",
+        "h3PromptFallback": "The AI call failed, so the plain template was used. Click Generate again (check the API log for the cause)."
       },
       "videoReview": {
         "title": "H3 video review",

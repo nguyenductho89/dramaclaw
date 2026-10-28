@@ -47,6 +47,7 @@ structured output) rather than plain forced tool-calling — see
 
 from __future__ import annotations
 
+import logging
 import os
 import re
 from pathlib import Path
@@ -618,6 +619,16 @@ def assemble_minimax_h3_prompt(context: MiniMaxH3BeatContext, content: MiniMaxH3
         if has_first_frame
         else f"[Shot 1] {framing[:1].upper()}{framing[1:]}."
     )
+    if not has_first_frame:
+        # No first frame carries the scene, so the beat's own description (era,
+        # crowd, props, who does what) is the ground truth and goes in verbatim
+        # — the LLM's paraphrase alone drifted from it (dropped the period
+        # crowd and the held prop, invented a camera position).
+        premise = _sanitize(context.visual_description)
+        if premise:
+            if premise[-1] not in ".!?":
+                premise += "."
+            opening = f"{opening} Scene premise: {premise}"
     if mode == "flf2va":
         closing = (
             f"The camera holds this framing until the final frame. At {duration:.2f} seconds, "
@@ -803,13 +814,13 @@ async def generate_minimax_h3_prompt_with_fallback(
     `_generate_h3_prompt_result` name as a thin alias to this function so
     its existing call sites are unchanged.
 
-    Only an outright failed call is retried (2 attempts total); a call that
+    Only an outright failed call is retried (3 attempts total); a call that
     succeeds but fails lint is NOT retried — lint issues are surfaced to the
     caller instead, same as the original behavior this was copied from
     verbatim."""
     from novelvideo.agents.minimax_h3_prompt_lint import lint_minimax_h3_prompt
 
-    max_llm_attempts = 2
+    max_llm_attempts = 3
     result = None
     last_exc: Exception | None = None
     retry_context = context
@@ -819,6 +830,12 @@ async def generate_minimax_h3_prompt_with_fallback(
             break
         except Exception as exc:  # noqa: BLE001
             last_exc = exc
+            logging.getLogger(__name__).warning(
+                "MiniMax H3 prompt LLM attempt %d/%d failed: %r",
+                _attempt + 1,
+                max_llm_attempts,
+                exc,
+            )
             retry_context = context.model_copy(
                 update={
                     "retry_feedback": (

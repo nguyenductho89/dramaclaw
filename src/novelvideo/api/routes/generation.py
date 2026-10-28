@@ -5295,6 +5295,7 @@ async def generate_single_video(
 
 
 _H3_IDENTITY_MARKER_RE = re.compile(r"\{\{([^}]+)\}\}\s*")
+_H3_PROP_MARKER_RE = re.compile(r"\[\[([^\]]+)\]\]")
 
 
 def _h3_replace_identity_markers(text: str, character_map: dict) -> str:
@@ -5304,14 +5305,19 @@ def _h3_replace_identity_markers(text: str, character_map: dict) -> str:
     sketch-color marker syntax other pipeline steps use. Any marker whose
     identity isn't in `character_map` is left as the bare identity id
     (still better than a raw `{{...}}` the LLM has no reason to parse)."""
-    if "{{" not in text:
+    if "{{" not in text and "[[" not in text:
         return text
 
     def _sub(match: re.Match) -> str:
         identity_id = match.group(1).strip()
-        return _h3_char_name_for_identity(identity_id, character_map)
+        name = _h3_char_name_for_identity(identity_id, character_map)
+        # The marker regex swallows the whitespace after it; keep one space so
+        # "{{Yui_x}} walks" becomes "Yui walks", not "Yuiwalks".
+        return name + (" " if match.group(0)[-1:].isspace() else "")
 
-    return _H3_IDENTITY_MARKER_RE.sub(_sub, text)
+    text = _H3_IDENTITY_MARKER_RE.sub(_sub, text)
+    # `[[prop]]` is the pipeline's prop-marker syntax; H3 just wants the name.
+    return _H3_PROP_MARKER_RE.sub(lambda m: m.group(1).strip(), text)
 
 
 _H3_SPEAKER_LABEL_RE_CACHE: dict[str, re.Pattern] = {}

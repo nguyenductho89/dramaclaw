@@ -279,7 +279,7 @@ def test_settings_db_retries_transient_sqlite_io_error(monkeypatch, tmp_path):
 
     assert (
         gateway_settings.get_model_gateway_settings()["model_gateway_mode"]
-        == MODE_OFFICIAL
+        == MODE_CUSTOM
     )
     assert configure_calls == 2
     with pytest.raises(sqlite3.ProgrammingError, match="closed database"):
@@ -472,54 +472,8 @@ def test_model_gateway_uses_explicit_custom_mode(monkeypatch, tmp_path):
     assert effective.api_key == "sk-custom-secret"
 
 
-def test_hybrid_mode_uses_official_gateway_by_default(monkeypatch, tmp_path):
-    _isolate_settings_db(monkeypatch, tmp_path)
-    save_custom_newapi_gateway(
-        base_url="http://127.0.0.1:3000",
-        api_key="sk-custom-secret",
-        activate=False,
-    )
-    save_official_newapi_key(api_key="sk-official-secret", activate=False)
-    set_model_gateway_mode(MODE_HYBRID)
-
-    effective = get_effective_newapi_config()
-    effective_llm = gateway_settings.get_effective_llm_config()
-
-    assert effective.mode == MODE_HYBRID
-    assert effective.source == "hybrid"
-    assert effective.api_key == "sk-official-secret"
-    assert effective_llm.mode == MODE_HYBRID
-    assert effective_llm.source == "hybrid"
-    assert effective_llm.api_key == "sk-official-secret"
-    assert effective_llm.model == "brainclaw"
-    assert effective_llm.is_brainclaw is True
 
 
-def test_hybrid_video_routes_only_comfyui_models_to_local_gateway(
-    monkeypatch, tmp_path
-):
-    _isolate_settings_db(monkeypatch, tmp_path)
-    save_custom_newapi_gateway(
-        base_url="http://127.0.0.1:3000",
-        api_key="sk-custom-secret",
-        activate=False,
-    )
-    save_official_newapi_key(api_key="sk-official-secret", activate=False)
-    save_newapi_media_model_mappings(
-        {
-            "wan-i2v": {"provider": "comfyui", "upstreamModel": ""},
-            "seedance-2.0": {"provider": "volcengine", "upstreamModel": ""},
-        }
-    )
-    set_model_gateway_mode(MODE_HYBRID)
-
-    local = NewApiVideoGenerator(model="wan-i2v")
-    official = NewApiVideoGenerator(model="seedance-2.0")
-
-    assert local.base_url == "http://127.0.0.1:3000/v1"
-    assert local.api_key == "sk-custom-secret"
-    assert official.api_key == "sk-official-secret"
-    assert newapi_video_backend_options()["newapi_wan-i2v"] == "wan-i2v"
 
 
 def test_newapi_video_backends_only_include_enabled_comfyui_video_models(
@@ -809,33 +763,6 @@ def test_ee_cognee_embedding_ignores_ce_database_config(monkeypatch, tmp_path):
     assert effective.upstream_model == ""
 
 
-def test_model_gateway_can_switch_back_to_official(monkeypatch, tmp_path):
-    _isolate_settings_db(monkeypatch, tmp_path)
-    save_official_newapi_key(
-        api_key="sk-official-secret",
-        activate=True,
-    )
-    save_custom_newapi_gateway(
-        base_url="http://127.0.0.1:3000/v1",
-        api_key="sk-custom-secret",
-        activate=True,
-    )
-    set_model_gateway_mode(MODE_OFFICIAL)
-
-    effective = get_effective_newapi_config(
-        official_base_url="https://official.example/v1",
-        official_api_key="sk-official-secret",
-    )
-    assert effective.mode == MODE_OFFICIAL
-    assert effective.base_url == OFFICIAL_NEWAPI_BASE_URL
-    assert effective.api_key == "sk-official-secret"
-
-    status = build_model_gateway_status(
-        official_base_url="https://official.example/v1",
-        official_api_key="sk-official-secret",
-    )
-    assert status["custom"]["configured"] is True
-    assert status["effective"]["source"] == "official"
 
 
 def test_model_gateway_status_keeps_official_section_when_custom_is_active(
@@ -865,56 +792,10 @@ def test_model_gateway_status_keeps_official_section_when_custom_is_active(
     assert status["official"]["source"] == "database"
 
 
-def test_model_gateway_official_database_key_overrides_env(monkeypatch, tmp_path):
-    _isolate_settings_db(monkeypatch, tmp_path)
-    save_official_newapi_key(
-        api_key="sk-user-official-secret",
-        activate=True,
-    )
-
-    effective = get_effective_newapi_config(
-        official_base_url="https://env-official.example/v1",
-        official_api_key="sk-env-official-secret",
-    )
-    assert effective.mode == MODE_OFFICIAL
-    assert effective.base_url == OFFICIAL_NEWAPI_BASE_URL
-    assert effective.api_key == "sk-user-official-secret"
-
-    status = build_model_gateway_status(
-        official_base_url="https://env-official.example/v1",
-        official_api_key="sk-env-official-secret",
-    )
-    assert status["official"]["source"] == "database"
-    assert status["official"]["environment"]["configured"] is False
 
 
-def test_model_gateway_official_url_ignores_newapi_base_url_env(monkeypatch, tmp_path):
-    _isolate_settings_db(monkeypatch, tmp_path)
-    save_official_newapi_key(api_key="sk-database-secret", activate=True)
-    monkeypatch.setenv("MODEL_GATEWAY_MODE", MODE_OFFICIAL)
-    monkeypatch.setenv("NEWAPI_BASE_URL", "https://malicious.example/v1")
-    monkeypatch.setenv("NEWAPI_API_KEY", "sk-env-secret")
-
-    effective = get_effective_newapi_config()
-
-    assert effective.mode == MODE_OFFICIAL
-    assert effective.base_url == OFFICIAL_NEWAPI_BASE_URL
-    assert effective.api_key == "sk-database-secret"
 
 
-def test_ce_gateway_does_not_fall_back_to_env_after_database_is_initialized(
-    monkeypatch, tmp_path
-):
-    _isolate_settings_db(monkeypatch, tmp_path)
-    set_model_gateway_mode(MODE_OFFICIAL)
-    monkeypatch.setenv("NEWAPI_API_KEY", "sk-later-secret")
-
-    effective = get_effective_newapi_config()
-    api_key, base_url = config.get_newapi_runtime_credentials()
-
-    assert effective.api_key == ""
-    assert api_key == ""
-    assert base_url == OFFICIAL_NEWAPI_BASE_URL
 
 
 def test_ee_gateway_uses_environment_and_ignores_ce_settings(monkeypatch, tmp_path):
@@ -954,35 +835,6 @@ def test_ee_cannot_mutate_ce_model_gateway_settings(monkeypatch, tmp_path):
     assert response.json()["detail"] == "ORG_SERVICE_EGRESS_DENIED"
 
 
-def test_ce_runtime_refresh_never_mutates_process_environment(monkeypatch, tmp_path):
-    from novelvideo.agents import global_video_optimizer
-
-    _isolate_settings_db(monkeypatch, tmp_path)
-    tracked = {
-        "MODEL_GATEWAY_RUNTIME_VERSION": "startup-version",
-        "NEWAPI_API_KEY": "startup-newapi-key",
-        "NEWAPI_BASE_URL": "https://startup.example/v1",
-        "OPENAI_API_KEY": "startup-openai-key",
-        "OPENAI_BASE_URL": "https://startup-openai.example/v1",
-        "LLM_API_KEY": "startup-llm-key",
-        "LLM_ENDPOINT": "https://startup-llm.example/v1",
-        "EMBEDDING_API_KEY": "startup-embedding-key",
-        "EMBEDDING_ENDPOINT": "https://startup-embedding.example/v1",
-    }
-    for key, value in tracked.items():
-        monkeypatch.setenv(key, value)
-    monkeypatch.setattr(global_video_optimizer, "_global_video_optimizer", object())
-    save_official_newapi_key(api_key="sk-database-secret", activate=True)
-
-    runtime = refresh_model_gateway_runtime()
-
-    assert runtime["configured"] is True
-    assert {key: os.environ.get(key) for key in tracked} == tracked
-    assert global_video_optimizer._global_video_optimizer is None
-    assert (
-        "novelvideo.agents.global_video_optimizer._global_video_optimizer"
-        in runtime["clearedCaches"]
-    )
 
 
 def test_newapi_base_url_normalizers_keep_admin_and_relay_urls_separate():
@@ -1696,30 +1548,6 @@ def test_database_status_does_not_expose_database_credentials(monkeypatch, tmp_p
     assert "secret" not in str(status)
 
 
-def test_model_gateway_config_route_masks_effective_key(monkeypatch, tmp_path):
-    _isolate_settings_db(monkeypatch, tmp_path)
-    monkeypatch.setattr(
-        model_gateway.app_config, "NEWAPI_BASE_URL", "https://official.example/v1"
-    )
-    monkeypatch.setattr(
-        model_gateway.app_config, "NEWAPI_API_KEY", "sk-official-secret"
-    )
-    save_official_newapi_key(
-        api_key="sk-official-secret",
-        activate=True,
-    )
-
-    app = FastAPI()
-    app.include_router(model_gateway.router)
-    client = TestClient(app)
-
-    response = client.get("/model-gateway/config")
-
-    assert response.status_code == 200
-    data = response.json()["data"]
-    assert data["mode"] == MODE_OFFICIAL
-    assert data["effective"]["apiKeyPreview"] == "sk-o...cret"
-    assert "sk-official-secret" not in response.text
 
 
 def test_ee_model_gateway_config_skips_ce_provisioner_and_settings(
@@ -1820,42 +1648,6 @@ def test_model_gateway_config_excludes_closed_source_provider_presets(
     assert "fal" not in providers
 
 
-def test_enable_official_gateway_route_switches_mode_when_enabled(
-    monkeypatch, tmp_path
-):
-    _isolate_settings_db(monkeypatch, tmp_path)
-    monkeypatch.setenv("NEWAPI_PROVISIONER_ENABLED", "true")
-    monkeypatch.setattr(
-        model_gateway.app_config, "NEWAPI_BASE_URL", "https://official.example/v1"
-    )
-    monkeypatch.setattr(
-        model_gateway.app_config, "NEWAPI_API_KEY", "sk-official-secret"
-    )
-    save_official_newapi_key(
-        api_key="sk-official-secret",
-        activate=True,
-    )
-    save_custom_newapi_gateway(
-        base_url="http://new-api:3000",
-        api_key="sk-custom-secret",
-        activate=True,
-    )
-
-    app = FastAPI()
-    app.include_router(model_gateway.router)
-    client = TestClient(app)
-
-    response = client.post("/model-gateway/official/enable")
-
-    assert response.status_code == 200
-    assert response.json()["data"]["mode"] == MODE_OFFICIAL
-    assert (
-        get_effective_newapi_config(
-            official_base_url="https://official.example/v1",
-            official_api_key="sk-official-secret",
-        ).mode
-        == MODE_OFFICIAL
-    )
 
 
 def test_official_media_catalog_preferences_and_remote_update(monkeypatch, tmp_path):
@@ -2158,73 +1950,8 @@ def test_official_media_catalog_ignores_cache_older_than_bundle(monkeypatch, tmp
     assert status["catalogVersion"] == bundled["catalogVersion"]
 
 
-def test_save_official_gateway_route_persists_user_registered_key(
-    monkeypatch, tmp_path
-):
-    _isolate_settings_db(monkeypatch, tmp_path)
-    monkeypatch.setenv("NEWAPI_PROVISIONER_ENABLED", "true")
-    monkeypatch.setattr(
-        model_gateway.app_config, "NEWAPI_BASE_URL", "https://env.example/v1"
-    )
-    monkeypatch.setattr(model_gateway.app_config, "NEWAPI_API_KEY", "sk-env-secret")
-
-    app = FastAPI()
-    app.include_router(model_gateway.router)
-    client = TestClient(app)
-
-    response = client.post(
-        "/model-gateway/official/config",
-        json={
-            "newApiApiKey": "sk-user-registered-secret",
-        },
-    )
-
-    assert response.status_code == 200
-    data = response.json()["data"]
-    assert data["mode"] == MODE_OFFICIAL
-    assert data["official"]["baseUrl"] == OFFICIAL_NEWAPI_BASE_URL
-    assert data["official"]["source"] == "database"
-    assert data["official"]["apiKeyPreview"] == "sk-u...cret"
-    assert "sk-user-registered-secret" not in response.text
-
-    effective = get_effective_newapi_config(
-        official_base_url="https://env.example/v1",
-        official_api_key="sk-env-secret",
-    )
-    assert effective.base_url == OFFICIAL_NEWAPI_BASE_URL
-    assert effective.api_key == "sk-user-registered-secret"
 
 
-def test_save_official_gateway_route_ignores_submitted_gateway_url(
-    monkeypatch, tmp_path
-):
-    _isolate_settings_db(monkeypatch, tmp_path)
-    monkeypatch.setenv("NEWAPI_PROVISIONER_ENABLED", "true")
-    monkeypatch.setattr(
-        model_gateway.app_config, "NEWAPI_BASE_URL", "https://env.example/v1"
-    )
-    monkeypatch.setattr(model_gateway.app_config, "NEWAPI_API_KEY", "sk-env-secret")
-
-    app = FastAPI()
-    app.include_router(model_gateway.router)
-    client = TestClient(app)
-
-    response = client.post(
-        "/model-gateway/official/config",
-        json={
-            "newApiBaseUrl": "https://official-user.example",
-            "newApiApiKey": "sk-user-registered-secret",
-        },
-    )
-
-    assert response.status_code == 200
-    assert response.json()["data"]["official"]["baseUrl"] == OFFICIAL_NEWAPI_BASE_URL
-    effective = get_effective_newapi_config(
-        official_base_url="https://env.example/v1",
-        official_api_key="sk-env-secret",
-    )
-    assert effective.base_url == OFFICIAL_NEWAPI_BASE_URL
-    assert effective.api_key == "sk-user-registered-secret"
 
 
 def test_custom_newapi_init_route_accepts_empty_body(monkeypatch, tmp_path):
@@ -3805,23 +3532,6 @@ def test_effective_cognee_embedding_keeps_saved_batch_size(monkeypatch, tmp_path
     assert effective.batch_size == "10"
 
 
-def test_ce_official_embedding_ignores_saved_custom_model(monkeypatch, tmp_path):
-    _isolate_settings_db(monkeypatch, tmp_path)
-    save_newapi_embedding_model_config(
-        provider="openai",
-        upstream_model="stale-custom-model",
-        dimension=1024,
-    )
-    set_model_gateway_mode(MODE_OFFICIAL)
-    monkeypatch.setenv("COGNEE_EMBEDDING_MODEL", "DC-cognee-embedding")
-    monkeypatch.setenv("COGNEE_EMBEDDING_DIM", "1024")
-
-    effective = get_effective_cognee_embedding_config()
-
-    assert effective.source == "environment"
-    assert effective.model == "DC-cognee-embedding"
-    assert effective.dimensions == "1024"
-    assert effective.upstream_model == ""
 
 
 def test_cognee_apply_embedding_env_sets_saved_batch_size(monkeypatch, tmp_path):

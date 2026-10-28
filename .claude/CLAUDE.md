@@ -2,6 +2,12 @@
 
 Máy này đã cài và cấu hình sẵn. Đọc file này trước khi cài/cấu hình lại để khỏi mất thời gian. Không ghi bí mật vào đây; mật khẩu root NewAPI nằm ở `NEWAPI_ROOT_PASSWORD` trong `.env` (gitignored).
 
+## Gateway chỉ dùng custom, NewAPI trên máy này (2026-10-29)
+
+- Đã bỏ chế độ `official`/`hybrid`: `normalize_gateway_mode()` luôn trả `custom` (chỉ nhánh CE), route `/official/enable` và `/hybrid/enable` trả 410, Settings chỉ còn tab custom. Lý do: danh mục RunPod của Freezone chỉ merge ở custom/hybrid.
+- Volume Docker của máy này tạo mới ngày 2026-10-22, nên các mục bên dưới viết "đã khởi tạo NewAPI / đã có channel" là trạng thái của máy khác. Ở máy này NewAPI được khởi tạo ngày 2026-10-29 (`POST /custom/newapi/init`, body `setupUsername`/`setupPassword`/`setupConfirmPassword`, mật khẩu = `NEWAPI_ROOT_PASSWORD`), rồi dựng lại bằng `upsert_channel()` đúng 2 channel: `DC-deepseek` (22 alias text) và `DC-qwen-vision` (5 alias vision: video-identity-detector, video-prompt-optimizer, freezone-vision, video-h3-prompt, render-qwen-edit-prompt). Chưa dựng `DC-custom`, `DC-ollama` và 3 alias cognee/hermes/codex.
+- Khi dựng lại channel, đọc key từ biến môi trường trong container, đừng `echo` giá trị key khi kiểm tra `.env`.
+
 ## Chạy stack
 
 - Dùng image dựng sẵn, không cần clone gateway: `docker compose -f docker-compose.release.yml up -d` (api, newapi, web).

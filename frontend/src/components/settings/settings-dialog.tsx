@@ -278,7 +278,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   );
 }
 
-const GATEWAY_MODES: GatewayMode[] = ["official", "custom", "hybrid"];
+const GATEWAY_MODES: GatewayMode[] = ["custom"];
 
 const DEFAULT_CUSTOM_NEWAPI_URL = "http://127.0.0.1:3000";
 
@@ -372,7 +372,7 @@ function ModelConfigSection({ open }: { open: boolean }) {
     ? !config.effective.configured || !config.llmEffective.configured
     : false;
 
-  const [mode, setMode] = useState<GatewayMode>("official");
+  const [mode, setMode] = useState<GatewayMode>("custom");
   const modeChosenByUser = useRef(false);
   const [customLlmMode, setCustomLlmMode] =
     useState<CustomLlmMode>("relayclaw_brainclaw");

@@ -39,12 +39,6 @@ def _isolate_ce(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
     monkeypatch.delenv("ST_CONTROL_PLANE_DSN", raising=False)
 
 
-def test_new_and_legacy_official_projects_bind_v2_and_v1(monkeypatch, tmp_path):
-    _isolate_ce(monkeypatch, tmp_path)
-    set_model_gateway_mode(MODE_OFFICIAL)
-
-    assert embedding_model_for_new_project() == COGNEE_EMBEDDING_MODEL_V2
-    assert embedding_model_for_legacy_project() == COGNEE_EMBEDDING_MODEL_V1
 
 
 def test_ce_custom_projects_bind_unversioned_model(monkeypatch, tmp_path):
@@ -80,50 +74,8 @@ def test_ce_custom_new_project_snapshots_configured_dimensions(monkeypatch, tmp_
     assert binding.send_dimensions is True
 
 
-def test_project_model_keeps_its_gateway_after_active_mode_switch(monkeypatch, tmp_path):
-    _isolate_ce(monkeypatch, tmp_path)
-    save_official_newapi_key(api_key="sk-official", activate=True)
-    save_custom_newapi_gateway(
-        base_url="http://new-api:3000",
-        api_key="sk-custom",
-        activate=True,
-    )
-
-    official = embedding_gateway_credentials(
-        embedding_model_spec(COGNEE_EMBEDDING_MODEL_V1)
-    )
-    custom = embedding_gateway_credentials(
-        embedding_model_spec(COGNEE_EMBEDDING_MODEL_LEGACY)
-    )
-
-    assert official == ("sk-official", "https://relayclaw.cdnfg.com/v1")
-    assert custom == ("sk-custom", "http://new-api:3000/v1")
 
 
-def test_legacy_project_binding_is_backfilled_once(monkeypatch, tmp_path):
-    _isolate_ce(monkeypatch, tmp_path)
-    set_model_gateway_mode(MODE_OFFICIAL)
-    state_dir = tmp_path / "project-state"
-    state_dir.mkdir()
-    config_path = state_dir / "project_config.json"
-    config_path.write_text('{"visual_style":"cinematic"}', encoding="utf-8")
-
-    assert (
-        ensure_cognee_embedding_model_in_state_dir(state_dir)
-        == COGNEE_EMBEDDING_MODEL_V1
-    )
-    persisted = json.loads(config_path.read_text(encoding="utf-8"))
-    assert persisted == {
-        "visual_style": "cinematic",
-        "cognee_embedding_model": COGNEE_EMBEDDING_MODEL_V1,
-        PROJECT_EMBEDDING_DIMENSION_KEY: 1024,
-    }
-
-    set_model_gateway_mode(MODE_CUSTOM)
-    assert (
-        ensure_cognee_embedding_model_in_state_dir(state_dir)
-        == COGNEE_EMBEDDING_MODEL_V1
-    )
 
 
 @pytest.mark.parametrize(

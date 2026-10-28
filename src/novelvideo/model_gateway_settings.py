@@ -129,8 +129,9 @@ def normalize_api_key(value: str | None) -> str:
 
 
 def normalize_gateway_mode(value: str | None) -> str:
-    mode = str(value or "").strip().lower()
-    return mode if mode in VALID_MODES else MODE_OFFICIAL
+    # This deployment is custom-only: any stored "official"/"hybrid" (or empty)
+    # value resolves to the bundled local NewAPI gateway.
+    return MODE_CUSTOM
 
 
 def normalize_custom_llm_mode(value: str | None) -> str:
@@ -300,8 +301,6 @@ def save_official_newapi_key(
     values = {
         "official_newapi_api_key": str(api_key or "").strip(),
     }
-    if activate:
-        values["model_gateway_mode"] = MODE_OFFICIAL
     _write_many(values)
 
 
@@ -1046,7 +1045,10 @@ def save_media_relay_config(
 
 def get_model_gateway_settings() -> dict[str, str]:
     data = _read_all() if _uses_ce_gateway_settings() else {}
-    data.setdefault("model_gateway_mode", MODE_OFFICIAL)
+    if _uses_ce_gateway_settings():
+        data["model_gateway_mode"] = MODE_CUSTOM
+    else:
+        data.setdefault("model_gateway_mode", MODE_OFFICIAL)
     if _uses_ce_gateway_settings():
         data.setdefault("custom_llm_mode", CUSTOM_LLM_MODE_ADVANCED)
     return data

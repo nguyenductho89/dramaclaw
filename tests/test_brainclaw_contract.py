@@ -551,27 +551,6 @@ def test_brainclaw_api_accepts_custom_newapi_endpoint_and_masks_key(
     assert "sk-user-relay-secret" not in response.text
 
 
-def test_custom_brainclaw_endpoint_does_not_replace_official_gateway(
-    monkeypatch, tmp_path
-):
-    _isolate_settings_db(monkeypatch, tmp_path)
-    save_official_newapi_key(api_key="sk-official-secret")
-    save_relayclaw_brainclaw_key(
-        api_key="sk-local-secret",
-        base_url="http://127.0.0.1:8317",
-    )
-    set_model_gateway_mode("custom")
-
-    custom_llm = get_effective_llm_config()
-    assert custom_llm.base_url == "http://127.0.0.1:8317/v1"
-    assert custom_llm.api_key == "sk-local-secret"
-    assert custom_llm.model == "brainclaw"
-
-    set_model_gateway_mode("official")
-    official_llm = get_effective_llm_config()
-    assert official_llm.base_url == OFFICIAL_NEWAPI_BASE_URL
-    assert official_llm.api_key == "sk-official-secret"
-    assert official_llm.model == "brainclaw"
 
 
 def test_custom_llm_mode_accepts_dedicated_brainclaw_without_official_key(
@@ -604,28 +583,3 @@ def test_custom_llm_mode_accepts_dedicated_brainclaw_without_official_key(
     )
 
 
-def test_brainclaw_settings_never_switch_the_active_gateway_mode(monkeypatch, tmp_path):
-    """BrainClaw is a setting inside Custom mode; touching it must not activate Custom."""
-    _isolate_settings_db(monkeypatch, tmp_path)
-    save_official_newapi_key(api_key="sk-official-secret")  # activates Official
-
-    save_relayclaw_brainclaw_key(api_key="sk-local-secret", base_url="http://127.0.0.1:8317")
-    assert get_model_gateway_settings().get("model_gateway_mode") == "official"
-    llm = get_effective_llm_config()
-    assert llm.mode == "official"
-    assert llm.base_url == OFFICIAL_NEWAPI_BASE_URL
-    assert llm.api_key == "sk-official-secret"
-
-    set_custom_llm_mode(CUSTOM_LLM_MODE_ADVANCED)
-    assert get_model_gateway_settings().get("model_gateway_mode") == "official"
-    assert get_effective_llm_config().mode == "official"
-
-    # Only the explicit enable action activates Custom, and then the saved
-    # BrainClaw endpoint / sub-mode applies.
-    set_model_gateway_mode("custom")
-    assert get_effective_llm_config().mode == CUSTOM_LLM_MODE_ADVANCED
-    set_custom_llm_mode(CUSTOM_LLM_MODE_RELAYCLAW_BRAINCLAW)
-    custom_llm = get_effective_llm_config()
-    assert custom_llm.mode == CUSTOM_LLM_MODE_RELAYCLAW_BRAINCLAW
-    assert custom_llm.base_url == "http://127.0.0.1:8317/v1"
-    assert custom_llm.api_key == "sk-local-secret"

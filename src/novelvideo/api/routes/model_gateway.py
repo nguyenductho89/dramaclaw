@@ -591,29 +591,10 @@ async def check_official_media_catalog() -> dict[str, Any]:
 
 @router.post("/official/enable")
 async def enable_official_gateway() -> dict[str, Any]:
-    try:
-        require_ce_gateway_management()
-    except PermissionError as exc:
-        raise _permission_error(exc) from exc
-    status = build_model_gateway_status(
-        official_base_url=app_config.OFFICIAL_NEWAPI_BASE_URL,
-        official_api_key=app_config.NEWAPI_API_KEY,
+    raise HTTPException(
+        status_code=410,
+        detail="official/hybrid gateway modes are disabled; only custom is supported",
     )
-    if not status["official"]["configured"]:
-        raise HTTPException(
-            status_code=400,
-            detail="official NewAPI gateway is not configured",
-        )
-    set_model_gateway_mode(MODE_OFFICIAL)
-    runtime = _refresh_runtime_after_gateway_write()
-    return {
-        "ok": True,
-        "data": build_model_gateway_status(
-            official_base_url=app_config.OFFICIAL_NEWAPI_BASE_URL,
-            official_api_key=app_config.NEWAPI_API_KEY,
-        ),
-        "runtime": runtime,
-    }
 
 
 @router.post("/custom/enable")
@@ -644,29 +625,10 @@ async def enable_custom_gateway() -> dict[str, Any]:
 
 @router.post("/hybrid/enable")
 async def enable_hybrid_gateway() -> dict[str, Any]:
-    try:
-        require_ce_gateway_management()
-    except PermissionError as exc:
-        raise _permission_error(exc) from exc
-    status = build_model_gateway_status(
-        official_base_url=app_config.OFFICIAL_NEWAPI_BASE_URL,
-        official_api_key=app_config.NEWAPI_API_KEY,
+    raise HTTPException(
+        status_code=410,
+        detail="official/hybrid gateway modes are disabled; only custom is supported",
     )
-    if not status["official"]["configured"] or not status["custom"]["configured"]:
-        raise HTTPException(
-            status_code=400,
-            detail="local and official NewAPI gateways must both be configured",
-        )
-    set_model_gateway_mode(MODE_HYBRID)
-    runtime = _refresh_runtime_after_gateway_write()
-    return {
-        "ok": True,
-        "data": build_model_gateway_status(
-            official_base_url=app_config.OFFICIAL_NEWAPI_BASE_URL,
-            official_api_key=app_config.NEWAPI_API_KEY,
-        ),
-        "runtime": runtime,
-    }
 
 
 @router.post("/official/config")

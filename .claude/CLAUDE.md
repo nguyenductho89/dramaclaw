@@ -101,6 +101,12 @@ Máy này đã cài và cấu hình sẵn. Đọc file này trước khi cài/c�
       - **Giả thuyết (chưa verify)**: conditioning của `image2` (identity) có thể quá yếu so với conditioning của `image1` (toàn cảnh photoreal đã có sẵn một "cậu học sinh" ở đúng vị trí đó từ lượt 1) — model ưu tiên nhất quán với bối cảnh xung quanh hơn là bám sát identity tham chiếu, có thể còn bị cộng hưởng bởi chênh lệch tuổi tác rõ rệt giữa sketch (học sinh trẻ) và identity (người lớn). Chưa thử: tăng trọng số/CFG riêng cho nhánh image2, prompt nhấn mạnh hơn ("exactly like image 2's face, mustache, hairstyle — not a young boy"), mask chặt hơn (ít feather hơn để model ít "trộn" với bối cảnh), hoặc tách `negative` conditioning để chủ động phủ nhận đặc điểm "học sinh trẻ".
     - **Kết luận hiện tại**: bài toán gốc (nhầm identity sang người khác) đã giải quyết bằng cơ chế mask. Bài toán mới (identity truyền vào yếu, không rõ mặt) chưa giải quyết — `runpod_qwen_edit_render_multi` CHƯA dùng được cho sản xuất thật. Beat nhiều nhân vật (như beat 5, 6 của `tesla_pov_short`) nên tiếp tục dùng `gemini_webai` (mặc định) cho tới khi vấn đề truyền identity được giải quyết.
 
+## Agent model (Xia Director) dùng DeepSeek trực tiếp (2026-10-29)
+
+- Settings → Models → **Agent model** = Third party: `POST /api/v1/model-gateway/agent/config` với `mode:"third_party"`, `baseUrl:"https://api.deepseek.com/v1"`, `model:"deepseek-chat"`, `apiKey` = `DEEPSEEK_API_KEY` (lưu trong settings DB của CE, không ghi vào repo). Chỉ ảnh hưởng Agent; các route text/ảnh/video vẫn theo gateway `custom`.
+- Codex App Server cần `wire_api="responses"`; đã kiểm `api.deepseek.com/v1/responses` trả 200 nên dùng được. Không qua NewAPI nên không cần alias `DC-codex-agent-LLM`.
+- Muốn quay lại: chọn "Follow current channel" (`mode:"inherit"`).
+
 ## Embedding có cần không?
 
 - Dự án mới tạo qua API luôn là `knowledge_pipeline: "structured_v1"` (`src/novelvideo/api/routes/projects.py:765`): không embedding, không đồ thị, không vector index. Ingest chỉ lưu nguồn và chia chunk.

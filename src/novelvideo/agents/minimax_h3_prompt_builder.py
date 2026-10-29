@@ -54,11 +54,26 @@ from pathlib import Path
 from typing import Literal, Optional
 
 from pydantic import BaseModel, Field, field_validator, model_validator
-from pydantic_ai import Agent, BinaryContent, ModelRetry, RunContext
-from pydantic_ai.exceptions import UnexpectedModelBehavior
+from pydantic_ai import Agent, BinaryContent, ModelRetry, RunContext, UsageLimits
+from pydantic_ai.exceptions import UnexpectedModelBehavior, UsageLimitExceeded
 from pydantic_ai.output import NativeOutput
 
 _RULES_PATH = Path(__file__).parent / "prompts" / "minimax_h3_rules.md"
+
+# Circuit breaker for the "thinking mode" vision model occasionally
+# collapsing into runaway repetition instead of producing valid JSON
+# (observed 2026-10-29: one response grew to ~24,000 characters of
+# free-associated word-salad before being cut off at the old 4000-token
+# `max_tokens`, still never closing its JSON). `UsageLimits.output_tokens_limit`
+# is checked by pydantic-ai right after each response (before it even
+# attempts to parse/repair that response) and again before sending the next
+# retry — so one response that alone balloons past this trips
+# `UsageLimitExceeded` immediately instead of paying for 1-2 more retries
+# hoping the model recovers. Sized well above a normal run (~1700 output
+# tokens measured for a full 2-attempt success) but below what 2 requests at
+# the bumped 6000-token `max_tokens` could burn if both went degenerate.
+_WRITER_OUTPUT_TOKENS_LIMIT = 5000
+_REVIEWER_OUTPUT_TOKENS_LIMIT = 2000
 
 
 def _load_rules() -> str:
@@ -411,9 +426,13 @@ def _build_agent() -> Agent:
         # `max_tokens`: a "thinking mode" vision model spends part of its
         # token budget on internal reasoning before the final JSON. The
         # schema is much smaller than the old free-text `final_prompt`
-        # design (content only, no multi-section prose), but still generous
-        # on purpose.
-        model_settings={**get_newapi_structured_output_model_settings(), "max_tokens": 4000},
+        # design (content only, no multi-section prose), but a successful
+        # 2-attempt run was measured (2026-10-29, debug script against beat 1
+        # of YuiDrama) at ~1700 output tokens total, i.e. well under the
+        # previous 4000/request — bumped to 6000 as headroom for a more
+        # complex beat (more subjects/voices/dialogue) that might need more
+        # than this one beat did, not because this beat needed it.
+        model_settings={**get_newapi_structured_output_model_settings(), "max_tokens": 6000},
         name="MiniMax H3 Prompt Director",
     )
 
@@ -1018,7 +1037,12 @@ async def review_h3_draft(context: "MiniMaxH3BeatContext", content: "MiniMaxH3Co
     """Independent AI pass: does the draft contradict or drop anything in the
     beat's own description? A failed review call never blocks generation."""
     try:
-        verdict = (await _get_review_agent().run(_review_input(context, content))).output
+        verdict = (
+            await _get_review_agent().run(
+                _review_input(context, content),
+                usage_limits=UsageLimits(output_tokens_limit=_REVIEWER_OUTPUT_TOKENS_LIMIT),
+            )
+        ).output
     except Exception as exc:  # noqa: BLE001
         logging.getLogger(__name__).warning("MiniMax H3 draft review skipped: %r", exc)
         return []
@@ -1101,7 +1125,9 @@ async def build_minimax_h3_prompt(context: MiniMaxH3BeatContext) -> MiniMaxH3Pro
         # The agent's own output validator already sent format / fidelity
         # failures back to the model; this loop adds the independent review.
         response = await agent.run(
-            [_build_user_prompt(attempt_context), *images], deps=attempt_context
+            [_build_user_prompt(attempt_context), *images],
+            deps=attempt_context,
+            usage_limits=UsageLimits(output_tokens_limit=_WRITER_OUTPUT_TOKENS_LIMIT),
         )
         output = response.output
         if not review_enabled():
@@ -1168,10 +1194,16 @@ async def generate_minimax_h3_prompt_with_fallback(
                 max_llm_attempts,
                 exc,
             )
-            if isinstance(exc, UnexpectedModelBehavior):
+            if isinstance(exc, (UnexpectedModelBehavior, UsageLimitExceeded)):
                 # Output retries already ran inside the agent (each with the
                 # concrete validation message); repeating the whole run only
                 # multiplies latency, so go straight to the fallback template.
+                # `UsageLimitExceeded` (the output-tokens circuit breaker,
+                # see `_WRITER_OUTPUT_TOKENS_LIMIT`) is a sibling of
+                # `UnexpectedModelBehavior`, not a subclass of it — without
+                # this it would fall through to `continue` below and retry
+                # the *entire* outer loop up to 2 more times, exactly the
+                # unbounded-cost failure mode this breaker exists to avoid.
                 break
             retry_context = context.model_copy(
                 update={

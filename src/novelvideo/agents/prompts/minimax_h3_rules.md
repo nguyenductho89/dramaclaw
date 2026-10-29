@@ -28,6 +28,13 @@ put in your structured answer's fields.
    from the camera"), do not empty a place the description says is crowded,
    and do not drop a prop the description mentions. Without a first frame,
    keep the camera `static` unless the description itself asks for a move.
+   **A Scene reference image is routinely an empty establishing plate** —
+   crowds/extras are usually added later and will not be visible in it. If
+   the plate looks empty but the beat text says the place is crowded,
+   that's expected, not a contradiction: still describe the crowd the text
+   names. Rule 7's "trust the image over the text" is about a *character*
+   reference's own appearance only — it never licenses dropping a crowd,
+   era detail, or action that the Scene reference simply doesn't depict.
 
 0. **Reference kinds and a missing first frame.** A reference of kind
    `scene` is the *location*: describe its architecture/lighting in its

@@ -75,6 +75,7 @@ trong `extra_model_paths.yaml` của endpoint này nhưng **không có node PDD 
 **Giới hạn thật đã đo (A40 48GB, 2026-10-29)**:
 - SeedVR2 7B, upscale 2x, 33 khung: OK, 196s thực thi, không OOM.
 - SeedVR2 7B, upscale 2x, 124 khung (full clip): **VRAM OOM** ở KSampler (43.35/44.42 GiB) khi chạy nguyên khối; dùng `SeedVR2TemporalChunk(auto)` thì né được VRAM (tự chia `frames_per_chunk=53`) nhưng **RAM hệ thống đứt kết nối websocket sau ~670s** (cùng lỗi RAM đã gặp với 3B ở bài trước) — worker không tự hồi phục, phải cycle `workers.max` 0→1. Cách chắc ăn đã dùng với 3B: chia 2 job riêng (không chunk trong 1 job), mỗi job 1 nửa số khung có chồng lấn, ghép crossfade bằng ffmpeg.
+- **Cách xử lý (2026-10-29)**: `scripts/seedvr2_upscale_chunked.py` (logic trong `src/novelvideo/generators/runpod_seedvr2_upscale.py`). Script chia clip thành các đoạn 41 khung, hai đoạn liền nhau chồng 8 khung, và gửi mỗi đoạn thành **một job RunPod riêng**. Graph mỗi job không có `SeedVR2TemporalChunk` và dùng `VAEEncodeTiled`/`VAEDecodeTiled`, nên VRAM lẫn RAM của worker chỉ phụ thuộc kích thước một đoạn, không phụ thuộc độ dài clip. Resize lanczos làm ở local (crf 0); các đoạn được ghép ở local bằng crossfade cùng dạng cửa sổ với `SeedVR2TemporalMerge`, rồi gắn lại audio gốc. Đoạn đã xong được lưu trong `--work-dir`, nên khi chạy lại chỉ gửi các đoạn còn thiếu. Ví dụ: `python scripts/seedvr2_upscale_chunked.py in.mp4 out.mp4 --model 7b --scale 2 --work-dir /tmp/sv2`. Chưa chạy bằng GPU thật.
 
 ---
 

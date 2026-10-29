@@ -37,6 +37,7 @@ from novelvideo.api.schemas import (
     SketchRegenerateRequest,
     SingleVideoRequest,
     MiniMaxH3PromptGenerateRequest,
+    RecoverH3VideoRequest,
     MultishotVideoRequest,
     SegmentFrameApproveRequest,
     SegmentFramesGenerateRequest,
@@ -5759,6 +5760,63 @@ def _video_review_fingerprint(
         except OSError:
             parts.append(p)
     return hashlib.sha1("|".join(parts).encode("utf-8", "ignore")).hexdigest()[:16]
+
+
+@router.post("/projects/{project}/episodes/{episode_num}/beats/{beat_num}/video/recover")
+async def recover_beat_video_from_job(
+    project: str,
+    episode_num: int,
+    beat_num: int,
+    body: RecoverH3VideoRequest,
+    user: dict = Depends(get_api_user),
+):
+    """Re-download the video of an already finished RunPod H3 job by id and
+    make it this beat's video. For a render whose download failed after the
+    GPU run (the mp4 is still in R2 under `jobs/<job_id>/`); no new job."""
+    from novelvideo.generators.runpod_minimax_h3_video import recover_runpod_h3_video
+    from novelvideo.generators.video_pool_indexer import add_video_to_pool
+    from novelvideo.utils.path_resolver import PathResolver
+    from novelvideo.video_billing import probe_video_duration_seconds
+
+    resolved = await _resolve_generation_project(project, user, required_role="editor")
+    paths = PathResolver(resolved.output_dir, episode_num)
+    target = paths.video(beat_num)
+    # Download beside the target first so a failed or partial fetch never
+    # replaces the beat's current video.
+    staging = target.with_name(f"{target.stem}.recover{target.suffix}")
+    result = await recover_runpod_h3_video(body.job_id, staging)
+    if result.error:
+        staging.unlink(missing_ok=True)
+        return {"ok": False, "error": result.error}
+    target.parent.mkdir(parents=True, exist_ok=True)
+    os.replace(staging, target)
+
+    duration = 0.0
+    try:
+        duration = float(await probe_video_duration_seconds(str(target)))
+    except Exception:  # noqa: BLE001 - pool metadata only
+        pass
+    video_pool_id = None
+    try:
+        entry = add_video_to_pool(
+            videos_ep_dir=paths.videos_dir(),
+            episode=episode_num,
+            beat_num=beat_num,
+            source_video_path=target,
+            duration=duration or 5.0,
+            video_mode="first_frame",
+            backend="runpod_minimax_h3",
+            prompt=f"(recovered from RunPod job {body.job_id})",
+        )
+        video_pool_id = entry.id
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Recovered video not added to the pool: %r", exc)
+    return {
+        "ok": True,
+        "video_path": target.as_posix(),
+        "video_pool_id": video_pool_id,
+        "duration": duration,
+    }
 
 
 @router.post("/projects/{project}/episodes/{episode_num}/beats/{beat_num}/video/review")

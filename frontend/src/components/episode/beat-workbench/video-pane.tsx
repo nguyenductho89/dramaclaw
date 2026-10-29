@@ -51,6 +51,7 @@ import {
   type VideoInputCropTarget,
   type VideoReviewData,
 } from "@/lib/queries/video";
+import { RecoverH3VideoButton } from "@/components/episode/beat-workbench/recover-h3-video";
 import { VideoReviewDialog } from "@/components/episode/beat-workbench/video-review-dialog";
 import { H3InputSection } from "@/components/episode/beat-workbench/h3-input-section";
 import {
@@ -2085,6 +2086,13 @@ export function VideoPane({
                 count: candidates.length,
               })}
             </span>
+            {showRunpodH3Config && (
+              <RecoverH3VideoButton
+                project={project}
+                episode={episode}
+                beatNum={beat.beat_number}
+              />
+            )}
           </div>
 
           {!showRunpodH3Config && (

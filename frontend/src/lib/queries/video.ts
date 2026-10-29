@@ -960,3 +960,29 @@ export function useGenerateMiniMaxH3Prompt(project: string, episode: number) {
       ),
   });
 }
+
+export interface RecoverH3VideoResult {
+  ok: boolean;
+  error?: string;
+  video_path?: string;
+  video_pool_id?: string | null;
+}
+
+/** Re-download a finished RunPod H3 job's video from R2 by job id. */
+export function useRecoverH3Video(project: string, episode: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ beatNum, jobId }: { beatNum: number; jobId: string }) =>
+      jsonWithBackendError<RecoverH3VideoResult>(
+        api.post(
+          p`api/v1/projects/${project}/episodes/${episode}/beats/${beatNum}/video/recover`,
+          { json: { job_id: jobId }, throwHttpErrors: false },
+        ),
+      ),
+    onSuccess: (res) => {
+      if (!res.ok) return;
+      void qc.invalidateQueries({ queryKey: queryKeys.videoPool(project, episode) });
+      void qc.invalidateQueries({ queryKey: queryKeys.beats(project, episode) });
+    },
+  });
+}

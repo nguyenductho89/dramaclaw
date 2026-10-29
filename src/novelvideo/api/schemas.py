@@ -192,6 +192,12 @@ class BeatVideoPromptGenerateRequest(BaseModel):
     language: str = "en"
 
 
+class RecoverH3VideoRequest(BaseModel):
+    """RunPod job id whose finished video should be re-downloaded from R2."""
+
+    job_id: str = Field(min_length=8, max_length=200, pattern=r"^[A-Za-z0-9._-]+$")
+
+
 class MiniMaxH3PromptGenerateRequest(BaseModel):
     # Optional override so the rewritten prompt's timestamps match whatever
     # duration the review dialog is currently showing (which may itself be

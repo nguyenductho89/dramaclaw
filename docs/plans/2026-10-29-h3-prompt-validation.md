@@ -61,6 +61,12 @@ suspects and at bounding cost:
   so the next live run shows which rule fails: `docker logs dramaclaw-api-1 | grep "validator retry"`.
 - Still TODO locally: steps 4-5 below (reviewer sanity, live beat 1 re-verify), then deploy.
 
+- Reviewer now uses DeepSeek: env `MINIMAX_H3_REVIEW_MODEL`, default alias
+  `DC-video-h3-review-LLM`, plain `output_type` (no NativeOutput). **The alias must be
+  provisioned locally** on channel `DC-deepseek` via `upsert_channel()` (not the
+  `/custom/newapi/channels` route, see CLAUDE.md); until then the review call fails,
+  is logged as "draft review skipped", and generation proceeds without it.
+
 ## Open problem (start here)
 
 Live call on beat 1 (ref2va, no first frame, refs: Yui identity, phone prop,

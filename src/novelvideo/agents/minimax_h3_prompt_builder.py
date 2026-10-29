@@ -944,13 +944,17 @@ def _get_review_agent() -> Agent:
         )
 
         _review_agent = Agent(
+            # Text-only and independent of the writer model: its own alias
+            # (`DC-video-h3-review-LLM`, mapped to channel `DC-deepseek`).
             get_newapi_text_pydantic_model(
-                "MINIMAX_H3_PROMPT_MODEL",
-                default_model="DC-video-h3-prompt-LLM",
+                "MINIMAX_H3_REVIEW_MODEL",
+                default_model="DC-video-h3-review-LLM",
                 capability="text.generate.agent",
             ),
             system_prompt=_REVIEW_SYSTEM_PROMPT,
-            output_type=NativeOutput(MiniMaxH3ReviewVerdict),
+            # Plain output type (forced tool-calling): deepseek-chat rejects
+            # NativeOutput/response_format with a 400 (ADR 0002).
+            output_type=MiniMaxH3ReviewVerdict,
             model_settings={**get_newapi_structured_output_model_settings(), "max_tokens": 1500},
             name="MiniMax H3 Prompt Reviewer",
         )

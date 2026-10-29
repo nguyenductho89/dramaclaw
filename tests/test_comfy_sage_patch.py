@@ -8,8 +8,19 @@ from novelvideo.generators import comfy_sage, nanobanana_grid, runpod_minimax_h3
 
 def _h3_ref2va():
     return h3.build_h3_ref2va_graph(
-        prompt="p", image_names=["a.png", "b.png"], audio_names=[], seed=1, width=768, height=1344, frames=124
+        prompt="p", image_names=["a.png", "b.png"], audio_names=[], seed=1, width=768, height=1344, frames=124,
+        pdd_file="MiniMax-H3-Ref2VA-Acc-8Step.safetensors",
     )
+
+
+def test_h3_ref2va_base_model_consumers_use_patched_model(sage_on):
+    g = h3.build_h3_ref2va_graph(
+        prompt="p", image_names=["a.png"], audio_names=[], seed=1, width=768, height=1344, frames=124,
+        pdd_file="",
+    )
+    assert _consumers(g, ["1", 0]) == []
+    assert g["8"]["inputs"]["model"] == [comfy_sage.SAGE_NODE_ID, 0]
+    assert g["28"]["inputs"]["model"] == [comfy_sage.SAGE_NODE_ID, 0]
 
 
 def _h3_fl2va():

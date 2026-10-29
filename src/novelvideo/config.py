@@ -876,8 +876,10 @@ RUNPOD_H3_SAGE_ATTENTION = os.environ.get("RUNPOD_H3_SAGE_ATTENTION", "")
 # Value of `sage_attention` that reverts to stock attention. Verify against the
 # worker's `object_info` for PathchSageAttentionKJ before enabling.
 RUNPOD_SAGE_DISABLED_MODE = os.environ.get("RUNPOD_SAGE_DISABLED_MODE", "disabled")
-# PDD acceleration (8-step). ref2va always; fl2va (1-shot and multishot) only
-# when RUNPOD_H3_PDD_FL2VA below is set, otherwise base 20-step.
+# PDD acceleration (8-step), per checkpoint: an empty value means base
+# 20-step for that checkpoint (1-shot and multishot). ref2va defaults to PDD;
+# set `RUNPOD_H3_PDD_REF2VA=` to trade ~2x GPU time for no PDD smearing on
+# faces/hands. fl2va only uses PDD when RUNPOD_H3_PDD_FL2VA below is set.
 RUNPOD_H3_PDD_REF2VA = os.environ.get(
     "RUNPOD_H3_PDD_REF2VA", "MiniMax-H3-Ref2VA-Acc-8Step.safetensors"
 )

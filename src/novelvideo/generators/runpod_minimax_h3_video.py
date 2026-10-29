@@ -194,6 +194,8 @@ def build_h3_ref2va_graph(
     audio_refine_cfg: float = 1.0,
     audio_refine_denoise: float = 0.5,
     pin_first_frame: bool = True,
+    pdd_file: str | None = None,
+    base_steps: int = 20,
 ) -> dict[str, Any]:
     """`MiniMaxH3ReferenceToVideo` + PDD 8-step acceleration. With
     `pin_first_frame` (default) `image_names[0]` is the first frame
@@ -235,6 +237,12 @@ def build_h3_ref2va_graph(
     sampler runs at `cfg=1.0` like the rest of this pipeline, and CFG at
     cfg=1 is mathematically `negative + 1.0*(positive-negative) = positive`,
     i.e. negative has zero effect on the result at that cfg value.
+
+    `pdd_file` (None = `RUNPOD_H3_PDD_REF2VA`): an empty string drops PDD and
+    samples the base model instead — `base_steps`-step res_multistep/simple,
+    the same base branch as `build_h3_fl2va_graph`. Measured 2026-10-29 on
+    YuiDrama beat 1 (A40): ~768s vs ~382s with PDD, but no PDD smearing on
+    faces/hands. `two_stage` has no base variant (stage 2 is a PDD branch).
     """
     from novelvideo.config import (
         RUNPOD_H3_AUDIO_VAE,
@@ -244,7 +252,12 @@ def build_h3_ref2va_graph(
         RUNPOD_H3_VIDEO_VAE,
     )
 
-    if pdd_steps not in (4, 6, 8):
+    if pdd_file is None:
+        pdd_file = RUNPOD_H3_PDD_REF2VA
+    use_pdd = bool(pdd_file)
+    if not use_pdd and two_stage:
+        raise ValueError("two_stage needs PDD (stage 2 is a PDD branch); set RUNPOD_H3_PDD_REF2VA")
+    if use_pdd and pdd_steps not in (4, 6, 8):
         raise ValueError(f"PDD acceleration only supports 4/6/8 steps, got {pdd_steps}")
     if two_stage and stage2_nfe not in ("4", "6", "8"):
         raise ValueError(f"stage2_nfe only supports '4'/'6'/'8', got {stage2_nfe!r}")
@@ -329,7 +342,7 @@ def build_h3_ref2va_graph(
             "class_type": "MiniMaxH3PDDAccApply",
             "inputs": {
                 "model": ["5", 0],
-                "pdd_file": RUNPOD_H3_PDD_REF2VA,
+                "pdd_file": pdd_file,
                 "nfe": str(pdd_steps),
                 "lora_strength": 1.0,
                 "head_strength": 1.0,
@@ -337,7 +350,16 @@ def build_h3_ref2va_graph(
             },
         },
     }
-    graph["8"]["inputs"]["model"] = ["6", 0]
+    if use_pdd:
+        graph["8"]["inputs"]["model"] = ["6", 0]
+    else:
+        del graph["5"], graph["6"]
+        graph["9"]["inputs"]["sampler_name"] = "res_multistep"
+        graph["28"] = {
+            "class_type": "BasicScheduler",
+            "inputs": {"model": ["1", 0], "scheduler": "simple", "steps": base_steps, "denoise": 1.0},
+        }
+        graph["12"]["inputs"]["sigmas"] = ["28", 0]
 
     for k, name in enumerate(all_image_names):
         graph[str(100 + k)] = {"class_type": "LoadImage", "inputs": {"image": name}}
@@ -381,7 +403,7 @@ def build_h3_ref2va_graph(
                 # Apply branch at stage2_nfe — pass 1's own "6" branch
                 # (nfe=8) is untouched.
                 "model": ["5", 0],
-                "pdd_file": RUNPOD_H3_PDD_REF2VA,
+                "pdd_file": pdd_file,
                 "nfe": stage2_nfe,
                 "lora_strength": 1.0,
                 "head_strength": 1.0,
@@ -414,7 +436,7 @@ def build_h3_ref2va_graph(
         # Reuse pass-1's own model branch ("6") for a single-stage refine;
         # stage 2's branch ("61") when two_stage is also on — matches
         # whichever branch actually produced `final_latent_node`.
-        refine_model = ["61", 0] if two_stage else ["6", 0]
+        refine_model = ["61", 0] if two_stage else (["6", 0] if use_pdd else ["1", 0])
         graph["66"] = {
             "class_type": "MiniMaxH3ChainAudioRefineSampler",
             "inputs": {
@@ -609,6 +631,7 @@ class RunPodMiniMaxH3VideoGenerator(VideoGeneratorBase):
             RUNPOD_H3_AUDIO_REFINE_ENABLED,
             RUNPOD_H3_AUDIO_REFINE_STEPS,
             RUNPOD_H3_PDD_FL2VA,
+            RUNPOD_H3_PDD_REF2VA,
             RUNPOD_H3_STAGE2_DENOISE,
             RUNPOD_H3_STAGE2_NFE,
             RUNPOD_H3_STAGE2_SCALE_BY,
@@ -722,6 +745,11 @@ class RunPodMiniMaxH3VideoGenerator(VideoGeneratorBase):
         else:
             mode = "fl2va"  # t2va / fl2va / flf2va all use MiniMaxH3ImageToVideo
 
+        pdd_file = RUNPOD_H3_PDD_REF2VA if mode == "ref2va" else RUNPOD_H3_PDD_FL2VA
+        if mode == "ref2va" and two_stage and not pdd_file:
+            log("two-stage needs PDD, RUNPOD_H3_PDD_REF2VA is empty: running single-stage base")
+            two_stage = False
+
         if mode == "ref2va":
             image_names = [name for name, _d, _m in image_payloads]
             audio_names = [name for name, _d, _m in audio_payloads]
@@ -745,6 +773,7 @@ class RunPodMiniMaxH3VideoGenerator(VideoGeneratorBase):
                 audio_refine_cfg=RUNPOD_H3_AUDIO_REFINE_CFG,
                 audio_refine_denoise=RUNPOD_H3_AUDIO_REFINE_DENOISE,
                 pin_first_frame=has_first_frame,
+                pdd_file=pdd_file,
             )
             upload_payloads = list(image_payloads) + ([end_frame_payload] if end_frame_payload else []) + audio_payloads
         else:
@@ -759,7 +788,7 @@ class RunPodMiniMaxH3VideoGenerator(VideoGeneratorBase):
                 height=height,
                 frames=frames,
                 last_frame_name=end_frame_payload[0] if end_frame_payload else None,
-                pdd_file=RUNPOD_H3_PDD_FL2VA,
+                pdd_file=pdd_file,
                 pdd_steps=pdd_steps,
             )
             upload_payloads = list(image_payloads[:1]) + ([end_frame_payload] if end_frame_payload else [])
@@ -772,7 +801,8 @@ class RunPodMiniMaxH3VideoGenerator(VideoGeneratorBase):
             if audio_refine:
                 parts.append("audio-refine")
             stage_note = f" [{'+'.join(parts)}]"
-        log(f"MiniMax H3 ({mode}{stage_note}, {width}x{height}, {frames} frames/{frames / _FPS:.1f}s) submitting...")
+        sampling_note = f"PDD {pdd_steps}-step" if pdd_file else "base 20-step"
+        log(f"MiniMax H3 ({mode}{stage_note}, {sampling_note}, {width}x{height}, {frames} frames/{frames / _FPS:.1f}s) submitting...")
 
         from novelvideo.generators.nanobanana_grid import (
             _runpod_download_output_sync,

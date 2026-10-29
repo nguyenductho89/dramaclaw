@@ -55,6 +55,7 @@ from typing import Literal, Optional
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 from pydantic_ai import Agent, BinaryContent, ModelRetry, RunContext
+from pydantic_ai.exceptions import UnexpectedModelBehavior
 from pydantic_ai.output import NativeOutput
 
 _RULES_PATH = Path(__file__).parent / "prompts" / "minimax_h3_rules.md"
@@ -237,7 +238,9 @@ class MiniMaxH3TimelineBeat(BaseModel):
     @field_validator("action")
     @classmethod
     def _plain_action(cls, value: str) -> str:
-        return _check_plain_text(value)
+        # Slow/soft filler is a style issue (the lint warns about it), not a
+        # structural one: it must not trigger a retry round-trip.
+        return _check_plain_text(value, allow_slow=True)
 
 
 class MiniMaxH3VoiceContent(BaseModel):
@@ -403,7 +406,7 @@ def _build_agent() -> Agent:
         deps_type=MiniMaxH3BeatContext,
         # Format/consistency failures (see `validate_h3_output` and the field
         # validators) are sent back to the model as retry messages.
-        retries=3,
+        retries=2,
         output_type=NativeOutput(MiniMaxH3LLMOutput),
         # `max_tokens`: a "thinking mode" vision model spends part of its
         # token budget on internal reasoning before the final JSON. The
@@ -420,6 +423,9 @@ def _build_agent() -> Agent:
     ) -> MiniMaxH3LLMOutput:
         problems = validate_h3_output(ctx.deps, output)
         if problems:
+            logging.getLogger(__name__).warning(
+                "MiniMax H3 output validator retry %d: %s", ctx.retry + 1, "; ".join(problems)
+            )
             raise ModelRetry(
                 "Fix these problems and answer again: " + "; ".join(problems) + "."
             )
@@ -1012,8 +1018,9 @@ def description_fidelity_problems(
         ]
     ).lower()
     problems: list[str] = []
+    written_flat = written.replace("-", " ")
     for tag in sorted(set(re.findall(r"[a-z]+-[a-z]+", description))):
-        if tag not in written:
+        if tag not in written and tag.replace("-", " ") not in written_flat:
             problems.append(f"the era/setting tag '{tag}' is never mentioned")
     crowd = [term for term in _CROWD_TERMS if term in description]
     if crowd and not any(term in written for term in _CROWD_TERMS):
@@ -1121,6 +1128,11 @@ async def generate_minimax_h3_prompt_with_fallback(
                 max_llm_attempts,
                 exc,
             )
+            if isinstance(exc, UnexpectedModelBehavior):
+                # Output retries already ran inside the agent (each with the
+                # concrete validation message); repeating the whole run only
+                # multiplies latency, so go straight to the fallback template.
+                break
             retry_context = context.model_copy(
                 update={
                     "retry_feedback": (

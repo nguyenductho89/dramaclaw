@@ -343,9 +343,8 @@ def _output(content, self_review=None):
     'She says "hello" and walks',
     "She walks <Picture 3> forward",
     "She steps into [Shot 2] the room",
-    "She walks slowly toward the door",
 ])
-def test_schema_rejects_dirty_or_slow_timeline_text(bad):
+def test_schema_rejects_dirty_timeline_text(bad):
     with pytest.raises(ValidationError):
         MiniMaxH3TimelineBeat(t=1.0, action=bad)
 
@@ -383,3 +382,15 @@ def test_validate_output_checks_subject_count_timeline_end_and_no_first_frame_cl
     assert any("2 references" in p for p in problems)
     assert any("past the clip length" in p for p in problems)
     assert any("nobody is already in frame" in p for p in problems)
+
+
+def test_fidelity_accepts_unhyphenated_era_tag_and_slow_words_do_not_fail_schema():
+    from novelvideo.agents import minimax_h3_prompt_builder as b
+
+    action = b.MiniMaxH3TimelineBeat(t=1.0, action="She slowly raises the phone toward her face")
+    assert "slowly" in action.action
+    content = b.MiniMaxH3Content.model_construct(
+        first_frame_description="", summary_action="Yui crosses an Edo period bridge",
+        end_state="", timeline=[],
+    )
+    assert b.description_fidelity_problems("an Edo-period bridge", content) == []

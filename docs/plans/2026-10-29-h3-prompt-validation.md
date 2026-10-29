@@ -47,6 +47,20 @@ deterministic `description_fidelity_problems` check were added first
   `tests/test_minimax_h3_prompt_assembler.py` (dirty-field test now uses
   `model_construct`). 41 pass.
 
+## Update (cloud session, no live LLM access)
+
+Applied without being able to reproduce live (cloud cannot reach the containers),
+so the exact failing validator is still unconfirmed. Changes aimed at the likely
+suspects and at bounding cost:
+
+- Slow/soft words in timeline `action` no longer fail the schema (style only; the lint still warns).
+- Era/setting tag check accepts the unhyphenated form ("Edo period" for "Edo-period").
+- Inner `retries` 3 -> 2; outer loop stops immediately on `UnexpectedModelBehavior`
+  (falls to the fallback template instead of 3 x 4 calls).
+- Output-validator retries are logged (`MiniMax H3 output validator retry N: ...`),
+  so the next live run shows which rule fails: `docker logs dramaclaw-api-1 | grep "validator retry"`.
+- Still TODO locally: steps 4-5 below (reviewer sanity, live beat 1 re-verify), then deploy.
+
 ## Open problem (start here)
 
 Live call on beat 1 (ref2va, no first frame, refs: Yui identity, phone prop,

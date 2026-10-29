@@ -239,6 +239,7 @@ def test_sampling_plan_ref2va_uses_pdd_fl2va_falls_back_without_file(monkeypatch
     from novelvideo.generators.runpod_minimax_h3_multishot_video import multishot_sampling_plan
 
     monkeypatch.setattr(cfg, "RUNPOD_H3_MULTISHOT_PDD_NFE", "8")
+    monkeypatch.setattr(cfg, "RUNPOD_H3_PDD_REF2VA", "MiniMax-H3-Ref2VA-Acc-8Step.safetensors")
     monkeypatch.setattr(cfg, "RUNPOD_H3_PDD_FL2VA", "")
     ref = multishot_sampling_plan("ref2va")
     assert ref["pdd_nfe"] == "8" and ref["steps"] == 8 and ref["pdd_file"]

@@ -9,6 +9,15 @@ import pytest
 from novelvideo.generators import runpod_minimax_h3_video as h3
 
 
+@pytest.fixture(autouse=True)
+def _default_ref2va_pdd(monkeypatch):
+    # Pin the shipped default so a local .env with `RUNPOD_H3_PDD_REF2VA=`
+    # (base-model mode) doesn't change the graph these tests assert on.
+    import novelvideo.config as cfg
+
+    monkeypatch.setattr(cfg, "RUNPOD_H3_PDD_REF2VA", "MiniMax-H3-Ref2VA-Acc-8Step.safetensors")
+
+
 def _base_kwargs(**overrides):
     kwargs = dict(
         prompt="p",
@@ -179,3 +188,32 @@ def test_fl2va_with_pdd_file_uses_pdd_model_and_sigmas():
     assert graph["29"]["inputs"]["sigmas"] == ["41", 1]
     assert graph["27"]["inputs"]["sampler_name"] == "euler"
     assert "28" not in graph
+
+
+def test_ref2va_without_pdd_file_samples_base_model():
+    g = h3.build_h3_ref2va_graph(**_base_kwargs(pdd_file=""))
+    assert not any(
+        n["class_type"].startswith(("MiniMaxH3PDD", "MiniMaxH3SigmaShift")) for n in g.values()
+    )
+    assert g["8"]["inputs"]["model"] == ["1", 0]
+    assert g["9"]["inputs"]["sampler_name"] == "res_multistep"
+    assert g["28"]["class_type"] == "BasicScheduler"
+    assert g["28"]["inputs"]["steps"] == 20
+    assert g["12"]["inputs"]["sigmas"] == ["28", 0]
+
+
+def test_ref2va_with_explicit_pdd_file_uses_it():
+    g = h3.build_h3_ref2va_graph(**_base_kwargs(pdd_file="custom.safetensors"))
+    assert g["6"]["inputs"]["pdd_file"] == "custom.safetensors"
+    assert g["8"]["inputs"]["model"] == ["6", 0]
+    assert "28" not in g
+
+
+def test_ref2va_without_pdd_rejects_two_stage():
+    with pytest.raises(ValueError, match="two_stage needs PDD"):
+        h3.build_h3_ref2va_graph(**_base_kwargs(pdd_file="", two_stage=True))
+
+
+def test_ref2va_without_pdd_audio_refine_uses_base_model():
+    g = h3.build_h3_ref2va_graph(**_base_kwargs(pdd_file="", audio_refine=True))
+    assert g["66"]["inputs"]["model"] == ["1", 0]

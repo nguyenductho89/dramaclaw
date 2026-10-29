@@ -444,3 +444,15 @@ Beat 1 YuiDrama (`01M5YQ80R0H4DJF6AHDJGMAZQ6`, mặt Yui trong khung chỉ ~60px
 - **Công thức cuối, không tốn thêm GPU để đạt đúng kích thước 2K**: chạy SeedVR2 ở 1.5x (không chunk, không OOM RAM với 124 khung — khác 2x từng phải chia 2 job vì tràn RAM hệ thống, xem mục "SeedVR2" ở trên), rồi `ffmpeg scale=1536:2688:flags=lanczos` (local, miễn phí) lên đúng 2x. Đổi lại: chi tiết nền (áo giáp, vân gỗ) hơi mềm hơn bản 2x gốc (so sánh crop trực tiếp), nhưng rõ hơn hẳn Lanczos-thuần — đánh đổi hợp lý vì mặt người là thứ khán giả nhìn vào.
 - **Đã áp dụng cho beat 1 thật**: `full_2k_final.mp4` (1536x2688, 124 khung, 24fps, audio AAC giữ nguyên) đã thêm vào video pool (`add_video_to_pool()` + `assign_video_to_beat()` trong `generators/video_pool_indexer.py`, gọi trực tiếp qua `docker exec` — route API `/video-pool-select` chỉ làm nửa sau là gán, không có route "add", phải gọi hàm Python trực tiếp) thành entry `beat_01_20261029_083433`, đã gán làm video chính của beat 1 (xác nhận qua `GET /projects/{id}/episodes/1/video-pool`). Bản cũ (`beat_01_20261029_071411`, có nhẫn) vẫn giữ trong pool để tham khảo, không xoá.
 - Công cụ dùng để cô lập lỗi: script theo dõi khuôn mặt bằng YuNet (OpenCV, `cv2.FaceDetectorYN`) qua `uv run --with opencv-python-headless` — "pick largest detection" không đáng tin trong cảnh đông người (có thể bắt nhầm mảng áo/mũ to hơn mặt thật), phải neo (anchor) ở khung giữa rồi theo dõi tiếp theo khung lân cận gần nhất (nearest-center tracking) mới ổn định.
+
+## H3 ref2va chạy base 20 bước thay PDD trên máy này (2026-10-29)
+
+- PDD 8 bước làm video ref2va nhòe, có bóng ma ở mặt và tay (YuiDrama beat 1). Base model 20 bước `res_multistep/simple` cho mặt Yui sắc nét.
+- Đo trên A40 (endpoint `a31613hf7l83r5`, cu130 + Sage, 768×1344, 124 khung): base 20 bước `executionTime` 741–768s; PDD 8 bước khoảng 382s. Base chậm khoảng 2 lần.
+- Công tắc: `RUNPOD_H3_PDD_REF2VA` để rỗng thì ref2va chạy base, cùng quy ước với `RUNPOD_H3_PDD_FL2VA`. `.env` máy này đã đặt `RUNPOD_H3_PDD_REF2VA=`. Code: tham số `pdd_file`/`base_steps` của `build_h3_ref2va_graph()`.
+- Biến này cũng áp dụng cho **multishot ref2va** (`multishot_sampling_plan`), nên multishot ref2va cũng chạy base và chậm hơn. fl2va vẫn PDD vì `RUNPOD_H3_PDD_FL2VA` còn đặt.
+- Two-stage không có bản base. Khi PDD tắt, `generate()` tự tắt two-stage và ghi log; gọi `build_h3_ref2va_graph()` trực tiếp với `two_stage=True` thì báo `ValueError`.
+- Không làm hybrid (pass 1 PDD rồi pass 2 base): chỉ tiết kiệm khoảng 4–5 phút/beat, mà latent upscale của H3 có rủi ro ra "colour-noise mush" (xem `runpod-h3-qwen-endpoints.md`).
+- Muốn quay lại PDD: xoá dòng `RUNPOD_H3_PDD_REF2VA=` trong `.env` rồi recreate `api` theo quy trình ở trên (`up -d api` → `docker cp src/novelvideo` → cài `langfuse boto3` → `restart`).
+- Đã verify qua route sản phẩm `POST .../beats/1/video`: log task ghi `ref2va, base 20-step`, video 768×1344, 124 khung, có audio. Job `a2c7c0df…`.
+- Test chạy bằng `.venv` local đọc `.env`, nên các test cần giá trị PDD mặc định đã tự cố định qua `monkeypatch`.

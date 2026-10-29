@@ -286,3 +286,59 @@ def test_is_h3_structured_prompt_distinguishes_seedance_prose_from_h3():
         "non_diegetic_music:\nN/A"
     )
     assert _is_h3_structured_prompt(fl2va_prompt) is True
+
+
+def _action_body(prompt: str) -> str:
+    return prompt.split("detailed_description:", 1)[1].split("overall_soundscape:", 1)[0]
+
+
+def _three_refs() -> list[MiniMaxH3Reference]:
+    return [
+        _ref("<Picture 1>", "Yui"),
+        _ref("<Picture 2>", "phone", kind="prop"),
+        _ref("<Picture 3>", "Nihonbashi Bridge", kind="scene"),
+    ]
+
+
+def test_selected_scene_and_prop_are_tied_to_the_action_text():
+    context = MiniMaxH3BeatContext(
+        mode="ref2va", has_first_frame=False, duration_seconds=5.0, references=_three_refs()
+    )
+    content = _content(subjects=[MiniMaxH3SubjectContent(anchor="black hair, sailor uniform")] * 3)
+    body = _action_body(assemble_minimax_h3_prompt(context, content))
+    assert "Nihonbashi Bridge shown in <Picture 3>" in body
+    assert "the prop phone from <Picture 2>" in body
+
+
+def test_removing_a_reference_removes_it_from_the_action_text():
+    refs = [r for r in _three_refs() if r.kind != "prop"]
+    refs[1] = refs[1].model_copy(update={"tag": "<Picture 2>"})
+    context = MiniMaxH3BeatContext(
+        mode="ref2va", has_first_frame=False, duration_seconds=5.0, references=refs
+    )
+    content = _content(subjects=[MiniMaxH3SubjectContent(anchor="black hair, sailor uniform")] * 2)
+    body = _action_body(assemble_minimax_h3_prompt(context, content))
+    assert "Nihonbashi Bridge shown in <Picture 2>" in body
+    assert "phone" not in body
+    assert "<Picture 3>" not in body
+
+
+def test_no_scene_or_prop_reference_adds_no_usage_sentence():
+    context = MiniMaxH3BeatContext(
+        mode="ref2va", has_first_frame=False, duration_seconds=5.0,
+        references=[_ref("<Picture 1>", "Yui")],
+    )
+    body = _action_body(assemble_minimax_h3_prompt(context, _content()))
+    assert "The whole shot takes place" not in body
+    assert "the prop" not in body
+
+
+def test_fallback_does_not_repeat_the_scene_premise_or_use_clumsy_anchors():
+    context = MiniMaxH3BeatContext(
+        mode="ref2va", has_first_frame=False, duration_seconds=5.0,
+        visual_description="Yui walks in holding a phone.", references=_three_refs(),
+    )
+    prompt = build_fallback_minimax_h3_prompt(context).final_prompt
+    assert _action_body(prompt).count("Yui walks in holding a phone.") == 1
+    assert "with matching" not in prompt
+    assert "Nihonbashi Bridge shown in <Picture 3>" in prompt

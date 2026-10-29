@@ -72,7 +72,7 @@ _RULES_PATH = Path(__file__).parent / "prompts" / "minimax_h3_rules.md"
 # hoping the model recovers. Sized well above a normal run (~1700 output
 # tokens measured for a full 2-attempt success) but below what 2 requests at
 # the bumped 6000-token `max_tokens` could burn if both went degenerate.
-_WRITER_OUTPUT_TOKENS_LIMIT = 5000
+_WRITER_OUTPUT_TOKENS_LIMIT = 8000
 _REVIEWER_OUTPUT_TOKENS_LIMIT = 2000
 
 
@@ -489,6 +489,38 @@ def _format_references(context: MiniMaxH3BeatContext) -> str:
     return "(no reference images — describe everything from the text)"
 
 
+def _coverage_note(context: MiniMaxH3BeatContext) -> str:
+    """Tells the model exactly which scene/prop references the user kept for
+    this run, so a changed selection changes what it must name in the action
+    (code adds the tags; this is about the wording of `timeline`)."""
+    scenes = [r.name or r.tag for r in context.references if r.kind == "scene"]
+    props = [r.name or r.tag for r in context.references if r.kind == "prop"]
+    lines = []
+    if scenes:
+        lines.append(
+            "Selected location reference(s): " + ", ".join(scenes)
+            + " — set the action in this place and name it in the timeline."
+        )
+    if props:
+        lines.append(
+            "Selected prop reference(s): " + ", ".join(props)
+            + " — name each one in a timeline action that shows how it is held or used."
+        )
+    if context.references:
+        order = "; ".join(
+            f"{i}. {r.name or r.tag} ({r.kind})" for i, r in enumerate(context.references, start=1)
+        )
+        lines.append(
+            f"`subjects` must have exactly {len(context.references)} entries, one per "
+            f"reference including locations and props, in this order: {order}."
+        )
+    lines.append(
+        "Anything the beat description mentions that has NO reference above "
+        "(no location image, no prop image) is described from the text alone."
+    )
+    return "\n## Selected references (this run only)\n" + "\n".join(lines) + "\n"
+
+
 def _build_user_prompt(context: MiniMaxH3BeatContext) -> str:
     dialogue_note = "(no dialogue in this beat — leave `voices` empty)"
     if context.dialogue_line.strip():
@@ -505,6 +537,7 @@ def _build_user_prompt(context: MiniMaxH3BeatContext) -> str:
 
     return f"""## Mode
 {context.mode}
+{_coverage_note(context)}
 
 ## Duration / aspect ratio
 {context.duration_seconds:.1f}s, {context.aspect_ratio}
@@ -827,7 +860,7 @@ def assemble_minimax_h3_prompt(context: MiniMaxH3BeatContext, content: MiniMaxH3
         display_name = _sanitize(ref.name) or f"the subject in {ref.tag}"
         if ref.kind == "scene":
             # A location, not a cast member: no <Subject N>, just a setting line.
-            anchor = anchor or "matching the reference image closely"
+            anchor = anchor or "the look shown in the reference image"
             subject_lines.append(f"{ref.tag} shows the setting {display_name}, with {anchor}.")
             retention_lines.append(
                 f"{ref.tag} (setting): partially_preserved - {anchor}, used as the location for the whole video."
@@ -835,7 +868,7 @@ def assemble_minimax_h3_prompt(context: MiniMaxH3BeatContext, content: MiniMaxH3
             continue
         subject_no += 1
         if not anchor:
-            anchor = "matching the reference image closely, with no changes"
+            anchor = "the exact look shown in the reference image, with no changes"
         noun = f"the prop {display_name}" if ref.kind == "prop" else display_name
         subject_lines.append(f"<Subject {subject_no}> is {noun}, shown in {ref.tag}, with {anchor}.")
         retention_lines.append(
@@ -895,11 +928,19 @@ def build_fallback_minimax_h3_prompt(context: MiniMaxH3BeatContext) -> MiniMaxH3
     subjects = [
         MiniMaxH3SubjectContent.model_construct(
             anchor=(ref.appearance_details.strip()[:140] if ref.appearance_details.strip() else "")
-            or "matching the reference image closely"
+            or ""
         )
         for ref in context.references
     ]
     base_action = (context.visual_description or context.narration_segment or "").strip()[:220]
+    # Without a first frame the assembler already pastes the description in
+    # verbatim as the scene premise; repeating it as the timeline action
+    # would just say everything twice.
+    timeline_action = (
+        "the action in the scene premise plays out in real time"
+        if not context.has_first_frame and base_action
+        else base_action or "The subject performs the described action."
+    )
     content = MiniMaxH3Content.model_construct(
         first_frame_description=context.visual_description.strip()[:220] or "the scene as described",
         style_line="Live-action film footage, naturalistic lighting, realistic detail, natural skin tones.",
@@ -910,7 +951,7 @@ def build_fallback_minimax_h3_prompt(context: MiniMaxH3BeatContext) -> MiniMaxH3
         timeline=[
             MiniMaxH3TimelineBeat.model_construct(
                 t=round(max(float(context.duration_seconds or 5.0), 0.1) * 0.5, 2),
-                action=base_action or "The subject performs the described action.",
+                action=timeline_action,
             )
         ],
         voices=[],
@@ -984,7 +1025,10 @@ _REVIEW_SYSTEM_PROMPT = (
     "dropped or used differently; a character appearing before she can (no first frame "
     "means nobody is in frame at 0.00 s); actions that contradict each other across "
     "timestamps; a subject anchor that does not match its reference name. Ignore "
-    "style and wording. Do not invent problems: if the draft is faithful, return "
+    "style and wording. Adding unspecified detail (which hand, an expression, a "
+    "gesture) is NOT a contradiction. Report only definite contradictions or "
+    "omissions; never list an item you yourself judge minor, acceptable or "
+    "unverified. Do not invent problems: if the draft is faithful, return "
     "consistent=true with no issues."
 )
 _review_agent: Optional[Agent] = None
@@ -1124,11 +1168,22 @@ async def build_minimax_h3_prompt(context: MiniMaxH3BeatContext) -> MiniMaxH3Pro
     for attempt in range(2):
         # The agent's own output validator already sent format / fidelity
         # failures back to the model; this loop adds the independent review.
-        response = await agent.run(
-            [_build_user_prompt(attempt_context), *images],
-            deps=attempt_context,
-            usage_limits=UsageLimits(output_tokens_limit=_WRITER_OUTPUT_TOKENS_LIMIT),
-        )
+        try:
+            response = await agent.run(
+                [_build_user_prompt(attempt_context), *images],
+                deps=attempt_context,
+                usage_limits=UsageLimits(output_tokens_limit=_WRITER_OUTPUT_TOKENS_LIMIT),
+            )
+        except Exception as exc:  # noqa: BLE001
+            if output is None:
+                raise
+            # A reviewer-driven second pass blew its token budget or failed
+            # validation: the first draft is still a complete, valid answer
+            # — keep it rather than dropping to the no-LLM fallback template.
+            logging.getLogger(__name__).warning(
+                "MiniMax H3 reviewer-retry attempt failed (%r); keeping the first draft", exc
+            )
+            break
         output = response.output
         if not review_enabled():
             break

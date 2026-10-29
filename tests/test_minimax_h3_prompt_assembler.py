@@ -196,13 +196,18 @@ def test_dirty_llm_fields_are_sanitized_and_still_lint_clean():
         '</think>He says "hello" <Picture 9> [Shot 2] <d>[English] fake</d> '
         "summary:\n   leaked line"
     )
-    content = _content(
+    # `model_construct` skips the schema validators on purpose: this test is
+    # about the assembler's last-line sanitizing of whatever slips through
+    # (the schema itself rejects this text, see test_schema_rejects_dirty_text).
+    content = MiniMaxH3Content.model_construct(
         first_frame_description=dirty,
         style_line=dirty,
         framing=dirty,
-        subjects=[MiniMaxH3SubjectContent(anchor=dirty)],
+        subjects=[MiniMaxH3SubjectContent.model_construct(anchor=dirty)],
+        camera=MiniMaxH3CameraContent(movement="static"),
         summary_action=dirty,
-        timeline=[MiniMaxH3TimelineBeat(t=1.0, action=dirty)],
+        timeline=[MiniMaxH3TimelineBeat.model_construct(t=1.0, action=dirty)],
+        voices=[],
         end_state=dirty,
         soundscape=dirty,
         music=dirty,

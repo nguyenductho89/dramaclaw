@@ -300,3 +300,86 @@ def test_no_first_frame_embeds_the_beat_description_verbatim():
 def test_with_first_frame_no_premise_is_added():
     ctx = MiniMaxH3BeatContext(mode="fl2va", duration_seconds=6.0, visual_description="anything")
     assert "Scene premise" not in assemble_minimax_h3_prompt(ctx, _content(0))
+
+
+def test_fidelity_flags_dropped_era_and_emptied_crowd():
+    from novelvideo.agents.minimax_h3_prompt_builder import description_fidelity_problems
+
+    desc = "Yui moves through a crowd of Edo-period townspeople and samurai on the bridge"
+    bad = _content(1).model_copy(update={
+        "timeline": [MiniMaxH3TimelineBeat(t=0.5, action="The bridge deck is devoid of people before Yui steps in")],
+        "summary_action": "Yui strides across the bridge.",
+    })
+    problems = description_fidelity_problems(desc, bad)
+    assert any("edo-period" in p for p in problems)
+    assert any("never shows them" in p for p in problems)
+    assert any("empty/deserted" in p for p in problems)
+
+    good = _content(1).model_copy(update={
+        "timeline": [MiniMaxH3TimelineBeat(t=0.5, action="Yui weaves between Edo-period townspeople and samurai")],
+    })
+    assert description_fidelity_problems(desc, good) == []
+    assert description_fidelity_problems("", good) == []
+
+
+# ── schema + validators + reviewer ──────────────────────────────────────
+
+import pytest
+from pydantic import ValidationError
+
+from novelvideo.agents.minimax_h3_prompt_builder import (
+    MiniMaxH3LLMOutput,
+    MiniMaxH3ShotPlan,
+    validate_h3_output,
+)
+
+
+def _output(content, self_review=None):
+    plan = MiniMaxH3ShotPlan(focus_subject="x", visible_gesture="y", shot_pattern="Static Frame")
+    return MiniMaxH3LLMOutput(plan=plan, content=content, self_review=self_review or [])
+
+
+@pytest.mark.parametrize("bad", [
+    'She says "hello" and walks',
+    "She walks <Picture 3> forward",
+    "She steps into [Shot 2] the room",
+    "She walks slowly toward the door",
+])
+def test_schema_rejects_dirty_or_slow_timeline_text(bad):
+    with pytest.raises(ValidationError):
+        MiniMaxH3TimelineBeat(t=1.0, action=bad)
+
+
+def test_schema_rejects_non_increasing_timeline_and_missing_camera_reason():
+    base = _content(0).model_dump()
+    with pytest.raises(ValidationError):
+        MiniMaxH3Content.model_validate(
+            {**base, "timeline": [{"t": 2.0, "action": "She steps forward onto the bridge"},
+                                  {"t": 1.0, "action": "She raises the phone to eye level"}]}
+        )
+    with pytest.raises(ValidationError):
+        MiniMaxH3Content.model_validate({**base, "camera": {"movement": "push_in", "reason": ""}})
+
+
+def test_unresolved_self_review_is_rejected():
+    with pytest.raises(ValidationError):
+        _output(_content(0), self_review=["I called the bridge empty but it is crowded"])
+    assert _output(_content(0), self_review=[]).self_review == []
+
+
+def test_validate_output_checks_subject_count_timeline_end_and_no_first_frame_claims():
+    ctx = MiniMaxH3BeatContext(
+        mode="ref2va", has_first_frame=False, duration_seconds=5.0,
+        references=[_ref("<Picture 1>", "Yui"), _ref("<Picture 2>", "phone", "prop")],
+        visual_description="Yui walks in",
+    )
+    content = _content(1).model_copy(update={
+        "timeline": [
+            MiniMaxH3TimelineBeat(t=1.0, action="Yui is already in frame and raises her phone"),
+            MiniMaxH3TimelineBeat(t=6.5, action="She lowers the phone to her side"),
+        ],
+    })
+    problems = validate_h3_output(ctx, _output(content))
+    assert any("2 references" in p for p in problems)
+    assert any("past the clip length" in p for p in problems)
+    assert any("nobody is already in frame" in p for p in problems)

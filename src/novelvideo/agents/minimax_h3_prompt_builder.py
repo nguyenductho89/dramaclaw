@@ -53,8 +53,8 @@ import re
 from pathlib import Path
 from typing import Literal, Optional
 
-from pydantic import BaseModel, Field
-from pydantic_ai import Agent, BinaryContent
+from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic_ai import Agent, BinaryContent, ModelRetry, RunContext
 from pydantic_ai.output import NativeOutput
 
 _RULES_PATH = Path(__file__).parent / "prompts" / "minimax_h3_rules.md"
@@ -170,6 +170,32 @@ class MiniMaxH3ShotPlan(BaseModel):
 # ── Content the LLM actually produces (no format, no tags, no quotes) ──────
 
 
+_FORBIDDEN_SYNTAX_RE = re.compile(
+    r"<\s*/?\s*(?:Picture|Subject|Audio|d)\b|\[\s*Shot\b|^[a-z_]+:\s*$|[\"\u201c\u201d]",
+    re.IGNORECASE | re.MULTILINE,
+)
+_SLOW_WORDS_RE = re.compile(
+    r"\b(slowly|gently|gradually|subtly|lingering|lingers)\b", re.IGNORECASE
+)
+
+
+def _check_plain_text(value: str, *, allow_slow: bool = False) -> str:
+    """Format rule shared by every free-text field the LLM fills: plain
+    descriptive prose only. A violation raises, which pydantic-ai turns into
+    a retry message addressed to the model (it fixes it in the same run)."""
+    if _FORBIDDEN_SYNTAX_RE.search(value or ""):
+        raise ValueError(
+            "contains a tag, [Shot N], a section-header-looking line or a quote mark; "
+            "write plain descriptive prose only (the code adds all tags and dialogue)"
+        )
+    if not allow_slow and _SLOW_WORDS_RE.search(value or ""):
+        raise ValueError(
+            "uses slow/soft filler (slowly, gently, gradually, subtly, lingering); "
+            "describe the concrete motion at natural real-time speed instead"
+        )
+    return value
+
+
 class MiniMaxH3SubjectContent(BaseModel):
     """One entry per `MiniMaxH3BeatContext.references[i]`, in the same
     order — NOT a `<Subject N>`/`<Picture N>` tag itself, the assembler
@@ -182,19 +208,36 @@ class MiniMaxH3SubjectContent(BaseModel):
             "words, comma-separated. No tags, no quotes, no personality or "
             "backstory. If a supplementary text hint is given and the image "
             "disagrees with it, describe the image, not the hint."
-        )
+        ),
+        min_length=3,
+        max_length=220,
     )
+
+    @field_validator("anchor")
+    @classmethod
+    def _plain_anchor(cls, value: str) -> str:
+        return _check_plain_text(value, allow_slow=True)
 
 
 class MiniMaxH3TimelineBeat(BaseModel):
-    t: float = Field(description="Timestamp in seconds from 0.00, strictly increasing across the list")
+    t: float = Field(
+        ge=0,
+        description="Timestamp in seconds from 0.00, strictly increasing across the list",
+    )
     action: str = Field(
         description=(
             "One concrete, observable action/gesture at this timestamp — "
             "never a bare emotion word, never the spoken dialogue line, "
             "never a quote."
-        )
+        ),
+        min_length=8,
+        max_length=400,
     )
+
+    @field_validator("action")
+    @classmethod
+    def _plain_action(cls, value: str) -> str:
+        return _check_plain_text(value)
 
 
 class MiniMaxH3VoiceContent(BaseModel):
@@ -260,10 +303,47 @@ class MiniMaxH3Content(BaseModel):
         default="N/A", description="1-3 sentences of non-diegetic music genre/tempo/mood, or exactly 'N/A'."
     )
 
+    @field_validator(
+        "first_frame_description", "style_line", "framing", "summary_action", "end_state",
+        "soundscape", "music",
+    )
+    @classmethod
+    def _plain_fields(cls, value: str) -> str:
+        return _check_plain_text(value, allow_slow=True)
+
+    @model_validator(mode="after")
+    def _timeline_and_camera(self) -> "MiniMaxH3Content":
+        times = [beat.t for beat in self.timeline]
+        if any(b <= a for a, b in zip(times, times[1:])):
+            raise ValueError("timeline timestamps must be strictly increasing")
+        if self.camera.movement != "static" and not self.camera.reason.strip():
+            raise ValueError("camera.reason is required when camera.movement is not static")
+        return self
+
 
 class MiniMaxH3LLMOutput(BaseModel):
     plan: MiniMaxH3ShotPlan
     content: MiniMaxH3Content
+    self_review: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Before answering, re-read the beat's visual description and your own "
+            "content. List every place where your content contradicts it or leaves "
+            "out one of its concrete elements (era, who fills the place, props, "
+            "direction of movement, who is where). Fix each one in `content` first; "
+            "this list must be EMPTY in your final answer."
+        ),
+    )
+
+    @model_validator(mode="after")
+    def _self_review_is_clean(self) -> "MiniMaxH3LLMOutput":
+        if any(item.strip() for item in self.self_review):
+            raise ValueError(
+                "self_review still lists unresolved contradictions ("
+                + "; ".join(i.strip() for i in self.self_review if i.strip())
+                + "). Fix them in `content`, then return an empty self_review."
+            )
+        return self
 
 
 class MiniMaxH3PromptResult(BaseModel):
@@ -306,7 +386,7 @@ def _build_agent() -> Agent:
         "then the structured content, following every rule below "
         "exactly.\n\n" + rules
     )
-    return Agent(
+    agent = Agent(
         get_newapi_text_pydantic_model(
             "MINIMAX_H3_PROMPT_MODEL",
             default_model="DC-video-h3-prompt-LLM",
@@ -320,6 +400,10 @@ def _build_agent() -> Agent:
         # mode" and rejects forced tool-calling, but does support
         # `response_format`/JSON schema cleanly. See
         # docs/adr/0002-identity-planner-and-text-models-deepseek.md.
+        deps_type=MiniMaxH3BeatContext,
+        # Format/consistency failures (see `validate_h3_output` and the field
+        # validators) are sent back to the model as retry messages.
+        retries=3,
         output_type=NativeOutput(MiniMaxH3LLMOutput),
         # `max_tokens`: a "thinking mode" vision model spends part of its
         # token budget on internal reasoning before the final JSON. The
@@ -329,6 +413,19 @@ def _build_agent() -> Agent:
         model_settings={**get_newapi_structured_output_model_settings(), "max_tokens": 4000},
         name="MiniMax H3 Prompt Director",
     )
+
+    @agent.output_validator
+    async def _validate(
+        ctx: RunContext[MiniMaxH3BeatContext], output: MiniMaxH3LLMOutput
+    ) -> MiniMaxH3LLMOutput:
+        problems = validate_h3_output(ctx.deps, output)
+        if problems:
+            raise ModelRetry(
+                "Fix these problems and answer again: " + "; ".join(problems) + "."
+            )
+        return output
+
+    return agent
 
 
 _agent: Optional[Agent] = None
@@ -387,7 +484,7 @@ def _build_user_prompt(context: MiniMaxH3BeatContext) -> str:
 ## Duration / aspect ratio
 {context.duration_seconds:.1f}s, {context.aspect_ratio}
 
-## Visual description (first frame / scene)
+## Visual description ({"first frame / scene" if context.has_first_frame else "AUTHORITATIVE — there is no first frame; everything in it must appear, nothing may be contradicted"})
 {context.visual_description or "(none provided)"}
 
 ## Scene
@@ -743,23 +840,26 @@ def build_fallback_minimax_h3_prompt(context: MiniMaxH3BeatContext) -> MiniMaxH3
     guaranteed to pass every structural lint check, just with plainer
     content than a successful vision call would produce. See
     `api/routes/generation.py`'s `generate_minimax_h3_prompt`."""
+    # `model_construct`: the fallback text comes straight from the beat (quotes,
+    # short actions, ...) and is cleaned by the assembler, so it must skip the
+    # LLM-facing format validators.
     subjects = [
-        MiniMaxH3SubjectContent(
+        MiniMaxH3SubjectContent.model_construct(
             anchor=(ref.appearance_details.strip()[:140] if ref.appearance_details.strip() else "")
             or "matching the reference image closely"
         )
         for ref in context.references
     ]
     base_action = (context.visual_description or context.narration_segment or "").strip()[:220]
-    content = MiniMaxH3Content(
+    content = MiniMaxH3Content.model_construct(
         first_frame_description=context.visual_description.strip()[:220] or "the scene as described",
         style_line="Live-action film footage, naturalistic lighting, realistic detail, natural skin tones.",
         framing="a medium shot at eye level",
         subjects=subjects,
-        camera=MiniMaxH3CameraContent(movement="static"),
+        camera=MiniMaxH3CameraContent.model_construct(movement="static"),
         summary_action=base_action or "The subject performs the described action.",
         timeline=[
-            MiniMaxH3TimelineBeat(
+            MiniMaxH3TimelineBeat.model_construct(
                 t=round(max(float(context.duration_seconds or 5.0), 0.1) * 0.5, 2),
                 action=base_action or "The subject performs the described action.",
             )
@@ -773,24 +873,209 @@ def build_fallback_minimax_h3_prompt(context: MiniMaxH3BeatContext) -> MiniMaxH3
     return MiniMaxH3PromptResult(plan=_fallback_shot_plan(context), final_prompt=final_prompt)
 
 
+def validate_h3_output(context: "MiniMaxH3BeatContext", output: "MiniMaxH3LLMOutput") -> list[str]:
+    """Context-dependent checks a schema alone cannot express: fidelity to the
+    beat's description, one `subjects` entry per reference, and a timeline
+    that fits the clip. Pure and deterministic (unit-tested without an LLM)."""
+    content = output.content
+    problems = description_fidelity_problems(context.visual_description, content)
+    if len(content.subjects) != len(context.references):
+        problems.append(
+            f"`subjects` has {len(content.subjects)} entries but there are "
+            f"{len(context.references)} references; return exactly one per reference, in order"
+        )
+    duration = float(context.duration_seconds or 0)
+    if duration and content.timeline and content.timeline[-1].t > duration:
+        problems.append(
+            f"the last timeline timestamp {content.timeline[-1].t:.2f}s is past the clip length {duration:.2f}s"
+        )
+    if len(content.timeline) < 2:
+        problems.append("the timeline needs at least two timestamped actions")
+    if not context.has_first_frame and re.search(
+        r"\b(already in frame|still in frame|as in the first frame)\b",
+        " ".join([content.summary_action, *(b.action for b in content.timeline)]),
+        re.IGNORECASE,
+    ):
+        problems.append("there is no first frame, so nobody is already in frame at 0.00s")
+    return problems
+
+
+class MiniMaxH3ReviewVerdict(BaseModel):
+    consistent: bool = Field(
+        description="True only if the draft contradicts nothing and omits no concrete element of the beat description"
+    )
+    issues: list[str] = Field(
+        default_factory=list,
+        description=(
+            "At most 5 issues, each naming the draft sentence and the fact it conflicts with "
+            "or the description element it leaves out. Empty when consistent."
+        ),
+    )
+
+
+_REVIEW_SYSTEM_PROMPT = (
+    "You are a strict continuity editor for a short-drama video prompt. You get a "
+    "beat's ground truth (visual description, who is in it, which reference images "
+    "exist, whether there is a first frame) and a DRAFT of the shot written from it. "
+    "Find contradictions and omissions only: the draft saying a place is empty when "
+    "the description says it is crowded; a different era, camera position, direction "
+    "of movement or number of people than the description gives; a prop that is "
+    "dropped or used differently; a character appearing before she can (no first frame "
+    "means nobody is in frame at 0.00 s); actions that contradict each other across "
+    "timestamps; a subject anchor that does not match its reference name. Ignore "
+    "style and wording. Do not invent problems: if the draft is faithful, return "
+    "consistent=true with no issues."
+)
+_review_agent: Optional[Agent] = None
+
+
+def _get_review_agent() -> Agent:
+    global _review_agent
+    if _review_agent is None:
+        from novelvideo.config import (
+            get_newapi_structured_output_model_settings,
+            get_newapi_text_pydantic_model,
+        )
+
+        _review_agent = Agent(
+            get_newapi_text_pydantic_model(
+                "MINIMAX_H3_PROMPT_MODEL",
+                default_model="DC-video-h3-prompt-LLM",
+                capability="text.generate.agent",
+            ),
+            system_prompt=_REVIEW_SYSTEM_PROMPT,
+            output_type=NativeOutput(MiniMaxH3ReviewVerdict),
+            model_settings={**get_newapi_structured_output_model_settings(), "max_tokens": 1500},
+            name="MiniMax H3 Prompt Reviewer",
+        )
+    return _review_agent
+
+
+def _review_input(context: "MiniMaxH3BeatContext", content: "MiniMaxH3Content") -> str:
+    refs = "\n".join(f"- {r.tag} ({r.kind}) {r.name}" for r in context.references) or "(none)"
+    timeline = "\n".join(f"- {b.t:.2f}s: {b.action}" for b in content.timeline)
+    anchors = "\n".join(
+        f"- subjects[{i}] ({context.references[i].name if i < len(context.references) else '?'}): {sub.anchor}"
+        for i, sub in enumerate(content.subjects)
+    )
+    return (
+        f"## Beat ground truth\nVisual description: {context.visual_description or '(none)'}\n"
+        f"First frame present: {context.has_first_frame}\nClip length: {context.duration_seconds:.1f}s\n"
+        f"References:\n{refs}\n\n## Draft\nOpening frame: {content.first_frame_description}\n"
+        f"Framing: {content.framing}\nCamera: {content.camera.movement}\n"
+        f"Summary: {content.summary_action}\nTimeline:\n{timeline}\nEnds: {content.end_state}\n"
+        f"Subject anchors:\n{anchors}"
+    )
+
+
+async def review_h3_draft(context: "MiniMaxH3BeatContext", content: "MiniMaxH3Content") -> list[str]:
+    """Independent AI pass: does the draft contradict or drop anything in the
+    beat's own description? A failed review call never blocks generation."""
+    try:
+        verdict = (await _get_review_agent().run(_review_input(context, content))).output
+    except Exception as exc:  # noqa: BLE001
+        logging.getLogger(__name__).warning("MiniMax H3 draft review skipped: %r", exc)
+        return []
+    return [] if verdict.consistent else [i.strip() for i in verdict.issues if i.strip()][:5]
+
+
+# Nouns that name who fills a place; if the beat's description has one, the
+# rewritten action must too (and must not call the place empty).
+_CROWD_TERMS = (
+    "crowd", "crowds", "townspeople", "samurai", "villagers", "merchants",
+    "pedestrians", "passersby", "commuters", "soldiers", "monks", "peasants",
+    "bystanders", "onlookers", "vendors", "customers", "students",
+)
+_EMPTY_PLACE_RE = re.compile(
+    r"\b(empty|deserted|devoid of (?:people|anyone|life)|no one|nobody|unoccupied)\b",
+    re.IGNORECASE,
+)
+
+
+def description_fidelity_problems(
+    visual_description: str, content: "MiniMaxH3Content"
+) -> list[str]:
+    """What the rewritten action dropped or contradicted from the beat's own
+    visual description: a hyphenated period/era tag (e.g. `Edo-period`), a
+    crowd noun, or an empty-place claim when the description has a crowd.
+    Deterministic — the LLM paraphrases freely and was seen to turn a crowded
+    Edo bridge into an empty one."""
+    description = (visual_description or "").lower()
+    if not description.strip():
+        return []
+    written = " ".join(
+        [
+            content.first_frame_description,
+            content.summary_action,
+            content.end_state,
+            *(beat.action for beat in content.timeline),
+        ]
+    ).lower()
+    problems: list[str] = []
+    for tag in sorted(set(re.findall(r"[a-z]+-[a-z]+", description))):
+        if tag not in written:
+            problems.append(f"the era/setting tag '{tag}' is never mentioned")
+    crowd = [term for term in _CROWD_TERMS if term in description]
+    if crowd and not any(term in written for term in _CROWD_TERMS):
+        problems.append(
+            f"the description says the place is filled with {', '.join(crowd)} but your text never shows them"
+        )
+    if crowd and _EMPTY_PLACE_RE.search(written):
+        problems.append(
+            "your text calls the place empty/deserted although the description says it is crowded"
+        )
+    return problems
+
+
+def review_enabled() -> bool:
+    """`MINIMAX_H3_REVIEW=0` turns the extra reviewer call off."""
+    return os.getenv("MINIMAX_H3_REVIEW", "1").strip().lower() not in ("0", "false", "off", "no")
+
+
 async def build_minimax_h3_prompt(context: MiniMaxH3BeatContext) -> MiniMaxH3PromptResult:
     agent = get_minimax_h3_prompt_agent()
 
-    user_prompt: list = [_build_user_prompt(context)]
+    images: list = []
     first_frame_content = _load_reference_image_content(context.first_frame_path)
     if first_frame_content is not None:
-        user_prompt.append(first_frame_content)
+        images.append(first_frame_content)
     if context.last_frame_path:
         last_frame_content = _load_reference_image_content(context.last_frame_path)
         if last_frame_content is not None:
-            user_prompt.append(last_frame_content)
+            images.append(last_frame_content)
     for ref in context.references:
         ref_content = _load_reference_image_content(ref.image_path)
         if ref_content is not None:
-            user_prompt.append(ref_content)
+            images.append(ref_content)
 
-    response = await agent.run(user_prompt)
-    output: MiniMaxH3LLMOutput = response.output
+    output: MiniMaxH3LLMOutput | None = None
+    attempt_context = context
+    for attempt in range(2):
+        # The agent's own output validator already sent format / fidelity
+        # failures back to the model; this loop adds the independent review.
+        response = await agent.run(
+            [_build_user_prompt(attempt_context), *images], deps=attempt_context
+        )
+        output = response.output
+        if not review_enabled():
+            break
+        issues = await review_h3_draft(context, output.content)
+        if not issues:
+            break
+        logging.getLogger(__name__).warning(
+            "MiniMax H3 reviewer found contradictions (attempt %d): %s",
+            attempt + 1,
+            "; ".join(issues),
+        )
+        attempt_context = context.model_copy(
+            update={
+                "retry_feedback": (
+                    "An independent reviewer found contradictions with the beat description "
+                    "in your previous answer: " + "; ".join(issues) + ". Fix every one of them."
+                )
+            }
+        )
+    assert output is not None
     final_prompt = assemble_minimax_h3_prompt(context, output.content)
     return MiniMaxH3PromptResult(plan=output.plan, final_prompt=final_prompt)
 

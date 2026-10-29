@@ -26,7 +26,8 @@ put in your structured answer's fields.
    (walks INTO frame from the edge), and who is where. Do not invent a
    camera position the description never gives ("from behind", "facing away
    from the camera"), do not empty a place the description says is crowded,
-   and do not drop a prop the description mentions.
+   and do not drop a prop the description mentions. Without a first frame,
+   keep the camera `static` unless the description itself asks for a move.
 
 0. **Reference kinds and a missing first frame.** A reference of kind
    `scene` is the *location*: describe its architecture/lighting in its

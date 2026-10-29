@@ -67,6 +67,17 @@ suspects and at bounding cost:
   `/custom/newapi/channels` route, see CLAUDE.md); until then the review call fails,
   is logged as "draft review skipped", and generation proceeds without it.
 
+## Next steps on the local machine (in order)
+
+1. `docker cp src/novelvideo dramaclaw-api-1:/app/src/` and `docker restart dramaclaw-api-1`.
+2. Provision the reviewer alias: inspect `newapi_provisioner.upsert_channel` signature
+   (`inspect.signature`), then call it with `provider:"deepseek"`, keeping all existing
+   `DC-deepseek` aliases and adding `DC-video-h3-review-LLM` -> `deepseek-chat`.
+   Print only `ok`/`action`/`channelId`, never the response dict (contains the key).
+   The cloud session could not do this (DramaClaw API unreachable from cloud).
+3. Re-verify beat 1 (both bodies below) and read `docker logs dramaclaw-api-1 | grep -E "validator retry|reviewer|review skipped"`.
+4. Run the pytest command in step 6 below.
+
 ## Open problem (start here)
 
 Live call on beat 1 (ref2va, no first frame, refs: Yui identity, phone prop,

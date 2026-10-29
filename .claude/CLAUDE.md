@@ -107,6 +107,8 @@ Máy này đã cài và cấu hình sẵn. Đọc file này trước khi cài/c�
 - Codex App Server cần `wire_api="responses"`; đã kiểm `api.deepseek.com/v1/responses` trả 200 nên dùng được. Không qua NewAPI nên không cần alias `DC-codex-agent-LLM`.
 - Muốn quay lại: chọn "Follow current channel" (`mode:"inherit"`).
 
+- **Bẫy: Hermes trong container phải là bản fork, không phải stock (2026-10-29).** Image local cài Hermes gốc (v0.19.0) nên mọi lượt chat báo `Model connection failed ... cannot be reached` (log thật ở `/data/runtime/api.log`: `HermesForkMissing ... _recover_turn_meta`), không liên quan model. Fix: clone `github.com/dramaclaw/hermes-agent` nhánh `brainclaw/evidence-plane` trên host (container không có git), `docker cp` vào `/opt/hermes-fork`, rồi `docker exec -e UV_HTTP_TIMEOUT=120 -e UV_HTTP_RETRIES=5 dramaclaw-api-1 sh -c 'cd /opt/hermes-fork && uv pip install --python /root/.local/share/uv/tools/hermes-agent/bin/python -e ".[acp]"'` (tải wheel `nemo-relay` hay lỗi DNS, thử lại), xong `docker restart dramaclaw-api-1`. Mất khi container bị recreate. Verify bằng websocket `chat.message` (cần `docker exec -i`).
+
 ## Embedding có cần không?
 
 - Dự án mới tạo qua API luôn là `knowledge_pipeline: "structured_v1"` (`src/novelvideo/api/routes/projects.py:765`): không embedding, không đồ thị, không vector index. Ingest chỉ lưu nguồn và chia chunk.

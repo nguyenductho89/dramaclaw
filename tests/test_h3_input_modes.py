@@ -394,3 +394,29 @@ def test_fidelity_accepts_unhyphenated_era_tag_and_slow_words_do_not_fail_schema
         end_state="", timeline=[],
     )
     assert b.description_fidelity_problems("an Edo-period bridge", content) == []
+
+
+def test_ref2va_prompt_ties_scene_and_prop_into_the_shot_body():
+    from novelvideo.agents import minimax_h3_prompt_builder as b
+
+    ctx = b.MiniMaxH3BeatContext(
+        mode="ref2va", has_first_frame=False, duration_seconds=5.2, aspect_ratio="9:16",
+        visual_description="Yui crosses the bridge holding her phone.",
+        references=[
+            b.MiniMaxH3Reference(tag="<Picture 1>", kind="character", name="Yui", image_path=""),
+            b.MiniMaxH3Reference(tag="<Picture 2>", kind="prop", name="phone", image_path=""),
+            b.MiniMaxH3Reference(tag="<Picture 3>", kind="scene", name="Nihonbashi Bridge", image_path=""),
+        ],
+    )
+    content = b.MiniMaxH3Content.model_construct(
+        first_frame_description="", style_line="", framing="a medium shot", subjects=[],
+        camera=b.MiniMaxH3CameraContent(), summary_action="Yui walks.", voices=[],
+        timeline=[b.MiniMaxH3TimelineBeat.model_construct(t=1.0, action="Yui walks forward")],
+        end_state="she stops", soundscape="", music="N/A",
+    )
+    detailed = b.assemble_minimax_h3_prompt(ctx, content).split("detailed_description:")[1]
+    assert "<Subject 2>, the prop phone from <Picture 2>" in detailed
+    assert "setting Nihonbashi Bridge shown in <Picture 3>" in detailed
+    # and the validator flags a prop the action never uses
+    out = b.MiniMaxH3LLMOutput.model_construct(content=content, self_review=[])
+    assert any("prop 'phone'" in p for p in b.validate_h3_output(ctx, out))

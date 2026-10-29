@@ -688,6 +688,29 @@ def _dialogue_block(context: MiniMaxH3BeatContext, content: MiniMaxH3Content) ->
     return " ".join(sentences) + " " + closing
 
 
+def _reference_usage_sentences(references: list) -> str:
+    """Tie every scene/prop reference into the shot description itself, not
+    only into `subject_definitions`: the model was seen to define a prop or
+    location image and then never use it in the action."""
+    subject_no = 0
+    parts: list[str] = []
+    for ref in references:
+        name = _sanitize(ref.name) or f"the item in {ref.tag}"
+        if ref.kind == "scene":
+            parts.append(
+                f"The whole shot takes place in the setting {name} shown in {ref.tag}, "
+                "keeping its architecture and layout."
+            )
+            continue
+        subject_no += 1
+        if ref.kind == "prop":
+            parts.append(
+                f"<Subject {subject_no}>, the prop {name} from {ref.tag}, stays visible "
+                "in the shot and is used in the action exactly as it looks in the reference."
+            )
+    return " ".join(parts)
+
+
 def assemble_minimax_h3_prompt(context: MiniMaxH3BeatContext, content: MiniMaxH3Content) -> str:
     """Deterministically builds the final, ready-to-submit H3 prompt text
     from `context` (ground truth: references, dialogue, duration) and
@@ -742,6 +765,7 @@ def assemble_minimax_h3_prompt(context: MiniMaxH3BeatContext, content: MiniMaxH3
     body_parts = [
         opening,
         camera_sentence,
+        _reference_usage_sentences(references) if mode == "ref2va" else "",
         action_sentences,
         dialogue_sentence,
         (
@@ -890,6 +914,18 @@ def validate_h3_output(context: "MiniMaxH3BeatContext", output: "MiniMaxH3LLMOut
             f"`subjects` has {len(content.subjects)} entries but there are "
             f"{len(context.references)} references; return exactly one per reference, in order"
         )
+    written = " ".join(
+        [content.summary_action, content.end_state, *(b.action for b in content.timeline)]
+    ).lower()
+    for ref in context.references:
+        if ref.kind != "prop":
+            continue
+        words = [w for w in re.split(r"[^a-z0-9]+", (ref.name or "").lower()) if len(w) >= 3]
+        if words and not any(w in written for w in words):
+            problems.append(
+                f"the prop '{ref.name}' ({ref.tag}) is never used in the summary or timeline; "
+                "show where it is and what is done with it"
+            )
     duration = float(context.duration_seconds or 0)
     if duration and content.timeline and content.timeline[-1].t > duration:
         problems.append(

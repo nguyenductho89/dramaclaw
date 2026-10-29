@@ -47,6 +47,7 @@ import json
 import logging
 import time
 import uuid
+from pathlib import Path
 from typing import Any
 
 from novelvideo.generators.video_generator import (
@@ -901,3 +902,41 @@ class RunPodMiniMaxH3VideoGenerator(VideoGeneratorBase):
             video_path=str(output_path),
             duration_seconds=frames / _FPS,
         )
+
+
+def _find_job_video_key_sync(job_id: str) -> str | None:
+    """R2 key of the rendered mp4 a RunPod job wrote under `jobs/<job_id>/`.
+    The handler stores outputs there, so a finished job can be fetched again
+    from its id alone, without RunPod's (short-lived) job result."""
+    from novelvideo.config import R2_BUCKET
+    from novelvideo.generators.nanobanana_grid import _runpod_r2_client
+
+    resp = _runpod_r2_client().list_objects_v2(Bucket=R2_BUCKET, Prefix=f"jobs/{job_id}/")
+    videos = [o for o in resp.get("Contents", []) if o["Key"].lower().endswith(".mp4")]
+    if not videos:
+        return None
+    return max(videos, key=lambda o: o["LastModified"])["Key"]
+
+
+async def recover_runpod_h3_video(job_id: str, output_path: str | Path) -> VideoGenResult:
+    """Re-download the video of an already finished H3 job by id (e.g. after
+    the original download timed out). Looks the file up in R2 directly."""
+    from novelvideo.generators.nanobanana_grid import _runpod_download_output_sync
+
+    job_id = (job_id or "").strip()
+    if not job_id:
+        return VideoGenResult(status=VideoGenStatus.FAILED, error="job id is empty")
+    try:
+        key = await asyncio.to_thread(_find_job_video_key_sync, job_id)
+    except Exception as exc:  # noqa: BLE001
+        return VideoGenResult(status=VideoGenStatus.FAILED, error=f"Failed to look up job in R2: {exc}")
+    if key is None:
+        return VideoGenResult(status=VideoGenStatus.FAILED, error=f"No video found in R2 for job {job_id}")
+    try:
+        data = await asyncio.to_thread(_runpod_download_output_sync, key)
+    except Exception as exc:  # noqa: BLE001
+        return VideoGenResult(status=VideoGenStatus.FAILED, error=f"Failed to download video from R2: {exc}")
+    out_path = Path(output_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    await asyncio.to_thread(out_path.write_bytes, data)
+    return VideoGenResult(status=VideoGenStatus.DONE, video_path=str(out_path))

@@ -4954,6 +4954,7 @@ def _runpod_r2_client():
     (`asyncio.to_thread`).
     """
     import boto3
+    from botocore.config import Config
 
     from novelvideo.config import R2_ACCESS_KEY_ID, R2_ENDPOINT, R2_SECRET_ACCESS_KEY
 
@@ -4962,6 +4963,14 @@ def _runpod_r2_client():
         endpoint_url=R2_ENDPOINT,
         aws_access_key_id=R2_ACCESS_KEY_ID,
         aws_secret_access_key=R2_SECRET_ACCESS_KEY,
+        # boto's default 60s read timeout is too short for a multi-MB video
+        # over a slow link (seen: a finished H3 job lost to "Read timeout"
+        # after the GPU time was already paid for).
+        config=Config(
+            connect_timeout=15,
+            read_timeout=300,
+            retries={"max_attempts": 5, "mode": "standard"},
+        ),
     )
 
 
@@ -4991,7 +5000,15 @@ def _runpod_download_output_sync(r2_key: str) -> bytes:
     from novelvideo.config import R2_BUCKET
 
     s3 = _runpod_r2_client()
-    return s3.get_object(Bucket=R2_BUCKET, Key=r2_key)["Body"].read()
+    last_exc: Exception | None = None
+    for attempt in range(3):
+        try:
+            return s3.get_object(Bucket=R2_BUCKET, Key=r2_key)["Body"].read()
+        except Exception as exc:  # noqa: BLE001 - body read timeouts bypass boto's own retries
+            last_exc = exc
+            time.sleep(2 * (attempt + 1))
+    assert last_exc is not None
+    raise last_exc
 
 
 async def _runpod_submit_job_with_409_retry(

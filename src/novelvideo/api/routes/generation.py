@@ -5848,7 +5848,13 @@ async def review_single_video(
             episode_num=episode_num,
             output_dir=output_dir,
             use_director_render=bool(body.use_director_render),
-            h3_config=h3_config,
+            # The input choices (mode / frames / reference keys) come from the
+            # beat as saved in the DB, not from the dialog's
+            # `seedance2_config_json` snapshot: the snapshot predates the AI
+            # rewrite that saves them, so it made review lint a 1-picture
+            # plan against a 3-picture prompt ("tags [1, 2, 3] do not match
+            # the reference image count (1)").
+            h3_config=parse_seedance2_config(beat.get("seedance2_config_json")),
             mode=body.h3_mode,
             first_frame=body.h3_first_frame,
             last_frame=body.h3_last_frame,

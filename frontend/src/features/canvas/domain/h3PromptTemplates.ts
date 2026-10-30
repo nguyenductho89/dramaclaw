@@ -60,7 +60,7 @@ export interface H3TemplateInput {
   imagePrompt?: string;
 }
 
-export type H3TemplateSource = "pixo" | "fal";
+export type H3TemplateSource = "pixo" | "fal" | "community";
 export type H3TemplateMode = "fl2va" | "flf2va" | "ref2va";
 
 export interface H3PromptTemplate {
@@ -850,6 +850,8 @@ const KEEP_BRACKET = /^(Shot \d+|keyframe completion.*|reference generation|Engl
  * generation]` and `<d>[Language] ...</d>` tags stay.
  */
 export function h3TemplateRunnablePrompt(template: H3PromptTemplate): string {
+  // Community prompts are free-form text; their square brackets are content.
+  if (template.source === "community") return template.prompt;
   return template.prompt.replace(/\[([^\]\n]+)\]/g, (match, inner: string) =>
     KEEP_BRACKET.test(inner.trim()) ? match : inner,
   );

@@ -5,7 +5,7 @@
 //   bun scripts/build_h3_template_gallery.ts
 //
 // Besides the Freezone templates it lists the community prompts in
-// community-prompts.json (apimodels.app / awesome-minimax-h3-prompts, English).
+// communityH3Prompts.json (apimodels.app / awesome-minimax-h3-prompts, English, also in the Freezone picker).
 // The 25 originals in Japanese/Chinese live in docs/zh/h3-templates/ (the repo
 // keeps CJK text out of the other docs) and are loaded by the page at runtime.
 // Those are free-form, so they carry no <Picture N> inputs and are not in the
@@ -53,7 +53,7 @@ interface CommunityEntry {
   prompt: string;
 }
 const community: CommunityEntry[] = JSON.parse(
-  readFileSync(join(galleryDir, "community-prompts.json"), "utf-8"),
+  readFileSync(join(galleryDir, "..", "..", "frontend", "src", "features", "canvas", "domain", "data", "communityH3Prompts.json"), "utf-8"),
 );
 
 const data = H3_PROMPT_TEMPLATES.map((t) => ({

@@ -6216,7 +6216,8 @@
       "placeholderHint": "Đã điền sẵn giá trị mẫu. @image1 = <Picture 1> (first frame), @image2 = <Picture 2>…; mỗi ảnh đầu vào có prompt tạo ảnh có thể sửa, hoặc tải ảnh của bạn lên.",
       "sources": {
         "fal": "Guide fal.ai",
-        "pixo": "pixo.video"
+        "pixo": "pixo.video",
+        "community": "Cộng đồng"
       },
       "categories": {
         "cinematic": "Điện ảnh",
@@ -6227,7 +6228,9 @@
         "motion": "Motion & poster",
         "ui": "UI game & web",
         "audio": "Theo âm thanh"
-      }
+      },
+      "needsFirstFrameUpload": "Prompt cộng đồng không có ảnh mẫu: hãy tạo node rồi tải lên hoặc tạo ảnh first frame.",
+      "loading": "Đang tải…"
     }
   },
   "tool": {

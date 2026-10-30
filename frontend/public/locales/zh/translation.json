@@ -6332,12 +6332,15 @@
       "modeFirstLastFrame": "首帧 + 尾帧",
       "sources": {
         "fal": "fal.ai 指南",
-        "pixo": "pixo.video"
+        "pixo": "pixo.video",
+        "community": "社区"
       },
       "hint": "MiniMax-H3 快速入门提示词（改编自 fal.ai 指南和 pixo.video 示例）",
       "createAndRun": "创建并运行",
       "edgeRejected": "部分输入无法连接到此视频节点（已达参考图上限）。",
-      "modeReference": "首帧 + 参考图"
+      "modeReference": "首帧 + 参考图",
+      "needsFirstFrameUpload": "社区提示词没有示例图：请先创建节点，再上传或生成首帧。",
+      "loading": "加载中…"
     },
     "addToChat": {
       "label": "添加到对话"

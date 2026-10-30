@@ -1275,6 +1275,12 @@ _EMPTY_PLACE_RE = re.compile(
 )
 
 
+_SHOT_VOCAB_WORDS = frozenset(
+    "close up medium extreme wide long tight push pull in out back dolly zoom pan tilt track "
+    "low high angle two shot eye level over shoulder hand held slow motion".split()
+)
+
+
 def description_fidelity_problems(
     visual_description: str, content: "MiniMaxH3Content"
 ) -> list[str]:
@@ -1297,6 +1303,11 @@ def description_fidelity_problems(
     problems: list[str] = []
     written_flat = written.replace("-", " ")
     for tag in sorted(set(re.findall(r"[a-z]+-[a-z]+", description))):
+        # Shot/camera vocabulary ("close-up", "push-in", "medium-close") lives in
+        # `framing`/`camera`, and the rules prefer a static camera with 2+
+        # characters, so demanding it in the action text can never be satisfied.
+        if all(word in _SHOT_VOCAB_WORDS for word in tag.split("-")):
+            continue
         if tag not in written and tag.replace("-", " ") not in written_flat:
             problems.append(f"the era/setting tag '{tag}' is never mentioned")
     crowd = [term for term in _CROWD_TERMS if term in description]
@@ -1369,6 +1380,16 @@ async def build_minimax_h3_prompt(context: MiniMaxH3BeatContext) -> MiniMaxH3Pro
     return MiniMaxH3PromptResult(plan=output.plan, final_prompt=final_prompt)
 
 
+def _is_malformed_json_failure(exc: BaseException) -> bool:
+    """True when the agent gave up only because the model's JSON was not valid
+    JSON (`json_invalid` / trailing characters), as opposed to a schema or
+    fidelity problem that a repeat would just reproduce."""
+    if not isinstance(exc, UnexpectedModelBehavior):
+        return False
+    cause = exc.__cause__ or exc.__context__
+    return cause is not None and "json_invalid" in str(cause)
+
+
 async def generate_minimax_h3_prompt_with_fallback(
     context: MiniMaxH3BeatContext,
     *,
@@ -1404,12 +1425,20 @@ async def generate_minimax_h3_prompt_with_fallback(
             break
         except Exception as exc:  # noqa: BLE001
             last_exc = exc
+            cause = exc.__cause__ or exc.__context__
             logging.getLogger(__name__).warning(
-                "MiniMax H3 prompt LLM attempt %d/%d failed: %r",
+                "MiniMax H3 prompt LLM attempt %d/%d failed: %r%s",
                 _attempt + 1,
                 max_llm_attempts,
                 exc,
+                f" | cause: {str(cause)[:600]}" if cause is not None else "",
             )
+            if _is_malformed_json_failure(exc) and _attempt + 1 < max_llm_attempts:
+                # The tool-call JSON itself was unparseable (DeepSeek sometimes
+                # appends stray `}` after a large nested object): a formatting
+                # glitch, not a content problem, and the whole run is cheap on
+                # a text-only writer, so just try again.
+                continue
             if isinstance(exc, (UnexpectedModelBehavior, UsageLimitExceeded)):
                 # Output retries already ran inside the agent (each with the
                 # concrete validation message); repeating the whole run only

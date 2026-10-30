@@ -155,3 +155,59 @@ async def test_build_sends_no_images_to_the_writer(tmp_path, monkeypatch):
     assert isinstance(seen["prompt"], str)  # text only: no BinaryContent list
     assert "seen <Picture 2>" in seen["prompt"]
     assert seen["deps"].references[0].appearance_source == "vision"
+
+
+def _content(**kw):
+    base = dict(
+        first_frame_description="She stands in the corridor.",
+        summary_action="She walks.",
+        end_state="She stops.",
+        timeline=[m.MiniMaxH3TimelineBeat(t=0.5, action="She turns"), m.MiniMaxH3TimelineBeat(t=2.0, action="She steps")],
+    )
+    base.update(kw)
+    return m.MiniMaxH3Content(**base)
+
+
+def test_camera_vocabulary_is_not_demanded_in_the_action_text():
+    desc = "A medium-close shot, then a slow push-in to an extreme close-up of her face"
+    assert m.description_fidelity_problems(desc, _content()) == []
+
+
+def test_era_and_wardrobe_tags_are_still_checked():
+    problems = m.description_fidelity_problems("An Edo-period street, a high-collared coat, a close-up", _content())
+    assert any("edo-period" in p for p in problems)
+    assert any("high-collared" in p for p in problems)
+    assert not any("close-up" in p for p in problems)
+
+
+def test_malformed_json_failures_are_recognised_but_other_failures_are_not():
+    from pydantic_ai.exceptions import UnexpectedModelBehavior
+
+    bad = UnexpectedModelBehavior("Exceeded maximum output retries (2)")
+    bad.__cause__ = ValueError("1 validation error for X\n  Invalid JSON: trailing characters [type=json_invalid]")
+    assert m._is_malformed_json_failure(bad)
+    semantic = UnexpectedModelBehavior("Exceeded maximum output retries (2)")
+    semantic.__cause__ = ValueError("1 validation error: timeline timestamps must be strictly increasing")
+    assert not m._is_malformed_json_failure(semantic)
+    assert not m._is_malformed_json_failure(RuntimeError("json_invalid"))
+
+
+async def test_a_json_glitch_is_retried_once_before_falling_back(monkeypatch):
+    from pydantic_ai.exceptions import UnexpectedModelBehavior
+
+    calls = {"n": 0}
+
+    async def flaky(context):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            err = UnexpectedModelBehavior("Exceeded maximum output retries (2)")
+            err.__cause__ = ValueError("Invalid JSON: trailing characters [type=json_invalid]")
+            raise err
+        return m.build_fallback_minimax_h3_prompt(context)
+
+    monkeypatch.setattr(m, "build_minimax_h3_prompt", flaky)
+    ctx = m.MiniMaxH3BeatContext(mode="fl2va", has_first_frame=True, visual_description="She walks.")
+    result, _lint, fallback_used = await m.generate_minimax_h3_prompt_with_fallback(
+        ctx, reference_count=1, duration_seconds=5.0, expects_dialogue=False
+    )
+    assert calls["n"] == 2 and fallback_used is False

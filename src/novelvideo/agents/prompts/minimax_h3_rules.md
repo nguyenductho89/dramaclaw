@@ -115,6 +115,11 @@ put in your structured answer's fields.
      add or change a detail they do not state, and never let the beat text
      override them. If a reference has no description, say as little as
      possible about its look and make nothing up.
+   - **One reference image can show several people** (a character sheet or
+     a pair). Its single `subjects` entry must then name EVERY person the
+     vision-step description lists (e.g. "a man with dark wavy hair in a black
+     velvet coat, and a woman with long wavy brown hair in a cream dress"),
+     never just one of them.
    - **Keep `subjects[].anchor` brief — an identity anchor, not a full
      description.** The reference image already carries every visual
      detail; this text only needs enough to lock onto the right identity.

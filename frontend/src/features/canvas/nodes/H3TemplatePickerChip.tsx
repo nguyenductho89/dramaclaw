@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { LayoutTemplate, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+import { loadCommunityH3Templates } from "@/features/canvas/domain/communityH3Templates";
 import {
   H3_PROMPT_TEMPLATES,
   H3_TEMPLATE_CATEGORIES,
@@ -45,21 +46,36 @@ export function H3TemplatePickerChip({ prompt, connectedImageCount, onApply }: H
   const [source, setSource] = useState<H3TemplateSource>("fal");
   const [category, setCategory] = useState<H3TemplateCategory>("cinematic");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [community, setCommunity] = useState<readonly H3PromptTemplate[]>([]);
 
+  // The community prompts are a large data file; fetch it only when its tab is opened.
+  useEffect(() => {
+    if (source !== "community" || community.length > 0) return;
+    let alive = true;
+    void loadCommunityH3Templates().then((items) => {
+      if (alive) setCommunity(items);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [source, community.length]);
+
+  const pool = useMemo(
+    () => (source === "community" ? community : H3_PROMPT_TEMPLATES),
+    [source, community],
+  );
   const categories = useMemo(
     () =>
       H3_TEMPLATE_CATEGORIES.filter((key) =>
-        H3_PROMPT_TEMPLATES.some((item) => item.source === source && item.category === key),
+        pool.some((item) => item.source === source && item.category === key),
       ),
-    [source],
+    [pool, source],
   );
   const activeCategory = categories.includes(category) ? category : (categories[0] ?? category);
   const visible = useMemo(
     () =>
-      H3_PROMPT_TEMPLATES.filter(
-        (item) => item.source === source && item.category === activeCategory,
-      ),
-    [source, activeCategory],
+      pool.filter((item) => item.source === source && item.category === activeCategory),
+    [pool, source, activeCategory],
   );
   const selected =
     visible.find((item) => item.id === selectedId) ?? visible[0] ?? null;
@@ -101,6 +117,8 @@ export function H3TemplatePickerChip({ prompt, connectedImageCount, onApply }: H
   }, [isOpen]);
 
   const hasAudioInput = selected?.inputs.some((input) => input.label.startsWith("<Audio")) ?? false;
+  // Community prompts have no image prompts to generate a first frame from.
+  const needsOwnFirstFrame = selected?.source === "community";
 
   const handleApply = (run: boolean) => {
     if (!selected) return;
@@ -153,7 +171,7 @@ export function H3TemplatePickerChip({ prompt, connectedImageCount, onApply }: H
               </div>
 
               <div className="flex shrink-0 gap-1.5 px-4 pb-1.5">
-                {(["fal", "pixo"] as const).map((key) => (
+                {(["fal", "pixo", "community"] as const).map((key) => (
                   <button
                     key={key}
                     type="button"
@@ -194,6 +212,9 @@ export function H3TemplatePickerChip({ prompt, connectedImageCount, onApply }: H
 
               <div className="flex min-h-0 flex-1 gap-3 px-4 pb-2">
                 <div className="ui-scrollbar flex w-[230px] shrink-0 flex-col gap-1.5 overflow-y-auto">
+                  {source === "community" && community.length === 0 && (
+                    <div className="px-1 text-[11px] text-text-muted">{t("canvas.h3Templates.loading")}</div>
+                  )}
                   {visible.map((item) => {
                     const isSelected = selected?.id === item.id;
                     return (
@@ -257,9 +278,13 @@ export function H3TemplatePickerChip({ prompt, connectedImageCount, onApply }: H
               </div>
 
               <div className="flex shrink-0 items-center justify-end gap-2 px-4 pb-4 pt-1">
-                {hasAudioInput && (
+                {(hasAudioInput || needsOwnFirstFrame) && (
                   <span className="mr-auto text-[11px] text-text-muted">
-                    {t("canvas.h3Templates.needsAudioUpload")}
+                    {t(
+                      hasAudioInput
+                        ? "canvas.h3Templates.needsAudioUpload"
+                        : "canvas.h3Templates.needsFirstFrameUpload",
+                    )}
                   </span>
                 )}
                 <button
@@ -273,7 +298,7 @@ export function H3TemplatePickerChip({ prompt, connectedImageCount, onApply }: H
                 <button
                   type="button"
                   onClick={() => handleApply(true)}
-                  disabled={!selected || hasAudioInput}
+                  disabled={!selected || hasAudioInput || needsOwnFirstFrame}
                   className="h-8 min-w-[50px] rounded-md bg-primary px-3 text-[13px] text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-text-muted"
                 >
                   {t("canvas.h3Templates.createAndRun")}

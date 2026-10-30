@@ -28,25 +28,29 @@ header, so the model literally cannot corrupt the structural checks
 beat text alone, so a flaky LLM call never has to leave the user with
 nothing — see `api/routes/generation.py`'s `generate_minimax_h3_prompt`.
 
-**Vision is still the source of truth for appearance** (this is the one
-thing carried over unchanged from the previous design, and the reason this
-still needs a vision-capable model + one call with images attached): a
-character's recorded `appearance_details` text, when present at all, can
-drift from what a later-regenerated reference image actually shows, and
-when absent the model previously had nothing to go on but invent something
-wrong. The real first frame and every reference image are attached
-directly to the one LLM call; `subjects[].anchor` must describe what the
-model actually sees, not a text hint.
-
-The model/alias this module uses (`MINIMAX_H3_PROMPT_MODEL`, default
-`DC-video-h3-prompt-LLM`) is mapped to `DC-qwen-vision`, which runs in
-"thinking mode" and needs `output_type=NativeOutput(...)` (JSON-schema
-structured output) rather than plain forced tool-calling — see
-`docs/adr/0002-identity-planner-and-text-models-deepseek.md`.
+**Two steps, each on the model that is good at it (2026-10-30).** The
+first-frame and every reference image are described by a SEPARATE vision
+call (`_describe_images_via_vision`, alias `DC-video-h3-vision-LLM` ->
+`DC-qwen-vision`, plain-text output, one factual sentence per image). Those
+sentences become the references' `appearance_details` (marked
+`appearance_source="vision"`) and the first-frame look, and the WRITER call
+(`MINIMAX_H3_PROMPT_MODEL`, default `DC-video-h3-prompt-LLM`, mapped to
+`DC-deepseek`, plain forced tool-calling, text only, no images) turns them
+into the structured content. Reason: when one Qwen "thinking mode" call both
+looked at the images AND had to return a strict JSON schema, ~11% of the
+writer calls hit the 6000-token cap (avg 124 s each, no valid JSON) and the
+review took 25 min with two shots falling back to the template (Langfuse,
+2026-10-30). The split keeps Qwen's accuracy on appearance (it is the only
+step that sees pixels) and removes it from the part that needs format
+discipline. Descriptions are cached per image file so the same reference is
+described once across shots/passes. If the vision step fails, the writer
+still runs on the text hints that came with the references.
 """
 
 from __future__ import annotations
 
+import asyncio
+import hashlib
 import logging
 import os
 import re
@@ -56,7 +60,6 @@ from typing import Literal, Optional
 from pydantic import BaseModel, Field, field_validator, model_validator
 from pydantic_ai import Agent, BinaryContent, ModelRetry, RunContext, UsageLimits
 from pydantic_ai.exceptions import UnexpectedModelBehavior, UsageLimitExceeded
-from pydantic_ai.output import NativeOutput
 
 _RULES_PATH = Path(__file__).parent / "prompts" / "minimax_h3_rules.md"
 
@@ -115,6 +118,13 @@ class MiniMaxH3Reference(BaseModel):
         ),
     )
     image_path: str = Field(default="", description="Absolute path to the reference image file, if any")
+    appearance_source: Literal["text", "vision"] = Field(
+        default="text",
+        description=(
+            "'vision' when `appearance_details` was written by the vision step that looked "
+            "at the real image (ground truth); 'text' for a recorded text hint"
+        ),
+    )
 
 
 class MiniMaxH3BeatContext(BaseModel):
@@ -161,6 +171,8 @@ class MiniMaxH3BeatContext(BaseModel):
     # what's really in frame at t=0 instead of only the (possibly stale)
     # `visual_description` text.
     first_frame_path: str = ""
+    # What the vision step saw in the first frame (empty when none/unavailable).
+    first_frame_look: str = ""
     references: list[MiniMaxH3Reference] = Field(default_factory=list)
 
 
@@ -379,18 +391,20 @@ def _build_agent() -> Agent:
     system_prompt = (
         "You are a MiniMax H3 video prompt director for a short drama. You "
         "will be given one beat's context (visual description, narration, "
-        "duration, aspect ratio, any director guidance) as text, and the "
-        "actual first frame plus any character/scene/prop reference images "
-        "as attached images, each labeled with its tag (when the beat has a "
-        "first frame, <Picture 1> is the first frame and <Picture 2>, "
-        "<Picture 3>, ... are references; when it has none, the references "
-        "start at <Picture 1>. References are in the order listed, each "
-        "corresponding 1:1 to the `subjects` list you return; a reference "
-        "of kind scene is a location, a prop is an object). Describe what you genuinely see in "
-        "those images — hair, face, clothing, the scene itself — rather "
-        "than any text hint that comes with a reference; a text hint is "
-        "only ever supplementary, and the image always wins if the two "
-        "disagree.\n\n"
+        "duration, aspect ratio, any director guidance) as text. You do not "
+        "see any image: a separate vision step already looked at the real "
+        "first frame and every character/scene/prop reference and wrote what "
+        "is visibly there. Those descriptions (marked as coming from a "
+        "vision step) are GROUND TRUTH for hair, face, clothing and the "
+        "setting: copy their visible details into your `subjects`, never "
+        "invent, add or change one, and never let the story text override "
+        "them. When the first frame has a <Picture 1>, it is the first "
+        "frame and <Picture 2>, <Picture 3>, ... are references; when it has "
+        "none, the references start at <Picture 1>. References are in the "
+        "order listed, each corresponding 1:1 to the `subjects` list you "
+        "return; a reference of kind scene is a location, a prop is an "
+        "object. A reference with no description at all is described from "
+        "the text only, as little as possible, with nothing made up.\n\n"
         "You do NOT write the final prompt text, section headers, "
         "`<Picture N>`/`<Subject N>`/`[Shot N]` tags, or any `<d>` dialogue "
         "tag — all of that is assembled by code from your structured "
@@ -411,28 +425,18 @@ def _build_agent() -> Agent:
             capability="text.generate.agent",
         ),
         system_prompt=system_prompt,
-        # `NativeOutput` (JSON-schema structured output via `response_format`),
-        # NOT plain `output_type=` (forced tool-calling / `tool_choice:
-        # "required"`) — this alias is mapped to a vision-capable channel
-        # (Qwen via DashScope, `DC-qwen-vision`), which runs in "thinking
-        # mode" and rejects forced tool-calling, but does support
-        # `response_format`/JSON schema cleanly. See
-        # docs/adr/0002-identity-planner-and-text-models-deepseek.md.
+        # Plain `output_type=` (forced tool-calling): this alias is mapped to
+        # `DC-deepseek` again (text-only, no images, no "thinking mode"). The
+        # old `NativeOutput` was only needed while the alias pointed at Qwen;
+        # `deepseek-chat` rejects `response_format` with a 400 (ADR 0002).
         deps_type=MiniMaxH3BeatContext,
         # Format/consistency failures (see `validate_h3_output` and the field
         # validators) are sent back to the model as retry messages.
         retries=2,
-        output_type=NativeOutput(MiniMaxH3LLMOutput),
-        # `max_tokens`: a "thinking mode" vision model spends part of its
-        # token budget on internal reasoning before the final JSON. The
-        # schema is much smaller than the old free-text `final_prompt`
-        # design (content only, no multi-section prose), but a successful
-        # 2-attempt run was measured (2026-10-29, debug script against beat 1
-        # of YuiDrama) at ~1700 output tokens total, i.e. well under the
-        # previous 4000/request — bumped to 6000 as headroom for a more
-        # complex beat (more subjects/voices/dialogue) that might need more
-        # than this one beat did, not because this beat needed it.
-        model_settings={**get_newapi_structured_output_model_settings(), "max_tokens": 6000},
+        output_type=MiniMaxH3LLMOutput,
+        # A text-only writer needs ~1000-1700 output tokens for a full
+        # answer (measured 2026-10-30 across 64 finished calls: ~900 avg).
+        model_settings={**get_newapi_structured_output_model_settings(), "max_tokens": 4000},
         name="MiniMax H3 Prompt Director",
     )
 
@@ -466,12 +470,11 @@ def get_minimax_h3_prompt_agent() -> Agent:
 def _picture_order_note(context: MiniMaxH3BeatContext) -> str:
     if context.has_first_frame:
         return (
-            "<Picture 1> is the first frame — its image follows this text, then each "
-            "reference's image in the order listed below"
+            "<Picture 1> is the first frame, then each reference in the order listed below"
         )
     return (
-        "there is NO first frame; the reference images follow this text in the order "
-        "listed below, starting at <Picture 1>"
+        "there is NO first frame; the references are listed below in order, "
+        "starting at <Picture 1>"
     )
 
 
@@ -479,8 +482,12 @@ def _format_references(context: MiniMaxH3BeatContext) -> str:
     lines = []
     for i, ref in enumerate(context.references, start=1):
         details = ref.appearance_details.strip()
-        hint = f" (supplementary text hint, image is authoritative: {details})" if details else ""
-        attached_note = " [image attached below]" if ref.image_path else " [no image available]"
+        if ref.appearance_source == "vision" and details:
+            hint = f" — AS SEEN IN THE IMAGE (ground truth, from a vision step): {details}"
+            attached_note = ""
+        else:
+            hint = f" (supplementary text hint: {details})" if details else ""
+            attached_note = " [no image description available]"
         lines.append(
             f"- subjects[{i - 1}] <- {ref.tag} ({ref.kind}){f' — {ref.name}' if ref.name else ''}{attached_note}{hint}"
         )
@@ -542,7 +549,10 @@ def _build_user_prompt(context: MiniMaxH3BeatContext) -> str:
 ## Duration / aspect ratio
 {context.duration_seconds:.1f}s, {context.aspect_ratio}
 
-## Visual description ({"first frame / scene" if context.has_first_frame else "AUTHORITATIVE — there is no first frame; everything in it must appear, nothing may be contradicted"})
+{f"""## First frame — what the vision step saw in the real image (ground truth)
+{context.first_frame_look.strip()}
+
+""" if context.first_frame_look.strip() else ""}## Visual description ({"first frame / scene" if context.has_first_frame else "AUTHORITATIVE — there is no first frame; everything in it must appear, nothing may be contradicted"})
 {context.visual_description or "(none provided)"}
 
 ## Scene
@@ -562,13 +572,13 @@ Next beat: {context.next_beat_narration or "(none)"}
 ## Existing motion hint (optional, may be stale — treat only as a hint, not authoritative)
 {context.existing_video_prompt or "(none)"}
 
-## Director guidance (optional, from the user — advisory, never a substitute for what the attached images actually show)
+## Director guidance (optional, from the user — advisory, never a substitute for the vision-step descriptions above)
 {context.director_guidance or "(none)"}
 {f'''
 ## Fix this specific problem from your previous attempt at this beat
 {context.retry_feedback}
 ''' if context.retry_feedback.strip() else ""}
-Now produce the directing plan and the structured content for this beat, describing every subject's appearance from the attached images, not from any text hint."""
+Now produce the directing plan and the structured content for this beat, taking every subject's appearance from the vision-step descriptions, not from the story text."""
 
 
 def _load_reference_image_content(image_path: str) -> Optional[BinaryContent]:
@@ -578,6 +588,165 @@ def _load_reference_image_content(image_path: str) -> Optional[BinaryContent]:
         return BinaryContent(data=_compress_image_bytes(image_path), media_type="image/jpeg")
     except OSError:
         return None
+
+
+# ── Step 1: a vision call that only DESCRIBES the images ──────────────────
+
+_VISION_OUTPUT_TOKENS_LIMIT = 4000
+_VISION_SYSTEM_PROMPT = (
+    "You describe images for a video-prompt writer who cannot see them. For "
+    "each labeled image write exactly ONE plain sentence of at most 60 words "
+    "stating only what is visibly there, with no story, no guess, no mood "
+    "words. A person: hair colour and style, face traits (age range, skin, "
+    "freckles, facial hair), clothing garment by garment with colours, "
+    "visible accessories; if one image shows several people, describe each "
+    "from left to right in the same sentence. A place: type of room, key "
+    "architecture, floor, lighting, mist or weather. An object: shape, "
+    "colour, material. A first frame: who stands where, pose, gaze, the "
+    "setting and the light. Output exactly one line per image, in the form "
+    "`<Picture N>: sentence`, using the label you were given, in the given "
+    "order, and nothing else."
+)
+_vision_agent: Optional[Agent] = None
+_vision_cache: dict[str, dict[str, str]] = {}
+_vision_locks: dict[tuple[int, str], asyncio.Lock] = {}
+_VISION_CACHE_MAX = 256
+_TAG_LINE_RE = re.compile(r"^[\W_]*(<\s*(?:Picture|Audio|Last)\s*\d*\s*>)\s*[:：\-–—]\s*(.+?)\s*$", re.IGNORECASE)
+
+
+def _get_vision_agent() -> Agent:
+    global _vision_agent
+    if _vision_agent is None:
+        from novelvideo.config import (
+            get_newapi_structured_output_model_settings,
+            get_newapi_text_pydantic_model,
+        )
+
+        _vision_agent = Agent(
+            get_newapi_text_pydantic_model(
+                "MINIMAX_H3_VISION_MODEL",
+                default_model="DC-video-h3-vision-LLM",
+                capability="text.generate.agent",
+            ),
+            system_prompt=_VISION_SYSTEM_PROMPT,
+            # Plain text: Qwen's "thinking mode" rejects forced tool-calling
+            # and needs no schema here, one line per image is enough.
+            output_type=str,
+            model_settings={**get_newapi_structured_output_model_settings(), "max_tokens": 2500},
+            name="MiniMax H3 Image Describer",
+        )
+    return _vision_agent
+
+
+def _norm_tag(tag: str) -> str:
+    return re.sub(r"\s+", "", tag).lower()
+
+
+def parse_vision_descriptions(text: str, tags: list[str]) -> dict[str, str]:
+    """`<Picture N>: sentence` lines -> {tag: sentence}. Tolerates a leaked
+    `</think>` block, bullets and spacing; ignores lines for unknown tags."""
+    if "</think>" in text:
+        text = text.rsplit("</think>", 1)[-1]
+    wanted = {_norm_tag(t): t for t in tags}
+    out: dict[str, str] = {}
+    for line in text.splitlines():
+        m = _TAG_LINE_RE.match(line.strip().lstrip("-*\u2022 "))
+        if not m:
+            continue
+        original = wanted.get(_norm_tag(m.group(1)))
+        if original is None or original in out:
+            continue
+        cleaned = _sanitize(m.group(2))
+        if cleaned:
+            out[original] = cleaned
+    return out
+
+
+def _vision_items(context: MiniMaxH3BeatContext) -> list[tuple[str, str, str]]:
+    """(tag, label, path) for every image the vision step should describe."""
+    items: list[tuple[str, str, str]] = []
+    if context.has_first_frame and context.first_frame_path and os.path.exists(context.first_frame_path):
+        items.append(("<Picture 1>", "first frame", context.first_frame_path))
+    if context.last_frame_path and os.path.exists(context.last_frame_path):
+        items.append(("<Last frame>", "last frame (pinned at the end)", context.last_frame_path))
+    for ref in context.references:
+        if ref.image_path and os.path.exists(ref.image_path):
+            who = f" — {ref.name}" if ref.name else ""
+            items.append((ref.tag, f"{ref.kind} reference{who}", ref.image_path))
+    return items
+
+
+def _vision_cache_key(items: list[tuple[str, str, str]]) -> str:
+    h = hashlib.sha1()
+    for tag, label, path in items:
+        st = os.stat(path)
+        h.update(f"{tag}|{label}|{path}|{st.st_mtime_ns}|{st.st_size}\n".encode())
+    return h.hexdigest()
+
+
+async def _describe_images_via_vision(items: list[tuple[str, str, str]]) -> dict[str, str]:
+    content: list = [
+        "Describe each labeled image below in one sentence, following your instructions exactly."
+    ]
+    for tag, label, path in items:
+        image = _load_reference_image_content(path)
+        if image is None:
+            continue
+        content.append(f"{tag} — {label}:")
+        content.append(image)
+    if len(content) == 1:
+        return {}
+    response = await _get_vision_agent().run(
+        content, usage_limits=UsageLimits(output_tokens_limit=_VISION_OUTPUT_TOKENS_LIMIT)
+    )
+    return parse_vision_descriptions(str(response.output), [t for t, _l, _p in items])
+
+
+async def _describe_images_cached(items: list[tuple[str, str, str]]) -> dict[str, str]:
+    """One vision call per distinct image set: the same references are shared by
+    every shot and every review pass, and several shots start at once, so a
+    per-(event loop, key) lock makes concurrent shots wait for the first call."""
+    key = _vision_cache_key(items)
+    if key in _vision_cache:
+        return dict(_vision_cache[key])
+    lock = _vision_locks.setdefault((id(asyncio.get_running_loop()), key), asyncio.Lock())
+    async with lock:
+        if key in _vision_cache:
+            return dict(_vision_cache[key])
+        result = await _describe_images_via_vision(items)
+        if result:
+            if len(_vision_cache) >= _VISION_CACHE_MAX:
+                _vision_cache.pop(next(iter(_vision_cache)))
+            _vision_cache[key] = dict(result)
+        return result
+
+
+async def apply_vision_descriptions(context: MiniMaxH3BeatContext) -> MiniMaxH3BeatContext:
+    """Return `context` with the images' descriptions filled in (step 1).
+    Never raises: on any vision failure the writer simply runs on whatever
+    text hints the context already has."""
+    items = _vision_items(context)
+    if not items:
+        return context
+    try:
+        described = await _describe_images_cached(items)
+    except Exception as exc:  # noqa: BLE001
+        logging.getLogger(__name__).warning(
+            "MiniMax H3 vision step failed (%r); the writer will use text hints only", exc
+        )
+        return context
+    if not described:
+        return context
+    refs = [
+        ref.model_copy(update={"appearance_details": described[ref.tag], "appearance_source": "vision"})
+        if ref.tag in described
+        else ref
+        for ref in context.references
+    ]
+    look = described.get("<Picture 1>", "")
+    if "<Last frame>" in described:
+        look = (look + " " if look else "") + "Last frame (pinned at the end): " + described["<Last frame>"]
+    return context.model_copy(update={"references": refs, "first_frame_look": look})
 
 
 # ── Deterministic assembly (no LLM involved past this point) ───────────────
@@ -1150,18 +1319,10 @@ def review_enabled() -> bool:
 async def build_minimax_h3_prompt(context: MiniMaxH3BeatContext) -> MiniMaxH3PromptResult:
     agent = get_minimax_h3_prompt_agent()
 
-    images: list = []
-    first_frame_content = _load_reference_image_content(context.first_frame_path)
-    if first_frame_content is not None:
-        images.append(first_frame_content)
-    if context.last_frame_path:
-        last_frame_content = _load_reference_image_content(context.last_frame_path)
-        if last_frame_content is not None:
-            images.append(last_frame_content)
-    for ref in context.references:
-        ref_content = _load_reference_image_content(ref.image_path)
-        if ref_content is not None:
-            images.append(ref_content)
+    # Step 1 (vision, cached per image set): describe the real images.
+    # Step 2 below (text-only writer on DeepSeek) never sees a pixel.
+    original_context = context
+    context = await apply_vision_descriptions(original_context)
 
     output: MiniMaxH3LLMOutput | None = None
     attempt_context = context
@@ -1170,7 +1331,7 @@ async def build_minimax_h3_prompt(context: MiniMaxH3BeatContext) -> MiniMaxH3Pro
         # failures back to the model; this loop adds the independent review.
         try:
             response = await agent.run(
-                [_build_user_prompt(attempt_context), *images],
+                _build_user_prompt(attempt_context),
                 deps=attempt_context,
                 usage_limits=UsageLimits(output_tokens_limit=_WRITER_OUTPUT_TOKENS_LIMIT),
             )

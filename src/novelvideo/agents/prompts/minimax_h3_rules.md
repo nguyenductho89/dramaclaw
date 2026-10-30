@@ -106,16 +106,17 @@ put in your structured answer's fields.
    [anthology §1.3; reference-motion-transfer §8.6; photoreal core rules]
 
 7. **Identity.**
-   - **Describe what you actually see in the attached images — not what a
-     text hint says.** You have been shown the real first frame and every
-     reference image. A character's recorded `appearance_details` text,
-     when given, is only ever a supplementary hint — the image is
-     authoritative. Never let a text hint override, contradict, or fill
-     in a detail the image itself doesn't show; if the two disagree,
-     trust the image. When there is no text hint at all, describe the
-     subject from the image alone.
+   - **Take every subject's appearance from the vision-step description,
+     not from the story text or a recorded text hint.** You cannot see the
+     images, but a separate vision step looked at the real first frame and
+     every reference and wrote what is visibly there; the lines marked "AS
+     SEEN IN THE IMAGE" are ground truth for hair, face, clothing and the
+     setting. Copy their visible details into the anchors. Never invent,
+     add or change a detail they do not state, and never let the beat text
+     override them. If a reference has no description, say as little as
+     possible about its look and make nothing up.
    - **Keep `subjects[].anchor` brief — an identity anchor, not a full
-     description.** The attached image already carries every visual
+     description.** The reference image already carries every visual
      detail; this text only needs enough to lock onto the right identity.
      One short clause, **2-3 visual anchors maximum** (e.g. hair + one
      outfit color/item), under ~15 words. Never personality, backstory, or

@@ -4,11 +4,11 @@
 //
 //   bun scripts/build_h3_template_gallery.ts
 //
-// Sample media is optional and picked up by file name, relative to the page:
-//   media/<template id>/preview.mp4        sample video (poster: preview.jpg)
-//   media/<template id>/picture-<N>.jpg    sample for <Picture N> (png/webp ok)
-// Missing files show a placeholder that names the expected path.
-import { writeFileSync } from "node:fs";
+// Sample media is optional and scanned from docs/h3-templates/media/<id>/:
+//   preview.mp4 (+ preview.jpg poster)   sample video of the source example
+//   ref-<N>.webp|jpg|png                 reference images of the source example
+// See media/SOURCES.md for where the clips come from.
+import { existsSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -19,7 +19,18 @@ import {
 } from "../frontend/src/features/canvas/domain/h3PromptTemplates";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const out = join(here, "..", "docs", "h3-templates", "index.html");
+const galleryDir = join(here, "..", "docs", "h3-templates");
+const out = join(galleryDir, "index.html");
+
+function mediaFor(id: string) {
+  const dir = join(galleryDir, "media", id);
+  if (!existsSync(dir)) return { video: false, refs: [] as string[] };
+  const files = readdirSync(dir);
+  const refs = files
+    .filter((f) => /^ref-\d+\.(webp|jpe?g|png)$/.test(f))
+    .sort((a, b) => parseInt(a.slice(4), 10) - parseInt(b.slice(4), 10));
+  return { video: files.includes("preview.mp4"), refs };
+}
 
 const data = H3_PROMPT_TEMPLATES.map((t) => ({
   id: t.id,
@@ -33,6 +44,7 @@ const data = H3_PROMPT_TEMPLATES.map((t) => ({
   durationSec: t.durationSec,
   inputs: t.inputs,
   prompt: h3TemplateRunnablePrompt(t),
+  media: mediaFor(t.id),
 }));
 
 const json = JSON.stringify({ categories: H3_TEMPLATE_CATEGORIES, templates: data })
@@ -68,8 +80,10 @@ p{margin:0;color:var(--mut)}
 .slot{border:1px dashed var(--line);border-radius:8px;overflow:hidden;background:var(--code);position:relative}
 .slot img,.slot video{display:block;width:100%;height:100%;object-fit:cover}
 .slot .ph{padding:8px;font-size:11px;color:var(--mut);word-break:break-all;display:flex;align-items:center;justify-content:center;text-align:center;height:100%}
-.vid{grid-column:1/-1;aspect-ratio:var(--ar)}
-.pic{aspect-ratio:var(--ar)}
+.vid{aspect-ratio:var(--ar);max-height:420px;margin:0 auto}
+.vid video{object-fit:contain;background:#000}
+.nomedia,.cap{font-size:12px;color:var(--mut)}
+.media .slot{aspect-ratio:1}
 .inp{font-size:13px;border-top:1px solid var(--line);padding-top:6px}
 .inp code{color:var(--acc)}
 .row{display:flex;gap:8px;align-items:center;justify-content:space-between}
@@ -99,29 +113,21 @@ let lang='vi';
 const $=id=>document.getElementById(id);
 const L=o=>o[lang]||o.en;
 const MODE={fl2va:'chỉ first frame',flf2va:'first + last frame',ref2va:'first frame + ảnh tham chiếu'};
-const exts=['jpg','png','webp'];
 function fillCats(){const s=$('cat');const v=s.value;s.innerHTML='<option value="">Mọi nhóm</option>'+D.categories.map(c=>'<option>'+c+'</option>').join('');s.value=v}
 function esc(s){return s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
 function copy(btn,text){navigator.clipboard.writeText(text).then(()=>{const o=btn.textContent;btn.textContent='Đã chép';setTimeout(()=>btn.textContent=o,1200)})}
-function pictureSlot(t,inp){
-  const m=/Picture (\\d+)/.exec(inp.label);if(!m)return '';
-  const n=m[1],ar=t.aspectRatio.replace(':','/');
-  const base='media/'+t.id+'/picture-'+n;
-  return '<div class="slot pic" style="--ar:'+ar+'"><img src="'+base+'.jpg" alt="" loading="lazy" data-base="'+base+'" data-i="0"><div class="ph" hidden>'+base+'.jpg</div></div>';
-}
 function card(t){
   const ar=t.aspectRatio.replace(':','/');
-  const vbase='media/'+t.id+'/preview';
   const inputs=t.inputs.map(i=>{
     const ip=i.imagePrompt?'<details><summary>Image prompt</summary><pre>'+esc(i.imagePrompt)+'</pre><button class="small" data-copy="ip">Chép</button></details>':'';
     return '<div class="inp"><code>'+esc(i.label)+'</code> '+esc(L(i.role))+ip+'</div>';
   }).join('');
-  const pics=t.inputs.map(i=>pictureSlot(t,i)).join('');
   return '<article class="card" data-id="'+t.id+'">'+
    '<div class="row"><h2>'+esc(L(t.title))+'</h2><button class="small" data-copy="id">'+esc(t.id)+'</button></div>'+
    '<div class="badges"><span class="b acc">'+t.category+'</span><span class="b">'+t.mode+' &middot; '+MODE[t.mode]+'</span><span class="b">'+t.aspectRatio+'</span><span class="b">'+t.durationSec+'s</span><span class="b">'+t.source+'</span></div>'+
    '<p>'+esc(L(t.description))+'</p>'+
-   '<div class="media"><div class="slot vid" style="--ar:'+ar+'"><video src="'+vbase+'.mp4" poster="'+vbase+'.jpg" controls loop muted preload="metadata"></video><div class="ph" hidden>'+vbase+'.mp4</div></div>'+pics+'</div>'+
+   (t.media.video?'<div class="slot vid" style="--ar:'+ar+'"><video src="media/'+t.id+'/preview.mp4" poster="media/'+t.id+'/preview.jpg" controls loop muted preload="none"></video></div>':'<div class="nomedia">Chưa có video mẫu</div>')+
+   (t.media.refs.length?'<div class="media">'+t.media.refs.map(r=>'<a class="slot" href="media/'+t.id+'/'+r+'" target="_blank"><img src="media/'+t.id+'/'+r+'" alt="" loading="lazy"></a>').join('')+'</div><div class="cap">Ảnh tham chiếu của ví dụ gốc (chỉ để xem; không trùng số với &lt;Picture N&gt; của template)</div>':'')+
    inputs+
    '<details><summary>Prompt đầy đủ</summary><pre>'+esc(t.prompt)+'</pre><button class="small" data-copy="prompt">Chép prompt</button></details>'+
    '</article>';
@@ -132,11 +138,6 @@ function render(){
     (!q||(t.id+' '+t.title.en+' '+t.title.vi+' '+t.description.en+' '+t.description.vi+' '+t.prompt).toLowerCase().includes(q)));
   $('list').innerHTML=items.map(card).join('');
   $('count').textContent=items.length+' / '+D.templates.length;
-  $('list').querySelectorAll('video').forEach(v=>v.addEventListener('error',()=>{v.hidden=true;v.nextElementSibling.hidden=false},{once:true}));
-  $('list').querySelectorAll('.pic img').forEach(img=>img.addEventListener('error',function f(){
-    const i=+img.dataset.i+1;
-    if(i<exts.length){img.dataset.i=i;img.src=img.dataset.base+'.'+exts[i]}else{img.hidden=true;img.nextElementSibling.hidden=false}
-  }));
 }
 $('list').addEventListener('click',e=>{
   const b=e.target.closest('[data-copy]');if(!b)return;

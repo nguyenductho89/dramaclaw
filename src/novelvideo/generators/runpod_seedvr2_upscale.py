@@ -27,6 +27,7 @@ import shutil
 import subprocess
 import tempfile
 import uuid
+from collections.abc import Callable, Iterable, Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -118,6 +119,43 @@ def stitch_segments(segments: list[Segment], frames_per_segment: list[np.ndarray
         out[seg.start + fade : seg.end] = frames[fade:]
         filled = seg.end
     return out
+
+
+def iter_stitched(segments: list[Segment], frames_per_segment: Iterable[np.ndarray]) -> Iterator[np.ndarray]:
+    """Streaming twin of `stitch_segments`: yields the merged clip in order.
+
+    Only one segment plus the not-yet-final overlap tail (`overlap_frames` of
+    the previous segment) is alive at a time, so peak RAM is bounded by the
+    segment, not by the clip. Concatenating the yielded chunks gives exactly
+    `stitch_segments(segments, list(frames_per_segment))`.
+    """
+    tail: np.ndarray | None = None
+    first_shape: tuple[int, ...] | None = None
+    count = 0
+    for i, frames in enumerate(frames_per_segment):
+        seg = segments[i]
+        if first_shape is None:
+            first_shape = frames.shape[1:]
+        if frames.shape[0] < seg.length:
+            raise ValueError(
+                f"segment {seg.start}-{seg.end} came back with {frames.shape[0]} frames, expected {seg.length}"
+            )
+        if frames.shape[1:] != first_shape:
+            raise ValueError(f"segment {seg.start}-{seg.end} has frame shape {frames.shape[1:]}, expected {first_shape}")
+        out = frames[: seg.length].copy()
+        fade = max(0, segments[i - 1].end - seg.start) if i else 0
+        if fade:
+            assert tail is not None and tail.shape[0] == fade
+            w = crossfade_weights(fade).reshape(fade, 1, 1, 1)
+            out[:fade] = np.clip(tail.astype(np.float32) * w + out[:fade].astype(np.float32) * (1.0 - w) + 0.5, 0, 255).astype(np.uint8)
+        next_fade = max(0, seg.end - segments[i + 1].start) if i + 1 < len(segments) else 0
+        keep = seg.length - next_fade
+        if keep > 0:
+            yield out[:keep]
+        tail = out[keep:] if next_fade else None
+        count += 1
+    if count != len(segments):
+        raise ValueError("segments and frames_per_segment differ in length")
 
 
 def build_seedvr2_segment_graph(
@@ -255,6 +293,43 @@ def write_video(frames: np.ndarray, fps: float, dst: str | Path, audio_src: str 
     subprocess.run(cmd, input=frames.tobytes(), check=True)
 
 
+def write_video_stream(
+    chunks: Iterable[np.ndarray],
+    fps: float,
+    dst: str | Path,
+    audio_src: str | Path | None,
+    *,
+    width: int,
+    height: int,
+    total_frames: int,
+    crf: int = 14,
+) -> None:
+    """Pipe frame chunks into one ffmpeg encode (same settings as `write_video`)."""
+    cmd = [
+        "ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "rgb24",
+        "-s", f"{width}x{height}", "-r", f"{fps}", "-i", "-",
+    ]
+    if audio_src is not None:
+        cmd += ["-i", str(audio_src), "-map", "0:v:0", "-map", "1:a:0?", "-c:a", "copy"]
+    cmd += [
+        "-c:v", "libx264", "-crf", str(crf), "-preset", "slow", "-pix_fmt", "yuv420p",
+        "-t", f"{total_frames / fps:.6f}", str(dst),
+    ]
+    proc = subprocess.Popen(cmd, stdin=subprocess.PIPE)
+    assert proc.stdin is not None
+    try:
+        for chunk in chunks:
+            proc.stdin.write(chunk.tobytes())
+        proc.stdin.close()
+    except BaseException:
+        proc.kill()
+        raise
+    finally:
+        rc = proc.wait()
+    if rc != 0:
+        raise subprocess.CalledProcessError(rc, cmd)
+
+
 def _even(x: float) -> int:
     return max(2, int(round(x / 2.0)) * 2)
 
@@ -278,11 +353,14 @@ async def upscale_video_chunked(
     color_correction: str = "lab",
     endpoint_id: str | None = None,
     work_dir: str | Path | None = None,
+    on_progress: Callable[[int, int, str], None] | None = None,
 ) -> UpscaleResult:
     """Upscale `src` to `dst`, one RunPod job per segment, sequentially.
 
     Segment outputs are cached in `work_dir` (`seg_XXXX.mp4`), so rerunning
     with the same `work_dir` after a failure only pays for the missing ones.
+    `on_progress(done, total, message)` fires after each segment (cached ones
+    included) and once more before the final local stitch.
     """
     from novelvideo.config import (
         RUNPOD_API_KEY,
@@ -305,6 +383,8 @@ async def upscale_video_chunked(
             done = work / f"seg_{i:04d}.mp4"
             seg_outputs.append(done)
             if done.exists() and done.stat().st_size > 0:
+                if on_progress:
+                    on_progress(i + 1, len(segments), f"segment {i + 1}/{len(segments)} cached")
                 continue
             inp = work / f"in_{i:04d}.mp4"
             await asyncio.to_thread(cut_resized_segment, src, inp, seg, out_w, out_h, fps)
@@ -323,10 +403,18 @@ async def upscale_video_chunked(
             if err or data is None:
                 return UpscaleResult(error=err or "empty output", segments=segments)
             done.write_bytes(data)
+            if on_progress:
+                on_progress(i + 1, len(segments), f"segment {i + 1}/{len(segments)} upscaled")
 
-        frames = [await asyncio.to_thread(read_frames, p) for p in seg_outputs]
-        merged = stitch_segments(segments, frames)
-        await asyncio.to_thread(write_video, merged, fps, dst, src)
+        def _stitch_to_dst() -> None:
+            write_video_stream(
+                iter_stitched(segments, (read_frames(p) for p in seg_outputs)),
+                fps, dst, src, width=out_w, height=out_h, total_frames=total,
+            )
+
+        if on_progress:
+            on_progress(len(segments), len(segments), "stitching segments and muxing audio")
+        await asyncio.to_thread(_stitch_to_dst)
         return UpscaleResult(output_path=str(dst), segments=segments)
     finally:
         if own_tmp:
@@ -341,7 +429,9 @@ __all__ = [
     "Segment",
     "build_seedvr2_segment_graph",
     "crossfade_weights",
+    "iter_stitched",
     "plan_segments",
     "stitch_segments",
     "upscale_video_chunked",
+    "write_video_stream",
 ]

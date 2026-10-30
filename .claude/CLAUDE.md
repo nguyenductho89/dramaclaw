@@ -294,6 +294,16 @@ Bản đầy đủ (số đo, quá trình, bẫy): `runpod-h3-qwen-endpoints.md`
 - **Verify thật 6 shot (2026-10-30, project `FoxFrogChase`, từ storyboard 8 panel qua Freezone `/video/multishot/review` → `/video/multishot`):** turbo LoRA 8 bước, 16:9 (1344×768), 141 khung/shot (5,88s) → video 35s có audio, 46 MB, không OOM. ~6 phút 15 giây/shot (~38 s/bước), tổng ~38 phút chạy thật ≈ $0,79 trên A40. Muốn dài hơn 35s thì tăng `shot_duration_seconds` (tối đa 12s, chưa đo shot > 124-141 khung nhiều shot) hoặc nối thêm job. `aspect_ratio` mặc định của route là 9:16, đặt `16:9` cho cảnh ngang. Mỗi shot đã xong nằm trên đĩa worker (`/comfyui/output/video/H3_SHOTS/`) nhưng chỉ lên R2 khi cả job xong, nên không tải từng shot giữa chừng được; theo dõi tiến độ qua `stream-worker-logs` (dòng `shot N/6 saved`). LLM của review lint chập chờn (shot rơi về `fallback_template` ngẫu nhiên): chạy review vài lần rồi ghép prompt tốt nhất từng shot vào `shot_prompts`. Gotcha: `up -d api` recreate container về image gốc, phải vá lại (`docker cp src/novelvideo` + `uv pip install langfuse boto3` + restart).
 - **So sánh worker tham chiếu `huchukato/runpod-minimax-h3`:** cùng bộ lượng tử hoá, chạy trên BLACKWELL_96 ($3,49/giờ), preset `r2va_singularity_turbo` = LoRA turbo 4-step ở 6 bước. README cảnh báo `--use-sage-attention` hỏng int8-convrot; trên image của mình cu130 + Sage vẫn sạch (chưa gặp).
 
+## SeedVR2 upscale 2x cho video (ghép theo luồng + task `api`, 2026-10-30)
+
+Chi tiết + số đo: `runpod-endpoints-checkpoints.md` mục SeedVR2. Tóm tắt:
+
+- **Dùng:** `POST /api/v1/projects/{p}/freezone/video/upscale-seedvr2` (`source_url`, mặc định `scale=2`, `model=7b`, đoạn 41 khung/chồng 8) → task `freezone_video_upscale_seedvr2` (hàng `video`), kết quả lấy qua `GET .../freezone/jobs/freezone_video_upscale_seedvr2/{job_id}/result`. Hoặc chạy tay `scripts/seedvr2_upscale_chunked.py in.mp4 out.mp4 --model 7b --scale 2 --work-dir DIR` (bật worker `qwen_t2i` trước, endpoint `q639jfhc6uaf3t`).
+- **Ghép theo luồng:** `iter_stitched()` + `write_video_stream()` thay cho `stitch_segments()` khi chạy thật → RAM chỉ theo kích thước đoạn (~1-2 GB ở 2688×1536), không cần cắt tay clip dài. `stitch_segments()` còn lại làm bản chuẩn cho test.
+- **Resume:** cache đoạn khóa theo (file nguồn + mtime + cài đặt), không theo `job_id`; gửi lại cùng yêu cầu sau khi lỗi/timeout chỉ trả tiền đoạn còn thiếu. Task có sàn timeout 6 giờ (`_LONG_RUNNING_TASK_TIMEOUT_S` trong `run_core.py`) vì `ST_PROJECT_TASK_TIMEOUT_S` của máy này là 3600.
+- **Đo thật (A40, 7B, 2x, 1344×768→2688×1536):** ~5 phút GPU/đoạn 41 khung, cold start ~9 phút, ~3,5 phút GPU mỗi giây video (clip 35s ≈ 2 giờ ≈ $2,5). Chất lượng ổn ở 4 đoạn đầu clip cáo/ếch; chưa chạy hết nguyên clip.
+- **Chưa làm:** nút trên UI frontend (chỉ có API); chạy các đoạn song song trên nhiều worker (cần nâng `workers.max`, endpoint dùng chung với `comfy-trends`).
+
 ## Dự án Tesla
 
 - `tesla_pov_short`, id `01M4QF11AY84RDH1B0FMW62W86`, kịch bản nguồn `examples/tesla-pov-short-60s.md`, mẫu `narrated`, đã ingest xong (`structured_v1`, 1 chunk).

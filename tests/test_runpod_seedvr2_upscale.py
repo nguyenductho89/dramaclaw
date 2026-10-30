@@ -47,6 +47,25 @@ def test_stitch_blends_inside_overlap_only():
     assert out[5, 0, 0, 0] == 0 and out[8, 0, 0, 0] == 200
 
 
+@pytest.mark.parametrize("total,seg,ov", [(124, 41, 8), (841, 41, 8), (60, 41, 8), (33, 41, 8), (100, 21, 20)])
+def test_iter_stitched_matches_stitch_segments(total, seg, ov):
+    rng = np.random.default_rng(total)
+    segs = m.plan_segments(total, seg, ov)
+    # Different content per segment so the crossfade is actually exercised.
+    per_seg = [rng.integers(0, 256, size=(s.length, 4, 6, 3), dtype=np.uint8) for s in segs]
+    expected = m.stitch_segments(segs, per_seg)
+    chunks = list(m.iter_stitched(segs, iter(per_seg)))
+    assert np.array_equal(np.concatenate(chunks), expected)
+    assert max(c.shape[0] for c in chunks) <= seg
+
+
+def test_iter_stitched_rejects_short_segment():
+    segs = m.plan_segments(124, 41, 8)
+    bad = [np.zeros((s.length - (1 if i == 1 else 0), 2, 2, 3), np.uint8) for i, s in enumerate(segs)]
+    with pytest.raises(ValueError):
+        list(m.iter_stitched(segs, iter(bad)))
+
+
 def test_graph_has_no_temporal_chunk_and_uses_requested_model():
     g = m.build_seedvr2_segment_graph(video_name="v.mp4", unet_name=m.SEEDVR2_7B_UNET, seed=1)
     types = {n["class_type"] for n in g.values()}

@@ -1256,3 +1256,119 @@ def run_freezone_video_multishot(
 register_project_task_runner(
     "freezone_video_multishot", run_freezone_video_multishot, requires_home_node=False
 )
+
+
+async def _run_freezone_video_upscale_seedvr2_async(
+    envelope: dict[str, Any], ctx: ProjectContext
+) -> dict[str, Any]:
+    """SeedVR2 upscale for Freezone: one RunPod job per overlapping segment.
+
+    Per-segment outputs are cached in a work dir keyed by the source file and
+    the upscale settings (not by `job_id`), so resubmitting the same request
+    after a failure/timeout only re-sends the missing segments. The final
+    stitch streams segment by segment (`iter_stitched`), so RAM does not grow
+    with the clip length."""
+    import hashlib
+    import shutil
+
+    from novelvideo.api.deps import make_static_url_for_context
+    from novelvideo.freezone.paths import outputs_dir
+    from novelvideo.generators.runpod_seedvr2_upscale import (
+        SEEDVR2_3B_UNET,
+        SEEDVR2_7B_UNET,
+        upscale_video_chunked,
+    )
+    from novelvideo.runpod_worker_control import RunpodWorkerControlError, get_status, start_worker
+
+    task_type = "freezone_video_upscale_seedvr2"
+    payload = envelope.get("payload") or {}
+    job_id = str(payload["job_id"])
+    project_dir = Path(str(payload.get("project_dir") or ctx.output_dir))
+    src = Path(str(payload["source_path"]))
+    if not src.exists():
+        raise FileNotFoundError(f"video source not found: {src}")
+    scale = float(payload.get("scale") or 2.0)
+    model = str(payload.get("model") or "7b")
+    segment_frames = int(payload.get("segment_frames") or 41)
+    overlap_frames = int(payload.get("overlap_frames") or 8)
+    seed = int(payload.get("seed") or 42)
+
+    manager = get_task_manager()
+
+    def on_log(msg: str, ratio: float = 0.0) -> None:
+        manager.update_progress_for_project(
+            ctx, task_type, ratio, scope=job_id, current_task=msg, logs=[msg]
+        )
+
+    def on_progress(done: int, total: int, msg: str) -> None:
+        # Leave the last 5% for the local stitch/mux.
+        on_log(f"SeedVR2 {model.upper()} {scale:g}x: {msg}", 0.05 + 0.9 * done / max(total, 1))
+
+    try:
+        status = await get_status("qwen_t2i")
+        if not status.get("running"):
+            on_log("starting the RunPod Qwen worker (qwen_t2i)")
+            await start_worker("qwen_t2i")
+    except RunpodWorkerControlError as exc:
+        # Not fatal: the worker may already be managed by hand.
+        on_log(f"could not check/start the RunPod worker ({exc}); continuing")
+
+    st = src.stat()
+    key = hashlib.sha1(
+        f"{src.as_posix()}|{st.st_mtime_ns}|{st.st_size}|{scale}|{model}|{segment_frames}|{overlap_frames}|{seed}".encode()
+    ).hexdigest()[:16]
+    work = outputs_dir(project_dir, task_type) / "_work" / key
+    out = outputs_dir(project_dir, task_type) / f"{job_id}.mp4"
+    out.parent.mkdir(parents=True, exist_ok=True)
+
+    on_log(f"starting SeedVR2 upscale of {src.name} (work dir {work.name})", 0.02)
+    result = await upscale_video_chunked(
+        src,
+        out,
+        scale=scale,
+        unet_name=SEEDVR2_7B_UNET if model == "7b" else SEEDVR2_3B_UNET,
+        segment_frames=segment_frames,
+        overlap_frames=overlap_frames,
+        seed=seed,
+        work_dir=work,
+        on_progress=on_progress,
+    )
+    if result.error or not out.exists():
+        # Keep the work dir: the same request resumes from the cached segments.
+        raise RuntimeError(result.error or "SeedVR2 upscale produced no output")
+    shutil.rmtree(work, ignore_errors=True)
+    on_log(f"done, saved to {out}", 1.0)
+
+    rel = out.relative_to(project_dir).as_posix()
+    return {
+        "job_id": job_id,
+        "output_path": str(out),
+        "output_url": make_static_url_for_context(ctx, rel),
+        "output_format": "mp4",
+        "meta": {
+            "model": model,
+            "scale": scale,
+            "segments": len(result.segments),
+            "segment_frames": segment_frames,
+            "overlap_frames": overlap_frames,
+        },
+    }
+
+
+def run_freezone_video_upscale_seedvr2(
+    envelope: dict[str, Any], ctx: ProjectContext
+) -> dict[str, Any]:
+    return asyncio.run(
+        await_envelope_with_cancel_watch(
+            _run_freezone_video_upscale_seedvr2_async(envelope, ctx),
+            envelope,
+            task_type="freezone_video_upscale_seedvr2",
+        )
+    )
+
+
+register_project_task_runner(
+    "freezone_video_upscale_seedvr2",
+    run_freezone_video_upscale_seedvr2,
+    requires_home_node=False,
+)

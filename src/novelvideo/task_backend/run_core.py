@@ -104,6 +104,7 @@ _PROJECT_TASK_RESOURCE_KINDS = {
     "freezone_agent_recipe_generate": "recipe",
     "freezone_video_gen": "video",
     "freezone_video_multishot": "video",
+    "freezone_video_upscale_seedvr2": "video",
     "freezone_image_animate_gif": "ffmpeg",
     "freezone_image_vectorize": "ffmpeg",
     "freezone_analyze": "video",
@@ -580,6 +581,11 @@ async def _emit_project_task_metrics(
         logger.debug("project task metrics emit failed: %s", exc)
 
 
+# Tasks whose whole job is a chain of long GPU jobs; the global default would
+# abandon them mid-way. They are resumable, so a lower bound is only a floor.
+_LONG_RUNNING_TASK_TIMEOUT_S = {"freezone_video_upscale_seedvr2": 6 * 3600}
+
+
 def _project_task_timeout_seconds() -> int:
     raw_value = os.environ.get("ST_PROJECT_TASK_TIMEOUT_S")
     if raw_value:
@@ -590,6 +596,14 @@ def _project_task_timeout_seconds() -> int:
                 "Invalid ST_PROJECT_TASK_TIMEOUT_S=%r; using default", raw_value
             )
     return 30 * 60
+
+
+def _task_timeout_seconds_for(task_type: str) -> int:
+    seconds = _project_task_timeout_seconds()
+    floor = _LONG_RUNNING_TASK_TIMEOUT_S.get(task_type)
+    if floor and 0 < seconds < floor:
+        return floor
+    return seconds
 
 
 def _project_task_failure_for_exception(
@@ -875,7 +889,7 @@ def run_project_task_core_sync(
     trusted_billing_metadata = feature_settlement_resolution.trusted_billing_metadata()
     if trusted_billing_metadata:
         envelope["billing_metadata"] = trusted_billing_metadata
-    timeout_seconds = _project_task_timeout_seconds()
+    timeout_seconds = _task_timeout_seconds_for(task_type)
     deadline_monotonic = (
         time.monotonic() + timeout_seconds if timeout_seconds > 0 else None
     )

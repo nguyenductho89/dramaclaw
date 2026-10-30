@@ -105,6 +105,7 @@ from novelvideo.api.schemas import (
     FreezoneVideoMultishotRequest,
     FreezoneVideoMultishotReviewRequest,
     FreezoneVideoOmniGenRequest,
+    FreezoneVideoSeedvr2UpscaleRequest,
     FreezoneVideoUpscaleRequest,
     ImpactRequest,
     PresetCanvasRequest,
@@ -3149,6 +3150,7 @@ async def _enqueue_or_start_freezone_media_job(
     task_type: Literal[
         "freezone_video_erase",
         "freezone_video_upscale",
+        "freezone_video_upscale_seedvr2",
         "freezone_audio_separate",
         "freezone_video_compose",
         "freezone_audio_eleven_music",
@@ -12342,6 +12344,69 @@ async def freezone_video_upscale(
     )
 
 
+@router.post(
+    "/projects/{project}/freezone/video/upscale-seedvr2",
+    response_model=FreezoneJobAcceptedResponse,
+    tags=[TAG_FREEZONE_VIDEO],
+)
+async def freezone_video_upscale_seedvr2(
+    project: str,
+    body: FreezoneVideoSeedvr2UpscaleRequest,
+    user: dict = Depends(get_api_user),
+):
+    """Enqueue a SeedVR2 video upscale (one RunPod job per overlapping segment).
+
+    Long-running (tens of minutes to hours for a long clip) and resumable: the
+    per-segment outputs are cached under a work dir keyed by the source file and
+    the upscale settings, so resubmitting the same request after a failure or
+    timeout only pays for the segments that are still missing."""
+    from novelvideo.config import _runpod_qwen_image_configured
+    from novelvideo.freezone.jobs import probe_video_stream
+
+    ctx, username, project_name, project_dir, _output_dir = await _resolve_freezone_project(
+        project, user, required_role="editor"
+    )
+    if not _runpod_qwen_image_configured():
+        raise HTTPException(503, "RUNPOD_QWEN_IMAGE_ENDPOINT_ID / RUNPOD_API_KEY / R2_* are not configured")
+    try:
+        source_path = resolve_static_url_to_path(body.source_url, project_dir)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    if not source_path.exists():
+        raise HTTPException(404, f"video source not found: {source_path}")
+    if body.overlap_frames >= body.segment_frames:
+        raise HTTPException(400, "overlap_frames must be smaller than segment_frames")
+    try:
+        meta = await probe_video_stream(str(source_path))
+    except RuntimeError as exc:
+        raise HTTPException(400, f"Unable to read source video info: {exc}") from exc
+
+    job_id = _new_job_id()
+    try:
+        return await _enqueue_or_start_freezone_media_job(
+            ctx=ctx,
+            username=username,
+            project=project_name,
+            project_dir=project_dir,
+            task_type="freezone_video_upscale_seedvr2",
+            queue_kind="video",
+            job_id=job_id,
+            payload={
+                "source_path": source_path.as_posix(),
+                "scale": body.scale,
+                "model": body.model,
+                "segment_frames": body.segment_frames,
+                "overlap_frames": body.overlap_frames,
+                "seed": body.seed,
+                "source_meta": {k: meta.get(k) for k in ("width", "height", "fps", "duration")},
+                "billing": {},
+            },
+        )
+    except RuntimeError as exc:
+        _handle_task_start_runtime_error("failed to start freezone SeedVR2 upscale task", exc)
+        raise HTTPException(503, f"failed to start freezone SeedVR2 upscale task: {exc}") from exc
+
+
 @router.get(
     "/projects/{project}/freezone/video/upscale/probe",
     tags=[TAG_FREEZONE_VIDEO],
@@ -12867,6 +12932,7 @@ async def freezone_job_result(
         "freezone_video_breakdown",
         "freezone_video_gen",
         "freezone_video_multishot",
+        "freezone_video_upscale_seedvr2",
         "freezone_mask_edit",
         "freezone_video_erase",
         "freezone_video_upscale",

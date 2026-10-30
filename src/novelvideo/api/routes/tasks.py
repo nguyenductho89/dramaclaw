@@ -83,6 +83,7 @@ _TASK_TYPE_LABELS = {
     "freezone_video_breakdown": "Video breakdown",
     "freezone_video_erase": "Video erase",
     "freezone_video_upscale": "Video upscale",
+    "freezone_video_upscale_seedvr2": "SeedVR2 video upscale",
     "freezone_audio_separate": "Audio separation",
     "freezone_video_compose": "Video composition",
     "freezone_text_translate": "Subtitle translation",

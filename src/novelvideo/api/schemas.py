@@ -1863,6 +1863,27 @@ class FreezoneVideoEraseRequest(BaseModel):
     )
 
 
+class FreezoneVideoSeedvr2UpscaleRequest(BaseModel):
+    """SeedVR2 video upscale on the RunPod Qwen worker (segment-per-job, resumable)."""
+
+    source_url: str = Field(description="Static URL of the video to upscale")
+    scale: float = Field(default=2.0, ge=1.0, le=2.0, allow_inf_nan=False, description="Linear upscale factor")
+    model: Literal["7b", "3b"] = Field(
+        default="7b",
+        description="SeedVR2 size. 7B avoids the invented detail 3B adds at 2x on small faces",
+    )
+    segment_frames: int = Field(default=41, ge=5, le=65, description="Frames per RunPod job (4n+1)")
+    overlap_frames: int = Field(default=8, ge=0, le=16, description="Frames shared by adjacent segments")
+    seed: int = Field(default=42, ge=0)
+
+    @field_validator("segment_frames")
+    @classmethod
+    def validate_segment_frames(cls, value: int) -> int:
+        if (value - 1) % 4 != 0:
+            raise ValueError("segment_frames must be 4n+1")
+        return value
+
+
 class FreezoneVideoUpscaleRequest(BaseModel):
     """Video enhancement request. The model is selected dynamically from media catalog capabilities."""
 

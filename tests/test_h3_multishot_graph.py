@@ -239,15 +239,56 @@ def test_sampling_plan_ref2va_uses_pdd_fl2va_falls_back_without_file(monkeypatch
     from novelvideo.generators.runpod_minimax_h3_multishot_video import multishot_sampling_plan
 
     monkeypatch.setattr(cfg, "RUNPOD_H3_MULTISHOT_PDD_NFE", "8")
+    monkeypatch.setattr(cfg, "RUNPOD_H3_MULTISHOT_TURBO_LORA", "")
     monkeypatch.setattr(cfg, "RUNPOD_H3_PDD_REF2VA", "MiniMax-H3-Ref2VA-Acc-8Step.safetensors")
     monkeypatch.setattr(cfg, "RUNPOD_H3_PDD_FL2VA", "")
     ref = multishot_sampling_plan("ref2va")
     assert ref["pdd_nfe"] == "8" and ref["steps"] == 8 and ref["pdd_file"]
     fl = multishot_sampling_plan("fl2va")
-    assert fl == {"pdd_nfe": "", "pdd_file": "", "steps": 20, "output_scale": 1.0}
+    assert fl == {"pdd_nfe": "", "pdd_file": "", "turbo_lora": "", "steps": 20, "output_scale": 1.0}
 
     monkeypatch.setattr(cfg, "RUNPOD_H3_PDD_FL2VA", "MiniMax-H3-FL2VA-Acc-8Step.safetensors")
     assert multishot_sampling_plan("fl2va")["pdd_file"].startswith("MiniMax-H3-FL2VA")
 
     monkeypatch.setattr(cfg, "RUNPOD_H3_MULTISHOT_PDD_NFE", "")
     assert multishot_sampling_plan("ref2va")["steps"] == 20
+
+
+_TURBO = "minimax_h3_ref2v_turbo_4step_v0.1_comfyui_bf16.safetensors"
+
+
+def test_multishot_turbo_lora_graph_uses_lora_stack_euler_beta():
+    from novelvideo.generators.runpod_minimax_h3_multishot_video import build_h3_multishot_graph
+
+    g = build_h3_multishot_graph(
+        script="x", shot_count=2, width=768, height=1344, frames_per_shot=124,
+        seed=1, steps=8, checkpoint="ref2va", turbo_lora=_TURBO,
+    )
+    stack = g["7"]
+    assert stack["class_type"] == "H3LoraStack"
+    assert stack["inputs"]["lora_1"] == _TURBO and stack["inputs"]["lora_2"] == "None"
+    sampler = g["10"]["inputs"]
+    assert sampler["model"] == ["7", 0]
+    assert (sampler["sampler_name"], sampler["scheduler"], sampler["steps"]) == ("euler", "beta", 8)
+    assert "sigmas" not in sampler and "6" not in g
+
+
+def test_multishot_turbo_lora_rejects_pdd_and_fl2va():
+    from novelvideo.generators.runpod_minimax_h3_multishot_video import build_h3_multishot_graph
+
+    base = dict(script="x", shot_count=2, width=768, height=1344, frames_per_shot=124, seed=1, steps=8)
+    with pytest.raises(ValueError, match="mutually exclusive"):
+        build_h3_multishot_graph(**base, checkpoint="ref2va", turbo_lora=_TURBO, pdd_nfe="8", pdd_file="f")
+    with pytest.raises(ValueError, match="ref2va"):
+        build_h3_multishot_graph(**base, checkpoint="fl2va", turbo_lora=_TURBO)
+
+
+def test_multishot_sampling_plan_turbo_replaces_pdd_for_ref2va_only(monkeypatch):
+    import novelvideo.config as cfg
+    from novelvideo.generators.runpod_minimax_h3_multishot_video import multishot_sampling_plan
+
+    monkeypatch.setattr(cfg, "RUNPOD_H3_MULTISHOT_TURBO_LORA", _TURBO)
+    monkeypatch.setattr(cfg, "RUNPOD_H3_MULTISHOT_TURBO_STEPS", 12)
+    ref = multishot_sampling_plan("ref2va")
+    assert (ref["turbo_lora"], ref["steps"], ref["pdd_nfe"], ref["pdd_file"]) == (_TURBO, 12, "", "")
+    assert multishot_sampling_plan("fl2va")["turbo_lora"] == ""

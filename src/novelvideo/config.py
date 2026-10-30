@@ -1001,6 +1001,14 @@ RUNPOD_H3_MULTISHOT_PACK_COMMIT = "d7d197709fc93c1afb125e3db1dfd4ac0ae28c60"
 # Applies only when a PDD file exists for the chain's checkpoint (ref2va
 # always; fl2va only once RUNPOD_H3_PDD_FL2VA is set).
 RUNPOD_H3_MULTISHOT_PDD_NFE = os.environ.get("RUNPOD_H3_MULTISHOT_PDD_NFE", "8")
+# Turbo LoRA for the ref2va multishot chain (2026-10-30), via the pack's own
+# `H3LoraStack` node (MODEL -> MODEL, same path as core LoraLoaderModelOnly).
+# Empty = off. When set it replaces PDD for ref2va chains: euler + beta over
+# the steps below. The pack's docs measure the 4-step distill LoRA @1.0 as
+# fine at 8 steps for voiceover-only shots and 12 for dialogue shots. The
+# endpoint needs `loras` mapped (see RUNPOD_H3_TURBO_LORA_REF2VA above).
+RUNPOD_H3_MULTISHOT_TURBO_LORA = os.environ.get("RUNPOD_H3_MULTISHOT_TURBO_LORA", "")
+RUNPOD_H3_MULTISHOT_TURBO_STEPS = int(_env_float("RUNPOD_H3_MULTISHOT_TURBO_STEPS", 8.0))
 # Post-decode pixel upscale built into `H3MultishotSampler` (`output_scale`,
 # lanczos — no upscale model is installed on this worker image). 1.0 = off.
 # This is the ONLY upscale the pack supports: its latent two-pass

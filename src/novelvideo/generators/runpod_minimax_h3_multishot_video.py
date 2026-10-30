@@ -134,9 +134,22 @@ def multishot_sampling_plan(checkpoint: Checkpoint) -> dict[str, Any]:
     from novelvideo.config import (
         RUNPOD_H3_MULTISHOT_OUTPUT_SCALE,
         RUNPOD_H3_MULTISHOT_PDD_NFE,
+        RUNPOD_H3_MULTISHOT_TURBO_LORA,
+        RUNPOD_H3_MULTISHOT_TURBO_STEPS,
         RUNPOD_H3_PDD_FL2VA,
         RUNPOD_H3_PDD_REF2VA,
     )
+
+    turbo_lora = RUNPOD_H3_MULTISHOT_TURBO_LORA if checkpoint == "ref2va" else ""
+    if turbo_lora:
+        # Turbo LoRA replaces PDD: it ships its own schedule (euler + beta).
+        return {
+            "pdd_nfe": "",
+            "pdd_file": "",
+            "turbo_lora": turbo_lora,
+            "steps": max(1, int(RUNPOD_H3_MULTISHOT_TURBO_STEPS)),
+            "output_scale": max(1.0, float(RUNPOD_H3_MULTISHOT_OUTPUT_SCALE or 1.0)),
+        }
 
     nfe = str(RUNPOD_H3_MULTISHOT_PDD_NFE or "").strip()
     pdd_file = RUNPOD_H3_PDD_REF2VA if checkpoint == "ref2va" else RUNPOD_H3_PDD_FL2VA
@@ -144,6 +157,7 @@ def multishot_sampling_plan(checkpoint: Checkpoint) -> dict[str, Any]:
     return {
         "pdd_nfe": nfe if use_pdd else "",
         "pdd_file": pdd_file if use_pdd else "",
+        "turbo_lora": "",
         "steps": int(nfe) if use_pdd else _BASE_STEPS,
         "output_scale": max(1.0, float(RUNPOD_H3_MULTISHOT_OUTPUT_SCALE or 1.0)),
     }
@@ -169,6 +183,7 @@ def build_h3_multishot_graph(
     pdd_nfe: str = "",
     pdd_file: str = "",
     output_scale: float = 1.0,
+    turbo_lora: str = "",
 ) -> dict[str, Any]:
     """Build the `H3MultishotSampler` API graph.
 
@@ -208,6 +223,10 @@ def build_h3_multishot_graph(
         raise ValueError("pdd_nfe needs a pdd_file matching the checkpoint")
     if output_scale < 1.0:
         raise ValueError(f"output_scale must be >= 1.0, got {output_scale}")
+    if turbo_lora and pdd_nfe:
+        raise ValueError("turbo_lora and pdd_nfe are mutually exclusive")
+    if turbo_lora and checkpoint != "ref2va":
+        raise ValueError("turbo_lora is the ref2v distill: it needs checkpoint='ref2va'")
 
     unet_name = RUNPOD_H3_UNET_REF2VA if checkpoint == "ref2va" else RUNPOD_H3_UNET_FL2VA
 
@@ -311,6 +330,28 @@ def build_h3_multishot_graph(
         sampler_inputs["sigmas"] = ["6", 1]
         sampler_inputs["steps"] = int(pdd_nfe)
         sampler_inputs["sampler_name"] = "euler"
+
+    if turbo_lora:
+        # Pack node `H3LoraStack` (h3_lora_stack.py, in the pinned commit):
+        # unused slots stay "None". Sampler keeps the default euler + beta
+        # schedule at `steps`, which is what the distill LoRA was trained on.
+        graph["7"] = {
+            "class_type": "H3LoraStack",
+            "inputs": {
+                "model": ["1", 0],
+                "lora_1": turbo_lora,
+                "strength_1": 1.0,
+                "lora_2": "None",
+                "strength_2": 1.0,
+                "lora_3": "None",
+                "strength_3": 1.0,
+                "lora_4": "None",
+                "strength_4": 1.0,
+            },
+        }
+        graph["10"]["inputs"]["model"] = ["7", 0]
+        graph["10"]["inputs"]["sampler_name"] = "euler"
+        graph["10"]["inputs"]["scheduler"] = "beta"
 
     if output_scale > 1.0:
         graph["10"]["inputs"]["output_scale"] = float(output_scale)
@@ -584,6 +625,7 @@ async def run_multishot_from_files(
         pdd_nfe=str(sampling.get("pdd_nfe") or ""),
         pdd_file=str(sampling.get("pdd_file") or ""),
         output_scale=float(sampling.get("output_scale") or 1.0),
+        turbo_lora=str(sampling.get("turbo_lora") or ""),
     )
 
     return await run_h3_multishot_job(

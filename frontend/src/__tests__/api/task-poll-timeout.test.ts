@@ -200,6 +200,12 @@ describe("budget sizing per task type", () => {
     }
   });
 
+  it("gives SeedVR2 upscale a budget longer than the server's 2h estimate for a 35s clip", () => {
+    expect(tasks.pollTimeoutForTaskType("freezone_video_upscale_seedvr2")).toBe(tasks.SEEDVR2_UPSCALE_MAX_POLL_MS);
+    expect(tasks.SEEDVR2_UPSCALE_MAX_POLL_MS).toBeGreaterThan(2 * 60 * 60 * 1000);
+    expect(tasks.SEEDVR2_UPSCALE_MAX_POLL_MS).toBeGreaterThan(tasks.LONG_JOB_MAX_POLL_MS);
+  });
+
   it("defaults unknown task types to the long budget", () => {
     // When a new backend task type is not registered, prefer waiting longer: waiting too long only delays the fallback,
     // while waiting too short reports a still-running task as failed.

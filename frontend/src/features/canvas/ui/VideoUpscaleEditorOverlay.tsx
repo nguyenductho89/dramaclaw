@@ -11,7 +11,9 @@ import {
   fetchFreezoneJobResult,
   probeFreezoneVideoUpscale,
   quoteFreezoneVideoUpscale,
+  submitFreezoneVideoSeedvr2Upscale,
   submitFreezoneVideoUpscale,
+  type FreezoneSeedvr2Model,
   type FreezoneVideoProbe,
   type FreezoneVideoScene,
   type FreezoneVideoSlowdown,
@@ -22,6 +24,7 @@ import { awaitTaskCompletion, isTaskPollTimeoutError } from '@/api/tasks';
 import { notifyTaskStillRunning } from '@/features/canvas/application/errorDialog';
 import { generationTaskDescriptor } from '@/features/canvas/application/resumeGeneration';
 import { availableVideoUpscaleResolutions } from '@/features/canvas/domain/videoUpscaleResolutions';
+import { useRunpodWorkerStatus } from '@/lib/queries/runpod-worker';
 import { readUrl } from '@/lib/url-params';
 import { CreditCostPill, type CreditPromotionDisplay } from '@/components/credits/credit-visual';
 import { NODE_TOOLBAR_CLASS } from './nodeToolbarConfig';
@@ -41,7 +44,13 @@ const RESOLUTION_LABEL: Record<FreezoneVideoUpscaleResolution, string> = {
 };
 const TARGET_FPS_PRESETS = [10, 12, 20, 23.976, 24, 25, 29.97, 30, 50, 59.94, 60, 90, 119.88, 120];
 
+type UpscaleEngine = 'standard' | 'seedvr2';
+const SEEDVR2_SCALES = [1.5, 2] as const;
+
 interface PersistedFields {
+  upscaleEngine?: UpscaleEngine;
+  upscaleSeedvr2Scale?: number;
+  upscaleSeedvr2Model?: FreezoneSeedvr2Model;
   upscaleSourceUrl?: string;
   upscaleResolution?: FreezoneVideoUpscaleResolution;
   upscaleTargetFps?: FreezoneVideoTargetFps;
@@ -72,6 +81,13 @@ export const VideoUpscaleEditorOverlay = memo(({ node }: { node: CanvasNode }) =
   const scene = persisted.upscaleScene ?? 'realistic';
   const faceEnhance = persisted.upscaleFaceEnhance === true;
   const needsFrameRate = targetFps !== 'auto' || slowdown !== 'auto';
+  // SeedVR2 runs on the RunPod Qwen worker; offer it only where that endpoint is configured (dev/CE-local).
+  const qwenWorkerStatus = useRunpodWorkerStatus('qwen_t2i', true);
+  const seedvr2Available = qwenWorkerStatus.data?.data?.configured === true;
+  const engine: UpscaleEngine = seedvr2Available && persisted.upscaleEngine === 'seedvr2' ? 'seedvr2' : 'standard';
+  const seedvr2 = engine === 'seedvr2';
+  const seedvr2Scale = persisted.upscaleSeedvr2Scale ?? 2;
+  const seedvr2Model = persisted.upscaleSeedvr2Model ?? '7b';
 
   useEffect(() => {
     let active = true;
@@ -95,7 +111,7 @@ export const VideoUpscaleEditorOverlay = memo(({ node }: { node: CanvasNode }) =
     let active = true;
     setCreditQuote(null);
     setQuoteError('');
-    if (!project || !sourceUrl || !probe || !availableResolutions.includes(resolution)) {
+    if (seedvr2 || !project || !sourceUrl || !probe || !availableResolutions.includes(resolution)) {
       return () => { active = false; };
     }
     void quoteFreezoneVideoUpscale(project, {
@@ -107,16 +123,16 @@ export const VideoUpscaleEditorOverlay = memo(({ node }: { node: CanvasNode }) =
       if (active) setQuoteError(error instanceof Error ? error.message : String(error));
     });
     return () => { active = false; };
-  }, [availableResolutions, faceEnhance, probe, project, resolution, scene, slowdown, smartInterpolation, sourceUrl, targetFps]);
+  }, [availableResolutions, faceEnhance, probe, project, resolution, scene, seedvr2, slowdown, smartInterpolation, sourceUrl, targetFps]);
 
   useEffect(() => {
-    if (!availableResolutions.length || availableResolutions.includes(resolution)) return;
+    if (seedvr2 || !availableResolutions.length || availableResolutions.includes(resolution)) return;
     const next = availableResolutions[0];
     updateNodeData(node.id, {
       upscaleResolution: next,
       displayName: `${t('node.videoUpscale.nodeTitle')} (${RESOLUTION_LABEL[next]})`,
     });
-  }, [availableResolutions, node.id, resolution, t, updateNodeData]);
+  }, [availableResolutions, node.id, resolution, seedvr2, t, updateNodeData]);
 
   const setResolution = useCallback((next: FreezoneVideoUpscaleResolution) => {
     updateNodeData(node.id, {
@@ -125,8 +141,18 @@ export const VideoUpscaleEditorOverlay = memo(({ node }: { node: CanvasNode }) =
     });
   }, [node.id, t, updateNodeData]);
 
+  const setEngine = useCallback((next: UpscaleEngine) => {
+    updateNodeData(node.id, {
+      upscaleEngine: next,
+      displayName: next === 'seedvr2'
+        ? `${t('node.videoUpscale.nodeTitle')} (SeedVR2 ${seedvr2Scale}x)`
+        : `${t('node.videoUpscale.nodeTitle')} (${RESOLUTION_LABEL[resolution]})`,
+    });
+  }, [node.id, resolution, seedvr2Scale, t, updateNodeData]);
+
   const handleSubmit = useCallback(async () => {
-    if (isSubmitting || !creditQuote || !project || !sourceUrl || !availableResolutions.includes(resolution)) return;
+    if (isSubmitting || !project || !sourceUrl) return;
+    if (!seedvr2 && (!creditQuote || !availableResolutions.includes(resolution))) return;
     const canvasId = readUrl().canvas ?? 'default';
     setIsSubmitting(true);
     updateNodeData(node.id, {
@@ -139,10 +165,14 @@ export const VideoUpscaleEditorOverlay = memo(({ node }: { node: CanvasNode }) =
       generationTaskJobId: null,
     });
     try {
-      const ref = await submitFreezoneVideoUpscale(project, {
-        sourceUrl: sourceUrl.split('?')[0], resolution, targetFps, slowdown, smartInterpolation, scene,
-        faceEnhance, canvasId, nodeId: node.id,
-      });
+      const ref = seedvr2
+        ? await submitFreezoneVideoSeedvr2Upscale(project, {
+          sourceUrl: sourceUrl.split('?')[0], scale: seedvr2Scale, model: seedvr2Model, canvasId, nodeId: node.id,
+        })
+        : await submitFreezoneVideoUpscale(project, {
+          sourceUrl: sourceUrl.split('?')[0], resolution, targetFps, slowdown, smartInterpolation, scene,
+          faceEnhance, canvasId, nodeId: node.id,
+        });
       updateNodeData(node.id, generationTaskDescriptor(ref));
       const completed = await awaitTaskCompletion(ref.task_key, project, { taskType: ref.task_type });
       let url = completed.result?.['output_url'] as string | undefined;
@@ -172,14 +202,50 @@ export const VideoUpscaleEditorOverlay = memo(({ node }: { node: CanvasNode }) =
     } finally {
       setIsSubmitting(false);
     }
-  }, [availableResolutions, creditQuote, faceEnhance, isSubmitting, node.id, project, resolution, scene, slowdown, smartInterpolation, sourceUrl, t, targetFps, updateNodeData]);
+  }, [availableResolutions, creditQuote, faceEnhance, isSubmitting, node.id, project, resolution, scene, seedvr2, seedvr2Model, seedvr2Scale, slowdown, smartInterpolation, sourceUrl, t, targetFps, updateNodeData]);
 
-  const disabled = isSubmitting || !probe || !creditQuote || Boolean(probeError) || availableResolutions.length === 0;
+  const disabled = seedvr2
+    ? isSubmitting || !probe || Boolean(probeError)
+    : isSubmitting || !probe || !creditQuote || Boolean(probeError) || availableResolutions.length === 0;
   return (
     <ReactFlowNodeToolbar nodeId={node.id} isVisible position={Position.Bottom} align="center" offset={12} className={NODE_TOOLBAR_CLASS}>
       <ZoomScaledToolbar origin="top center">
         <div className={`w-[440px] max-w-[calc(100vw-32px)] rounded-[var(--node-radius)] p-4 ${CANVAS_NODE_OPS_PANEL_CLASS}`} onClick={(event) => event.stopPropagation()}>
           <div className="space-y-3">
+            {seedvr2Available && (
+              <SelectRow
+                label={t('node.videoUpscale.panel.engine')}
+                value={engine}
+                options={[
+                  { value: 'standard', label: t('node.videoUpscale.panel.engineStandard') },
+                  { value: 'seedvr2', label: t('node.videoUpscale.panel.engineSeedvr2') },
+                ]}
+                onChange={(value) => setEngine(value as UpscaleEngine)}
+              />
+            )}
+            {seedvr2 && (
+              <>
+                <SelectRow
+                  label={t('node.videoUpscale.panel.seedvr2Scale')}
+                  value={String(seedvr2Scale)}
+                  options={SEEDVR2_SCALES.map((value) => ({
+                    value: String(value),
+                    label: t(value === 2 ? 'node.videoUpscale.panel.seedvr2Scale2' : 'node.videoUpscale.panel.seedvr2Scale15'),
+                  }))}
+                  onChange={(value) => updateNodeData(node.id, {
+                    upscaleSeedvr2Scale: Number(value),
+                    displayName: `${t('node.videoUpscale.nodeTitle')} (SeedVR2 ${value}x)`,
+                  })}
+                />
+                <SelectRow
+                  label={t('node.videoUpscale.panel.seedvr2Model')}
+                  value={seedvr2Model}
+                  options={[{ value: '7b', label: 'SeedVR2 7B' }, { value: '3b', label: 'SeedVR2 3B' }]}
+                  onChange={(value) => updateNodeData(node.id, { upscaleSeedvr2Model: value as FreezoneSeedvr2Model })}
+                />
+              </>
+            )}
+            {!seedvr2 && (<>
             <SelectRow
               label={t('node.videoUpscale.panel.resolution')}
               value={resolution}
@@ -231,9 +297,11 @@ export const VideoUpscaleEditorOverlay = memo(({ node }: { node: CanvasNode }) =
               checked={faceEnhance}
               onChange={(checked) => updateNodeData(node.id, { upscaleFaceEnhance: checked })}
             />
+            </>)}
           </div>
+          {seedvr2 && <p className="mt-3 text-[11px] text-text-muted">{t('node.videoUpscale.panel.seedvr2Hint')}</p>}
           {probe && <p className="mt-3 text-[11px] text-text-muted">{t('node.videoUpscale.panel.sourceInfo', { width: probe.width, height: probe.height, fps: probe.fps.toFixed(2) })}</p>}
-          {probe && availableResolutions.length === 0 && (
+          {probe && !seedvr2 && availableResolutions.length === 0 && (
             <p className="mt-3 text-xs text-red-400">
               {t(Math.max(probe.width, probe.height) >= 3840
                 ? 'node.videoUpscale.panel.noHigherResolution'
@@ -241,9 +309,9 @@ export const VideoUpscaleEditorOverlay = memo(({ node }: { node: CanvasNode }) =
             </p>
           )}
           {probeError && <p className="mt-3 text-xs text-red-400">{t('node.videoUpscale.panel.probeError', { error: probeError })}</p>}
-          {quoteError && <p className="mt-3 text-xs text-red-400">{quoteError}</p>}
+          {quoteError && !seedvr2 && <p className="mt-3 text-xs text-red-400">{quoteError}</p>}
           <div className="mt-4 flex justify-end items-center gap-2">
-            <CreditCostPill display={creditQuote?.display} promotion={creditQuote?.promotion} className={NODE_CREDIT_PILL_FLAT_CLASS} />
+            {!seedvr2 && <CreditCostPill display={creditQuote?.display} promotion={creditQuote?.promotion} className={NODE_CREDIT_PILL_FLAT_CLASS} />}
             <button type="button" onClick={handleSubmit} disabled={disabled} className={`${NODE_GENERATE_BUTTON_BASE_CLASS} ${disabled ? NODE_GENERATE_BUTTON_DISABLED_CLASS : NODE_GENERATE_BUTTON_ENABLED_CLASS}`} title={t('node.videoUpscale.panel.submit')}><ArrowUp className="h-4 w-4" /></button>
           </div>
         </div>

@@ -398,6 +398,7 @@ export interface FreezoneJobRef {
     | "freezone_video_erase"
     | "freezone_video_compose"
     | "freezone_video_upscale"
+    | "freezone_video_upscale_seedvr2"
     | "freezone_audio_separate"
     | "freezone_audio_speech"
     | "freezone_audio_eleven_music"
@@ -538,6 +539,35 @@ export async function submitFreezoneVideoUpscale(
         smart_interpolation: payload.smartInterpolation ?? true,
         scene: payload.scene ?? "realistic",
         face_enhance: payload.faceEnhance ?? false,
+        ...nodeContextBody(payload),
+      },
+    },
+  );
+}
+
+/** SeedVR2 7B/3B upscale on the RunPod Qwen worker (one RunPod job per overlapping segment). */
+export type FreezoneSeedvr2Model = "7b" | "3b";
+
+export interface FreezoneVideoSeedvr2UpscalePayload extends FreezoneNodeContext {
+  /** Static URL of the source video to upscale. */
+  sourceUrl: string;
+  /** Linear factor, 1-2. 1.5 is ~2x faster and enough for most clips. */
+  scale?: number;
+  model?: FreezoneSeedvr2Model;
+}
+
+export async function submitFreezoneVideoSeedvr2Upscale(
+  project: string,
+  payload: FreezoneVideoSeedvr2UpscalePayload,
+): Promise<FreezoneJobRef> {
+  return await apiCall<FreezoneJobRef>(
+    `projects/${encodeURIComponent(project)}/freezone/video/upscale-seedvr2`,
+    {
+      method: "POST",
+      json: {
+        source_url: payload.sourceUrl,
+        scale: payload.scale ?? 2,
+        model: payload.model ?? "7b",
         ...nodeContextBody(payload),
       },
     },
@@ -2539,6 +2569,7 @@ export async function fetchFreezoneJobResult(
     | "freezone_video_erase"
     | "freezone_video_compose"
     | "freezone_video_upscale"
+    | "freezone_video_upscale_seedvr2"
     | "freezone_audio_separate"
     | "freezone_audio_speech"
     | "freezone_audio_eleven_music"

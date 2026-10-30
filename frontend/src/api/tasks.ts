@@ -293,12 +293,24 @@ const SHORT_TASK_TYPES = new Set([
  */
 export const MULTISHOT_MAX_POLL_MS = 4.5 * 60 * 60 * 1000;
 
+/**
+ * SeedVR2 upscale (`freezone_video_upscale_seedvr2`) is a chain of RunPod
+ * jobs: ~3.5 GPU-minutes per second of video, so a 35s clip needs ~2h and
+ * the server allows up to 6h (`_LONG_RUNNING_TASK_TIMEOUT_S`). Progress is
+ * reported per segment, but the generic 35min silence budget is still far
+ * too short for a clip this long.
+ */
+export const SEEDVR2_UPSCALE_MAX_POLL_MS = 6.5 * 60 * 60 * 1000;
+
 export function pollTimeoutForTaskType(taskType: string | null | undefined): number {
   if (taskType && SHORT_TASK_TYPES.has(taskType)) {
     return DEFAULT_MAX_POLL_MS;
   }
   if (taskType === "freezone_video_multishot") {
     return MULTISHOT_MAX_POLL_MS;
+  }
+  if (taskType === "freezone_video_upscale_seedvr2") {
+    return SEEDVR2_UPSCALE_MAX_POLL_MS;
   }
   return LONG_JOB_MAX_POLL_MS;
 }

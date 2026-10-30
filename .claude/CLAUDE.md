@@ -280,6 +280,19 @@ Chi tiết đầy đủ + lý do từng quyết định: `docs/adr/0005-segment-
 - **Chưa làm**: UI frontend (toàn bộ gọi qua API/MCP trực tiếp, chưa có nút/dialog trong `beats.lazy.tsx`); chưa chạy GPU thật cho luồng `/segments/*` end-to-end (hạ tầng multishot GPU đã verify riêng 1 lần trước đó, không qua route mới này) — cần hỏi user trước khi tốn RunPod.
 - 190+ test pass (segment planner, segment store, compose multishot dedup/audio, SRT timing) + toàn bộ test suite hiện có không regression (xác nhận bằng `git stash` giống cách làm mọi lần trước — ~22 test fail trước giờ đều pre-existing, không liên quan).
 
+## H3 turbo LoRA (1-shot + multishot) + A/B ChainNormalize (2026-10-30)
+
+Bản đầy đủ (số đo, quá trình, bẫy): `runpod-h3-qwen-endpoints.md` mục 8d; ghi chú phiên: memory `h3-turbo-lora-multishot-bench`.
+
+- **Vì sao:** clip 12s (294 khung) 1-shot ref2va chạy >50 phút sau khi tắt PDD (`RUNPOD_H3_PDD_REF2VA=`, vì PDD làm nhòe mặt). A40 `AMPERE_48` ($1,22/giờ serverless), RAM container bị cgroup giới hạn 46,6 GiB dù host 503 GB (log worker). CA-MTL-1 chỉ có A40 và H100 (đều LOW).
+- **Công tắc (trên `main`, mặc định tắt):** `RUNPOD_H3_TURBO_LORA_REF2VA` + `RUNPOD_H3_TURBO_STEPS_REF2VA` (6) cho 1-shot; `RUNPOD_H3_MULTISHOT_TURBO_LORA` + `RUNPOD_H3_MULTISHOT_TURBO_STEPS` (8; pack khuyên 12 cho shot có thoại) cho multishot, qua node `H3LoraStack`. LoRA `minimax_h3_ref2v_turbo_4step_v0.1_comfyui_bf16.safetensors` (nguồn `Comfy-Org/MiniMax-H3`, 1.956.193.000 B) thay cả PDD lẫn base; euler + beta. Đổi `.env` thì phải recreate `api` (quy trình ở trên).
+- **Đo (A40, 768×1344, ref2va, worker ấm):** 1-shot 124 khung: base 20 bước 741–768s, PDD 8 ~382s, **LoRA 6 bước 284,7s**. Multishot 2×124: PDD 8 631s, LoRA 8 696s (~34,6 s/bước); 3×124 LoRA 8 không node chuẩn hoá 1023s (~340s/shot), không OOM. Cold start sau khi về 0 worker: 4–9 phút. Clip 294 khung với LoRA chưa đo (ước ~19 phút).
+- **`H3ChainNormalize` (đã tắt mặc định, `RUNPOD_H3_MULTISHOT_CHAIN_NORMALIZE=off|texture|full`):** làm khung đầu nhuộm tím (dải trời 115 vs 143 ảnh gốc) và mờ hơn (độ nét khung 0→36: 420→221, không node 458→360). Ban đầu tôi kết luận sai là node kéo tối nền trời; bản không node cũng tối vì nội dung (khung hình chật dần). Độ sáng: **chưa kết luận**, cần người xem mắt.
+- **`RUNPOD_H3_MULTISHOT_MAX_SHOTS` mặc định 2 → 6** (đã đo 3 và 6 shot × 124 khung không OOM). Chưa thử > 6, shot > 124 khung nhiều shot.
+- **Đã đổi trên RunPod (không nằm trong git):** thêm LoRA vào `models/loras/` và `/runpod-volume/extra_paths_loras.yaml` trên volume `zyen2jmxt3` (image không map `loras`; không có yaml này `LoraLoaderModelOnly` báo `not in []`); `COMFY_EXTRA_ARGS` của **cả hai** endpoint `a31613hf7l83r5` và `u0hkrms7k1xeua` = `--use-sage-attention --extra-model-paths-config /runpod-volume/extra_paths_loras.yaml` (endpoint multishot dùng chung với `comfy-trends`). Cả hai để `workers.max=0`.
+- **Bẫy:** env của endpoint chỉ áp cho worker mới (quay vòng `workers.max` 0→1) và bị ghi đè nguyên bộ (gửi lại đủ 4 biến R2); gửi `run` song song với lệnh bật `max=1` trả 409 `ENDPOINT_PAUSED`; sandbox cloud không với tới `api.runpod.ai` (proxy 403) nên dùng MCP Runpod `run-endpoint`; ghi file lên volume bằng pod A40 tạm ở CA-MTL-1 rồi xoá.
+- **So sánh worker tham chiếu `huchukato/runpod-minimax-h3`:** cùng bộ lượng tử hoá, chạy trên BLACKWELL_96 ($3,49/giờ), preset `r2va_singularity_turbo` = LoRA turbo 4-step ở 6 bước. README cảnh báo `--use-sage-attention` hỏng int8-convrot; trên image của mình cu130 + Sage vẫn sạch (chưa gặp).
+
 ## Dự án Tesla
 
 - `tesla_pov_short`, id `01M4QF11AY84RDH1B0FMW62W86`, kịch bản nguồn `examples/tesla-pov-short-60s.md`, mẫu `narrated`, đã ingest xong (`structured_v1`, 1 chunk).

@@ -1,7 +1,8 @@
 // Community MiniMax-H3 prompts for the Freezone "H3 templates" picker.
 //
 // Collected from https://apimodels.app/en/minimax-h3-prompts (English
-// versions; the prompts belong to the authors credited in the data file, which
+// versions where the site has them, otherwise the Japanese/Chinese original;
+// the prompts belong to the authors credited in the data file, which
 // also feeds docs/h3-templates/index.html). They are free-form text prompts, not
 // the official six-section layout, so they are kept out of H3_PROMPT_TEMPLATES
 // (whose tests enforce that layout) and loaded lazily when the tab is opened.

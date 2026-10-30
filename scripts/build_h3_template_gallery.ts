@@ -4,12 +4,11 @@
 //
 //   bun scripts/build_h3_template_gallery.ts
 //
-// Besides the Freezone templates it lists the community prompts in
-// communityH3Prompts.json (apimodels.app / awesome-minimax-h3-prompts, English, also in the Freezone picker).
-// The 25 originals in Japanese/Chinese live in docs/zh/h3-templates/ (the repo
-// keeps CJK text out of the other docs) and are loaded by the page at runtime.
-// Those are free-form, so they carry no <Picture N> inputs and are not in the
-// Freezone picker; the gallery is reference only.
+// Besides the Freezone templates it lists the community prompts (apimodels.app,
+// English plus the Japanese/Chinese originals) from
+// frontend/src/features/canvas/domain/data/communityH3Prompts.json, which is
+// also what the Freezone picker loads. They are free-form, so no <Picture N>
+// inputs beyond the first frame.
 //
 // Sample media is not in git. `python scripts/fetch_h3_gallery_media.py` fills
 // docs/h3-templates/media/<id>/ (preview.mp4, preview.jpg, ref-N.webp) from
@@ -152,11 +151,9 @@ pre{margin:6px 0 0;background:var(--code);border-radius:8px;padding:10px;white-s
 </header>
 <div id="warn" hidden style="padding:10px 16px;background:var(--card);border-bottom:1px solid var(--line);font-size:13px">Video/ảnh mẫu chưa có trên máy này (không nằm trong git). Chạy <code>python scripts/fetch_h3_gallery_media.py</code> rồi tải lại trang.</div>
 <main id="list"></main>
-<script src="../zh/h3-templates/community-prompts-cjk.js"></script>
 <script id="data" type="application/json">${json}</script>
 <script>
 const D=JSON.parse(document.getElementById('data').textContent);
-if(window.H3_CJK_TEMPLATES)D.templates.push(...window.H3_CJK_TEMPLATES);
 let lang='vi';
 const $=id=>document.getElementById(id);
 const L=o=>o[lang]||o.en;

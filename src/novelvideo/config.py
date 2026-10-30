@@ -899,6 +899,16 @@ RUNPOD_H3_PDD_FL2VA = os.environ.get("RUNPOD_H3_PDD_FL2VA", "")
 # Two-stage needs PDD, so it is skipped while this is on. Multishot ignores it.
 RUNPOD_H3_TURBO_LORA_REF2VA = os.environ.get("RUNPOD_H3_TURBO_LORA_REF2VA", "")
 RUNPOD_H3_TURBO_STEPS_REF2VA = int(_env_float("RUNPOD_H3_TURBO_STEPS_REF2VA", 6.0))
+# Realism LoRA for every H3 path (2026-10-30): `fal/MiniMax-H3-Realism-People-LoRA`,
+# file `h3-realism-people-t2v-i2v-r2v.safetensors` (131,229,656 B, rank 32; one file
+# for t2v/i2v/r2v) in `models/loras/` on volume `zyen2jmxt3` (same yaml mapping as
+# the turbo LoRA above). Empty = off. The model card requires the trigger word at the
+# start of the prompt and calls 1.0 the intended strength (0.6-0.8 = lighter touch).
+# It says nothing about stacking with the turbo/PDD distillation, so A/B before
+# turning it on by default; see generators/comfy_lora.py.
+RUNPOD_H3_REALISM_LORA = os.environ.get("RUNPOD_H3_REALISM_LORA", "")
+RUNPOD_H3_REALISM_LORA_STRENGTH = _env_float("RUNPOD_H3_REALISM_LORA_STRENGTH", 1.0)
+RUNPOD_H3_REALISM_TRIGGER = os.environ.get("RUNPOD_H3_REALISM_TRIGGER", "r34l1sm")
 
 
 def _runpod_h3_video_configured() -> bool:

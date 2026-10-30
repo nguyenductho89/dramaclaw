@@ -154,6 +154,19 @@ def multishot_sampling_plan(checkpoint: Checkpoint) -> dict[str, Any]:
         RUNPOD_H3_PDD_REF2VA,
     )
 
+    from novelvideo.generators.comfy_lora import realism_settings
+
+    realism_lora, realism_strength, realism_trigger = realism_settings()
+    # Keys only exist while the LoRA is on, so the off-state plan is unchanged.
+    realism = (
+        {
+            "realism_lora": realism_lora,
+            "realism_strength": realism_strength,
+            "realism_trigger": realism_trigger,
+        }
+        if realism_lora
+        else {}
+    )
     chain_normalize = _resolve_chain_normalize(None)
     turbo_lora = RUNPOD_H3_MULTISHOT_TURBO_LORA if checkpoint == "ref2va" else ""
     if turbo_lora:
@@ -165,6 +178,7 @@ def multishot_sampling_plan(checkpoint: Checkpoint) -> dict[str, Any]:
             "chain_normalize": chain_normalize,
             "steps": max(1, int(RUNPOD_H3_MULTISHOT_TURBO_STEPS)),
             "output_scale": max(1.0, float(RUNPOD_H3_MULTISHOT_OUTPUT_SCALE or 1.0)),
+            **realism,
         }
 
     nfe = str(RUNPOD_H3_MULTISHOT_PDD_NFE or "").strip()
@@ -177,6 +191,7 @@ def multishot_sampling_plan(checkpoint: Checkpoint) -> dict[str, Any]:
         "chain_normalize": chain_normalize,
         "steps": int(nfe) if use_pdd else _BASE_STEPS,
         "output_scale": max(1.0, float(RUNPOD_H3_MULTISHOT_OUTPUT_SCALE or 1.0)),
+        **realism,
     }
 
 
@@ -202,6 +217,9 @@ def build_h3_multishot_graph(
     output_scale: float = 1.0,
     turbo_lora: str = "",
     chain_normalize: str | None = None,
+    realism_lora: str = "",
+    realism_strength: float = 1.0,
+    realism_trigger: str = "",
 ) -> dict[str, Any]:
     """Build the `H3MultishotSampler` API graph.
 
@@ -245,6 +263,11 @@ def build_h3_multishot_graph(
         raise ValueError("turbo_lora and pdd_nfe are mutually exclusive")
     if turbo_lora and checkpoint != "ref2va":
         raise ValueError("turbo_lora is the ref2v distill: it needs checkpoint='ref2va'")
+
+    if realism_lora:
+        from novelvideo.generators.comfy_lora import with_trigger_in_script
+
+        script = with_trigger_in_script(script, realism_trigger)
 
     unet_name = RUNPOD_H3_UNET_REF2VA if checkpoint == "ref2va" else RUNPOD_H3_UNET_FL2VA
 
@@ -356,25 +379,29 @@ def build_h3_multishot_graph(
         }
         graph["30"]["inputs"]["images"] = ["20", 0]
 
+    lora_slots: list[tuple[str, float]] = []
     if turbo_lora:
+        lora_slots.append((turbo_lora, 1.0))
+    if realism_lora:
+        lora_slots.append((realism_lora, float(realism_strength)))
+    if lora_slots:
         # Pack node `H3LoraStack` (h3_lora_stack.py, in the pinned commit):
-        # unused slots stay "None". Sampler keeps the default euler + beta
-        # schedule at `steps`, which is what the distill LoRA was trained on.
-        graph["7"] = {
-            "class_type": "H3LoraStack",
-            "inputs": {
-                "model": ["1", 0],
-                "lora_1": turbo_lora,
-                "strength_1": 1.0,
-                "lora_2": "None",
-                "strength_2": 1.0,
-                "lora_3": "None",
-                "strength_3": 1.0,
-                "lora_4": "None",
-                "strength_4": 1.0,
-            },
-        }
-        graph["10"]["inputs"]["model"] = ["7", 0]
+        # unused slots stay "None". Turbo goes first, realism second.
+        stack_inputs: dict[str, Any] = {"model": ["1", 0]}
+        for i in range(1, 5):
+            name, strength = lora_slots[i - 1] if i <= len(lora_slots) else ("None", 1.0)
+            stack_inputs[f"lora_{i}"] = name
+            stack_inputs[f"strength_{i}"] = strength
+        graph["7"] = {"class_type": "H3LoraStack", "inputs": stack_inputs}
+        # PDD chains patch the model through SigmaShift -> PDD apply, so the
+        # stack must sit in front of that chain; otherwise it feeds the sampler.
+        if "5" in graph:
+            graph["5"]["inputs"]["model"] = ["7", 0]
+        else:
+            graph["10"]["inputs"]["model"] = ["7", 0]
+    if turbo_lora:
+        # Sampler keeps euler + beta at `steps`, which is what the distill
+        # LoRA was trained on.
         graph["10"]["inputs"]["sampler_name"] = "euler"
         graph["10"]["inputs"]["scheduler"] = "beta"
 
@@ -652,6 +679,9 @@ async def run_multishot_from_files(
         output_scale=float(sampling.get("output_scale") or 1.0),
         turbo_lora=str(sampling.get("turbo_lora") or ""),
         chain_normalize=str(sampling.get("chain_normalize") or "off"),
+        realism_lora=str(sampling.get("realism_lora") or ""),
+        realism_strength=float(sampling.get("realism_strength") or 1.0),
+        realism_trigger=str(sampling.get("realism_trigger") or ""),
     )
 
     return await run_h3_multishot_job(

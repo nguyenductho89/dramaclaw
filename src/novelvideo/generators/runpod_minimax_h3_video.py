@@ -198,6 +198,8 @@ def build_h3_ref2va_graph(
     base_steps: int = 20,
     turbo_lora: str | None = None,
     turbo_steps: int | None = None,
+    realism_lora: str | None = None,
+    realism_strength: float | None = None,
 ) -> dict[str, Any]:
     """`MiniMaxH3ReferenceToVideo` + PDD 8-step acceleration. With
     `pin_first_frame` (default) `image_names[0]` is the first frame
@@ -262,6 +264,15 @@ def build_h3_ref2va_graph(
         RUNPOD_H3_VIDEO_VAE,
     )
 
+    from novelvideo.generators.comfy_lora import realism_settings, with_trigger
+
+    _cfg_lora, _cfg_strength, _trigger = realism_settings()
+    if realism_lora is None:
+        realism_lora = _cfg_lora
+    if realism_strength is None:
+        realism_strength = _cfg_strength
+    if realism_lora:
+        prompt = with_trigger(prompt, _trigger)
     if turbo_lora is None:
         turbo_lora = RUNPOD_H3_TURBO_LORA_REF2VA
     if turbo_steps is None:
@@ -492,8 +503,11 @@ def build_h3_ref2va_graph(
     graph["13"]["inputs"]["samples"] = [final_latent_node, 0]
     graph["14"]["inputs"]["samples"] = [final_latent_node, 0]
 
+    from novelvideo.generators.comfy_lora import apply_model_lora
     from novelvideo.generators.comfy_sage import apply_sage_patch, sage_mode_requested
 
+    # LoRA first, Sage second: UNET -> Sage -> realism -> (turbo) -> sampler.
+    apply_model_lora(graph, "1", realism_lora, realism_strength)
     apply_sage_patch(graph, "1", sage_mode_requested())
     return graph
 
@@ -511,6 +525,8 @@ def build_h3_fl2va_graph(
     scheduler: str = "simple",
     pdd_file: str = "",
     pdd_steps: int = 8,
+    realism_lora: str | None = None,
+    realism_strength: float | None = None,
 ) -> dict[str, Any]:
     """`MiniMaxH3ImageToVideo` — first frame (and optional last frame) only,
     no character/scene/prop reference images, no voice-timbre audio. With
@@ -521,6 +537,15 @@ def build_h3_fl2va_graph(
     official FL2VA PDD file, `RUNPOD_H3_PDD_FL2VA`) it uses the same
     SigmaShift(12/3) -> MiniMaxH3PDDAccApply chain as ref2va: euler on the
     Apply node's own trained-grid sigmas, `steps`/`scheduler` ignored."""
+    from novelvideo.generators.comfy_lora import realism_settings, with_trigger
+
+    _cfg_lora, _cfg_strength, _trigger = realism_settings()
+    if realism_lora is None:
+        realism_lora = _cfg_lora
+    if realism_strength is None:
+        realism_strength = _cfg_strength
+    if realism_lora:
+        prompt = with_trigger(prompt, _trigger)
     from novelvideo.config import (
         RUNPOD_H3_AUDIO_VAE,
         RUNPOD_H3_TEXT_ENCODER,
@@ -624,8 +649,10 @@ def build_h3_fl2va_graph(
     if last_frame_name:
         graph["101"] = {"class_type": "LoadImage", "inputs": {"image": last_frame_name}}
         graph["24"]["inputs"]["last_frame"] = ["101", 0]
+    from novelvideo.generators.comfy_lora import apply_model_lora
     from novelvideo.generators.comfy_sage import apply_sage_patch, sage_mode_requested
 
+    apply_model_lora(graph, "20", realism_lora, realism_strength)
     apply_sage_patch(graph, "20", sage_mode_requested())
     return graph
 

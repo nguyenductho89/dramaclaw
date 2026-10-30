@@ -49,9 +49,13 @@ async def test_runner_streams_progress_keeps_cache_on_failure_and_cleans_on_succ
     src.write_bytes(b"not really a video")
     ctx = SimpleNamespace(output_dir=str(tmp_path))
     updates = []
-    manager = SimpleNamespace(
-        update_progress_for_project=lambda c, t, ratio, **kw: updates.append((ratio, kw.get("current_task")))
-    )
+    # Mirror the real signature: (ctx, task_type, episode, beat_num=None, scope=None, progress=None, ...).
+    def update_progress_for_project(c, t, episode, beat_num=None, scope=None, progress=None, current_task=None, **kw):
+        assert episode == 0, "the progress ratio must not be passed as the episode"
+        assert scope == "j1"
+        updates.append((progress, current_task))
+
+    manager = SimpleNamespace(update_progress_for_project=update_progress_for_project)
     monkeypatch.setattr(runner, "get_task_manager", lambda: manager)
     monkeypatch.setattr("novelvideo.api.deps.make_static_url_for_context", lambda c, rel: f"/static/{rel}")
 

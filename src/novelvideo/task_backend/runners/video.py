@@ -1296,8 +1296,11 @@ async def _run_freezone_video_upscale_seedvr2_async(
     manager = get_task_manager()
 
     def on_log(msg: str, ratio: float = 0.0) -> None:
+        # `episode` is the 3rd positional argument; the ratio goes in `progress=`
+        # (passing it positionally files the update under a nonexistent
+        # "episode 0.02" row, which the task manager silently ignores).
         manager.update_progress_for_project(
-            ctx, task_type, ratio, scope=job_id, current_task=msg, logs=[msg]
+            ctx, task_type, 0, scope=job_id, progress=ratio, current_task=msg, logs=[msg]
         )
 
     def on_progress(done: int, total: int, msg: str) -> None:

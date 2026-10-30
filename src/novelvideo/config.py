@@ -968,9 +968,12 @@ RUNPOD_H3_CONTEXT_LOOP_PACK_COMMIT = "43afeffcc570beb5f7382593e79e4b211c7e02f6"
 # `runpod-h3-qwen-endpoints.md` section 5a for the full table. Two fixes are
 # encoded here as config rather than left to the graph builder to get wrong
 # again:
-#   - `RUNPOD_H3_MULTISHOT_MAX_SHOTS` defaults low (2) for v1: nobody has run
-#     a chain this long before, and a 3-shot/243-frame chain was estimated at
-#     ~4.2h/~$5.2 and never actually tried.
+#   - `RUNPOD_H3_MULTISHOT_MAX_SHOTS` defaults to 6: measured 2026-10-28 on an
+#     A40 (3 and 6 shots x 124 frames, 768x1344, ref2va PDD-8): no OOM, host
+#     RAM peak 94-96% and flat in the shot count, ~316-320s per shot
+#     (`runpod-h3-qwen-endpoints.md` 8c). Not tried: more than 6 shots (the
+#     node allows 8), or shots longer than 124 frames across several shots
+#     (a 3-shot/243-frame chain was once estimated at ~4.2h and never run).
 #   - There is deliberately NO `pin_frames` setting here — that parameter
 #     does not exist on `H3MultishotSampler` (only on the separate
 #     `H3MultishotMemorySampler`, which needs another pack that isn't
@@ -991,7 +994,7 @@ RUNPOD_H3_MULTISHOT_TIMEOUT_SECONDS = _env_float(
 RUNPOD_H3_MULTISHOT_IDLE_TIMEOUT_SECONDS = int(
     _env_float("RUNPOD_H3_MULTISHOT_IDLE_TIMEOUT_SECONDS", 90.0)
 )
-RUNPOD_H3_MULTISHOT_MAX_SHOTS = int(_env_float("RUNPOD_H3_MULTISHOT_MAX_SHOTS", 2.0))
+RUNPOD_H3_MULTISHOT_MAX_SHOTS = int(_env_float("RUNPOD_H3_MULTISHOT_MAX_SHOTS", 6.0))
 RUNPOD_H3_MULTISHOT_PACK_COMMIT = "d7d197709fc93c1afb125e3db1dfd4ac0ae28c60"
 # PDD acceleration for the multishot chain (2026-10-20): `H3MultishotSampler`
 # accepts an external MODEL + `sigmas`, so the same SigmaShift(12/3) ->
@@ -1015,6 +1018,18 @@ RUNPOD_H3_MULTISHOT_TURBO_STEPS = int(_env_float("RUNPOD_H3_MULTISHOT_TURBO_STEP
 # upscale+redraw was removed in 2.1.3 as off-manifold ("colour-noise mush"),
 # so there is no in-chain Upscale -> Re-draw step. Adds pixels, not detail.
 RUNPOD_H3_MULTISHOT_OUTPUT_SCALE = _env_float("RUNPOD_H3_MULTISHOT_OUTPUT_SCALE", 1.0)
+# `H3ChainNormalize` between the sampler and CreateVideo (pack node, meant for
+# chains of a minute or more). `off` (default) leaves the decoded frames alone.
+# `texture` softens high-detail frames only; `full` also histogram-matches every
+# frame, per channel, to ONE shot-1 frame (the pre-2026-10-30 behaviour).
+# Measured 2026-10-30 on a 2-shot ref2va chain: `full` forced the whole-frame
+# mean flat (66.6-67.7) by dragging the static sky band 118 -> 65 as the dark
+# uniform filled the frame, tinted frame 0 purple, and its softening dropped the
+# sharpness metric from 420 to 221 within 36 frames (the 1-shot graphs, which
+# have no such node, stayed within 5 levels of sky brightness).
+RUNPOD_H3_MULTISHOT_CHAIN_NORMALIZE = os.environ.get(
+    "RUNPOD_H3_MULTISHOT_CHAIN_NORMALIZE", "off"
+).strip().lower()
 
 
 def _runpod_h3_multishot_configured() -> bool:

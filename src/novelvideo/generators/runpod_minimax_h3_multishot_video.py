@@ -122,6 +122,20 @@ def join_shots_script(shot_prompts: list[str]) -> str:
     AIRLOCK/LAND SETTLED rules."""
     return json.dumps({"prompts": [p.strip() for p in shot_prompts]}, ensure_ascii=False)
 
+_CHAIN_NORMALIZE_MODES = ("off", "texture", "full")
+
+
+def _resolve_chain_normalize(value: str | None) -> str:
+    """`None` reads `RUNPOD_H3_MULTISHOT_CHAIN_NORMALIZE`; anything unknown is
+    treated as `off` (never silently re-enable the node)."""
+    if value is None:
+        from novelvideo.config import RUNPOD_H3_MULTISHOT_CHAIN_NORMALIZE
+
+        value = RUNPOD_H3_MULTISHOT_CHAIN_NORMALIZE
+    value = str(value or "off").strip().lower()
+    return value if value in _CHAIN_NORMALIZE_MODES else "off"
+
+
 def multishot_sampling_plan(checkpoint: Checkpoint) -> dict[str, Any]:
     """Resolve how a chain on `checkpoint` will be sampled, from config.
 
@@ -140,6 +154,7 @@ def multishot_sampling_plan(checkpoint: Checkpoint) -> dict[str, Any]:
         RUNPOD_H3_PDD_REF2VA,
     )
 
+    chain_normalize = _resolve_chain_normalize(None)
     turbo_lora = RUNPOD_H3_MULTISHOT_TURBO_LORA if checkpoint == "ref2va" else ""
     if turbo_lora:
         # Turbo LoRA replaces PDD: it ships its own schedule (euler + beta).
@@ -147,6 +162,7 @@ def multishot_sampling_plan(checkpoint: Checkpoint) -> dict[str, Any]:
             "pdd_nfe": "",
             "pdd_file": "",
             "turbo_lora": turbo_lora,
+            "chain_normalize": chain_normalize,
             "steps": max(1, int(RUNPOD_H3_MULTISHOT_TURBO_STEPS)),
             "output_scale": max(1.0, float(RUNPOD_H3_MULTISHOT_OUTPUT_SCALE or 1.0)),
         }
@@ -158,6 +174,7 @@ def multishot_sampling_plan(checkpoint: Checkpoint) -> dict[str, Any]:
         "pdd_nfe": nfe if use_pdd else "",
         "pdd_file": pdd_file if use_pdd else "",
         "turbo_lora": "",
+        "chain_normalize": chain_normalize,
         "steps": int(nfe) if use_pdd else _BASE_STEPS,
         "output_scale": max(1.0, float(RUNPOD_H3_MULTISHOT_OUTPUT_SCALE or 1.0)),
     }
@@ -184,6 +201,7 @@ def build_h3_multishot_graph(
     pdd_file: str = "",
     output_scale: float = 1.0,
     turbo_lora: str = "",
+    chain_normalize: str | None = None,
 ) -> dict[str, Any]:
     """Build the `H3MultishotSampler` API graph.
 
@@ -264,23 +282,10 @@ def build_h3_multishot_graph(
                 "save_every_shot": True,
             },
         },
-        "20": {
-            "class_type": "H3ChainNormalize",
-            "inputs": {
-                "images": ["10", 0],
-                "baseline_seconds": 10.0,
-                "skip_seconds": 2.0,
-                "fps": _FPS,
-                "strength": 1.0,
-                "deadband": 1.06,
-                "ema": 0.10,
-                "colour_match": True,
-            },
-        },
         "30": {
             "class_type": "CreateVideo",
             "inputs": {
-                "images": ["20", 0],
+                "images": ["10", 0],
                 "audio": ["10", 1],
                 "fps": _FPS,
                 "bit_depth": "auto",
@@ -330,6 +335,26 @@ def build_h3_multishot_graph(
         sampler_inputs["sigmas"] = ["6", 1]
         sampler_inputs["steps"] = int(pdd_nfe)
         sampler_inputs["sampler_name"] = "euler"
+
+    chain_normalize = _resolve_chain_normalize(chain_normalize)
+    if chain_normalize != "off":
+        # Optional post-process; off by default (see config.py: `full` pulled
+        # the static background's brightness down 50 levels and softened the
+        # opening frames on a measured 2-shot chain).
+        graph["20"] = {
+            "class_type": "H3ChainNormalize",
+            "inputs": {
+                "images": ["10", 0],
+                "baseline_seconds": 10.0,
+                "skip_seconds": 2.0,
+                "fps": _FPS,
+                "strength": 1.0,
+                "deadband": 1.06,
+                "ema": 0.10,
+                "colour_match": chain_normalize == "full",
+            },
+        }
+        graph["30"]["inputs"]["images"] = ["20", 0]
 
     if turbo_lora:
         # Pack node `H3LoraStack` (h3_lora_stack.py, in the pinned commit):
@@ -626,6 +651,7 @@ async def run_multishot_from_files(
         pdd_file=str(sampling.get("pdd_file") or ""),
         output_scale=float(sampling.get("output_scale") or 1.0),
         turbo_lora=str(sampling.get("turbo_lora") or ""),
+        chain_normalize=str(sampling.get("chain_normalize") or "off"),
     )
 
     return await run_h3_multishot_job(

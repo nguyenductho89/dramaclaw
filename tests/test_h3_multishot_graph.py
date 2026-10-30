@@ -53,6 +53,14 @@ def test_join_shots_script_survives_bracket_led_prompts():
     assert json.loads(script)["prompts"] == prompts
 
 
+@pytest.fixture(autouse=True)
+def _pin_multishot_config(monkeypatch):
+    # A local .env must not change the graphs these tests assert on.
+    import novelvideo.config as cfg
+
+    monkeypatch.setattr(cfg, "RUNPOD_H3_MULTISHOT_CHAIN_NORMALIZE", "off")
+
+
 def _base_kwargs(**overrides):
     kwargs = dict(
         script="a\n---\nb",
@@ -111,11 +119,10 @@ def test_fl2va_graph_uses_fl2va_unet_and_no_pin_frames_anywhere():
     assert sampler["inputs"]["save_every_shot"] is True
     assert sampler["inputs"]["script"] == "a\n---\nb"
     assert sampler["inputs"]["shot_count"] == 2
-    # H3ChainNormalize sits between the sampler's images output and
-    # CreateVideo.
-    assert g["20"]["class_type"] == "H3ChainNormalize"
-    assert g["20"]["inputs"]["images"] == ["10", 0]
-    assert g["30"]["inputs"]["images"] == ["20", 0]
+    # H3ChainNormalize is off by default: CreateVideo reads the sampler's
+    # images output directly.
+    assert "20" not in g
+    assert g["30"]["inputs"]["images"] == ["10", 0]
     assert g["30"]["inputs"]["audio"] == ["10", 1]
     assert g["31"]["class_type"] == "SaveVideo"
 
@@ -245,7 +252,14 @@ def test_sampling_plan_ref2va_uses_pdd_fl2va_falls_back_without_file(monkeypatch
     ref = multishot_sampling_plan("ref2va")
     assert ref["pdd_nfe"] == "8" and ref["steps"] == 8 and ref["pdd_file"]
     fl = multishot_sampling_plan("fl2va")
-    assert fl == {"pdd_nfe": "", "pdd_file": "", "turbo_lora": "", "steps": 20, "output_scale": 1.0}
+    assert fl == {
+        "pdd_nfe": "",
+        "pdd_file": "",
+        "turbo_lora": "",
+        "chain_normalize": "off",
+        "steps": 20,
+        "output_scale": 1.0,
+    }
 
     monkeypatch.setattr(cfg, "RUNPOD_H3_PDD_FL2VA", "MiniMax-H3-FL2VA-Acc-8Step.safetensors")
     assert multishot_sampling_plan("fl2va")["pdd_file"].startswith("MiniMax-H3-FL2VA")
@@ -292,3 +306,41 @@ def test_multishot_sampling_plan_turbo_replaces_pdd_for_ref2va_only(monkeypatch)
     ref = multishot_sampling_plan("ref2va")
     assert (ref["turbo_lora"], ref["steps"], ref["pdd_nfe"], ref["pdd_file"]) == (_TURBO, 12, "", "")
     assert multishot_sampling_plan("fl2va")["turbo_lora"] == ""
+
+
+def test_chain_normalize_texture_keeps_node_without_colour_match():
+    g = ms.build_h3_multishot_graph(**_base_kwargs(chain_normalize="texture"))
+    assert g["20"]["class_type"] == "H3ChainNormalize"
+    assert g["20"]["inputs"]["images"] == ["10", 0]
+    assert g["20"]["inputs"]["colour_match"] is False
+    assert g["30"]["inputs"]["images"] == ["20", 0]
+
+
+def test_chain_normalize_full_is_the_old_graph():
+    g = ms.build_h3_multishot_graph(**_base_kwargs(chain_normalize="full"))
+    assert g["20"]["inputs"]["colour_match"] is True
+    assert g["30"]["inputs"]["images"] == ["20", 0]
+
+
+def test_chain_normalize_unknown_value_falls_back_to_off():
+    g = ms.build_h3_multishot_graph(**_base_kwargs(chain_normalize="bogus"))
+    assert "20" not in g and g["30"]["inputs"]["images"] == ["10", 0]
+
+
+def test_chain_normalize_reads_config_and_shows_in_sampling_plan(monkeypatch):
+    import novelvideo.config as cfg
+
+    monkeypatch.setattr(cfg, "RUNPOD_H3_MULTISHOT_CHAIN_NORMALIZE", "texture")
+    assert ms.multishot_sampling_plan("ref2va")["chain_normalize"] == "texture"
+    g = ms.build_h3_multishot_graph(**_base_kwargs())
+    assert g["20"]["inputs"]["colour_match"] is False
+
+
+def test_max_shots_default_is_six():
+    import importlib
+    import os
+
+    import novelvideo.config as cfg
+
+    if "RUNPOD_H3_MULTISHOT_MAX_SHOTS" not in os.environ:
+        assert cfg.RUNPOD_H3_MULTISHOT_MAX_SHOTS == 6

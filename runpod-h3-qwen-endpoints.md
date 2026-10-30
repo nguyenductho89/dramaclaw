@@ -137,7 +137,7 @@ Image hiện tại (`photoreal-h3-worker:0.37.2`) còn đủ cả Qwen+H3. Cần
 | 3 | Hết RAM host ở cuối job (không phải VRAM), mất trắng job | `H3MultishotSampler` giữ toàn bộ khung mọi shot trong RAM tới khi ghép cuối; `handler.py`'s `collect_outputs()` tải cả file vào RAM trước khi upload R2 (phần này ở ngoài repo dramaclaw, thuộc `comfy-trends`, **chưa vá**). | `build_h3_multishot_graph()` **luôn** ép `save_every_shot=True` (không expose làm tham số tắt được) — pack tự ghi mục đích "insurance for long chains". Giảm thêm rủi ro: `RUNPOD_H3_MULTISHOT_MAX_SHOTS` default 2 (chưa ai chạy chain dài hơn thật). |
 | 4 | Thử cu130 cho nhanh hơn → chậm hơn (eager mode) + vẫn OOM | Image tag `-cu130` thiếu runtime cu130 đầy đủ. | Không đổi runtime — endpoint vẫn dùng image cu128 hiện tại. |
 | 5 | `409 ENDPOINT_PAUSED` ngay sau khi bật worker | Độ trễ propagation RunPod. | `run_h3_multishot_job()` giữ đúng cơ chế retry 6 lần/10s như 1-shot H3. |
-| 6 | Phụ kiện (mũ) biến mất giữa shot | Pack không có bộ nhớ phụ kiện, frame relay chỉ truyền pixel. | Giảm nhẹ (chưa giải quyết hẳn): lặp nguyên văn mô tả nhân vật/phụ kiện mọi shot (việc của prompt builder, **chưa viết**) + `H3ChainNormalize` (đã wire vào graph, giữa `images` output của sampler và `CreateVideo`). |
+| 6 | Phụ kiện (mũ) biến mất giữa shot | Pack không có bộ nhớ phụ kiện, frame relay chỉ truyền pixel. | Giảm nhẹ (chưa giải quyết hẳn): lặp nguyên văn mô tả nhân vật/phụ kiện mọi shot (việc của prompt builder, **chưa viết**) + `H3ChainNormalize` (từng wire mặc định; **đã tắt mặc định 2026-10-30**, xem mục 8d). |
 | 7 | Chưa ai test chain dài thật (3 shot×243 khung ước ~4.2h/$5.2) | Chưa test, không phải lỗi. | `RUNPOD_H3_MULTISHOT_MAX_SHOTS` default 2; tăng dần khi verify thật. |
 
 ### 5b. Graph đã implement (`build_h3_multishot_graph`)
@@ -294,3 +294,19 @@ Dùng crest factor (`ffmpeg astats`) + spectrogram (`showspectrumpic`) để ch�
 **Kết luận**: không phải do số bước sampling, không phải do thiếu audio-refine pass, không phải do model tự bịa giọng không có mẫu — cả 4 hướng sửa trong phạm vi code/cấu hình DramaClaw đều không cải thiện, 1 hướng còn làm tệ hơn. Tính chất buzzy nhiều khả năng là giới hạn vốn có của nhánh audio trong trọng số DiT int8-quantized hiện có trên volume (`minimax_h3_*_pruned_int8_convrot.safetensors`), dùng chung cho cả video lẫn audio.
 
 **Hướng còn lại, chưa thử**: `RUNPOD_H3_AUDIO_REFINE_DENOISE=1.0` (refine toàn bộ thay vì 0.5 — khả năng thấp vì 0.5 đã không đổi gì); trọng số UNET không quantize (nếu có, tốn VRAM/chậm hơn nhiều); hoặc **chuyển hẳn sang TTS riêng + ghép audio vào video** thay vì để H3 tự sinh giọng — khuyến nghị cho các beat cần giọng rõ.
+
+### 8d. `H3ChainNormalize` làm nhòe khung đầu + kéo độ sáng nền (2026-10-30)
+
+Video multishot turbo (job `b95e4ef9…`, 2 shot × 124 khung, LoRA 8 bước) có khung đầu mờ và độ sáng đổi qua các khung. Nguyên nhân là node `H3ChainNormalize` mà graph multishot luôn chèn giữa sampler và `CreateVideo` (từ 2026-10-19, `colour_match=True`): nó histogram-match **từng khung, từng kênh màu** về một khung tham chiếu giữa shot 1 và làm mềm các khung có năng lượng chi tiết vượt 1,06× baseline (mức làm mềm tăng dần theo EMA, tối đa 0,85). Pack ghi node dành cho chuỗi dài (đo trên 84 giây).
+
+Đo theo khung (độ sáng trung bình; "dải trời" = 130 hàng trên cùng của khung 384×672, nền tĩnh; độ nét = phương sai Laplacian):
+
+| Video | Độ sáng cả khung | Độ sáng dải trời | Độ nét |
+|---|---|---|---|
+| Multishot turbo, có node | 66,6–67,7 (bị ép phẳng) | 118 → 65 (dao động 53) | 420 → 221 sau 36 khung |
+| 1-shot turbo6, không node | 71,6–79,1 | 137–142 | 448 → 384 |
+| 1-shot base20, không node | 70,6–83,4 | 140–146 | 522 → 306 → 360 |
+| Multishot PDD cũ (`c4dd3b09`, `859365be`) | 29–30 (ép phẳng) | — | 370 → 43 ở khung 72 |
+
+Sửa: `RUNPOD_H3_MULTISHOT_CHAIN_NORMALIZE` = `off` (mặc định, không có node "20"), `texture` (chỉ làm mềm, `colour_match=False`), `full` (hành vi cũ). Cũng nâng `RUNPOD_H3_MULTISHOT_MAX_SHOTS` mặc định 2 → 6 theo benchmark mục 8c (3 và 6 shot × 124 khung không OOM, RAM đỉnh không tăng theo số shot). Chưa thử > 6 shot, shot dài hơn 124 khung nhiều shot.
+

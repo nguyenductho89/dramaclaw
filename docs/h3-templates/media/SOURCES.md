@@ -1,5 +1,9 @@
 # Nguồn media mẫu
 
+Media **không nằm trong git** (đã gitignore). Tải bằng `python scripts/fetch_h3_gallery_media.py` (đọc `../media-sources.json`, cần ffmpeg + curl).
+
+Nhóm `apim_*` (149 prompt cộng đồng): https://apimodels.app/en/minimax-h3-prompts (video của từng prompt, tác giả và bài gốc ghi trong `community-prompts.json`; bản gốc tiếng Nhật/Trung ở `docs/zh/h3-templates/`). Bản quyền prompt thuộc tác giả gốc.
+
 Video/ảnh trong thư mục này là **output và ảnh tham chiếu của các ví dụ trong bài gốc**, tải về chỉ để làm tham chiếu nội bộ khi chọn template. Bản quyền thuộc về pixo.video / fal.ai / MiniMax; không dùng cho mục đích khác.
 
 - pixo: https://pixo.video/blog/minimax-h3-prompts (video mẫu của ví dụ cùng tên)

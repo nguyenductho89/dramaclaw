@@ -1,0 +1,802 @@
+[
+ {
+  "id": "apim_cPsGpndn",
+  "category": "cinematic",
+  "title": {
+   "en": "Condor Heroes characters teach English word dream",
+   "vi": "Nhân vật Thần điêu dạy từ tiếng Anh \"dream\""
+  },
+  "author": "@nicekate8888",
+  "authorUrl": "https://x.com/nicekate8888",
+  "postUrl": "https://x.com/nicekate8888/status/2082762739697815758",
+  "aspectRatio": "16:9",
+  "durationSec": null,
+  "prompt": "神雕侠侣主角趣味讲单词 dream 教程",
+  "source": "apimodels",
+  "description": {
+   "en": "",
+   "vi": ""
+  },
+  "mode": "",
+  "inputs": [],
+  "lang": "cjk",
+  "media": {
+   "video": true,
+   "refs": []
+  },
+  "credit": {
+   "author": "@nicekate8888",
+   "authorUrl": "https://x.com/nicekate8888",
+   "postUrl": "https://x.com/nicekate8888/status/2082762739697815758"
+  },
+  "genMode": ""
+ },
+ {
+  "id": "apim_xL_R6hj7",
+  "category": "drama",
+  "title": {
+   "en": "Fantasy Academy Bread-Sharing Scene",
+   "vi": "Cảnh chia bánh mì ở học viện fantasy"
+  },
+  "author": "@haruuraeadss",
+  "authorUrl": "https://x.com/haruuraeadss",
+  "postUrl": "https://x.com/haruuraeadss/status/2082652041709773075",
+  "aspectRatio": "16:9",
+  "durationSec": null,
+  "prompt": "高品質アニメ映像。世界観は、上品な現代ファンタジー学園を舞台にした2D手描きの日常会話アニメ。表情設計は必ず、目 → 眉 → まぶた → 口 → 視線、の順で行う。\n【参照画像と人物固定】\n画像1は人物Aの参照画像。画像1に描かれたキャラクターを、全編で同じ人物として維持する。画像1は、人物Aの顔、目の形、虹彩色、髪型、髪色、衣装、装飾、体格、シルエット、雰囲気、キャラクターカラーの参照にのみ使用する。\n画像2は人物Bの参照画像。画像2に描かれたキャラクターを、全編で同じ人物として維持する。画像2は、人物Bの顔、目の形、虹彩色、髪型、髪色、衣装、装飾、体格、シルエット、雰囲気、キャラクターカラーの参照にのみ使用する。\n参照画像そのものの背景、部屋、家具、ポーズ、画角、フレーミング、光源配置は再現しない。変化してよいのは、表情、視線、口元、姿勢、呼吸、自然な髪と衣装の揺れだけ。\n人物Aと人物Bの特徴を混ぜない。顔の平均化、衣装交換、髪型交換、別人化、クローン化、分身、余計な人物の追加は禁止。\n画像2に武器や手持ち品が含まれていても、人物Bの両手には何も持たせない。画像1に非戦闘用の装飾や小型バッグがある場合のみ、人物Aに自然に残してよい。ただしバッグは身体側に固定し、手で持つ、開ける、動作に使うことは禁止。武器、大型装備、発光する戦闘装備は持たせない。\n【小物・色味・雰囲気の調整】\n場所、座る位置、会話内容、パンを分ける動作、カメラ構成は固定する。そのうえで、人物Aと人物Bの参照画像に合わせて、髪飾り、ブローチ、リボン、バッグなどの装飾、小物、配色、光の印象、背景の差し色を自然に調整する。\n全体の線色、影色、背景の差し色、午後光の色温度は、人物Aと人物Bのキャラクターカラーと雰囲気に合わせて調整する。ただし、明るく上品で清潔な現代ファンタジー学園の日常感は維持し、暗い戦闘空間、ホラー、退廃、極端な逆光にはしない。\n【絵柄固定】\n細く繊細な色付き線画、透明感のある二層から三層の色影、柔らかなグラデーション。彩度は低くしすぎず、参照人物の固有色を髪、瞳、衣装、反射光、背景の差し色へ自然に反映する。\n瞳は宝石のような虹彩の奥行きと複数の小さなキャッチライト、髪は真珠のような多層ハイライト。髪、まつ毛、レース、刺繍、髪飾り、装飾、衣服の皺を高密度に描く。布は上質なマット素材、レース、金属、宝石、リボンはそれぞれ異なる繊細な質感で描き分ける。\n背景も同じ2D手描き筆致で、クリーム色の壁、木製ベンチ、植栽、遠景の校舎を十分な密度で描く。太線、厚輪郭、簡略TVアニメ化、平坦な単層セル塗り、低密度背景、滑らかな3D素材、半写実、実写質感、強いくすみ、生成AI平均顔、画風混合は禁止。\n【固定場所と人物配置】\n放課後の学園中庭にある木製ベンチ。人物Bは画面左、人物Aは画面右。二人は隣り合って座る。\n人物Aだけが、薄い紙包みに入った丸いあんパン一個を右手で下側から持つ。開始時のパンは完全な丸形で、歯形も欠けもない。指は紙包みの下側に置き、食べる位置から離す。パン、紙包み、手指を増やさない。\n【Cut 1】\nカメラ位置はベンチ正面中央。カメラ高は座った二人の目線の高さ。正面から二人を胸上で同じ大きさに収め、背景の消失軸は二人の間の奥へ抜ける。目的は、二人の関係とパンの持ち主が人物Aであることを示すこと。\n人物Bはパンを見たあと人物Aへ視線を戻し、両手を胸元で合わせ、身体ごと少し近づく。瞳を輝かせ、眉を上げ、まぶたを期待で開き、甘える口元を作り、人物Aへ視線を合わせる。\n人物Bだけが明るく甘い声で言う。\n「そのアンパン、一口ちょうだい。」\n短い止めを入れ、さらに甘えて言う。\n「お願い、一生のお願い！」\n人物Aは話さず、あきれながらも優しい目で人物Bを見る。\n【Cut 2】\nカメラ位置は人物Aの斜め前。カメラ高は二人の目線の高さ。人物Aの肩越しから人物Bへ向き、二人の顔とパンを中近景で見せる。背景の消失軸は右奥へ変える。目的は、返答、差し出す手、一口だけかじる動作を一続きで見せること。\n人物Aは瞳を柔らかくし、眉を少し下げ、まぶたを穏やかに細め、困った笑顔の口元を作り、人物Bへ視線を合わせる。\n小さく息を吐き、短い止めを入れ、人物Aだけが落ち着いた優しい声で言う。\n「もう、しょうがないなー。ひとくちだけだよ」\n言い終わりながら、人物Aは右手の一個のあんパンを人物Bの口元へ差し出す。持ち主は人物Aのままで、手渡さない。\n接触前：パンは完全な丸形。人物Bの歯とパンの間に小さな隙間がある。\n接触：人物Bが顔を近づけ、歯がパンの上側の端へ接触する瞬間を見せ、一口だけかじる。\n接触後：パンにだけ小さな半月形の一口分が欠け、人物Bは顔を離す。人物Aは同じパンを右手で胸元へ戻す。手や指を噛まない。パン、紙包み、手指を複製しない。\n【Cut 3】\nカメラ位置は人物Bの斜め前。カメラ高は二人の目線の高さ。人物B側から人物A側へ向き、人物Bを胸上でやや大きく見せたあと、短く左へ移動して二人の胸上ツーショットにする。背景の消失軸は左奥へ変える。目的は、人物Bの満足顔と人物Aが返す微笑みを同じ終端画へ置くこと。\n人物Bは口を閉じて小さく二回だけ噛み、飲み込む。短い止めのあと、瞳を明るくし、眉を柔らかな弧にし、まぶたを幸せそうに細め、満足した笑顔の口元を作り、人物Aへ視線を戻す。\n人物Bだけが弾む優しい声で言う。\n「んー、おいしい！」\n人物Aは一口分だけ欠けた同じパンを右手で胸元に持ち、無言で温かな微笑みを返す。二人の顔とパンを同じ画面に保ち、人物Bが「おいしい」の最後の母音を言い終え、二人の笑顔が完成した瞬間に切る。\n【音声】\n人物の外見、年齢感、雰囲気に合った日本語の二人の声を生成する。人物Bは明るく甘い声、人物Aは落ち着いた優しい声。話者を交換せず、三つの台詞を一字一句そのまま、重ねず、口の形と発声を同期させる。\n台詞以外の会話、ナレーション、字幕、画面内文字は入れない。BGMなし、音楽なし。環境音とフォーリーのみ。弱い風、遠い鳥、布擦れ、紙包みの紙音、柔らかなパン生地を一口かじった瞬間の小さな圧縮音を、見えている動作へ同期させる。誇張した咀嚼音は入れない。\n【重要な禁止】\n話者交換、同時発話、口パクずれ、パンの複製、勝手な手渡し、二口以上食べる、食べる前の歯形、手指の変形、人物の追加、顔を隠す前景、顔中央の光点、字幕、ロゴを出さない。",
+  "source": "apimodels",
+  "description": {
+   "en": "",
+   "vi": ""
+  },
+  "mode": "",
+  "inputs": [],
+  "lang": "cjk",
+  "media": {
+   "video": true,
+   "refs": []
+  },
+  "credit": {
+   "author": "@haruuraeadss",
+   "authorUrl": "https://x.com/haruuraeadss",
+   "postUrl": "https://x.com/haruuraeadss/status/2082652041709773075"
+  },
+  "genMode": ""
+ },
+ {
+  "id": "apim_9FUQ4ZQp",
+  "category": "animation",
+  "title": {
+   "en": "Dreamlike Summer Greenhouse Anime",
+   "vi": "Anime nhà kính mùa hè như mơ"
+  },
+  "author": "@haruuraeadss",
+  "authorUrl": "https://x.com/haruuraeadss",
+  "postUrl": "https://x.com/haruuraeadss/status/2082707037256056852",
+  "aspectRatio": "16:9",
+  "durationSec": null,
+  "prompt": "高品質アニメ映像。\n【作品トーン】\n透明感のある夏のガラス温室を舞台にした、上品で夢のような午後の叙情アニメ。映像全体は高密度な2D手描きアニメとして統一し、静かな呼吸、光の移動、素材ごとの反射と透過、繊細な表情変化を中心に描く。\n【参照画像の役割】\n画像1のみを使用する。画像1は登場する一人のキャラクターの参照として扱い、顔立ち、目の形、虹彩色、髪型、髪色、衣装、装飾、体格、全身シルエット、雰囲気、キャラクター固有色だけを参照する。\n画像1そのものの背景、部屋、家具、建築、ポーズ、手の位置、画角、カメラ距離、フレーミング、構図、照明状態は再現しない。画像1の背景要素を温室内へ持ち込まない。\n画像1と同じ人物を、全編で同じ一人のキャラクターとして厳密に維持する。顔の輪郭、目の形、左右の瞳の特徴、虹彩色、前髪、髪の長さ、髪型、髪飾り、衣装構造、装飾位置、体格、年齢感、キャラクター固有色を変えない。表情、視線、口元、呼吸、肩の力、手の動き、自然な髪と衣装の揺れだけ変化してよい。特徴の混合、顔の平均化、別人化、衣装交換、装飾消失、髪型変更、クローン化、分身、余計な人物の追加は禁止する。\n【絵柄固定】\nキャラクター同一性とは別条件として、映像全体を繊細で高密度な2D手描きアニメに固定する。細く淡い寒色系の線、透明感のある多層の色影、柔らかなグラデーション、肌の淡い発光感、髪の繊細なハイライト、瞳の多層反射を維持する。花、ガラス、紅茶、空、雲、白い家具、床タイル、温室建築も同じ密度の手描き筆致で描く。太い輪郭、簡略化されたTVアニメ調、平坦な単層セル影、低密度背景、滑らかなCG、3D化、半写実、実写化、画風混合にしない。\n【キャラクターに合わせて変化させる要素】\n場所と出来事は固定し、小物の意匠、アクセント色、光の印象、紅茶の色味、卓上の小さな添え物だけを画像1のキャラクターに合わせて調整する。\n温室の白と淡い青を基調とした明るさは維持しながら、画像1の髪色、瞳色、衣装色、装飾色から一色だけを補助アクセントとして抽出する。アクセント色はカップの縁、ソーサーの細い装飾、卓上の花、屈折光のわずかな色味に限定し、背景全体をキャラクター色で塗り替えない。\nティーカップとソーサーの形状は、画像1の衣装や装飾の印象に合わせて、上品、可憐、端正、幻想的などの範囲でわずかに意匠を調整してよい。ただし透明なガラス製であること、カップ一つ、取っ手一つ、ソーサー一枚であることは固定する。\n紅茶は透明感のある温かい色を保ち、画像1のキャラクターカラーに合わせて、琥珀色、淡い蜂蜜色、薄い薔薇色、淡い青緑を含む幻想的な茶色などへ穏やかに調整してよい。濁った液体、不透明な液体、蛍光色にはしない。\n卓上の添え物は一つだけ置く。画像1の雰囲気に合わせ、柑橘の一切れ、小さな砂糖菓子、一輪の花、薄い果実片などから最も自然なものを一つ選ぶ。添え物は途中で増殖、移動、変形させない。\n【固定舞台】\n舞台は明るい夏のガラス温室。白い窓枠と屋根骨格、澄んだ青空、白い雲、外の緑と花、白い丸テーブル、白い金属椅子、花鉢、淡い青灰色の床タイルを維持する。白と淡い青を基調とし、日差しが作る淡い金色と、画像1から抽出した補助アクセント色だけを使用する。\n【小物固定】\n開始状態では、透明なガラスのティーカップ一つに紅茶が入り、誰の手にも保持されず、透明なガラスのソーサー一枚の中央に置かれている。卓上の添え物一つは白い丸テーブルの上に置いたままにする。\n後半でキャラクター本人だけが右手でカップの取っ手を持つ。カップ、取っ手、紅茶、ソーサー、添え物を増殖、交換、消失、変形させない。\n【開始カメラ】\n最初のカメラは白い丸テーブルの斜め前、テーブル面と同じ低い高さからキャラクターの斜め前へ向く。前景にティーカップとソーサーを大きく置き、奥にキャラクターの胸上と顔を明瞭に見せる。背景消失軸は床タイルと右側の窓枠が温室奥へ伸びる方向に揃える。\n紅茶とキャラクターを最初から同じ画面で紹介する。キャラクターは穏やかに呼吸し、髪先、袖、衣装の軽い装飾だけが温室の微風でわずかに揺れる。\n【光の発生】\n屋外の薄い雲が横へ流れて日差しが開き、温室の窓ガラスを通った白い陽光が紅茶を透過する。紅茶と透明ガラスの屈折によって生まれた柔らかな光模様が、ソーサーの縁から白いテーブルへ現れる。\n光模様の基本色は淡い金色とし、画像1のキャラクター固有色がごく薄く混じる。キャラクターは新しい光に気づき、肩の力を少し抜き、上半身を光の方向へごくわずかに向ける。\n【光を追うカメラ移動】\n光模様が雲の移動に合わせて連続して流れ始め、カメラは光を案内線として追う。カメラ位置はテーブル斜め前から床近くへ滑らかに下がり、光の進行方向へ向いたまま、被写体サイズをカップの近景から衣装の中景へ変える。背景消失軸はテーブル奥から床タイルの斜め奥へ移す。\n透明ガラスでは細い透明な反射、紅茶では色のある透過光、白い布では柔らかな拡散光、金属装飾では短い鋭い反射、床タイルでは淡い鏡面光として、素材ごとに描き分ける。\n続けて光は白いテーブルから床タイル、衣装の裾や下部装飾、腰周辺の装飾へ連続して移る。カメラは床近くからキャラクターの斜め前へ向いたまま胸の高さまで上がり、被写体サイズを衣装の中景から胸上へ戻す。背景消失軸は床タイルから右上へ伸びる窓枠と屋根骨格へ受け渡す。\n画像1の衣装に裾飾りや腰飾りがない場合は、存在しない装飾を追加せず、実際に存在する衣装の縁、布の重なり、胸元、袖口、髪飾りの順に光を移す。背景の窓枠、花、椅子は緩やかなパララックスを作り、温室の奥行きを保つ。\n【表情変化】\n光は顔中央へ入らず、肩、髪の外周、衣装の輪郭だけを淡く縁取る。\n表情変化は、最初に左右の瞳の内側に元からあるキャッチライトだけが同時にわずかに明るくなり、次に眉が少し上がり、その後まぶたが柔らかく緩み、続いて口角が自然に上がり、最後に視線を紅茶へ落とす順序で見せる。\nカメラは斜め前の胸上を保ち、画像1の瞳、顔立ち、髪型、髪飾り、衣装の主要装飾を読みやすく見せる。\n【カップを持ち上げる動作】\nキャラクターは右手の指でカップの取っ手だけを丁寧につまみ、透明なティーカップをソーサーから静かに持ち上げる。左手は白いテーブルの縁へ軽く添えたままにする。\nカップを胸元より少し低い高さで保持すると、紅茶に小さな波紋が生まれ、温室の白い屋根骨格、青空、流れる雲が紅茶の表面へ自然に映り込む。\n【終端カメラ】\n終端のカメラはキャラクターの斜め前、胸の高さから紅茶面と顔へ向く。キャラクターを胸上の大きさで保ち、手前に紅茶面、奥に実像の三分の四顔を置く。背景消失軸は白い屋根骨格が右上へ抜ける方向に揃える。\nカメラをわずかに下向きへ傾け、キャラクターが透明なティーカップを胸元より少し低い位置で静かに保持する。手前の紅茶面に温室の青空と、同じキャラクターの三分の四顔が一度だけ明瞭に映る。\n紅茶面の顔は光学的な反射像であり、別人、分身、第二の人物ではない。奥の実像と同じ顔立ち、髪型、表情、視線方向を保つ。奥の実像は穏やかな微笑みを維持し、紅茶の波紋が収まり、実像と反射像が同時に澄んだ瞬間に切る。\n【禁止事項】\n光点、水平フレア、ガラス反射を顔中央、鼻筋、眉間、瞳の表面へ重ねない。顔を光で隠さない。背景を画像1の背景へ置き換えない。温室以外の場所へ変更しない。文字、字幕、ロゴ、透かしなし。BGMなし、音楽なし、環境音なし、フォーリーなし、音響生成なし。",
+  "source": "apimodels",
+  "description": {
+   "en": "",
+   "vi": ""
+  },
+  "mode": "",
+  "inputs": [],
+  "lang": "cjk",
+  "media": {
+   "video": true,
+   "refs": []
+  },
+  "credit": {
+   "author": "@haruuraeadss",
+   "authorUrl": "https://x.com/haruuraeadss",
+   "postUrl": "https://x.com/haruuraeadss/status/2082707037256056852"
+  },
+  "genMode": ""
+ },
+ {
+  "id": "apim_lBWSkNpL",
+  "category": "audio",
+  "title": {
+   "en": "Grimy hip-hop music video mood",
+   "vi": "Không khí MV hip-hop bẩn"
+  },
+  "author": "@tebasaki3D",
+  "authorUrl": "https://x.com/tebasaki3D",
+  "postUrl": "https://x.com/tebasaki3D/status/2083032443226030578",
+  "aspectRatio": "16:9",
+  "durationSec": null,
+  "prompt": "洗練されているが汚れた質感のヒップホップMV。地下雑誌、コピー機、アナログスキャン、攻撃的なビート感。",
+  "source": "apimodels",
+  "description": {
+   "en": "",
+   "vi": ""
+  },
+  "mode": "",
+  "inputs": [],
+  "lang": "cjk",
+  "media": {
+   "video": true,
+   "refs": []
+  },
+  "credit": {
+   "author": "@tebasaki3D",
+   "authorUrl": "https://x.com/tebasaki3D",
+   "postUrl": "https://x.com/tebasaki3D/status/2083032443226030578"
+  },
+  "genMode": ""
+ },
+ {
+  "id": "apim_hXSJWPtB",
+  "category": "audio",
+  "title": {
+   "en": "Y2K K-Pop Candy Typography Music Video",
+   "vi": "MV K-Pop kẹo ngọt typography Y2K"
+  },
+  "author": "@LeoCreaIA",
+  "authorUrl": "https://x.com/LeoCreaIA",
+  "postUrl": "https://x.com/LeoCreaIA/status/2083240416166748313",
+  "aspectRatio": "16:9",
+  "durationSec": null,
+  "prompt": "Soft cute Y2K crush K-pop girl group rap MV. High fashion performance film mixed with inflated 3D candy typography graphic system. Three female idols wearing pink, blue and purple luxury Y2K stage outfits. Cute 3D chibi doll face, big dewy eyes, porcelain skin, soft blush cheeks, chibi idol proportions. Reference typography: only the inflated 3D rubber bubble font language, pink/lavender/ice-blue chrome plastic material, not the whole layout. Visual style: soft pastel crush energy, Y2K game UI, candy glossy finish, milky translucent plastic × K-pop aggressive feminine rap energy. Texture: 35mm film grain + soft glow bloom + iridescent holographic foil + jelly plastic specular + Y2K scanline + candy dot halftone + VHS frame vibration + plastic toy surface reflection + glitter confetti rain. Editing: Fast rhythm editing. Only hard cuts. No fade. No smooth transitions. Every cut follows: bass hit, snare, rap vocal impact.\nCharacter Performance Three female performers from reference image 1. Keep: same 3D chibi doll faces, big sparkling eyes, pastel Y2K idol makeup, pink/blue/purple fashion styling, soft cute cold expression. Each member has a signature prop: A holds a chunky rhinestone microphone, B has a plush bear shoulder bag, C wears oversized heart-shaped sunglasses pushed up on head. They are not posing. They are performing rap. Actions: aggressive eye contact, head nodding, shoulder movement, leaning toward camera, hand pushing toward lens, confident cute facial expression, sharp body movement, wink on snare hit, tongue-out on bass drop, hair flip on beat. Lip sync: perfect rap mouth synchronization. The performance should feel like a real K-pop rap unit MV with Y2K crush energy.\nTypography Animation Typography is a visual weapon. Not subtitles. Not static graphics. Use: giant English words inflated 3D rubber bubble font, jelly plastic material, pink lavender ice-blue chrome, soft puffy candy letters, compressed bold balloon fonts, stretched vertical puffy letters, handwritten graffiti titles, 3D extruded candy text, glitch displacement, print error effect, Y2K game UI pixel corruption. Text appears only when the beat hits. Characters can cover the text. Text can cover parts of clothing. Never cover eyes or main facial expression. Tiny Y2K stickers burst on beat: heart, star, smiley, sparkle, chain link, bow, four-leaf clover, mini bear.\nShot 1 — Member A · Extreme Close-up「RUN NOW」 Character A face close-up, framed inside a pink heart-shaped iris wipe transition (in only, hard cut out). She looks directly into camera. Cute cold doll expression, big dewy eyes, soft blush, frosted pink lip gloss, rhinestone tear sticker under one eye. Starts rap. Chunky rhinestone microphone enters frame from below, she grips it tightly. Camera slowly pushes closer. Tiny pink heart stickers float up from bottom edge like bubbles. Huge inflated bubble letters crash into frame from left and right. Typography: \"RUN NOW\" — Pink jelly rubber 3D font, glossy candy surface, soft inner glow. Letters stretch vertically like puffy balloons. The word vibrates and squishes with bass, casts soft pink shadow on her cheek. Rap: \"Run now, I don't chase.\" Confetti burst on final syllable. Hard cut.\nShot 2 — Member B · Rap Performance「BREAK LIMIT」 Member B medium close-up, slight low angle, camera orbits 15° around her during the take. Lavender fur jacket, Y2K layered top, plush bear bag bouncing on her hip, chunky pearl choker, star-shaped earrings. She performs aggressively. Shoulders hit the rhythm. Hair flips hard on the second snare, blue hair ties catch the light. Hair moves naturally. Background: pastel gradient pink-to-lavender with faint Y2K perspective grid lines floating. Behind her appears huge handwritten text. Typography: \"BREAK LIMIT\" — Ice-blue bubble graffiti brush writing, soft inflated stroke, candy-coated, letters appear one by one with bounce easing. Animation: letters tear apart, reassemble, rotate 360° on snare, shake with bass. Chain link graphic swings across frame, sparkle stickers pop on every beat. Rap: \"Break limits, break rules.\" Hard cut.\nShot 3 — Member C · Hand Attack Shot「NO APOLOGY」 Member C moves close to camera. Top-down camera angle, she leans over the lens. Hand reaches toward lens. Nails are long pink acrylic with 3D star and heart charms. Focus: rings with mini plush bear charm, heart-cut gemstone, baby-pink leather texture, knit ribbed sleeve, plushy toy surface. Foreground vertical text: \"NO APOLOGY\" — Stretched vertical pink bubble letters, jelly puffy material, letters pierce through the back of her hand visually. Hand covers part of the typography. Fingers spread wide on the bass hit. Camera: handheld vibration. Film grain strong. Candy halftone dots bloom in shadow. Tiny \"XOXO\" sticker tag pulses in corner. Rap: \"No apology, no regret.\" Hard cut.\nShot 4 — Fashion Magazine Impact Cut「UNSTOPPABLE」 Member A close-up. Her face appears inside a broken Y2K trading card / idol photo card frame, with barcode at bottom, \"SYS.07-A\" serial tag, holographic foil border torn on left side. Not a full layout. Only one graphic element. Typography: \"UNSTOPPABLE\" — Huge lavender handwritten bubble text, inflated 3D rubber, glossy plastic finish, letters explode outward from center of her forehead, push edges of the card frame. Animation: text suddenly expands from behind her. Card frame rips in half vertically, holographic confetti pours from the tear, revealing pastel gradient background underneath. A second smaller photo card of her winks in from the right, slightly rotated. Rap: \"Can't stop my wave.\" Hard cut.\nShot 5 — Glitch Double Image「STATIC」 Member B close-up, slight Dutch angle (5° tilt). Create: duplicate frame, pastel RGB separation (pink/blue/lavender channels), xerox shadow, motion trail, VHS tracking line at bottom edge. Main face stays sharp. She holds a sparkly heart-shaped lollipop up beside her cheek, the lollipop leaves a trail of echo frames. Background text: \"STATIC\" — Y2K pixel font, candy pink chrome, letters flicker like broken game sprite, jump between frames, sometimes inverted color, sometimes missing entirely. Like corrupted music video signal + cute game glitch. A tiny \"ERROR 404\" sticker blinks in upper corner. Rap: \"Static noise, I get louder.\" Hard cut.\nShot 6 — Pink Blue Purple Battle「PINK OUT」 Member A and C alternate close-ups, rhythm: A-A-C-A-C-C, two frames each. Fast switching. Visual split: each member sits in a vertical color block (A=pink, C=lavender, alternating). Center text: \"PINK OUT\" — Pastel pink-to-purple gradient bubble 3D, letters appear one word at a time, syncing to each cut. Words appear one by one. Each word: stretch vertically on entry, compress horizontally on hold, invert color on snare, explode into heart stickers and star confetti on exit. Tiny \"1.2.3.GO!\" counter graphic ticks in corner. Rap: \"Lights out, pink out.\" Hard cut.\nShot 7 — Group Rap Performance「UNBREAKABLE」 Three members together.",
+  "source": "apimodels",
+  "description": {
+   "en": "",
+   "vi": ""
+  },
+  "mode": "",
+  "inputs": [],
+  "lang": "cjk",
+  "media": {
+   "video": true,
+   "refs": []
+  },
+  "credit": {
+   "author": "@LeoCreaIA",
+   "authorUrl": "https://x.com/LeoCreaIA",
+   "postUrl": "https://x.com/LeoCreaIA/status/2083240416166748313"
+  },
+  "genMode": ""
+ },
+ {
+  "id": "apim_qpLTi66p",
+  "category": "ecommerce",
+  "title": {
+   "en": "The Thief's Awkward Product Excuse",
+   "vi": "Lời bao biện vụng về của tên trộm"
+  },
+  "author": "@ponzponz15",
+  "authorUrl": "https://x.com/ponzponz15",
+  "postUrl": "https://x.com/ponzponz15/status/2082646007444300101",
+  "aspectRatio": "16:9",
+  "durationSec": null,
+  "prompt": "日本語での会話シーン。ピンクシャツを着た泥棒の男が、おばあさんに見つかり、こっぴどく叱られて立ちすくんでいる。男はそばにいる少女に向かって言い訳を始める。「別に盗むつもりじゃなかったんだ、ちょっと借りただけだったんだよ」と弁解していると、おばあさんがふと思い出したように話を遮り、「そういえば、はいるお スリーが出たんだって」と告知するように明るく言う。少女と男は一瞬きょとんとした表情を浮かべ、泥棒は「そそ、そうだよ！はいるおスリーが出たんだよ！そのためにパンをちょっと借りたんだよ！」と気まずい空気が笑いに変わる。少女は画面に向かって軽くアピールするような仕草を見せ、まるでコマーシャルの一言のように場の空気を切り替える。カメラは9種類の異なるアングルで切り替わり、男が言い訳する肩越しショット、少女が告知する瞬間のクローズアップ、おばあさんと男が驚く表情のアップ、三人の位置関係が分かる引きの全体ショットでしめくくる。コミカルな緊張感と告知の明るさを両立させるように構成される。",
+  "source": "apimodels",
+  "description": {
+   "en": "",
+   "vi": ""
+  },
+  "mode": "",
+  "inputs": [],
+  "lang": "cjk",
+  "media": {
+   "video": true,
+   "refs": []
+  },
+  "credit": {
+   "author": "@ponzponz15",
+   "authorUrl": "https://x.com/ponzponz15",
+   "postUrl": "https://x.com/ponzponz15/status/2082646007444300101"
+  },
+  "genMode": ""
+ },
+ {
+  "id": "apim_ZFGfSUkK",
+  "category": "ecommerce",
+  "title": {
+   "en": "SparkRush Ultra Fizz beach soft-drink commercial",
+   "vi": "Quảng cáo nước ngọt SparkRush Ultra Fizz trên bãi biển"
+  },
+  "author": "@mi7_crypto",
+  "authorUrl": "https://x.com/mi7_crypto",
+  "postUrl": "https://x.com/mi7_crypto/status/2083042578883383681",
+  "aspectRatio": "16:9",
+  "durationSec": 15,
+  "prompt": "（16:9 / 15秒 / 8カット / 日本語セリフ版）\n@ ImageA＝採用済みイメージボード。\n（以降、イメージボードと記述）\nイメージボードは 登場人物2人の雰囲気、水着、ビーチ環境、商品ボトルデザイン、色、爽快感、映像トーンの参考資料 としてのみ使用する。\n重要：イメージボードのレイアウトや構成そのものは絶対に映像内へ描写しない。\nイメージボード、8分割グリッド、コマ割り、番号、説明文、見出し、商品一覧、配色見本、ムードボード、ポスター、静止画コラージュ、絵コンテ風表示を作らない。\n完成物は1本の実写CM映像として出力し、画面内に文字・数字・ロゴ説明・CUT番号・パネル分割を表示しない。\n15秒、16:9、実写シネマティックCM、全8カット。\n真夏の明るい昼のビーチ。白い砂浜、透明感のある青い海、強い日差し、爽やかな風。\n登場人物は20代前半の成人男女2人。健康的でおしゃれ、自然な笑顔、友達同士の軽快で爽やかな空気感。\n商品は架空の超炭酸ペットボトル飲料 SPARKRUSH ULTRA FIZZ。\n透明ペットボトル、青いキャップ、濃いブルー主体のラベル、斜めライン、粒粒の炭酸バブル表現、勢いのある刺激的なデザイン。\n水やミネラルウォーターではなく、強い超炭酸飲料に見せること。\nラベルはエネルギッシュでおしゃれ、炭酸の刺激が伝わるグラフィック。\n実在ブランドのロゴや意匠は使わない。\n全カットで人物の顔、水着、商品ロゴ、ボトル形状、ラベル配色を統一する。\n字幕、テロップ、追加文字、別ロゴは入れない。\nCUT1 0:00-0:02\nワイドショット。真夏のビーチ。男女2人が浅瀬を走りながら海へ入っていく。水しぶきがきらめく。爽快で青春感のある始まり。\n男「うわー、最高！」\nCUT2 0:02-0:04\n2人がビーチボールで遊ぶ。明るく笑いながら投げ合う。空と海が鮮やかで、夏らしい開放感。\n女「ほら、ナイスキャッチ！」\nCUT3 0:04-0:06\n女性の上半身寄り。女性が SPARKRUSH ULTRA FIZZ のボトルをカメラに向けて掲げ、爽やかに笑う。ボトルの青いラインと粒粒の炭酸デザインがしっかり見える。\n女「これ、超炭酸だよ！」\nCUT4 0:06-0:08\n商品寄り。手でキャップをひねって開けた瞬間、プシュッという強い炭酸音。ボトル口から細かな泡と冷たいミストが弾ける。超炭酸の刺激を強く見せる。\nSE：炭酸の鋭い開栓音\nCUT5 0:08-0:10\n男性がボトルを飲む寄りショット。冷えたボトルの水滴、喉を通る爽快感、飲んだ瞬間の刺激的で気持ちいい表情。\n男「うおっ、キリッとくる！」\nCUT6 0:10-0:12\n2人のツーショット。笑い合いながらボトルを持つ。自然な距離感、眩しい日差し、夏が弾けるような空気感。\n女「すっきり爽快！」\n男「夏って感じ！」\nCUT7 0:12-0:14\n海辺の商品イメージカット。手前または岩場近くに SPARKRUSH ULTRA FIZZ のボトル。背景の海ではイルカの群れが数頭ジャンプしている。爽やかで開放的な奇跡のような演出。海しぶきと太陽光がきらめく。\nNA「超炭酸で、リフレッシュ！」\nCUT8 0:14-0:15\nエンドカット。海を背にして並ぶ2人、または海辺に座る2人の後ろ姿。画面の手前または横に商品ボトルを大きく配置。最後は商品が主役。\n2人「スパークラッシュ！」\n映像トーン：高級感のある夏の飲料CM、爽快、青春、開放感、清潔感、ファッション広告のような洗練。\nカメラ：ワイド、ミディアム、商品寄り、人物寄りをテンポよく切り替える。\n音：波音、軽快なサマーポップ、ビーチボールの軽い音、炭酸の開栓音、泡が弾ける音。\n口パクは日本語セリフに自然に合わせる。\n強い禁止事項\nイメージボードのムードボード自体を再現しない\n8分割パネル、コマ割り、静止画コラージュにしない\n番号、見出し、解説文、配色パレット、商品比較図を表示しない\nポスター、絵コンテ、広告ボード、資料画像のようにしない\n1枚絵の資料ではなく、自然な連続CM映像として出力する",
+  "source": "apimodels",
+  "description": {
+   "en": "",
+   "vi": ""
+  },
+  "mode": "",
+  "inputs": [],
+  "lang": "cjk",
+  "media": {
+   "video": true,
+   "refs": []
+  },
+  "credit": {
+   "author": "@mi7_crypto",
+   "authorUrl": "https://x.com/mi7_crypto",
+   "postUrl": "https://x.com/mi7_crypto/status/2083042578883383681"
+  },
+  "genMode": ""
+ },
+ {
+  "id": "apim_h3_08_photoreal_",
+  "category": "motion",
+  "title": {
+   "en": "Photoreal Character Turnaround Sheet",
+   "vi": "Bảng xoay nhân vật ảnh thật"
+  },
+  "author": "@aiehon_aya",
+  "authorUrl": "https://x.com/aiehon_aya",
+  "postUrl": "https://x.com/aiehon_aya/status/2082501605803597837",
+  "aspectRatio": "16:9",
+  "durationSec": null,
+  "prompt": "※実写ver。アニメキャラの場合はリプ参照（↓）\n──────────────────\n【スタイル指定】\n- 添付画像のデザイン（衣装・髪型・体格・配色）を完全に維持したまま、実在の人物が衣装を着用して撮影したようなフォトリアルな実写に変換する\n- 生地・肌・髪・金属などの質感は写真として自然なリアリティで再現する\n- デザインそのものの変更（衣装や小物の追加・削除）はしない\n- スタジオ写真撮影のような自然光・均一な照明にする\n【共通ルール】\n- SHOT区切りのみで進行する（秒数指定なし）\n- 各SHOTの最後は静止カットで終える。滑らかな変形ではなく静止→カットで切り替える\n- 各SHOTの画面には、そのSHOTで指定された要素だけを映す。それ以外の角度・別バージョンの絵を混ぜない\n- 背景は無地の単色スタジオ背景（白またはライトグレー）に統一する\n- 字幕・テキスト・ロゴ・透かしは表示しない\nSHOT 1：正面の立ち姿と、その顔の実写クローズアップを並べて表示する。\nSHOT 2：横向き（右）の立ち姿と、その横顔の実写クローズアップを並べて表示する。\nSHOT 3：横向き（左）の立ち姿と、その横顔の実写クローズアップを並べて表示する。\nSHOT 4：後ろ向きの立ち姿と、その後頭部の実写クローズアップを並べて表示する。\nSHOT 5：正面の立ち姿と、表情差分6パターン（普通・笑顔・怒り・驚き・悲しみ・ウインク）の実写クローズアップを並べて表示する。\nSHOT 6：正面の立ち姿と、身に着けているもの（衣装・小物・アクセサリー）の素材ディテール実写マクロ接写を並べて表示する。\nSHOT 7：正面の立ち姿・横向き（右）の立ち姿・後ろ向きの立ち姿と、正面の顔の実写クローズアップをまとめて1枚に並べる\n──────────────────",
+  "source": "apimodels",
+  "description": {
+   "en": "",
+   "vi": ""
+  },
+  "mode": "",
+  "inputs": [],
+  "lang": "cjk",
+  "media": {
+   "video": true,
+   "refs": []
+  },
+  "credit": {
+   "author": "@aiehon_aya",
+   "authorUrl": "https://x.com/aiehon_aya",
+   "postUrl": "https://x.com/aiehon_aya/status/2082501605803597837"
+  },
+  "genMode": ""
+ },
+ {
+  "id": "apim_mS4oNCuB",
+  "category": "cinematic",
+  "title": {
+   "en": "1970s Shibuya Urban-Legend Horror",
+   "vi": "Kinh dị truyền thuyết đô thị Shibuya thập niên 70"
+  },
+  "author": "@drjoetw",
+  "authorUrl": "https://x.com/drjoetw",
+  "postUrl": "https://x.com/drjoetw/status/2082669221222207488",
+  "aspectRatio": "9:16",
+  "durationSec": 15,
+  "prompt": "😱👇\n【風格】\n1970年代日本都市傳說恐怖電影（Japanese Urban Legend Horror Movie），經典日系恐怖片風格，昭和時代澀谷街景，高密度群眾演出，電影級分鏡，強烈戲劇張力，歡樂復古流行音樂逐漸扭曲變調為詭異恐怖配樂，緊湊快節奏剪輯，陰森都市怪談氛圍，9:16直式畫面。\n【音樂】\n開場：歡樂復古1970年代日本流行樂。\n中段：音樂逐漸失真、降速、出現不和諧音。\n結尾：低沉詭異弦樂、女性怪笑聲、電子故障音（Glitch）。\n【總時長】15秒，中文對話\n【場景】1970年代東京澀谷區熱鬧商店街 → 暗巷 → 都市傳說恐怖事件\n【鏡頭1（00:00 - 00:03）】\n熱鬧的1970年代澀谷街頭。  大量打扮前衛新潮的年輕男女逛街聊天。\n地面散落報紙、飲料罐與垃圾。  突然一名穿著女僕咖啡廳制服的粉紅色長髮可愛女店員從狹窄暗巷衝出來。  她身穿低胸黑色與白色相間的女僕裝，搭配白色長手套、黑色網襪與高跟鞋，臉色慘白、滿臉恐懼。  一邊奔跑一邊尖叫：\n「救命啊！有鬼！」下一秒她重重跌倒在地，當場昏迷。  周圍路人紛紛停下腳步圍觀。\n【鏡頭2（00:03 - 00:06）】\n一名醉醺醺的平頭流氓推開圍觀群眾。  肩膀露出龍紋刺青。  他粗暴地大喊：\n「滾開！」人群驚慌後退。  流氓蹲到女店員旁邊。  不耐煩地用力搖晃她肩膀：\n「小姐！妳醒醒！」\n【鏡頭3（00:06 - 00:08）】\n女店員虛弱睜開眼睛。  顫抖地說：\n「有鬼……」她艱難抬起左手。  指向旁邊漆黑暗巷。  接著再次失去意識。  流氓順勢轉頭望向暗巷。  背景音樂突然停止。\n【鏡頭4（00:08 - 00:10）】\n暗巷深處。  垃圾堆旁飄浮著一名白衣長黑髮女鬼。  長髮遮住半張臉。  蒼白雙眼死死瞪著鏡頭。  周圍空氣微微扭曲。  遠方傳來低沉詭異笑聲。\n【鏡頭5（00:10 - 00:12）】\n流氓臉部超特寫。  他震驚得不自覺張開嘴巴。  頭緩緩歪向右側。  醉意瞬間消失。  額頭冒出冷汗。\n【鏡頭6（00:12 - 00:14）】\n女鬼也做出完全相同的動作。  嘴巴慢慢張開。  頭歪向右側。  接著發出尖銳而詭異的笑聲：\n「呵呵呵呵呵……」下一秒。  女鬼突然高速朝鏡頭飛撲而來。  長髮與白衣瞬間佔滿整個畫面。\n【鏡頭7（00:14 - 00:15）】\n畫面突然發生強烈電子故障。  Glitch！  黑白噪訊瘋狂閃爍。  尖銳雜音爆發。  畫面瞬間切成全黑。  只剩女鬼最後一聲詭異笑聲在黑暗中迴盪。",
+  "source": "apimodels",
+  "description": {
+   "en": "",
+   "vi": ""
+  },
+  "mode": "",
+  "inputs": [],
+  "lang": "cjk",
+  "media": {
+   "video": true,
+   "refs": []
+  },
+  "credit": {
+   "author": "@drjoetw",
+   "authorUrl": "https://x.com/drjoetw",
+   "postUrl": "https://x.com/drjoetw/status/2082669221222207488"
+  },
+  "genMode": ""
+ },
+ {
+  "id": "apim_ghaWWRbC",
+  "category": "animation",
+  "title": {
+   "en": "Ink-wash shrimp leap into futuristic city",
+   "vi": "Tôm thủy mặc nhảy vào thành phố tương lai"
+  },
+  "author": "@nicekate8888",
+  "authorUrl": "https://x.com/nicekate8888",
+  "postUrl": "https://x.com/nicekate8888/status/2082746108493848857",
+  "aspectRatio": "16:9",
+  "durationSec": null,
+  "prompt": "水墨虾跃入未来城市——一张宣纸在夜色摩天楼之间展开，八只黑白水墨虾从纸面跃出，身体仍保留飞白与墨晕，虾须化成发光城市轨道，墨滴变成霓虹雨；画面有巨大尺度反差、强烈纵深、电影级光影和一眼停留的奇观感，不要文字、不要水印。",
+  "source": "apimodels",
+  "description": {
+   "en": "",
+   "vi": ""
+  },
+  "mode": "",
+  "inputs": [],
+  "lang": "cjk",
+  "media": {
+   "video": true,
+   "refs": []
+  },
+  "credit": {
+   "author": "@nicekate8888",
+   "authorUrl": "https://x.com/nicekate8888",
+   "postUrl": "https://x.com/nicekate8888/status/2082746108493848857"
+  },
+  "genMode": ""
+ },
+ {
+  "id": "apim_cxchqU6L",
+  "category": "ecommerce",
+  "title": {
+   "en": "ASMR multi-cut overseas snack unboxing anime",
+   "vi": "Anime ASMR unboxing snack nước ngoài nhiều cảnh"
+  },
+  "author": "@aiehon_aya",
+  "authorUrl": "https://x.com/aiehon_aya",
+  "postUrl": "https://x.com/aiehon_aya/status/2082768164413428159",
+  "aspectRatio": "16:9",
+  "durationSec": null,
+  "prompt": "日本のフルカラーアニメ映画風、シネマティックな高品質映像。BGMなし、セリフなし、字幕なし、文字なし、環境音のみ。\n# 映像スタイル\n添付イラストのキャラクター本人感を最優先。\n過度な写実化・厚塗り・複雑な陰影は禁止。\nキャラクターの顔立ち、髪型、体型、衣装、アクセは変えない。\n# 制約\n全カットで画角とアングルを変えて単調にしない。\n文字・ロゴは入れない。自然な生活感のある仕草にする。各カットは完全な固定カメラ（カメラワーク・カメラ移動なし）。フェードやモーフィングは禁止し、明確なハードカットで瞬時に切り替える。所作は極めてゆっくり、静かに、最小限に。「キャラクターの顔」と「手元の細かい作業」は絶対に同じカットに入れない。\n# 登場人物\n## 女性\n添付イラストの成人女性。\n# 情景\n夜のリビングのローテーブル。ランプの光の輪の中に段ボールや包みが待っている。\n# シーン\n女性が海外のお菓子詰め合わせを開封する。テープ、緩衝材、包み紙。開ける音の快感を最大限に立てながら、中身が見えるまでの期待感で引っ張る。開封の工程と仕草を交互に見せる。\nこの1本だけの見せ場として、「カラフルな包み紙がテーブルに広がっていく俯瞰」を後半のカットに必ず入れる。\ncut1:\n超クローズアップ。ランプの光の輪の中、箱のテープにカッターの刃が当たる。\n環境音：刃を出すカチカチという音だけ。\ncut2:\n超クローズアップ、真上俯瞰。テープがすーっと切れていく。\n環境音：テープの切れる音。\ncut3:\nクローズアップ、正面。瞳がきらきらして、蓋に手をかける。\n環境音：夜の静けさ。\ncut4:\nクローズアップ、箱の内側視点。蓋が開き、覗き込む顔が現れる。\n環境音：段ボールの軋み。\ncut5:\n超クローズアップ、手元。緩衝材のプチプチを一枚めくる。指がひとつだけぷちんと潰す。\n環境音：プチプチの音を主役に。\ncut6:\nクローズアップ、横顔。息を止めて中を見つめる。\n環境音：静けさ。\ncut7:\n超クローズアップ。薄紙を一枚ずつぺりぺりと剥がしていく。\n環境音：薄紙の繊細な音。\ncut8:\n超クローズアップ。海外のお菓子詰め合わせの一部がちらりと見える。まだ全体は見せない。\n環境音：包装の最後の音。\ncut9:\nミディアム、真後ろ。ランプの光の輪の中で開封を続ける後ろ姿。\n環境音：包みの音、夜の静けさ。\ncut10:\nクローズアップ、俯瞰。海外のお菓子詰め合わせが姿を現す。指先でそっと持ち上げる。\n環境音：包装が落ちる音。\ncut11:\nクローズアップ、横顔。海外のお菓子詰め合わせをランプの光にかざしてうっとり見つめる。\n環境音：静けさ。\ncut12:\n超クローズアップ、手元。付属品や説明書をぱらりとめくって確認する。\n環境音：紙のめくれる音。\ncut13:\nクローズアップ、斜め上。海外のお菓子詰め合わせを部屋の定位置にそっと置き、角度を整える。\n環境音：置く小さな音。\ncut14:\n超クローズアップ。空箱をばりばりと畳む。開封の儀の後片付け。\n環境音：段ボールの音。\ncut15:\nワイド、テーブル全景。開け終わった包みと戦利品が光の輪に残る。\n環境音：夜の静けさ。\ncut16:\nワイド。一番かわいい缶を棚に飾る。ランプの光の中、満足の空気が満ちる。\n環境音：静寂へフェード。",
+  "source": "apimodels",
+  "description": {
+   "en": "",
+   "vi": ""
+  },
+  "mode": "",
+  "inputs": [],
+  "lang": "cjk",
+  "media": {
+   "video": true,
+   "refs": []
+  },
+  "credit": {
+   "author": "@aiehon_aya",
+   "authorUrl": "https://x.com/aiehon_aya",
+   "postUrl": "https://x.com/aiehon_aya/status/2082768164413428159"
+  },
+  "genMode": ""
+ },
+ {
+  "id": "apim_mulPDocP",
+  "category": "audio",
+  "title": {
+   "en": "Watercolor anime fetish montage rapid cuts",
+   "vi": "Montage anime màu nước cắt nhanh"
+  },
+  "author": "@yachimat_manga",
+  "authorUrl": "https://x.com/yachimat_manga",
+  "postUrl": "https://x.com/yachimat_manga/status/2082799648528335119",
+  "aspectRatio": "9:16",
+  "durationSec": 5,
+  "prompt": "style:\n  visual: \"日本の水彩画風フルカラーアニメ\"\n  editing: \"0.5秒おきの高速カット割り\"\n  animation: \"作画枚数多め、滑らかな24fps\"\n  tone: \"官能的だが直接的にはせず、温度・湿度・心拍を映像化する\"\nproject:\n  id: \"fetish_montage_v3_with_broll\"\n  format: \"vertical_9x16\"\n  fps: 24\n  shot_duration: \"0.5s\"\n  total_shots: 28\n  total_duration: \"14s\"\n  ratio: \"fetish 22 : b-roll 6（約3.5:1）\"\nbroll_philosophy:\n  role: \"呼吸・象徴・感情の外部化\"\n  placement: \"フェチ的なカットが連続した直後、または感情の転換点\"\n  rule: \"直接的な性的表現は避け、心拍・温度・湿度・緊張を伝える\"\nbroll_categories:\n  nature_micro:\n    - \"雨粒が窓を一筋伝う\"\n    - \"蝋燭の炎が揺れる。息で消えそうな瞬間\"\n    - \"氷が割れる音と共に、ひびが走る\"\n    - \"花弁が一枚、テーブルへ落ちる\"\n    - \"蜘蛛の巣の水滴が揺れる\"\n    - \"煙草の灰が静かに落ちる\"\n    - \"湯気が立ち上り、消える\"\n    - \"夜の街灯の周りを虫が一匹飛ぶ\"\n  object_symbol:\n    - \"壁時計の秒針のアップ。止まりそうに見える\"\n    - \"コーヒーの黒い表面に天井が映る\"\n    - \"床に脱ぎ捨てられた靴。片方だけ\"\n    - \"誰もいないベッドの皺\"\n    - \"鳴り続ける電話。誰も出ない\"\n    - \"灰皿の吸い殻が二本。片方には口紅\"\n    - \"ドアの隙間から漏れる光\"\n    - \"鏡に映る空の椅子\"\n  texture_landscape:\n    - \"夜の濡れた路面。ヘッドライトが滲む\"\n    - \"ネオンサインのフリッカー\"\n    - \"シーシャの炭が赤く脈打つ\"\n    - \"金属表面に映る歪んだ顔\"\n    - \"革張りソファに沈む手の跡\"\n    - \"湯船の水面が揺れる\"\n  body_abstract:\n    - \"心臓の鼓動に合わせ、布団が微かに上下する\"\n    - \"人物の影だけが壁を伝う\"\n    - \"ガラス越しの人物の輪郭。ピントがずれる\"\n    - \"水滴の中に顔が映り込む\"\nsequence:\n  - id: 01\n    type: \"fetish\"\n    action: \"髪を持ち上げ、うなじを晒す\"\n    scale: \"macro\"\n  - id: 02\n    type: \"fetish\"\n    action: \"下唇を噛み、ゆっくり離す\"\n    scale: \"extreme_macro\"\n  - id: 03\n    type: \"b-roll\"\n    category: \"object_symbol\"\n    action: \"壁時計の秒針が、カチッと一秒進む\"\n    intent: \"時間の伸縮を意識させる\"\n  - id: 04\n    type: \"fetish\"\n    action: \"袖口のボタンを外し、袖を一度まくる\"\n    scale: \"macro\"\n  - id: 05\n    type: \"fetish\"\n    action: \"襟がわずかにずれ、鎖骨に影が落ちる\"\n    scale: \"macro\"\n  - id: 06\n    type: \"fetish\"\n    action: \"グラスの縁を指先でなぞる。結露が一滴落ちる\"\n    scale: \"extreme_macro\"\n  - id: 07\n    type: \"b-roll\"\n    category: \"nature_micro\"\n    action: \"蝋燭の炎が、一度だけ大きく揺れる\"\n    intent: \"呼吸の比喩。緊張のピーク\"\n  - id: 08\n    type: \"fetish\"\n    action: \"イヤリングを外す。直後に髪が肩へ落ちる\"\n    scale: \"macro\"\n  - id: 09\n    type: \"fetish\"\n    action: \"ヒールから足が抜ける\"\n    scale: \"macro\"\n  - id: 10\n    type: \"fetish\"\n    action: \"喉が小さく動く。嚥下\"\n    scale: \"extreme_macro\"\n  - id: 11\n    type: \"b-roll\"\n    category: \"texture_landscape\"\n    action: \"シーシャの炭が、脈打つように赤く光る\"\n    intent: \"心拍の外部化\"\n  - id: 12\n    type: \"fetish\"\n    action: \"口元から煙をゆっくり吐く\"\n    scale: \"macro_side\"\n  - id: 13\n    type: \"fetish\"\n    action: \"薄手の布越しに、肩甲骨が静かに動く\"\n    scale: \"macro_back\"\n  - id: 14\n    type: \"fetish\"\n    action: \"ペンのキャップを歯で咥え、ゆっくり引き抜く\"\n    scale: \"extreme_macro\"\n  - id: 15\n    type: \"b-roll\"\n    category: \"body_abstract\"\n    action: \"布団が呼吸に合わせて微かに上下する\"\n    intent: \"緊張の小休止。まだ続くという予告\"",
+  "source": "apimodels",
+  "description": {
+   "en": "",
+   "vi": ""
+  },
+  "mode": "",
+  "inputs": [],
+  "lang": "cjk",
+  "media": {
+   "video": true,
+   "refs": []
+  },
+  "credit": {
+   "author": "@yachimat_manga",
+   "authorUrl": "https://x.com/yachimat_manga",
+   "postUrl": "https://x.com/yachimat_manga/status/2082799648528335119"
+  },
+  "genMode": ""
+ },
+ {
+  "id": "apim_PS02w8j4",
+  "category": "animation",
+  "title": {
+   "en": "Hand-Drawn Ginger Pork Cooking Anime",
+   "vi": "Anime nấu thịt heo xào gừng vẽ tay"
+  },
+  "author": "@ozuozuai99",
+  "authorUrl": "https://x.com/ozuozuai99",
+  "postUrl": "https://x.com/ozuozuai99/status/2082828444484960451",
+  "aspectRatio": "16:9",
+  "durationSec": 15,
+  "prompt": "手描きの日本の2Dアニメ、温かみのあるセルシェーディング、居心地のいい町の定食屋の厨房。15秒、ゆっくり見せる6カット、各約2.5秒。寄りのクローズアップ中心で、食欲をそそる濃厚な演出：脂、照り、湯気、たっぷりの量。\n1 まな板を真上から：包丁が厚切りの豚ロースを切る、白い脂の霜降り。\n2 斜め45度：熱々の鉄のフライパンに肉を並べ入れる、油が弾け、縁が反り返る。\n3 マクロ：脂が溶け出し、深い焼き色の焦げ目が広がる。\n4 寄り：濃い生姜醤油ダレを回し入れる、ぐつぐつと煮立って濃厚な照りのタレになり、肉に絡みつく。\n5 横から：フライパンを揺すり、すべての肉に鏡のような照りがまとわり、湯気が立ち上る。\n6 ラスト：湯気の立つ白ご飯の丼に生姜焼きを山盛りにのせ、タレが米粒の間へ垂れていく。\n料理と手元のみ。顔なし、食べるシーンなし、文字なし、BGMなし、ナレーションなし。実写風なし、3Dなし。",
+  "source": "apimodels",
+  "description": {
+   "en": "",
+   "vi": ""
+  },
+  "mode": "",
+  "inputs": [],
+  "lang": "cjk",
+  "media": {
+   "video": true,
+   "refs": []
+  },
+  "credit": {
+   "author": "@ozuozuai99",
+   "authorUrl": "https://x.com/ozuozuai99",
+   "postUrl": "https://x.com/ozuozuai99/status/2082828444484960451"
+  },
+  "genMode": ""
+ },
+ {
+  "id": "apim_IdYpRUa1",
+  "category": "cinematic",
+  "title": {
+   "en": "Lilia Astra title sequence",
+   "vi": "Title sequence Lilia Astra"
+  },
+  "author": "@haruuraeadss",
+  "authorUrl": "https://x.com/haruuraeadss",
+  "postUrl": "https://x.com/haruuraeadss/status/2082945363431080299",
+  "aspectRatio": "16:9",
+  "durationSec": null,
+  "prompt": "高品質アニメ映像。\nExpression progression: eyes -> brows -> eyelids -> mouth -> gaze.\n【参照画像とキャラクター固定】\nSame girl, same person, same identity in every shot. 画像1を、この少女の顔・目・髪型・髪色・衣装・装飾・体型・装備を含む唯一の最優先参照として使用する。\n全カットで、画像1と同じ一人の少女を厳密に維持する。\n画像1内の文字、UI、レイアウト、背景、ポーズ見本、表情一覧、および小さく描かれた顔の差異は参照しない。\n画像1に複数の表情差分や小さな顔見本が含まれていても、それらを別人として扱わず、同一人物のバリエーション情報としてのみ扱う。\n顔の平均化、別人化、衣装交換、複製、クローン、追加人物を禁止。\n許可する変化は、表情、視線、口元、ポーズ、呼吸、自然な髪・布の動きのみ。\n表情変化は必ず 「目 -> 眉 -> まぶた -> 口 -> 視線」 の順序で見せる。\n顔は画像1の\n小さく柔らかな卵型、繊細な顎、紫から青へ層状に変化する大きな虹彩、マゼンタとシアンの反射、多層のキャッチライト、細い上まつ毛、淡い肌、長い桃色のツインテール、斜め前髪、頭の紫花と濃紫リボン\nを厳密に維持する。\n衣装・装飾・体型・装備は画像1の\n深い紫のショートケープ、古金の縁取りと星花刺繍、白いフリルブラウス、黒紫のコルセット、ダークブラウンの革ベルト、短い重ねスカート、白いサイハイ、紫黒と古金のブーツ、紫水晶の胸飾り\nを維持する。\n 画像1で明確に確認できる形状・配色・材質を最優先し、不明瞭な箇所のみ同一デザインとして自然に補完する。\n小道具は、金の透かし彫りと紫水晶を持つダークブラウンの革装丁の魔導書、腰の紫色のガラス小瓶、紫水晶のチャーム。\n魔導書は一冊だけで、開始時は閉じており、常に左手で支え、右手だけで表紙を開き紙のページを一枚めくる。\nガラス小瓶とチャームは腰に固定したまま使用しない。\n【固定レンダリング：3D toon/cel-look】\n細く制御された色付き線画。線色は黒ではなく深い紫褐色。\n陰影は2〜3層のトゥーン影と柔らかな中間グラデーション。\n配色は桃色、深紫、白、古金、宝石のマゼンタを主軸にする。\n瞳は多層、髪は真珠質、金属と水晶は局所的な鋭いハイライト。\n肌はマット、髪は絹、ケープは織布、ブラウスは薄い白布、ベルトと魔導書は革、装飾は古金、宝石とガラス小瓶は透明結晶として材質を分離する。\n顔、まつ毛、髪束、フリル、金装飾、革、魔法図形、濡れた石床、真鍮扉、アーチ窓は高密度に描写する。\n太い輪郭線、単層だけの平坦なセル塗り、汎用的な3Dアニメ顔、滑らかなプラスチックCG素材、低密度背景、実写、半実写、鈍い色、画風混在を禁止。\n【世界とトーン】\n真夜中の王立魔導文書庫。\n濡れた黒い石床、背の高いアーチ窓、真鍮の星形錠、奥まで続く暗い書架。\n黒い余白、アイボリー、深紫、マゼンタ、古金の幾何学色面を使った映画ティザー。\n比率はサスペンス60%、ノワールジャズ40%。\n神秘的、都会的、冷静、俊敏。\nホラー、重い悲劇、陽気なジャズMVにはしない。\n物語の核は「魔導書の紋章から星が一つ盗まれた」。\n戦闘ではなく、少女が異変を発見し、残された魔法痕跡を追う瞬間を見せる。\n【カメラと編集設計】\nCamera state: position=three-quarter and over-shoulder; height=eye level then low angle; direction=tracks then push-in; subject scale=close-up to medium; vanishing axis=archive depth axis; purpose=to show the clue chain and reveal the missing star. Narrow split panels open into a vast archive space, creating a clear scale change.\nカメラは各動作の因果を見せるために動く。\n瞳の異変は極端な寄り、手掛かりの進行は左右非対称の分割画面、扉の解錠は低い追従、真相への接近は奥行き方向の押し込み、最後の決意は胸上の3/4正面で停止する。\n動きの最中も被写体を画面中央へ固定し続けず、斜め構図、前景遮蔽、奥行き差を使う。\nソフトディゾルブと液体モーフを使わず、すべて硬い切替、マスク、ワイプ、タイル再配置でつなぐ。\n黒画面にアイボリーの細い線が一本だけ引かれ、その線が画像1の右目の輪郭へ変わる。\n極端な顔の寄り。\n虹彩に映る魔導書の星花紋章から、星が一つだけ音もなく消える。\n少女は「目 -> 眉 -> まぶた -> 口 -> 視線」の順に、ごく小さな微笑みから警戒した静かな表情へ変わり、視線を画面右下の魔導書へ落とす。\n虹彩の円形反射が古い天文レコード盤のように回転し、硬い円形ワイプとなる。\n画面が左右非対称の二分割へスナップする。\n左の細いパネルには閉じた魔導書の金具の接写。\n右の大きなパネルには濡れた石床を進む彼女のブーツと長いケープの裾。\n深紫とマゼンタの色面、細い古金フレームが一片ずつ組み上がる。\n少女が右手の指先を魔導書の紫水晶の数センチ手前で止めると、水晶が一度だけ自発的に点灯し、その点灯を起点に細いマゼンタの魔法痕跡線が水晶から扉へ伸びる。\n扉は痕跡線が到達する前まで閉じたまま。\n痕跡線の先端が扉中央の星形錠の中心と正確に重なると、真鍮の錠が一度だけ回転して扉が垂直に開く。\n扉の縦線がそのまま硬い縦カットになる。\n開いた暗がりから、人物ではない平面的な長い影が石床を横切り、全画面を一度だけワイプする。\nこの影に顔、身体、立体感を与えない。\n影が抜けると、少女は左手で支えた一冊の魔導書を右手で開き、紙のページを一枚だけめくる。\n紙のページ端が次の画面を硬く切る。\nページには幾何学的な星図だけが浮かび、読める文字は出さない。\n三つの細いフレームがタイル状にスナップして、瞳の反射、星形錠、途切れたマゼンタの痕跡を同時に示す。\n少女は一歩だけ進み、低い背面カメラが肩越しまで上昇して、奥の巨大なアーチ窓と一点だけ欠けた星座を見せる。\n巨大な英字「A」の輪郭が画面外から滑り込み、その内部だけが次の映像を見せる硬い文字マスクになる。\n少女が右手の掌を上へ向けると、その掌の上に星花型の魔法陣が一つだけ展開する。\n魔法陣は古金の外周、マゼンタの細線、紫水晶色の中心で構成され、一点の星だけ黒く欠けている。\n欠けた一点から赤紫の直線が横へ走り、胸上の構図へ硬く切る。\nカメラが魔法陣から顔へ短く鋭く振る。\n少女は「目 -> 眉 -> まぶた -> 口 -> 視線」の順に異変を理解し、怯えず、静かな決意へ変わる。\n魔法陣を消し、右手で魔導書を閉じ、閉じた表紙へ右手を置く。\n魔導書の紫水晶と胸飾りだけが一度ずつ呼応して点灯する。\n最後は黒、深紫、アイボリーの矩形タイルが硬くスナップして一枚の画面を組み上げる。\n終端タイプはポーズロック（pose lock）。\n左に少女の胸上3/4正面、右に十分な黒い余白。\n右側に英字タイトル 「LILIA ASTRA: THE STOLEN STAR」 を一度だけ、完全に正しい綴りで表示する。\nその下に 「COMING SOON」 を一度だけ表示する。\nほかの文字、役職、名前、漢字、ひらがな、カタカナ、疑似文字、読めない記号は一切表示しない。\n少女は一冊の閉じた魔導書を左手で支え、右手を表紙に置いたまま静止する。\n平面的な影は画面右外縁で止まり、新しい要素は入らない。\nタイトルを二秒間完全に保持する。\n緊張した和音と一発のドラムヒットの余韻が終わる正確なフレームでカットする。\n【音響】\n完全オリジナルの15秒タイトル音楽。既存曲や既存メロディを模倣しない。\n低いドローン、緊張した弦のピチカート、冷たいシンセパルス、低いキック、疎らなブラシ、短いウォーキングベース断片、短いバリトンサックス、クリップしたブラスアクセント。\n冒頭は低域とハイハット。\n低いキックは3秒付近。\nジャズベースの動きは6秒付近。\n短いサックスとブラスのリフは10秒付近。\n13秒で緊張した和音と一発のドラムヒットを置き、その余韻を15秒まで保持する。\n台詞、ナレーション、歌唱なし。\n効果音は見える動作に同期し、その瞬間だけ鳴る。\n革装丁の魔導書が開閉する瞬間だけ、短い革のきしみ。\n紙のページ一枚がめくれる瞬間だけ、乾いた紙の音。\n真鍮の星形錠が回転する瞬間だけ、短く乾いた真鍮の鳴り。\nブーツが濡れた石床へ着地する瞬間だけ、湿った石床の足音。\nケープと髪が動く瞬間だけ、軽い布の擦れ。\n紫水晶が点灯する瞬間だけ、細い結晶共鳴音。\n材質を混同しない。\n【禁止】\n別人化、顔崩れ、目色変更、髪型変更、衣装簡略化、衣装交換、アクセサリー欠落、装備の増殖、魔導書の複製、手指破綻、余分な腕、追加人物、群衆、クローン、顔平均化、戦闘、爆発、流血、恐怖顔、悪霊、ホラー照明、実写化、半実写化、画風変化、太い輪郭線、低詳細背景、プラスチック質感、ソフトディゾルブ、液体モーフ、過剰な被写界深度、手ぶれ、読めない文字、綴り間違い、重複タイトル、字幕、ロゴ、透かし。",
+  "source": "apimodels",
+  "description": {
+   "en": "",
+   "vi": ""
+  },
+  "mode": "",
+  "inputs": [],
+  "lang": "cjk",
+  "media": {
+   "video": true,
+   "refs": []
+  },
+  "credit": {
+   "author": "@haruuraeadss",
+   "authorUrl": "https://x.com/haruuraeadss",
+   "postUrl": "https://x.com/haruuraeadss/status/2082945363431080299"
+  },
+  "genMode": ""
+ },
+ {
+  "id": "apim_Ox19lf8Z",
+  "category": "animation",
+  "title": {
+   "en": "Greenhouse tea isekai anime",
+   "vi": "Anime isekai trà trong nhà kính"
+  },
+  "author": "@haruuraeadss",
+  "authorUrl": "https://x.com/haruuraeadss",
+  "postUrl": "https://x.com/haruuraeadss/status/2082798959014064531",
+  "aspectRatio": "16:9",
+  "durationSec": null,
+  "prompt": "高品質アニメ映像。\n作品トーンと世界観は、透明感のある夏のガラス温室から、紅茶の渦の内側に存在するオリジナルの小さな不思議の国へ連続する、上品で夢幻的な叙情ファンタジー。澄んだ白、水色、琥珀色、淡い金色を主役にし、怖さや混沌ではなく、好奇心、浮遊感、静かな高揚を描く。今回は1枚のソース参照画像image1のみを使用し、image1をキャラクター、衣装、2D手描き画風、配色、現実側のガラス温室背景の唯一の参照として扱う。\n【同一人物固定】\nimage1と完全に同じ一人の少女を全編で維持する。小さく繊細な同じ顔立ち、大きな青緑色の宝石のような瞳、同じ目の形、多層の虹彩と白いキャッチライト、淡い頬、細いまつ毛、真珠のような白銀髪、柔らかな長いウェーブ、編み込みを含むまとめ髪、淡い金色のリボン、青い雫形の髪飾りを固定する。表情変化でも目、眉、まぶた、口、視線の順を守る。白い長袖のハイネックドレス、淡い水色の刺繍と縁取り、淡い金色の腰リボン、華奢で上品な体格、白・水色・淡い金色の人物固有配色を変えない。現実の温室と不思議の国に同時に複数の少女を存在させず、光学トランジションの前後で同じ一人の少女として連続させる。変えてよいのは表情、視線、呼吸、歩行、手の動き、髪と袖とスカート裾の自然な揺れだけ。別人化、顔の平均化、衣装変更、装飾欠落、分身、余分な人物、既存作品を想起させる有名キャラクターを出さない。\n【2D hand-drawn／2D手描き画風固定】\nimage1の細く淡い青灰色と暖灰色の線、透明感のある二層以上の色影、柔らかなグラデーション、白・ミルキーブルー・澄んだ空色・琥珀色・淡い金色の明るい配色を全編で維持する。白銀髪の真珠質ハイライト、瞳の多層反射、肌の淡い発光感、ドレスの皺と刺繍、花、葉、ガラス、白い家具、床タイル、紅茶まで高密度の手描き筆致で描く。布は柔らかく、ガラスは透明で硬質、紅茶は澄んだ琥珀色、異世界の道と建築は半透明の白いガラス質として素材を描き分ける。太い輪郭にしない。簡略TVアニメにしない。平坦な単層セル影にしない。低密度背景にしない。滑らかなCG・3Dにしない。半写実にしない。実写にしない。くすんだ色や画風混合にしない。\n【舞台と小物固定】\n現実側はimage1と同じ明るいガラス温室。白い窓枠と屋根骨格、青空と白い雲、外の緑と白い花、白い丸テーブル、白い金属椅子、淡い青灰色の床タイルを維持する。開始時はimage1の少女の顔、目、髪、衣装、温室背景、白・水色・淡い金色の配色、明るさ、柔らかなコントラストを維持し、追加される小物はティーポットだけ。小物の所有者はimage1の少女一人だけ。透明なガラスのティーポット一つ、透明なティーカップ一つ、透明なソーサー一つだけを使う。開始状態ではティーカップはソーサー中央に置かれ、底に浅い琥珀色の紅茶が入っている。少女は右手でティーポットの取っ手を持ち、左手はソーサーの横へ軽く添える。ティーポット、カップ、ソーサーを増殖、交換、変形させない。不思議の国ではこれらを人物や巨大な小道具として複製しない。\n少女の表情は、目→眉→まぶた→口→視線の順に変化させる。まず左右の目の中にある小さなキャッチライトがわずかに明るくなり、次に眉が少し上がり、その後まぶたが柔らかく開き、口元に小さな驚きと微笑みが生まれ、最後に視線が渦の中心へ下がる。反射線、窓枠、光点を顔中央へ重ねず、顔と両目を常に明瞭に保つ。\n最初のカメラ高は白い丸テーブルと同じ低い位置。少女の斜め前から、手前にティーカップとソーサーを大きく、奥に少女の胸上と顔を明瞭に置く。背景消失軸は床タイルと右側の窓枠が温室奥へ斜めに伸びる方向へ揃える。この構図の目的は、少女、ポット先端、カップ中央の着水点を最初の一画で同時に読ませること。\n少女が右手首だけをゆっくり傾けると、ティーポットの先端から一筋だけの琥珀色の紅茶がカップ中央へ落ちる。ポット先端、液体の筋、着水点を一画で読み取れるようにし、紅茶はテーブル外へこぼれない。この着水点を変化の起点とする。着水点から一つの時計回りの渦が生まれ、青空の反射と淡い金色の日差しを巻き込みながら、琥珀、青、白の三色の螺旋へ育つ。\nカメラはテーブルと同じ低い位置からカップの斜め上へ滑らかに上がり、人物サイズを胸上の中景から背景の顔が読める近景へ保ったまま、紅茶面へ近づく。背景消失軸は温室奥から円形のカップ中央へ収束させる。この移動の目的は、現実の着水点を異世界への案内線へ変えること。\n螺旋の半分がまだ琥珀色の紅茶、もう半分が細い光の道になっている形成中の中間状態を短く明瞭に見せる。続いて螺旋が画面全体を満たした瞬間、その同じ回転方向、曲率、色の並びを保ったまま、一本の光の道へ完成する。暗転、瞬間移動、破裂、液体の中を溺れる表現にせず、紅茶面から異世界の俯瞰へ連続する光学的な形状一致として接続する。\n変化後の完成状態である不思議の国は、傾いた白いガラスの庭道、空中でゆっくり反転する白い花壇、輪のように連なる温室アーチ、上下が穏やかに入れ替わる空色の庭で構成する。文字盤、数字、看板、動物、人型住民は出さない。\nカメラ高は少女の胸より少し低い位置へ移り、同じ少女の斜め前を後退しながら、胸から膝までの中景で追従する。背景消失軸は琥珀と青の光の道が円形アーチの奥へ伸びる方向へ揃える。この移動の目的は、紅茶の渦だった曲線が少女を導く冒険路へ変わったことを読ませること。\n少女は光の道に沿って軽やかに三歩進み、第一歩で傾いた庭道へ乗り、第二歩で浮かぶ白い床片を渡り、第三歩で円形のガラスアーチをくぐる。各足裏を順に接地させ、髪、袖、スカート裾は歩みより少し遅れて同じ風向きへ揺れる。滑走、飛行、急回転に見せない。\n少女がアーチをくぐると、周囲の白い花が外側から順に淡い水色へ染まり、頭上のガラス骨格がゆっくり四分の一回転して上下の庭をつなぐ。少女自身は直立を保ち、重力方向を急変させない。\nカメラは胸より少し低い位置を保って少女の肩越しへ短く回り込み、人物サイズを胸上に寄せる。背景消失軸は前方の光の道が作る一つの円へ収束させる。この移動の目的は、少女の冒険の先に帰還路が生まれることを示すこと。光の道は再び一つの時計回りの螺旋となり、その円周が現実のティーカップの縁と同じ形、大きさ、角度へ整列する。\nカメラは螺旋の中心を通り、琥珀色の紅茶面の極近景から現実の温室へ滑らかに引く。カメラ高はテーブルと同じ低い位置へ戻り、人物サイズを奥の胸上へ戻す。背景消失軸は円形のカップ中央から床タイルと窓枠が温室奥へ伸びる開始方向へ戻す。この移動の目的は、異世界の冒険を一杯の紅茶の中へ回収し、少女の感情へ報酬を返すこと。同じ少女が帰還した連続性を保つ。\n終端では少女が右手のティーポットを垂直へ戻し、紅茶の筋をきれいに止め、ティーポットを胸より低い高さで保持する。左手はソーサー横に添えたまま。カップ内の最後の渦がゆっくり縮み、中心に青と淡い金の小さな反射一つだけを残して静止する。\nカメラはテーブル高さの斜め前で、手前の静かな紅茶面、奥の少女の三分の四顔と穏やかな微笑みを同時に読ませる。紅茶面の反射が完全に止まり、少女の両目、ティーポット、カップ、渦の名残が一画で明瞭になった瞬間に切る。\n液体を黒く濁らせない。渦を黒い穴、荒れた水面、別形状の物体へ変えない。顔を歪ませない。手指を増やさない。余分な人物や余分な食器を出さない。ストロボ、激しい明滅、強い水平フレア、白飛びなし。文字、字幕、ロゴ、透かしなし。BGMなし、音楽なし、環境音なし、フォーリーなし、音響生成なし。",
+  "source": "apimodels",
+  "description": {
+   "en": "",
+   "vi": ""
+  },
+  "mode": "",
+  "inputs": [],
+  "lang": "cjk",
+  "media": {
+   "video": true,
+   "refs": []
+  },
+  "credit": {
+   "author": "@haruuraeadss",
+   "authorUrl": "https://x.com/haruuraeadss",
+   "postUrl": "https://x.com/haruuraeadss/status/2082798959014064531"
+  },
+  "genMode": ""
+ },
+ {
+  "id": "apim_HxDM0AMn",
+  "category": "cinematic",
+  "title": {
+   "en": "#MiniMaxH3",
+   "vi": "#MiniMaxH3"
+  },
+  "author": "@mugi_AI_Art",
+  "authorUrl": "https://x.com/mugi_AI_Art",
+  "postUrl": null,
+  "aspectRatio": "16:9",
+  "durationSec": null,
+  "prompt": "Hailuoの新モデルMiniMaxH3の早期アクセスをさせていただいたので早速試してみまし…\n#MiniMaxH3\nHailuoの新モデルMiniMaxH3の早期アクセスをさせていただいたので早速試してみました❣️\n悪くはないけどもう少し激しく躍らせてみたいな✨\n色々試してみます☺️\n@Hailuo_AI https://t.co/ib0fff7mmZ",
+  "source": "apimodels",
+  "description": {
+   "en": "",
+   "vi": ""
+  },
+  "mode": "",
+  "inputs": [],
+  "lang": "cjk",
+  "media": {
+   "video": true,
+   "refs": []
+  },
+  "credit": {
+   "author": "@mugi_AI_Art",
+   "authorUrl": "https://x.com/mugi_AI_Art",
+   "postUrl": null
+  },
+  "genMode": ""
+ },
+ {
+  "id": "apim_Q4kVQSXl",
+  "category": "ecommerce",
+  "title": {
+   "en": "Mecha Mobile Game Season Ad",
+   "vi": "Quảng cáo mùa mới game mobile mecha"
+  },
+  "author": "@liyue_ai",
+  "authorUrl": "https://x.com/liyue_ai",
+  "postUrl": "https://x.com/liyue_ai/status/2083128868668666020",
+  "aspectRatio": "16:9",
+  "durationSec": 15,
+  "prompt": "生成一支15秒16:9横版科幻机甲手游新赛季商业广告。\n虚构游戏品牌 MECHA FRONT，主角是银白与深蓝配色的限定机甲 AETHER-07，机体外形、装甲结构和配色在全片保持一致。\n画面只允许出现以下文字，且必须拼写完全正确，MECHA FRONT、AETHER-07、限定机甲、攻击 920、机动 88、现在解锁。  \n0至4秒，\n黑色未来机库中，一束冷白顶光依次扫过机甲头部、胸甲与机械关节，镜头从低机位快速推进，完整机体从黑暗中亮起，MECHA FRONT 与 AETHER-07 清晰出现。  \n4至10秒，\n机甲在原地缓慢转身，半透明蓝色游戏 UI 围绕机体依次展开。左侧显示限定机甲，右侧准确显示攻击 920 与机动 88，三枚无文字技能图标顺序点亮。UI 不能遮挡机甲主体，机甲造型不得变化。  \n10至15秒，\nUI 卡片沿轨迹收拢，机甲完成半周转身后正面定格。背景形成蓝白能量环，结尾只保留 MECHA FRONT、AETHER-07 与现在解锁，所有文字完整可读。 \n 整体采用顶级 3A 游戏 CG 宣传片与新品发布广告质感，冷黑、银白、电光蓝配色，金属材质真实，轮廓光锐利，镜头运动干净有力量。\n不要人物，不要战斗剧情，不要爆炸，不要新增文字，不要乱码，不要水印。原创声音使用低频机械启动、UI 点击和克制的电子鼓点，结尾一记厚重机械锁定音。",
+  "source": "apimodels",
+  "description": {
+   "en": "",
+   "vi": ""
+  },
+  "mode": "",
+  "inputs": [],
+  "lang": "cjk",
+  "media": {
+   "video": true,
+   "refs": []
+  },
+  "credit": {
+   "author": "@liyue_ai",
+   "authorUrl": "https://x.com/liyue_ai",
+   "postUrl": "https://x.com/liyue_ai/status/2083128868668666020"
+  },
+  "genMode": ""
+ },
+ {
+  "id": "apim_LVhb6mBH",
+  "category": "cinematic",
+  "title": {
+   "en": "Raw Ringside Boxing Match",
+   "vi": "Trận đấm bốc ven sàn quay thô"
+  },
+  "author": "@johnAGI168",
+  "authorUrl": "https://x.com/johnAGI168",
+  "postUrl": "https://x.com/johnAGI168/status/2083033353679221043",
+  "aspectRatio": "9:16",
+  "durationSec": 15,
+  "prompt": "【风格】UGC 拳赛现场实拍（Ringside Phone Footage），真实手机竖屏手持质感（9:16 Vertical, Handheld），现场生肉感：数码变焦、轻微失焦、运动模糊、闪光灯频闪，无滤镜无调色的直出画面\n【时长】15 秒\n【场景】室内拳击馆比赛之夜：正规拳台、四周围绳、台上顶灯直打，台下观众黑压压一片举着手机，闪光灯此起彼伏，拍摄者站在台边第二排人群里手持手机拍摄\n【角色】主角 1 @图片1（黑袍蓝边战袍方，脱袍后黑色拳裤黑手套）、主角 2 @图片2（白袍绿边战袍方，脱袍后白色拳裤白手套）\n【拍摄机制】全片一镜到底的手机手持视角：画面始终带轻微手抖和呼吸晃动，关键时刻拍摄者会猛推数码变焦怼近、短暂失焦再对上，激烈处镜头被前排观众起身遮挡半秒又找回角度——所有\"不完美\"都是真实感的来源\n[00:00-00:03] 开局试探\n手机视角越过前排观众的后脑勺拍向拳台：铃声\"铛\"一响，两人从各自角落逼近，主角 1 压低重心左右晃动寻找角度，主角 2 双拳护脸小步游走，两人互相试探刺拳，拳套相碰发出闷响。\n【现场音】铃声、观众嘈杂人声、拍摄者身边有人喊\"打他！\"\n[00:03-00:07] 第一波对攻\n拍摄者猛推数码变焦怼近：主角 1 突进一记左刺拳接右摆拳，主角 2 侧头闪过、贴身回敬两记摆拳组合，两人拳套砰砰互击、汗珠在顶灯下甩出，画面因变焦过快糊了半秒又对上焦。\n【现场音】拳套击打的连续闷响、观众爆发的\"哦——！\"、拍摄者忍不住的一声惊呼。\n[00:07-00:10] 缠斗与遮挡\n两人进入贴身缠斗互相抱架，裁判上前分开——此时前排观众激动起身，手机画面被后脑勺挡住一瞬，拍摄者手忙脚乱举高手机越过人头继续拍：两人分开各退半步，主角 2 抹了把脸，主角 1 活动了下脖子。\n【现场音】裁判喊\"Break！\"，人群骚动声浪盖过一切。\n[00:10-00:13] 高潮重击\n举高俯角视角：主角 2 抢先出重拳，主角 1 一个下潜躲过，起身瞬间一记右上勾拳结结实实顶中主角 2 下巴——主角 2 整个人晃了两晃、踉跄后退撞上围绳滑坐到台面，全场瞬间炸裂，闪光灯连成一片。\n【现场音】重击一声爆响后观众声浪掀顶，拍摄者激动大吼，手机剧烈晃动。\n[00:13-00:15] 终场定格\n画面抖着拉回全景：裁判冲上前查看，主角 1 退到中立角高举双拳，台下无数手机屏幕的亮光连成星海，拍摄者边喊边把镜头怼向台上，画面在主角 1 振臂的糊焦瞬间定格。\n【现场音】欢呼、口哨、有人狂拍前座椅背，收束在鼎沸人声里。\n【备注】全片保持手机直出的粗粝感：允许过曝的顶灯、糊焦、拖影和构图歪斜，禁止任何电影感调色和稳定器丝滑运镜；击打动作写意图和结果（命中、踉跄、坐地），保持竞技体育范畴，无出血无伤情特写。",
+  "source": "apimodels",
+  "description": {
+   "en": "",
+   "vi": ""
+  },
+  "mode": "",
+  "inputs": [],
+  "lang": "cjk",
+  "media": {
+   "video": true,
+   "refs": []
+  },
+  "credit": {
+   "author": "@johnAGI168",
+   "authorUrl": "https://x.com/johnAGI168",
+   "postUrl": "https://x.com/johnAGI168/status/2083033353679221043"
+  },
+  "genMode": ""
+ },
+ {
+  "id": "apim_1zv1k9cN",
+  "category": "audio",
+  "title": {
+   "en": "Cyber Grunge K-Pop MV",
+   "vi": "MV K-Pop cyber grunge"
+  },
+  "author": "@liandeli2",
+  "authorUrl": "https://x.com/liandeli2",
+  "postUrl": "https://x.com/liandeli2/status/2083070647660609837",
+  "aspectRatio": "16:9",
+  "durationSec": 15,
+  "prompt": "15s K-pop 女团 MV 提示词\n主体：三人 K-pop 女团，人物形象与当前角色设定一致。\nSOL：黑色长直发，冷静强势，黑色结构短西装、低腰百褶短裙、黑色长靴。\nLUNA：银灰色短狼尾，冷感疏离，银灰短款机能夹克、黑色连体内搭、不对称裙裤、厚底靴。\nCORONA：深红棕长卷发，带细辫，叛逆锋利，红黑赛车短夹克、低腰裙裤、绑带长靴。\n场景：白色无缝影棚被重新处理成地下音乐杂志拍摄现场。背景不是干净商业棚拍，而是带有过曝白墙、灰黑阴影、复印纸贴片、撕裂纸边、半色调网点、胶带痕迹、扫描错位和局部黑色喷漆纹理。部分镜头中背景瞬间切换为纯黑、过曝白或高反差灰色，只通过硬切完成。\n视觉风格：dark-pop、cyber-grunge、rap 音乐视频，写实高时装质感，90 年代末至 00 年代初独立杂志、地下音乐海报、复印纸、胶片扫描与 zine 拼贴美学。高反差黑白与低饱和暗红、银灰点缀，肤色真实，黑位厚重但保留衣服细节。粗颗粒、轻微胶片抖动、曝光跳动、半色调网点、印刷毛边、扫描偏移、局部色版套印错误。不要廉价赛博霓虹，不要游戏 CG，不要过度磨皮。\n摄影：真实音乐视频拍摄感，24mm、35mm 和 50mm 镜头快速切换。近距离广角压迫感、头部点拍、肩部特写、低机位半身、手部推进镜头、贴脸侧面特写。镜头可以轻微手持、突然向前冲、快速横移或在鼓点上瞬间停住。人物表演卡住鼓点，不是走秀，不是静态摆拍。\n音乐：15 秒 dark-pop / cyber-grunge / trap rap 段落。低频 bass 强烈，干脆 snare，失真电子噪音，短促人声切片。节奏约 138 BPM。前 3 秒建立压迫感，中间进入连续 rap，最后 2 秒重低音收束。\n文字包装：文字不是普通字幕，而是画面主体的一部分。使用原创无品牌词组。字体混合粗黑无衬线、窄体工业字、打字机字和手工复印字。文字位于人物前景、中景与背景之间，人物可以遮挡部分文字，文字也可以压过身体、服装或手部，但不能遮挡眼睛和主要面部表情。文字跟随 rap 重音、snare 和 bass hit 瞬间出现、震动、拉伸、压缩、断裂、翻转或硬切重组。文字边缘带油墨溢出、复印噪点、色版错位和扫描毛边。\n剪辑规则：全片只使用硬切、跳切、闪白切、闪黑切和鼓点匹配切。禁止淡入淡出，禁止溶解，禁止柔和转场，禁止慢动作堆叠。每个镜头 0.3 至 1.2 秒，快速但清晰，动作和文字都精准卡住节拍。\nSHOT 01｜0.0–0.8s 纯黑画面在 bass hit 上硬切为 SOL 的极近距离正面特写。24mm 广角贴近面部，身体前倾靠近镜头，头部突然向下点拍，黑色长发轻微甩动。画面高反差，背景过曝白。巨大粗黑文字位于她身后，头部遮挡文字中间部分。胶片颗粒突然增强，画面有一次轻微上下抖动。\nSHOT 02｜0.8–1.5s 硬切 LUNA 肩部与下颌特写。她压低肩膀，侧头看向镜头，在 snare 上突然把脸转正。银灰短发扫过眼角，但不遮挡眼睛。半色调网点从背景切入人物衣服边缘。窄体文字从画面右侧被硬切压缩进来，位于她身后与肩膀前景之间。\nSHOT 03｜1.5–2.3s 硬切 CORONA 低机位半身。她一只手快速推向镜头，手掌掠过镜头前景，在 bass hit 上收回，身体向前压。深红棕头发带有真实惯性。红黑色版轻微错位，画面像旧杂志扫描。文字被她的手部遮挡一部分。\nSHOT 04｜2.3–3.0s 三人正面中景，站位紧凑。SOL 位于中央，LUNA 和 CORONA 分居两侧。三人同时肩膀下压，再在鼓点上抬头看镜头。背景瞬间从白色硬切为黑色，再切回白色。大型文字在人物背后横向拉伸，人物身体遮挡文字中部。\nSHOT 05｜3.0–3.7s SOL 50mm 侧面近景。她转身时突然停住，脸从侧面转向镜头，手指沿着下颌快速划过。镜头在动作停点时突然向前推进半步。文字位于前景左侧，轻微压过她的肩膀，但不遮挡脸。\nSHOT 06｜3.7–4.4s LUNA 全身低机位。她做一个短促、真实的舞蹈动作：膝盖内扣、上半身向后拉、手臂在胸前切开，然后立即向镜头前倾。银灰外套与透明袖套产生清晰动态。画面在 snare 上切成黑白半色调 3 帧，再恢复彩色。\nSHOT 07｜4.4–5.1s CORONA 35mm 贴脸特写。她侧头、咬住节奏轻微抬下巴，随后向镜头靠近。不是微笑，而是带挑衅感的真实 rap 表情。暗红文字从她身后突然切到前景，压住头发和夹克局部，不遮挡眼睛。\nSHOT 08｜5.1–6.0s 三人快速交替头部点拍 montage。SOL 正面点头、LUNA 侧面甩头、CORONA 向前压头。每个动作只保留 3 至 5 帧，用三个连续硬切完成。背景在白、灰、黑之间切换。胶片扫描线短暂上下滚动。\nSHOT 09｜6.0–6.8s SOL 和 CORONA 同框近景。SOL 正面对镜头 rap，CORONA 从她身后突然探出并靠近镜头。两人的前后层次明确。文字分别位于背景与前景下方，压过服装但不遮脸。\nSHOT 10｜6.8–7.6s LUNA 单人中近景。她双手在脸侧快速交叉，然后向两边切开，动作卡住连续 snare。镜头同步快速向左横移，再在最后一个重音瞬间停住。背景出现撕裂复印纸和黑色胶带图形，像真实贴在棚墙上。\nSHOT 11｜7.6–8.5s 三人全身广角。她们不是整齐跳舞，而是分别完成不同但互相呼应的动作：SOL 向前迈一步并肩膀下压；LUNA 身体向侧面折叠；CORONA 转身后回头靠近镜头。动作在同一个 bass hit 上同时停住。\nSHOT 12｜8.5–9.3s 极近距离手部 montage。金属戒指、腰链、夹克拉链、手指敲击腿部、手掌推向镜头。每个细节只出现 2 至 4 帧。文字碎片像剪贴纸一样在不同画面位置硬切重组。\nSHOT 13｜9.3–10.2s CORONA 在前景 rap，镜头使用 24mm 靠得很近。她一只手指向镜头，然后手腕旋转向下压。LUNA 和 SOL 在后方虚化，但仍做小幅头部与肩部动作。人物与文字形成三层关系：背景文字、中景两名成员、前景 CORONA 和手势。\nSHOT 14｜10.2–11.1s LUNA 从画面左侧快速转入镜头。她转身时衣摆甩动，随后脸贴近镜头侧边，眼睛直视镜头。画面在重音上出现轻微水平扫描错位，人物轮廓产生红青色版偏移，但肤色保持真实。\nSHOT 15｜11.1–12.0s SOL 中央正面半身。她低头停顿半拍，随后猛然抬头，三人从她身后同时向前压近。镜头也向后快速退一步，制造真实空间冲击。巨大文字从背景突然切到人物前景之间，被三人的身体切割成多个部分。\nSHOT 16｜12.0–13.0s 连续三次硬切：SOL 手指推镜头；LUNA 肩膀撞向镜头方向；CORONA 转身回头。每个镜头都配合一个 snare。画面颗粒和印刷噪点逐次加重。\nSHOT 17｜13.0–14.0s 三人低机位全身英雄镜头。SOL 中央向前站一步，LUNA 侧身压低重心，CORONA 身体前倾。三人保持真实呼吸和微小晃动，不是冻结静态 pose。背景大字被人物遮挡，只能看到分裂的字形。\nSHOT 18｜14.0–15.0s 最后一个 bass hit。镜头突然推进到三人的脸部近景，三人同时头部点拍并直视镜头。画面瞬间压缩成高反差黑白复印效果。原创文字短暂出现在人物背后与肩膀前景之间，轻微震动两次。最后直接硬切纯黑，不淡出。\n负面要求：不要普通女团排排站，不要持续走秀，不要静态时尚 pose，不要软弱缓慢动作，不要过度机械舞蹈，不要卡通表情，不要赛博朋克霓虹城市，不要廉价 RGB 光污染，不要真实品牌或任何现实中存在的组合名与歌曲名，不要普通字幕，不要淡入淡出，不要溶解转场，不要柔光梦幻滤镜，不要游戏 CG 感，不要过度平滑的 AI 运镜。",
+  "source": "apimodels",
+  "description": {
+   "en": "",
+   "vi": ""
+  },
+  "mode": "",
+  "inputs": [],
+  "lang": "cjk",
+  "media": {
+   "video": true,
+   "refs": []
+  },
+  "credit": {
+   "author": "@liandeli2",
+   "authorUrl": "https://x.com/liandeli2",
+   "postUrl": "https://x.com/liandeli2/status/2083070647660609837"
+  },
+  "genMode": ""
+ },
+ {
+  "id": "apim_bUgHRttC",
+  "category": "ui",
+  "title": {
+   "en": "Divine Ascension Web Interface",
+   "vi": "Giao diện web Thăng thiên thần thánh"
+  },
+  "author": "@Cia0_exe",
+  "authorUrl": "https://x.com/Cia0_exe",
+  "postUrl": "https://x.com/Cia0_exe/status/2083090068378616089",
+  "aspectRatio": "16:9",
+  "durationSec": 15,
+  "prompt": "15秒 | 16:9 | 1440p | 24fps | 无缝循环 | 网页首屏动画\n[人物锁定 · @image1] 完全按照该参考图呈现，不进行任何重新设计。金色卷发、闭合的双眼、仰起的面容与安详神情；象牙色垂坠长袍；左右两枚金色玫瑰花章肩甲，含中心宝石与放射浮雕；金丝胸饰、十字垂饰、多层珠链；水晶巨剑，含金色巴洛克护手与剑柄头、缠绕剑柄，双臂高举过头横持，金色火柱自上贯入；白色大理石圆台；下方云海；深蓝天空；身后刻满金色符文的巨大光环与放射状水晶碎片及其硬边 RGB 衍射。全片不得改动发型、面部、肩甲浮雕、胸饰、长袍轮廓、护手纹样与剑身比例。\n她的双眼全片闭合，仅在 11.4 至 12.6 秒睁开，并在 15.0 秒前再次闭合。\n[字形锁定 · @image2] 本片所有拉丁文字必须完全采用 @image2 的字形——相同的衬线结构、凿刻感收笔、字宽比例与字距，不得发明或替换字体。材质取自 @image2：抛光铬银，每一笔画的左上缘带温暖琥珀色轮廓光，细微倒角，细腻颗粒。\n[解剖锁定 · 最高优先级] 全片自始至终只有两条手臂、两只手、每只手五指、一把剑。严禁多余的手臂、手掌、手指或第二把武器。快速旋转与运动模糊中，残影绝不可被渲染成额外肢体；手部每一帧结构完整、指节分明、无粘连。剑柄同时只被该拍指定的手握持；空出的手须明确可见且有清楚朝向。\n[网页 UI/UX 系统 · 全片骨架] 画面按 12 栏网格构建，左右外边距各占画幅宽度 6%，栏间距 2%。\n安全区：第 1 至 5 栏留空，供网页标题与行动按钮使用。人物、剑与光环全程不得进入第 1 至 4 栏。\n视窗框：铬色发丝级四角框线于 1.4 秒延展到位并保持，每次转场轻微重新吸附，绝不重置。\n载入指示：光环的进度弧兼作页面载入条——1.4 秒起步，7.8 秒约半圈，11.4 秒闭合爆亮，12.6 秒后逆向清空。\n副环：三层同心符文环于 3.2 秒依次向外展开，以不同速度反向旋转。\n准星：追踪剑身并随她运动持续修正，撞击时收紧。\n数据列：画面右缘细长字形条滚动，速度随配乐加快。\n计数器：持续攀升，9.6 秒跳动异常，11.4 秒爆红归零。\n频谱条：环外一圈径向条形随音频脉动。\n所有界面元素为铬色发丝线条与薄光，半透明，被水晶折射，统一笔画粗细，绝不越过面部，绝不进入第 1 至 4 栏。\n缓动：所有界面与文字元素以缓出曲线入场，约 0.4 秒；退场约 0.25 秒。绝不线性，绝不弹跳。多元素之间错位约 0.06 秒。\n[文字 · 稀少且为实体，绝非叠加] 全片只有四处文字，每一处都是场景中真实存在的物体，具备厚度、倒角、投影与光照响应，随镜头产生透视变形，被前景遮挡，被水晶折射。\n1.8秒 光环符文带上一段符文重组为 @image2 的字形 \"ASCENSION\"，呈深铬阴刻切入环体，随环旋转出画。\n4.6秒 \"SCROLL\" 作为小号铬色标签，下方带一枚细箭头，居于画面下缘第 6 至 7 栏，轻微脉动。\n12.8秒 首屏版式于第 1 至 5 栏组装：顶部一条铬色发丝导航横线与三个圆点；显示级 \"ASCENSION\"；其下一枚发丝圆角按钮内含小号 \"ENTER\"。保持 0.8 秒后整体溶解。\n14.2秒 署名以深铬阴刻切入符文带，刻痕深度、笔画宽度、边缘磨损与氧化程度与周围符文完全一致。绝不更亮、绝不更大、无发光、无描边。它随环体弧面产生透视变形，被前方水晶碎片局部遮挡，仅在侧光扫过的一瞬显现，在正光下几乎重新隐没于金属之中。\n全片不出现任何日文字符、字幕或其他文字。\n[色彩] 天空自顶部深海军蓝 #0B2350 至宝石蓝 #12356B，地平线转暖白 #F0E4CE。火柱核心过曝白，向外为浅金 #FFE9B0、琥珀 #FFD98A、橙金 #E8A63C，最外缘半透明热扰动。剑身自剑尖冷青 #9FD8E0 渐变至护手暖金，中段穿插全光谱色散带沿剑身流动。长袍受光面象牙白 #F5EDDC 至暖灰米 #C9BBA4，褶皱深处冷蓝影 #8C93A6。金属高光 #FFF0C0、中调 #E0B454、暗部 #8A6220、最暗带绿调，绝不平涂。日冕自内向外为白、金、琥珀、品红、靛蓝、透明六段。云海暖白 #FFF6E6 至灰蓝 #7E96B4 至紫蓝 #4A5A85。铬色文字与界面 #E8ECEF，带暖琥珀 #D9A05B 轮廓光。全光谱仅以折射形式出现，绝不平涂。\n[风格与特效] 电影级手绘感 2.5D 动画，巴洛克式密度。胶片高光滚降，阴影提亮，最亮处柔和光晕，细腻颗粒，饱和浓郁不过曝。皮肤具次表面散射；金色为各向异性拉丝金属；水晶具真实色散；织物为多层布料解算，有惯性与回弹；头发逐丝渲染，逆光半透明。\n特效逐级升级：碎片投出硬边 RGB 衍射光带；金色高光上的星芒光斑；火柱以翻腾丝带状降下；上帝之光穿透云海；碎片剥落光之羽；棱镜焦散在肩甲与胸饰上爬行；圆台由内发光；可见的冲击波畸变环；日冕绽放时短暂过曝再回落；空气中始终悬浮尘埃与晶屑。\n[摄影] 变形宽银幕，椭圆焦外，蓝金双色条状光斑，180 度快门，轻微桶形畸变。每个镜头都有明确运动动机与前中后三层纵深——云絮、光之羽、晶屑或长袍一角始终位于前景制造视差。人物始终位于第 6 至 12 栏内。\n0.0-1.4 微距置于水晶剑身内部，在晶体裂隙间穿行，光沿裂纹色散，随后自剑刃穿出进入开阔天空。\n1.4-3.2 摇臂沿光环内缘攀升，符文自近及远依次点亮，透视强烈压缩。\n3.2-4.6 35mm 弧形轨道绕至碎片之后，全光谱扫过镜头，她以逆光剪影浮现。\n4.6-6.0 40mm 低角度缓推，火柱自画面顶部入画与剑尖相接，构图收束为首屏比例。\n6.0-7.8 50mm 空中环绕，随她 180 度旋转同步绕行，斩击瞬间升格至四倍慢速再回落。\n7.8-9.6 18mm 一镜到底随她坠落穿过光环，穿越时全光谱填满画面，绝不切。\n9.6-11.4 焦段随拍点跳切，85mm 特写与 18mm 广角交替，中间插入一次甩镜。\n11.4-12.6 摇臂升降加滑动变焦，由低仰角升至面部齐平，背景压缩感随之改变。\n12.6-15.0 缓慢后拉，随后沿剑身推进再次进入水晶内部，与第一帧完全对位。\n开场与收束段一律使用带光晕的溶解与镜头位移，绝不硬切；仅 9.6 至 11.4 秒使用硬切并加静音门。\n[分镜]\n0.0-1.4 循环点。镜头在水晶剑身内部穿行，裂纹、气泡与色散缓缓掠过，随后自剑刃穿出，天空豁然展开。四角框线开始延展。\n1.4-3.2 点火。摇臂沿环内缘攀升，火沿环周逐个点亮符文奔跑一圈。1.8 秒处一段符文重组为深铬阴刻的 \"ASCENSION\" 并随环转出画。进度弧起步。\n3.2-4.6 浮现。轨道绕至碎片之后，全光谱扫过镜头，她以剪影浮现，双手同握剑柄将剑垂于身前。三层符文环展开，数据列开始滚动。\n4.6-6.0 举剑。双手将巨剑举过头顶横持，回到 @image1 姿态，下颌微仰，火柱降下与剑尖相接。\"SCROLL\" 落位于画面下缘。构图锁定为首屏比例。\n6.0-7.8 接光。她将剑举迎向降下的火柱——由剑身承接，双手始终紧握剑柄绝不松手——随即全身旋转 180 度带出一记横斩。棱镜光爆炸开，UI 全线爆红。双眼仍闭合。\n7.8-9.6 坠落。她背向下坠穿过光环中心，右手单手持剑于身侧缓慢旋转，左手向上伸展，长袍如伞面张开。一镜到底，穿越瞬间全光谱填满画面。\n9.6-11.4 蒙太奇，八拍每拍 0.225 秒：一、白底铬色线稿，仅剑与双臂轮廓；二、平涂光谱色块拼贴；三、二色剪影，象牙白配纯金；四、完整渲染，一记真实的空中回旋；五、拖影帧，拉出长条残像；六、整帧负片反转，仅此一帧；七、铬色线稿叠加彩虹衍射；八、完整渲染并短暂静止。光与云的扰动八拍之间持续累积，绝不重置。\n11.4-12.6 顶点。左手回握剑柄，双手同握将剑锋钉入虚空，冲击波向外扩散。她睁开双眼——青碧色，平静，直视镜头。睫毛先分离，眼睑上抬，瞳孔收缩后放大，泪膜捕捉火柱高光，眼角一道光。日冕绽放，进度弧闭合爆亮。\n12.6-15.0 归位。她上升落回圆台，双臂举剑横于头顶回到 @image1 姿态，各环反向折叠，日冕收敛为一道金线，双眼闭合。首屏版式于左区组装、保持、溶解。署名随环转入画面，被侧光扫过而显现，随后转入正光重新隐没。镜头沿剑身推进，再次进入水晶内部。最后一帧与第一帧完全一致。\n[动态] 重量与优雅优先于摆姿势，动作连贯绝不生硬。长袍、卷发与垂带在每次转向时滞后，布料有真实惯性与回弹。巨剑沉重，挥动时可见承力与减速。一切略带高空浮力感。云层流动与人物动作互相影响。杜绝任何僵硬、停顿或不自然的关节角度。\n[音频] 每个音效卡在其画面拍点的准确帧上，混音首尾相接可循环。底层：高空空气感，远处风声，极淡持续人声。\n0.0-1.4 水晶内部的封闭共鸣，极轻的晶体应力声，穿出剑刃时空气骤然开阔。\n1.4-3.2 符文逐个点亮的清脆金属点火声，沿环奔跑形成加速连音，合唱自远处涌起，铬色文字落定时一记低音。\n3.2-4.6 全光谱扫过的高频泛音，布料舒展的柔和摩擦，副环展开的层叠环鸣。\n4.6-6.0 举剑的低频蓄势，火柱降临的持续嗡鸣，剑尖相接时一声清亮长音。\n6.0-7.8 撞击。管风琴与超低频同时落下，玻璃爆裂，反向镲片渐强，警报般明亮的界面爆红音。\n7.8-9.6 坠落气压呼啸，入环骤然滤波为水下感合唱，穿出时爆发大空间混响。\n9.6-11.4 八记打击声分别卡在八拍上，合唱断奏，每拍之间硬静音门，负片帧加一记反相金属噪音。\n11.4-12.6 顶点。完整合唱、管风琴、钟声与一记低沉铜管齐鸣，睁眼那一帧落下一声清亮的钟，混音随日冕展宽。\n12.6-15.0 收束为延长的合唱长音，各环以相反节奏收拢，最终回到与开场完全相同的水晶内部封闭共鸣。\n无对白。\n[限制] 画面中只有一个人物，两条手臂，两只手，一把剑。人物绝不进入第 1 至 4 栏。所有拉丁文字须完全匹配 @image2 的字形。光谱仅以折射形式出现。界面层保持铬色发丝质感，绝不越过面部。特效持续累积直至归位段。双眼仅在 11.4 至 12.6 秒睁开。无日文字符、无品牌标识、无水印、无字幕。首尾帧完全一致，两帧中都不得残留任何浮动文字。",
+  "source": "apimodels",
+  "description": {
+   "en": "",
+   "vi": ""
+  },
+  "mode": "",
+  "inputs": [],
+  "lang": "cjk",
+  "media": {
+   "video": true,
+   "refs": []
+  },
+  "credit": {
+   "author": "@Cia0_exe",
+   "authorUrl": "https://x.com/Cia0_exe",
+   "postUrl": "https://x.com/Cia0_exe/status/2083090068378616089"
+  },
+  "genMode": ""
+ },
+ {
+  "id": "apim_EojHDNTT",
+  "category": "audio",
+  "title": {
+   "en": "Industrial Dark Pop Performance",
+   "vi": "Biểu diễn dark pop công nghiệp"
+  },
+  "author": "@ivanka_humeniuk",
+  "authorUrl": "https://x.com/ivanka_humeniuk",
+  "postUrl": "https://x.com/ivanka_humeniuk/status/2082854898907931081",
+  "aspectRatio": "16:9",
+  "durationSec": 15,
+  "prompt": "15 seconds, 16:9 dark-pop music video performance. Use @Image 1 as the strict identity reference for the three women — faces, hair and wardrobe unchanged in every shot. Use @Image 2 as the reference for the two titles only: ultra-condensed heavy caps, bone white, photocopied print surface.\nThe three women perform and sing to camera throughout. Follow the beats below shot by shot with continuous natural camera movement and real physical motion inside every frame — this is live performance footage, never a slideshow, never a sequence of held poses.\nVOCAL: a single female lead voice, gritty and low, close-mic'd with tape saturation. Three short lyric lines are sung at 2.7s, 6.0s and 10.0s. Lip-sync locks precisely to those lines on whichever woman is singing. Between the lines all three mouth along, breathe hard and move.\n[0.0–2.7s] The three stand in near-blackness, sand-beige studio crushed dark. Handheld camera drifting slowly forward, breathing. The platinum-crop woman rolls her shoulders and steps toward lens. Her hair lifts. The auburn woman in mirrored shades tilts her head up. Real movement, low energy, building. First title card over the darkness.\n[2.7–6.0s] The auburn woman in the mirrored shades sings the first line straight into the lens, medium-close, mouth clearly forming the words. Camera whip-pans off her to the platinum-crop woman mid-stride, then crash-zooms back. Hard cuts every 0.3 seconds. Bodies in constant motion — hair whipping, chains swinging, hips driving, hands reaching for camera. Single-frame white flashes between cuts.\n[6.0–10.0s] All three together, performing hard. The chestnut-haired woman takes the second line, singing directly to lens while the other two move behind her, bodies loose and driving. Camera orbits the trio fast, then whip-pans, then handheld snap-zooms. Cuts every 0.2 seconds. Hair, fur and fishnet all moving. Faces alive, mouths working, sweat catching the light.\n[10.0–12.7s] Slow down hard, two long shots. The chestnut-haired woman alone, medium-close, singing the third line slowly and holding eye contact with the lens all the way through. Camera almost still, only breathing. Her wet hair moves across her face. She finishes the line and her mouth stays slightly open.\n[12.7–15.0s] Everything detonates. Flash cutting, single-frame plates, all three thrashing and singing at once, faces close to lens, black frames and inverted negatives between cuts. Camera whipping violently. Final title card hammers in. Cut hard to black with the music.\nMUSIC: driving industrial dark-pop, distorted 808 kick landing at 2.7 seconds, full arrangement through 6.0 to 10.0 seconds with clipped brass stabs and heavy tape saturation, dropping to near silence and one breath at 12.0 seconds for a full second, then the final two seconds at full weight with one metallic crash on the closing title. The lead vocal sits forward in the mix. Do not imitate an existing melody.\nWarm sand-beige studio sweep, hard raking light from camera-left, Kodak Portra 400 grain, tape dropout, scanline tear, chromatic fringing, light leaks. Hard cuts only, full speed throughout, every shot carrying real motion. Titles spelled exactly as written, English only.\nReference prompts (2)\nThis clip was made by generating reference images with the prompts below, then driving the video with the prompt above.\n参考图 1 · 三人组角色定妆\nCopy\nRender a 16:9 three-woman group production reference sheet.\nSHEET — layout: single group photograph, three women standing together on one continuous seamless ground, full body head to sole, arranged left to right as a trio; the frame reads as one editorial group shot rather than a panelled sheet. Aspect 16:9 horizontal, 4K.\nMEDIUM — 35mm film photograph on Kodak Portra 400, analog film response with gentle highlight halation, fine natural grain carried evenly across the whole frame. One photographed frame of three living actors on set, one stock, one grain structure.\nSUBJECT 1 — VESPER: late-twenties woman of Eastern European build, tall and lean with wide shoulders. Bleached platinum crop cut short and shaggy, dark roots grown out, buzzed close at the nape. Pale grey-green eyes. Markers: a fine vertical scar splitting the left eyebrow, a dense freckle scatter across the nose bridge, a healed empty piercing hole in the right nostril. Wardrobe: cropped shaggy sheepskin coat in bone and toffee worn open off one shoulder, silver chainmail mesh halter beneath, low-slung baggy carpenter denim in washed sand with a studded belt hanging loose, fingerless black leather gloves, platform moto boots in scuffed black leather. Mood: combative stillness, chin lifted, soft closed-lip expression. Standing at full height on the left third, frontal, weight dropped onto the right hip.\nSUBJECT 2 — MARLOW: early-thirties woman of Mediterranean colouring, slender with long limbs. Dark auburn hair past the shoulder blades, half-wet and raked straight back. Hazel eyes behind narrow wraparound mirrored shield sunglasses. Markers: a faint pale scar along the right jawline, a small dark mole beside the left corner of the mouth. Wardrobe: oversized black leather bomber with a heavy grey wolf-fur collar pushed off both shoulders, white ribbed cotton tank cropped raw above the navel, layered steel chain harness, low-rise bootcut denim in near-black wash with laced open panels down the outer thigh, chunky black buckled boots. Mood: cold unbothered composure. Crouched low in the centre foreground, three-quarter to camera-right, forearms across the knees, one hand raised to the sunglasses temple.\nSUBJECT 3 — SABLE: mid-twenties woman of Irish colouring, compact and athletic. Long dark chestnut hair to the waistline, heavily tousled and swept forward across the left cheek. Dark brown eyes with a heavy upper lid, very fair skin with a live flush. Markers: a visible gap between the two upper front teeth, a pale scar high on the right temple, a cluster of small dark moles down the left side of the neck. Wardrobe: rust-orange satin corset top boned and front-laced, shaggy Mongolian fur stole in cream falling off both shoulders, asymmetric brown leather wrap mini skirt, torn black fishnet tights, cream faux-fur leg warmers, spiked platform heels in oxblood leather. Mood: coiled predatory readiness, lips just parted. Leaning in from the right third, bent forward at the waist toward frame centre, three-quarter to camera-left.\nSCENE — the trio holds one group pose as a unit: Vesper upright and open on the left, Marlow low and central pulling the eye down, Sable folding in from the right to close the triangle; the three silhouettes overlap slightly at the edges so the group reads as one mass. Location: an empty seamless studio cyclorama, warm sand-beige sweep running floor into wall.\nLIGHT — key: 5400K single very large studio softbox raking from camera-left at 40 degrees, soft-edged, carving all three sets of cheekbones with one shadow direction. Fill: broad white bounce card camera-right at 3:1, cooler by 400K. Rim: narrow strip light behind camera-right separating platinum crop, wolf-fur collar and chestnut hair from the sweep. Material response: sheepskin and Mongolian fur breaking into bright curling fringes, chainmail throwing hard specular pinpoints, satin sweeping a long soft highlight along each crease, mirrored lenses returning a flat hard reflection of the softbox, fishnet casting a fine shadow lattice on fair skin. Firm contact shadows where every boot meets the floor, twin catchlights in every visible eye.\nLOOK — warm analog grade led by sand-beige, bone and rust against the cool blacks of leather and denim, contrast held gentle, shadows lifted to a milky charcoal, highlights rolling off softly. Hasselblad H6D-100c, 80mm, f/8 with all three figures crisp from crown to sole. 35mm film still, Kodak Portra 400, fine natural film grain, matte fibre texture, late-1990s fashion editorial.\nCONSISTENCY LOCK — three distinct women photographed in one frame, each keeping her own facial geometry, eye colour, hair colour and length, body proportion and complete wardrobe; all three under one continuous light recipe on one continuous ground with one film stock and one grain structure.\n参考图 2 · 标题字体系统板\nCopy\nRender a 16:9 graphic design system board — a single flat printed reference sheet photographed head-on, filling the entire frame edge to edge.\nLAYOUT — ten numbered panels in an asymmetric grid on a deep black ground, thin hairline rules dividing them, each panel carrying a small sans-serif index number in its upper-left corner with a short descriptive caption beside it.\nPanel 01, upper-left, wide and tall — an ultra-condensed heavy all-caps title in bone white, letters stretched tall and pressed narrow, filling the panel in two stacked lines. A hairline vertical rule runs down the far left edge carrying tiny rotated type.\nPanel 02, upper-centre-left, narrow vertical strip — two heavy condensed words set sideways, reading bottom to top, bone white on black, filling the full column height, with small type at the base.\nPanel 03, upper-centre, wide — two heavy condensed words arcing outward in perspective, letters fanning from a vanishing point below the baseline so the type rushes toward the viewer, with a thin measurement scale and micro-type beneath.\nPanel 04, upper-right, wide — a bone-white bordered box on black holding a single heavy condensed word, with a technical strip beneath carrying a small wireframe globe glyph, a row of checker squares, a numeral and a small burst mark, plus a line of micro-type below.\nPanel 05, far-right narrow vertical strip — a tall machine-readable barcode in bone white running the full column height, with rotated type alongside.\nPanel 06, lower-left, wide — two enormous heavy condensed words acting as a cut-out window, a grainy high-contrast black-and-white landscape photograph visible inside the letterforms, with micro-type beneath.\nPanel 07, lower-centre — a solid oxblood-red block filling the panel carrying two bone-white heavy condensed words stacked on two lines, with a thin audio waveform strip and micro-type beneath.\nPanel 08, lower-right, wide — a heavy condensed word standing in perspective on a receding wireframe grid, a second smaller ghosted instance behind it in dark grey, small labels pointing to each depth layer.\nPanel 09, bottom-left, wide and short — a block of small sans-serif body copy in bone white on black arranged in three columns under short headings, with six small bordered chips beneath one heading and a boxed line at the left.\nPanel 10, bottom-right, wide and short — six square texture swatches in a row showing coarse film grain, halftone dot pattern, scratched emulsion, dust and hair speckle, torn paper edge and scan misregistration streaking, with micro-labels beneath and a small oxblood-red block at the far corner.\nTYPOGRAPHY: every title set in one family of ultra-condensed heavy all-caps sans-serif with tight tracking, bone white on black or bone white on oxblood red. Captions, index numbers and micro-type in a plain small sans-serif, uppercase, widely tracked. All text English, correctly spelled, each glyph holding its exact designed shape.\nPALETTE: deep black ground, bone white type, one aggressive oxblood red used only in Panel 07 and the corner block of Panel 10.\nSURFACE AND TREATMENT: the whole board reads as a physical printed page that has been photocopied and scanned — coarse film grain across every panel, halftone dot structure inside the large letterforms, rough inked print edges, faint scan misregistration offsetting the red channel by a hair, light scratches and dust speckle, paper worn and slightly torn along the outer frame border. Flat even illumination with the faintest vignette in the corners. Shot square-on, every panel equally sharp, late-1990s underground music-poster and zine design language.",
+  "source": "apimodels",
+  "description": {
+   "en": "",
+   "vi": ""
+  },
+  "mode": "",
+  "inputs": [],
+  "lang": "cjk",
+  "media": {
+   "video": true,
+   "refs": []
+  },
+  "credit": {
+   "author": "@ivanka_humeniuk",
+   "authorUrl": "https://x.com/ivanka_humeniuk",
+   "postUrl": "https://x.com/ivanka_humeniuk/status/2082854898907931081"
+  },
+  "genMode": ""
+ },
+ {
+  "id": "apim_dEqQpwHR",
+  "category": "ui",
+  "title": {
+   "en": "Mona Lisa Character Selection Screen",
+   "vi": "Màn hình chọn nhân vật Mona Lisa"
+  },
+  "author": "@ivanka_humeniuk",
+  "authorUrl": "https://x.com/ivanka_humeniuk",
+  "postUrl": "https://x.com/ivanka_humeniuk/status/2083555429758464203",
+  "aspectRatio": "16:9",
+  "durationSec": null,
+  "prompt": "Use @Image 1 for the character and the menu interface style. Use @Image 2 for the game world and the in-game HUD style. Use @Image 3 as the source for every item thumbnail shown inside the panels — its left column holds the three outfits, its centre column holds the three hairstyles, its right column holds the three weapons, each in that exact order top to bottom.\nOne continuous shot, no cuts. The camera moves smoothly and constantly. Every panel stays fully inside the frame, positioned to the right of the character and large enough to read clearly.\n[0–2 seconds] Wide shot matching @Image 1, camera drifting slowly forward. The Mona Lisa character stands in the dark candlelit hall in her olive velvet gown and sheer veil, hands folded, still. She blinks once, slowly. The gold cursor travels down the right-hand menu across PLAY and onto WARDROBE, each button flaring gold as it passes. The cursor clicks WARDROBE with a sharp gold burst.\n[2–5.5 seconds] Ease in slightly, holding a full-body framing. A WARDROBE panel slides in on the right, filling the right third of frame — a vertical column of three ornate gold-framed slots carrying the three outfit thumbnails from the left column of @Image 3, in that exact order: blue brocade gown at the top, crimson silk gown in the middle, black leather set at the bottom. The selector highlights the top slot and her gown becomes the deep blue brocade court gown. The selector drops to the middle slot and her gown becomes the crimson silk gown with the boned corset. The selector drops to the bottom slot and locks: her long skirt dissolves upward in gold particles and reassembles as fitted black leather shorts, the bodice tightens into a cropped black leather top laced across the chest with gold cord, thigh-high black leather boots build up her legs plate by plate, and slim gold vambraces snap onto both forearms.\n[5.5–8.5 seconds] Rise smoothly to a medium shot from the waist up, keeping the panel column fully visible beside her. An APPEARANCE panel slides in on the right in the same position and size, carrying the three hairstyle thumbnails from the centre column of @Image 3, in that exact order: veiled waves at the top, coiled braid crown in the middle, high ponytail at the bottom. The selector highlights the middle slot and her hair winds itself up into the coiled braid crown threaded with gold chain. The selector drops to the bottom slot and locks: the sheer veil dissolves into gold particles and clears frame, her waves sweep upward and gather high on the crown into a long full ponytail bound with a gold cuff, the tail falling heavy behind her shoulder and swinging once as it settles. Her face stays exactly as it is throughout — the same serene gaze and the same faint closed-lip smile.\n[8.5–11 seconds] Ease down to a medium shot showing her from the hips up with both hands in frame, the panel column still fully visible beside her. An ARMOURY panel slides in on the right in the same position and size, carrying the three weapon thumbnails from the right column of @Image 3, in that exact order: crossed twin daggers at the top, war axe in the middle, gold-hilted duelling sword at the bottom. The selector highlights the top slot and two matched daggers assemble from gold particles, one in each hand. The selector drops to the middle slot and they break apart and reform as the broad war axe held across her body. The selector drops to the bottom slot and locks: the axe dissolves and the slender duelling sword builds itself in her right hand piece by piece — the swept gold hilt forming first, then the long polished steel blade extending outward with a bright ring. She lowers it to her side, point down.\n[11–12.5 seconds] Pull back smoothly to a full-body shot. A CONFIRM button flashes gold at frame centre and the cursor clicks it. Every panel collapses inward and vanishes. A LOADING bar sweeps in along the bottom and races from 0% to 100%. The dark hall brightens as warm golden daylight bleeds in from the left and the shadows retreat.\n[12.5–15 seconds] The world loads in around her: the sunlit Florence street from @Image 2 assembles outward from her feet — pale stone paving, ochre buildings, striped market awnings, hanging banners, townspeople walking, the cathedral dome rising at the end of the road under a pale blue morning sky. The camera swings around behind her and settles into a third-person gameplay position at her shoulder. The HUD fades in exactly as in @Image 2: CURRENT TASK reading REACH THE CATHEDRAL at upper left, circular minimap upper right, health and stamina meters lower left, weapon slot lower right showing the sword icon, and a large gold diamond quest marker floating above the road ahead. She stands with her back fully to camera, ponytail swinging, sword at her side, and takes her first step forward down the street.\nAUDIO — a game interface soundscape where every selection is loud and unmistakable: The interface sounds sit forward in the mix and are the clearest element in the piece. Every cursor hover fires a bright short gold chime. Every click lands as a hard mechanical thunk with a metallic tail, sharp and percussive, immediately audible. Every selector step down a row snaps with a crisp tick. Every panel slides in on a parchment whoosh and closes on a wooden clack. Under this, open on the quiet hush of a stone hall with a low candle-flame crackle and a soft sustained lute drone. Each outfit change carries a rush of cloth and a fine shimmer of particles; the leather build adds creaking hide and small metal snaps. The hair change is a soft sweep finishing on one gold cuff click. Each weapon assembly is sharp metal on metal, the sword finishing on a long bright blade ring. CONFIRM lands on a full resonant gold chime. The loading bar hums and rises in pitch as it fills. At 12.5 seconds the hall reverb drops away and the open street opens up: distant market chatter, birdsong, a cart wheel, footsteps on stone, warm Renaissance strings and lute swelling underneath. Ends on her boot striking the paving. Do not imitate an existing melody.\nFull speed throughout with no slow motion. Her face, gaze and faint closed-lip smile stay identical across every beat. All interface text in English, correctly spelled, every glyph crisp and legible.\nReference prompts (3)\nThis clip was made by generating reference images with the prompts below, then driving the video with the prompt above.\n参考图 1 · 主菜单界面\nCopy\nRender a 16:9 video game main menu screen — one clean in-game screenshot from a premium Renaissance action game. THE CHARACTER is the woman from Leonardo da Vinci's Mona Lisa, rebuilt as a stylized three-dimensional game character and standing at full body. Her likeness is exact: a serene oval face with a high smooth forehead, softly rounded cheeks, a straight narrow nose, heavy-lidded warm dark brown eyes gazing calmly and directly at the viewer, barely present brows, and the faint closed-lip smile with its ambiguous lifted corners. Long dark brown hair parted at the centre falls in soft loose waves past her shoulders, a sheer dark translucent veil laid over the crown and draping down behind. Warm ivory skin with soft subsurface shading.\nShe wears her Renaissance Florentine gown: deep olive-brown velvet bodice gathered into fine vertical pleats across the chest, a wide square neckline edged in delicate gold interlace embroidery, ruched ochre-gold satin sleeves full at the upper arm and narrowing to the wrist, and a heavy olive skirt falling straight to the floor in soft folds. She stands in the left two thirds of the frame, turned a few degrees toward camera, both hands folded one gently over the other at waist height in the exact attitude of the painting. Beneath her is a dark polished marble floor catching a soft warm reflection of her gown. Behind her the environment falls into a deep shadowed Renaissance interior — stone arches and one distant warm window, heavily defocused and dark. A soft warm rim of candlelight separates her silhouette from the darkness.\nTHE INTERFACE sits over the image, rendered as aged gold and dark lacquered plates: upper left a player profile bar with a circular portrait frame, the name \"LISA\", a level badge \"III\" and a half-filled experience meter; right side a vertical menu of five buttons reading \"PLAY\", \"WARDROBE\", \"APPEARANCE\", \"ARMOURY\", \"SETTINGS\", with \"WARDROBE\" highlighted in solid gold and a gold arrow cursor resting on it; lower left a health and stamina cluster reading \"3 / 3\"; lower right a small circular gold-rimmed compass dial; bottom centre three engraved prompts reading \"SELECT\", \"BACK\" and \"CONFIRM\" beside small gold key glyphs.\nTYPOGRAPHY: every label in an elegant engraved serif, uppercase, generously tracked, in warm antique gold. PALETTE: deep near-black ground, warm antique gold as the only bright interface value, one deep crimson accent in the health meter, olive and ochre of her gown as the single area of colour. LOOK: stylized three-dimensional game character render against a real-time game environment, physically based materials, soft warm candlelight key from camera-left, gentle bloom on the gold interface edges, faint craquelure in the darkest plate areas.\n参考图 2 · 游戏世界与 HUD\nCopy\nRender a 16:9 in-game third-person gameplay screenshot from a premium Renaissance action game. The frame shows the world and the interface only, with no character present.\nTHE WORLD: a broad Renaissance city street in Florence at early morning, seen from a third-person camera positioned low and looking down the street. Warm golden sunlight rakes in from the left at a low angle, throwing long soft shadows across pale stone paving. Tall ochre and cream plaster buildings rise on both sides with terracotta roofs, green shutters thrown open, iron brackets and coloured cloth banners hanging still. Terracotta pots of flowers sit on windowsills. Market stalls with striped awnings line the near left. Townspeople in period dress move through the middle distance, small and softly out of focus. At the end of the street a great cathedral dome rises against a pale blue morning sky. Fine dust and pollen drift through the sunbeams.\nTHE HEADS-UP DISPLAY sits over the world as aged gold and dark lacquered plates with fine engraved line work: lower left a health and stamina cluster with the numerals \"3 / 3\"; upper right a circular minimap on a gold-rimmed dial with a directional arrow at its centre and the letter \"N\" at the top edge; upper left a quest tracker headed \"CURRENT TASK\" with a single line reading \"REACH THE CATHEDRAL\"; centre, floating above the road at the far end of the street, a large gold diamond quest marker with a soft glow; lower right a weapon slot containing an engraved icon of a slender rapier with the label \"RAPIER\" beneath it; bottom centre three engraved prompts reading \"MOVE\", \"ATTACK\" and \"INTERACT\" beside small gold key glyphs.\nTYPOGRAPHY: every label in an elegant engraved serif, uppercase, generously tracked, in warm antique gold. PALETTE: warm ochre, cream stone and terracotta under golden morning light, pale blue sky, warm antique gold interface, one deep crimson accent in the health meter. LOOK: real-time game engine render, physically based materials, volumetric morning sunbeams, gentle bloom, soft atmospheric haze building with distance, cinematic third-person framing.\n参考图 3 · 物品栏九宫格\nCopy\nRender a 16:9 sheet of game interface item slots on a deep near-black ground. Three separate vertical panels stand side by side with clear empty space between them. There is no text anywhere on this sheet — no labels, no captions, no numbers. Only frames and images inside them.\nEach panel is a tall column of three stacked square item slots. Every slot is a black plate with an ornate engraved antique gold frame, fine bracketed corners and a soft inner bevel, in the style of a Renaissance game interface. The three panels are identical in size, frame design and slot spacing.\nLEFT PANEL — three outfits, each a small full-body figure of the same dark-haired Renaissance woman standing frontally against the black slot interior, lit warmly from the left: slot one a long deep blue brocade court gown with gold thread across the bodice; slot two a crimson silk gown with a boned dark metal corset laced over it, the skirt split high on one side; slot three fitted black leather shorts, a cropped black leather top laced across the chest with gold cord, thigh-high black leather boots and slim gold vambraces.\nCENTRE PANEL — three hairstyles, each a head-and-shoulders view of the same woman, seen from the front: slot one long loose dark waves parted at the centre under a sheer dark translucent veil; slot two the hair wound up into a sculpted coiled braid crown threaded with fine gold chain; slot three the hair swept up high into a long full ponytail bound with a gold cuff.\nRIGHT PANEL — three weapons, each an object alone against the black slot interior, angled diagonally: slot one two matched short daggers with dark blued steel blades and gold quillons, crossed; slot two a single broad-headed war axe with a dark walnut haft and gold engraving; slot three a slender straight duelling sword with an ornate swept gold hilt and a long polished steel blade.\nIn every panel the third slot down carries a warm gold highlight fill behind its image, marking it as selected, while the upper two sit on plain black. LOOK: warm antique gold frames with fine engraved line work, deep near-black slot interiors, warm directional light from the left, soft contact shadows, gentle bloom on the brightest gold edges, faint craquelure in the darkest areas, flat even illumination across the whole sheet.",
+  "source": "apimodels",
+  "description": {
+   "en": "",
+   "vi": ""
+  },
+  "mode": "",
+  "inputs": [],
+  "lang": "cjk",
+  "media": {
+   "video": true,
+   "refs": []
+  },
+  "credit": {
+   "author": "@ivanka_humeniuk",
+   "authorUrl": "https://x.com/ivanka_humeniuk",
+   "postUrl": "https://x.com/ivanka_humeniuk/status/2083555429758464203"
+  },
+  "genMode": ""
+ },
+ {
+  "id": "apim_Rl1vzoA6",
+  "category": "cinematic",
+  "title": {
+   "en": "Kintsugi Sword Reborn",
+   "vi": "Thanh kiếm kintsugi tái sinh"
+  },
+  "author": "@Cia0_exe",
+  "authorUrl": "https://x.com/Cia0_exe",
+  "postUrl": "https://x.com/Cia0_exe/status/2083525563491524882",
+  "aspectRatio": "16:9",
+  "durationSec": 15,
+  "prompt": "15秒 | 16:9 | 1440p | 24fps | 无缝循环\n[角色锁定] 完全按照 @image1 呈现，不进行任何重新设计。蓬松的蓝灰色波浪短发，刘海垂落遮住上半张脸；面容清秀，唇色偏暖；珊瑚朱红色宽袖长袍，腰间层层缠绕的宽腰带，深色内衬；持剑手戴深色手套。长剑：华丽的银金巴洛克护手与柄头，镜面剑身映出真实的天空与云。全片不得改动发量与卷曲走向、刘海遮眼的方式、袍身轮廓、腰带缠法、手套、护手纹样与剑身比例。\n[循环 · 核心设定] 剑身自第一帧起就已布满一张固定的旧金脉之网——那是它此前碎裂并被金继修补留下的痕迹。本片是这一循环中的又一次：它沿着既有金脉再次裂开，碎片散去，熔金重新灌回同样的裂缝，恢复成完全相同的样子。不增添任何新金脉、不改变其走向与数量。最后一帧须与第一帧完全一致。\n[剑的恒定 · 最高优先级] 重铸后的剑必须与开场完全相同：长度、宽度、弧度、剑尖、护手雕花、柄头、缠柄、镜面质感、金脉走向数量粗细、刻痕位置，逐一对应。严禁任何形态变化——不得变长变大、不得生出新纹饰或棱刺、不得产生光晕或能量外溢、不得改变颜色材质、不得出现任何\"进化\"\"觉醒\"\"强化形态\"式转变。金只填回原有裂缝，绝不溢出剑身之外、绝不覆盖镜面。\n[解剖锁定 · 最高优先级] 全片有且仅有一名人物：两条手臂、两只手、每只手五指、一把剑。严禁多余的手臂、手掌、手指或第二把武器。高速转身与运动模糊中，残影绝不可被渲染成额外肢体。手部每帧结构完整、指节分明；戴手套的手握柄，空出的手须清晰可见且有明确朝向。\n[沉浸 · 观众入画] 画面本身是一张真实存在的和纸，镜头是观众伸进这个世界的一只眼睛，世界会反过来影响它。\n一、画面裂纹：0.9 秒剑开裂的同一帧，一道极细的裂纹自画面中心向四角蔓延，如同观看的这块玻璃也被划开；裂纹全片存在并缓慢加深，10.8 秒起被金继之金一并填补，13.8 秒前完全消失。\n二、纸的边界：画面四边的和纸纤维始终微微起伏，重击时被掀起并向内卷曲，露出纸的毛边。\n三、墨上镜头：3.2 秒的长弧甩出的墨点直接溅在镜头上，附着后沿纸纤维缓慢晕开，随后逐渐变淡，13.8 秒前完全干透消失。\n四、倒影中的观众：2.2 秒与 13.4 秒各有一片碎片旋转至极近处，其镜面中短暂映出镜头本身与其外的一片天光，仿佛观众看见了自己所在的位置——只出现一瞬即转开。\n五、沉入：7.0 至 8.8 秒，墨云直扑镜头并将其吞没，镜头沉入墨中——四周被浓墨包裹，仅上方透出天光与她的剪影，纸纤维如絮状物在\"水中\"缓缓漂过，画面轻微起伏如同随液体晃动；8.8 秒墨向下退去，镜头破\"水面\"而出。\n所有以上效果必须在 13.8 秒前彻底清除，最后一帧的画面须与第一帧一样干净。\n[场景 · 明亮] 高空之上，正午。头顶通透饱和的湛蓝天空，向地平线渐变为明亮浅色薄雾；脚下极远处是被阳光照亮的洁白积云海。她悬浮其中——无地面、无建筑、无道具。金箔长带随上升气流飘过。全片阳光充沛、明亮通透，绝不转阴、绝不去饱和。\n[色彩] 天空 #2E6FA8 渐变至 #CFE3EF。长袍珊瑚朱红 #D9563F，褶皱 #A63A2A。头发蓝灰 #8CA3B8，边缘接暖色轮廓光。手套与内衬 #14161C。护手做旧银金。碎片映出真实蓝天白云。墨为纯黑 #0A0A0C。金脉为哑光金箔 #C9962E，熔金前沿炽白金 #FFEBB0，冷却后回到完全相同的 #C9962E。\n[风格与质感] 水墨画与照相级玻璃的融合。整个画面覆盖极淡的和纸纤维质感；天空与云以水墨渲染，边缘晕开带枯笔飞白；人物与剑为完全清晰的实体渲染，如实体嵌在画中。金为真实金箔——极薄、有褶皱、氧化磨损、受光不均。碎片有真实厚度与内部裂纹，每片映出不同的云。发丝逐根渲染，逆光半透明；袍料厚重，褶皱有真实重量与回弹；护手雕花凹处压暗。胶片高光滚降，金上柔和光晕，细腻颗粒。\n[特效] 逐级升级：剑锋所过之处墨如入水般翻卷晕开；金箔自长带剥落飘散；墨与金彼此排斥绝不相融，如大理石纹互相推挤；高速动作拖出枯笔飞白擦痕；每次重击有一帧纯墨黑剪影；熔金沿裂缝奔流，前沿炽白，其后冷却为哑光金箔。\n[动画法则] 每个动作遵循预备—爆发—收势：出手前明确反向蓄势，爆发只占少数帧，收势有减速与轻微过冲后回位，绝不匀速。发丝、宽袖、袍摆、腰带末端各以不同延迟跟随身体，绝不同步启停。所有轨迹为弧线。高空中一切略带浮力感。杜绝任何僵硬、停顿或不自然的关节角度。\n[逐拍动作]\n0.0-1.4 她双手垂落，右手握剑于身侧偏后，剑斜指下方，头微低、刘海遮眼；仅呼吸使胸口微起伏。剑沿一道既有金脉裂开，手指本能收紧一下。\n1.4-3.2 剑沿所有金脉同时裂开脱手，碎片向外散开，断口边缘皆为原有的金。右手仍维持握持姿势停在半空，指节微张；左手抬至胸前，掌心向上；头始终微低。\n3.2-5.2 右手将空柄自身侧向斜上方划出完整长弧，腰胯先行带动肩背，宽袖甩开翻卷；收势时手腕轻微过冲后回位，左手向后平展保持平衡。\n5.2-7.0 侧身转体半周，重心自右脚移至左脚，袍摆螺旋展开；转身中右手将空柄换至身前反握，左手抬至面侧。\n7.0-8.8 虚空中一蹬，身体略下沉蓄势，双臂猛地向两侧张开召回碎片；随后双臂收拢至胸前，掌心相对，碎片锁定成环。\n8.8-10.8 一次真实的挥臂与转身，被不同渲染风格切分呈现。\n10.8-13.0 右手缓缓翻转、掌心向上再合拢，碎片沿手臂旋绕归位；剑成形时五指依次收紧扣柄，手臂承力下沉半寸，肩线压低。\n13.0-13.8 第一次抬起头，刘海被气流分开露出双眼，平视镜头；手腕转动一周使金脉迎光。\n13.8-15.0 缓缓垂下手腕，剑回到身侧偏后斜指下方；头重新低下，刘海落回遮眼，左手垂落身侧——完全回到第一帧姿势。\n[表演] 全片沉静克制。碎裂时无惊慌，只有指节一次收紧；召回时下颌微抬、呼吸加深；金脉合拢时嘴角极细微的松动；抬头对视时眼神平静笃定；垂下头时回归最初的静默。\n[署名] 剑身护手上方刃根处刻有小号宽字距镌刻大写署名，是剑本身的一部分，绝非叠加图层。刻痕内自第一帧起已嵌金，重铸后完全相同，绝不变亮变大或增添装饰。\n[文字 · 墨落纸上] 所有文字为湿润毛笔书法渗入画面本身的和纸纤维：落笔带刷毛痕迹与枯笔断白，墨沿纤维晕开一拍后随纸干淡去。拉丁文为厚重镌刻衬线，日文为浓墨重笔竖排于侧三分之一。文字位于她身后并被遮挡，绝不覆盖面部。六个时间点各落一处：0.8 秒、2.4 秒、5.0 秒、7.6 秒、10.6 秒、13.2 秒，其中 7.6 秒那处在墨将干时自笔画渗出金色，10.6 秒那处先落墨再被金箔灌满，13.2 秒的居中标题组须在 14.4 秒前完全淡去，最后一帧不得残留任何文字。\n[摄影] 变形宽银幕，椭圆焦外，暖色条状光斑，180 度快门，轻微桶形畸变。摇臂有质量、起停缓入缓出；甩镜末端轻微过冲后回稳；移焦有极短过冲再回拉。前景始终有金箔长带、碎片或袍袖掠过制造视差。\n0.0-1.4 100mm 微距沿镜面剑身向护手行进，云影流过钢面，金脉与刻痕掠过。\n1.4-3.2 35mm 环绕碎片场。\n（注：原帖的摄影分镜表在回复楼中被折叠，此处为已公开的部分。）",
+  "source": "apimodels",
+  "description": {
+   "en": "",
+   "vi": ""
+  },
+  "mode": "",
+  "inputs": [],
+  "lang": "cjk",
+  "media": {
+   "video": true,
+   "refs": []
+  },
+  "credit": {
+   "author": "@Cia0_exe",
+   "authorUrl": "https://x.com/Cia0_exe",
+   "postUrl": "https://x.com/Cia0_exe/status/2083525563491524882"
+  },
+  "genMode": ""
+ },
+ {
+  "id": "apim_aWJm8HYs",
+  "category": "audio",
+  "title": {
+   "en": "Magical Fan Bag Idol Performance",
+   "vi": "Biểu diễn idol với túi quạt thần kỳ"
+  },
+  "author": "@si1verPEGA",
+  "authorUrl": "https://x.com/si1verPEGA",
+  "postUrl": "https://x.com/si1verPEGA/status/2083368267675222244",
+  "aspectRatio": "16:9",
+  "durationSec": 3,
+  "prompt": "Create a 15-second 16:9 horizontal photorealistic and 3D-anime hybrid video with native dialogue, singing, original music, and sound effects.\nReferences:\nReference 1 = Japanese schoolgirl.\nReference 2 = tiny original 3D idol.\nReference 3 = decorated fan-support bag.\n0–3 sec:\nIn a medium-wide shot, the schoolgirl places the bag on a table and opens it toward the camera. The bag fills the center and right side of the frame while her surprised face remains visible on the left.\nBadges and keychains shake naturally. A miniature stage light appears inside.\nThe girl says: 「えっ、動いた？」\nGenerate a natural young Japanese female voice: soft, surprised, believable, not exaggerated, accurate lip-sync.\n3–6 sec:\nThe acrylic stand matching Reference 2 glows, becomes three-dimensional, and jumps into the central stage area.\nTiny charms transform into miniature light sticks across the left and right sides of the bag.\n6–11 sec:\nThe tiny idol sings: 「キミの今日を　きらり更新！」\nGenerate an original young Japanese idol voice: bright, cute, energetic, clear pronunciation, stable pitch, natural breathing, and accurate singing lip-sync.\nGenerate original modern Japanese idol-pop with sparkling synths, crisp drums, handclaps, bright bass, and a catchy melodic hook.\nThe idol performs energetic choreography. Badges flash across the wide frame, ribbons move like curtains, and keychains bounce like a cheering audience.\n11–15 sec:\nThe idol jumps onto the girl's palm in the foreground. They perform the same finger-heart pose side by side.\nA star-shaped light connects their fingers. The idol freezes back into an acrylic stand for a seamless loop.\nAudio:\nMiniature stereo crowd cheers, plastic charm sounds, acrylic clicks, claps, sparkle effects, and a clean final chime.\nNo subtitles, additional people, logos, character redesigns, or watermarks.",
+  "source": "apimodels",
+  "description": {
+   "en": "",
+   "vi": ""
+  },
+  "mode": "",
+  "inputs": [],
+  "lang": "cjk",
+  "media": {
+   "video": true,
+   "refs": []
+  },
+  "credit": {
+   "author": "@si1verPEGA",
+   "authorUrl": "https://x.com/si1verPEGA",
+   "postUrl": "https://x.com/si1verPEGA/status/2083368267675222244"
+  },
+  "genMode": ""
+ },
+ {
+  "id": "apim_K3L6B1I3",
+  "category": "animation",
+  "title": {
+   "en": "Lava Blade Anime Action",
+   "vi": "Hành động anime lưỡi dung nham"
+  },
+  "author": "@Cia0_exe",
+  "authorUrl": "https://x.com/Cia0_exe",
+  "postUrl": "https://x.com/Cia0_exe/status/2082693906224009447",
+  "aspectRatio": "16:9",
+  "durationSec": null,
+  "prompt": "@image1 完全按照参考图呈现，不重新设计角色。面部五官比例、金色浮雕铠甲纹样、服装剪裁与巨剑造型，全片保持严格一致，不因动作幅度、镜头角度或光线变化产生偏差。\n武器锁定：全片只使用这把巨剑，不出现任何其他武器或道具。\n场景：高处开阔的灰白岩石台地，四周散布着大小不一的巨岩，最远处矗立一块屋子大小的黑色巨岩。天空是清透的灰蓝色，浮着几片白云。侧向强光在岩石上投下长影。空气中悬浮着细小浮尘，被光线照出颗粒感；岩缝间偶有暗红余烬般的光点隐约明灭。\n剑的机制：剑身表面是焦黑的炭质外壳，壳下裂缝中流动着橙红熔岩，流速与亮度随她的发力实时联动——蓄力时如心跳般规律搏动，全力挥砍前的瞬间由暗转亮。剑尖始终有熔融的橙红液滴缓慢垂落，落地后凝成一小块暗红结晶。每完成一次切割，炭壳裂缝会略微扩大、露出更多内部熔光，全片末段剑刃发光面积明显多于开场，形成清晰的能量攀升弧线。\n切割效果铁律：她的剑不是劈开岩石，而是熔穿它。每一道切口必须呈现完整过程——刃口经过处岩面先烧成暗红并向内塌软，断面呈现熔融的橙红发光切面并挂着流动的熔滴，岩块随后才顺着切面滑开分离，分离时切面之间拉出细长的熔融丝线。切割瞬间偶有细小岩屑因高温爆裂点状飞溅，带着橙色光点划出短促弧线。所有发光切口在全片持续发亮不熄灭，断面的橙红光晕实时照亮她的铠甲表面与周边岩壁，形成随光源移动的动态反光；岩石落地时溅出的熔渣与火星留在地面累积。\n视觉效果：挥剑时刃后拖出扭曲空气与橙红热痕；高温使剑刃周围空气持续升腾扭曲；熔滴落地激起细小火星与青烟，余烬如萤火虫般在空中缓慢飘升；岩石碎块被斩飞时带着燃烧的边缘旋转；切割瞬间自切口喷出一道细长白炽气流，剑刃全亮时刃线周围溢出轻微白色光晕；她的发丝与衣摆被上升热气不均匀地掀动，呈现不对称的飘动。命中瞬间插入纯白冲击帧，全片共两次（4.5-6 秒与 10.5-12.5 秒）。高速动作段落（1.5-3 秒、3-4.5 秒、7.5-9 秒、10.5-12.5 秒）叠加笔刷质感速度线与三重残影，缓慢或静态镜头不套用此效果。\n动作原则：视线先到、剑刃后到。挥剑前肩膀先转、腰胯发力、手臂最后到位，收势时手腕再补一记轻甩为刃部增速。每次落剑后剑尖因巨剑重量继续下沉半拍；大力劈砍后她的躯干会顺着剑势多转一点角度才收住，呈现真实惯性与延迟，而非机械式一刀归位。落地时膝盖沉降缓冲、脚尖抓地。她全程双手与单手交替持握，换手时剑柄在掌中转半圈。呼吸与发力同步——蓄力时短促吸气，发力瞬间从齿间压出短促吐息，大招前肩背明显起伏。每一击节奏不完全相同：部分快、脆、一闪而过，部分沉、重、带延迟惯性，避免全片动作节奏单一化。\n风格：2.5D 剧场版动漫，赛璐璐上色配厚涂光影，线条锐利。冷色调环境（灰白岩石、灰蓝天空）与炽热橙红剑光形成互补色对比。模拟 35mm 变形宽银幕镜头：横向椭圆散景、浅景深。16:9，4K，24 帧，15 秒。镜头每 1.5 秒换一个角度，不重复。\n声音：熔岩流动的低沉咕噜声、炭壳开裂的细碎脆响、巨剑破空的沉重呼啸、岩石熔穿时的滋滋声、岩块滑开与落地的闷响、熔滴滴落的轻响、冲刺时靴底碾过碎石的摩擦声、她的呼吸与发力吐息。没有音乐。\n0-1.5 秒 微距特写，浅景深：镜头贴着剑身缓慢滑过，焦黑炭壳裂缝里橙红熔岩如心跳般规律搏动，一颗熔滴垂落拉长后坠地溅起火星。焦点后拉，她双手握住剑柄，指节逐一收紧，黑色指甲压进缠绳。她垂眼看向第一块巨岩，瞳孔微微收紧锁定目标。\n1.5-3 秒 侧面平移追踪，与她同速：右脚踏前瞬间脚跟先着地抓稳，腰胯先转带动双臂甩出，巨剑横向扫过第一块巨岩。刃口经过处岩面瞬间烧成暗红塌软，断面亮起熔融橙光，细小岩屑带火星四溅。岩石停半拍后顺切面滑开两半，切面间拉出数条熔丝，橙光映上她的铠甲侧面。她收剑时剑尖因重量继续下沉半拍。\n3-4.5 秒 低角度仰拍：两块巨岩立于她两侧。她脚尖为轴原地半旋，双手举剑过顶，先是一记快、脆的斩击劈向左侧，再借剑势惯性沉重地回身劈向右侧，一快一重形成节奏对比。两道切口几乎同时亮起，四块岩体外滑砸地，溅起熔渣青烟，几缕余烬缓缓升起。她落定时双膝微屈，发丝被热气不均匀地掀向一侧。\n4.5-6 秒 极近垂直特写：她双臂完全伸展将剑举过头顶，肩背明显收紧蓄力，剑身裂缝里熔岩流速骤然加快、亮度提升。随即整个躯干下沉发力垂直劈落，牙关咬紧、短促吐息喷出——剑刃自高大立岩顶端一路熔穿至底部，岩体沿切面倒向两侧，切口喷出细长白炽气流。插入纯白冲击帧，镜头随冲击轻微震动。\n6-7.5 秒 侧向缓慢横移，体积光穿过热气：她剑尖点地稍作停顿，肩膀剧烈起伏，呼出一口白气，重心在两脚间轻轻晃动找回平衡。镜头横移扫过身后——三处切口仍明亮燃烧，熔滴缓缓垂落，地面已积起暗红结晶与青烟，橙光在她脸颊与铠甲上跳动反射。剑柄在掌中转半圈换到另一只手。\n7.5-9 秒 高速环绕加速：数块小岩石被她一脚踢向空中。她双脚蹬地纵身跃起，膝盖微收加快转速，空中旋身一圈连续挥剑四次，每一击手臂完全伸展并在末端补一记手腕轻甩——每块岩石被熔穿的瞬间亮起橙色断面，燃烧的边缘旋转飞散。\n（注：原帖到此为止，作者标注「DM for continue」，后半段未公开。）",
+  "source": "apimodels",
+  "description": {
+   "en": "",
+   "vi": ""
+  },
+  "mode": "",
+  "inputs": [],
+  "lang": "cjk",
+  "media": {
+   "video": true,
+   "refs": []
+  },
+  "credit": {
+   "author": "@Cia0_exe",
+   "authorUrl": "https://x.com/Cia0_exe",
+   "postUrl": "https://x.com/Cia0_exe/status/2082693906224009447"
+  },
+  "genMode": ""
+ }
+]

@@ -111,3 +111,6 @@ docs/superpowers/
 # Style gallery images are now served from OSS (backend sets STYLE_GALLERY_ASSET_BASE) and are no longer
 # shipped with the repo. scripts/build_style_gallery.py still writes its output here; it is a local intermediate.
 /frontend/public/style-gallery/
+# Third-party sample media for the H3 template gallery; fetch with
+# scripts/fetch_h3_gallery_media.py
+docs/h3-templates/media/*/

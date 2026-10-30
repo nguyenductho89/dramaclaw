@@ -889,6 +889,16 @@ RUNPOD_H3_PDD_REF2VA = os.environ.get(
 # Never pair it with a ref2va UNET (the Apply node's fingerprint check
 # rejects that anyway).
 RUNPOD_H3_PDD_FL2VA = os.environ.get("RUNPOD_H3_PDD_FL2VA", "")
+# Turbo LoRA for 1-shot ref2va (`minimax_h3_ref2v_turbo_4step_v0.1_comfyui_bf16`,
+# Comfy-Org/MiniMax-H3, ~1.96GB, `models/loras/` on volume `zyen2jmxt3`; the
+# endpoint needs `--extra-model-paths-config` pointing at a yaml that maps
+# `loras`). Empty = off. When set it replaces BOTH PDD and the base schedule
+# for ref2va: LoRA on the UNET, euler + beta sigmas, no sigma-shift node, steps
+# below (huchukato/runpod-minimax-h3 `r2va_singularity_turbo` uses 6). Measured
+# 2026-10-30 on A40 (768x1344, 124 frames): ~285s vs ~750s for base 20-step.
+# Two-stage needs PDD, so it is skipped while this is on. Multishot ignores it.
+RUNPOD_H3_TURBO_LORA_REF2VA = os.environ.get("RUNPOD_H3_TURBO_LORA_REF2VA", "")
+RUNPOD_H3_TURBO_STEPS_REF2VA = int(_env_float("RUNPOD_H3_TURBO_STEPS_REF2VA", 6.0))
 
 
 def _runpod_h3_video_configured() -> bool:

@@ -16,6 +16,7 @@ def _default_ref2va_pdd(monkeypatch):
     import novelvideo.config as cfg
 
     monkeypatch.setattr(cfg, "RUNPOD_H3_PDD_REF2VA", "MiniMax-H3-Ref2VA-Acc-8Step.safetensors")
+    monkeypatch.setattr(cfg, "RUNPOD_H3_TURBO_LORA_REF2VA", "")
 
 
 def _base_kwargs(**overrides):

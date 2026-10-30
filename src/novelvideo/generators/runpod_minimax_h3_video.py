@@ -196,6 +196,8 @@ def build_h3_ref2va_graph(
     pin_first_frame: bool = True,
     pdd_file: str | None = None,
     base_steps: int = 20,
+    turbo_lora: str | None = None,
+    turbo_steps: int | None = None,
 ) -> dict[str, Any]:
     """`MiniMaxH3ReferenceToVideo` + PDD 8-step acceleration. With
     `pin_first_frame` (default) `image_names[0]` is the first frame
@@ -243,17 +245,35 @@ def build_h3_ref2va_graph(
     the same base branch as `build_h3_fl2va_graph`. Measured 2026-10-29 on
     YuiDrama beat 1 (A40): ~768s vs ~382s with PDD, but no PDD smearing on
     faces/hands. `two_stage` has no base variant (stage 2 is a PDD branch).
+
+    `turbo_lora` (None = `RUNPOD_H3_TURBO_LORA_REF2VA`): a LoRA filename drops
+    PDD and the base schedule and samples `turbo_steps` (default
+    `RUNPOD_H3_TURBO_STEPS_REF2VA`) euler/beta steps with the LoRA applied to
+    the UNET (no sigma-shift node), mirroring huchukato/runpod-minimax-h3's
+    `r2va_singularity_turbo` preset. Mutually exclusive with PDD and `two_stage`.
     """
     from novelvideo.config import (
         RUNPOD_H3_AUDIO_VAE,
         RUNPOD_H3_PDD_REF2VA,
         RUNPOD_H3_TEXT_ENCODER,
+        RUNPOD_H3_TURBO_LORA_REF2VA,
+        RUNPOD_H3_TURBO_STEPS_REF2VA,
         RUNPOD_H3_UNET_REF2VA,
         RUNPOD_H3_VIDEO_VAE,
     )
 
+    if turbo_lora is None:
+        turbo_lora = RUNPOD_H3_TURBO_LORA_REF2VA
+    if turbo_steps is None:
+        turbo_steps = RUNPOD_H3_TURBO_STEPS_REF2VA
+    if turbo_lora and pdd_file:
+        raise ValueError("turbo_lora and pdd_file are mutually exclusive; pass pdd_file=\"\"")
+    if turbo_lora and two_stage:
+        raise ValueError("two_stage needs PDD and cannot be combined with turbo_lora")
+    if turbo_lora and turbo_steps < 1:
+        raise ValueError(f"turbo_steps must be >= 1, got {turbo_steps}")
     if pdd_file is None:
-        pdd_file = RUNPOD_H3_PDD_REF2VA
+        pdd_file = "" if turbo_lora else RUNPOD_H3_PDD_REF2VA
     use_pdd = bool(pdd_file)
     if not use_pdd and two_stage:
         raise ValueError("two_stage needs PDD (stage 2 is a PDD branch); set RUNPOD_H3_PDD_REF2VA")
@@ -360,6 +380,16 @@ def build_h3_ref2va_graph(
             "inputs": {"model": ["1", 0], "scheduler": "simple", "steps": base_steps, "denoise": 1.0},
         }
         graph["12"]["inputs"]["sigmas"] = ["28", 0]
+        if turbo_lora:
+            graph["70"] = {
+                "class_type": "LoraLoaderModelOnly",
+                "inputs": {"model": ["1", 0], "lora_name": turbo_lora, "strength_model": 1.0},
+            }
+            graph["8"]["inputs"]["model"] = ["70", 0]
+            graph["9"]["inputs"]["sampler_name"] = "euler"
+            graph["28"]["inputs"].update(
+                {"model": ["70", 0], "scheduler": "beta", "steps": turbo_steps}
+            )
 
     for k, name in enumerate(all_image_names):
         graph[str(100 + k)] = {"class_type": "LoadImage", "inputs": {"image": name}}
@@ -436,7 +466,11 @@ def build_h3_ref2va_graph(
         # Reuse pass-1's own model branch ("6") for a single-stage refine;
         # stage 2's branch ("61") when two_stage is also on — matches
         # whichever branch actually produced `final_latent_node`.
-        refine_model = ["61", 0] if two_stage else (["6", 0] if use_pdd else ["1", 0])
+        refine_model = (
+            ["61", 0]
+            if two_stage
+            else (["6", 0] if use_pdd else (["70", 0] if turbo_lora else ["1", 0]))
+        )
         graph["66"] = {
             "class_type": "MiniMaxH3ChainAudioRefineSampler",
             "inputs": {
@@ -636,6 +670,8 @@ class RunPodMiniMaxH3VideoGenerator(VideoGeneratorBase):
             RUNPOD_H3_STAGE2_NFE,
             RUNPOD_H3_STAGE2_SCALE_BY,
             RUNPOD_H3_STAGE2_UPSCALE_METHOD,
+            RUNPOD_H3_TURBO_LORA_REF2VA,
+            RUNPOD_H3_TURBO_STEPS_REF2VA,
             RUNPOD_H3_TWO_STAGE_ENABLED,
             RUNPOD_H3_VIDEO_ENDPOINT_ID,
             RUNPOD_H3_VIDEO_TIMEOUT_SECONDS,
@@ -746,8 +782,15 @@ class RunPodMiniMaxH3VideoGenerator(VideoGeneratorBase):
             mode = "fl2va"  # t2va / fl2va / flf2va all use MiniMaxH3ImageToVideo
 
         pdd_file = RUNPOD_H3_PDD_REF2VA if mode == "ref2va" else RUNPOD_H3_PDD_FL2VA
+        turbo_lora = RUNPOD_H3_TURBO_LORA_REF2VA if mode == "ref2va" else ""
+        if turbo_lora:
+            pdd_file = ""
         if mode == "ref2va" and two_stage and not pdd_file:
-            log("two-stage needs PDD, RUNPOD_H3_PDD_REF2VA is empty: running single-stage base")
+            log(
+                "two-stage needs PDD, "
+                + ("turbo LoRA is on" if turbo_lora else "RUNPOD_H3_PDD_REF2VA is empty")
+                + ": running single-stage"
+            )
             two_stage = False
 
         if mode == "ref2va":
@@ -774,6 +817,8 @@ class RunPodMiniMaxH3VideoGenerator(VideoGeneratorBase):
                 audio_refine_denoise=RUNPOD_H3_AUDIO_REFINE_DENOISE,
                 pin_first_frame=has_first_frame,
                 pdd_file=pdd_file,
+                turbo_lora=turbo_lora,
+                turbo_steps=RUNPOD_H3_TURBO_STEPS_REF2VA,
             )
             upload_payloads = list(image_payloads) + ([end_frame_payload] if end_frame_payload else []) + audio_payloads
         else:
@@ -801,7 +846,11 @@ class RunPodMiniMaxH3VideoGenerator(VideoGeneratorBase):
             if audio_refine:
                 parts.append("audio-refine")
             stage_note = f" [{'+'.join(parts)}]"
-        sampling_note = f"PDD {pdd_steps}-step" if pdd_file else "base 20-step"
+        sampling_note = (
+            f"turbo LoRA {RUNPOD_H3_TURBO_STEPS_REF2VA}-step"
+            if turbo_lora
+            else (f"PDD {pdd_steps}-step" if pdd_file else "base 20-step")
+        )
         log(f"MiniMax H3 ({mode}{stage_note}, {sampling_note}, {width}x{height}, {frames} frames/{frames / _FPS:.1f}s) submitting...")
 
         from novelvideo.generators.nanobanana_grid import (

@@ -36,19 +36,21 @@ def fetch(job: tuple[str, str, str, bool]) -> str:
         if out.exists() and not force:
             return f"skip {tid}"
         raw = d / "raw.mp4"
-        curl(url, raw)
-        subprocess.run(
-            ["ffmpeg", "-y", "-v", "error", "-i", str(raw), "-vf", SCALE,
-             "-c:v", "libx264", "-crf", "28", "-preset", "medium", "-pix_fmt", "yuv420p",
-             "-c:a", "aac", "-b:a", "64k", "-movflags", "+faststart", str(out)],
-            check=True,
-        )
-        subprocess.run(
-            ["ffmpeg", "-y", "-v", "error", "-ss", "1", "-i", str(out),
-             "-frames:v", "1", "-q:v", "5", str(d / "preview.jpg")],
-            check=True,
-        )
-        raw.unlink()
+        try:
+            curl(url, raw)
+            subprocess.run(
+                ["ffmpeg", "-y", "-v", "error", "-i", str(raw), "-vf", SCALE,
+                 "-c:v", "libx264", "-crf", "28", "-preset", "medium", "-pix_fmt", "yuv420p",
+                 "-c:a", "aac", "-b:a", "64k", "-movflags", "+faststart", str(out)],
+                check=True,
+            )
+            subprocess.run(
+                ["ffmpeg", "-y", "-v", "error", "-ss", "1", "-i", str(out),
+                 "-frames:v", "1", "-q:v", "5", str(d / "preview.jpg")],
+                check=True,
+            )
+        finally:
+            raw.unlink(missing_ok=True)  # also drops the empty file of a dead (403) link
         return f"ok {tid}"
     dest = d / f"ref-{kind[3:]}.webp"
     if dest.exists() and not force:

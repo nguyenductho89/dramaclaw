@@ -172,7 +172,7 @@ function card(t){
   }).join('');
   return '<article class="card" data-id="'+t.id+'">'+
    '<div class="row"><h2>'+esc(L(t.title))+'</h2><button class="small" data-copy="id">'+esc(t.id)+'</button></div>'+
-   '<div class="badges"><span class="b acc">'+t.category+'</span><span class="b">'+t.mode+' &middot; '+MODE[t.mode]+'</span><span class="b">'+t.aspectRatio+'</span><span class="b">'+t.durationSec+'s</span><span class="b">'+t.source+'</span></div>'+
+   '<div class="badges"><span class="b acc">'+t.category+'</span>'+(t.mode?'<span class="b">'+t.mode+' &middot; '+MODE[t.mode]+'</span>':'<span class="b">prompt tự do</span>')+'<span class="b">'+t.aspectRatio+'</span>'+(t.durationSec?'<span class="b">'+t.durationSec+'s</span>':'')+'<span class="b">'+t.source+'</span></div>'+
    (t.description.en||t.description.vi?'<p>'+esc(L(t.description))+'</p>':'')+
    (t.credit?'<div class="cap">'+(t.credit.author?'Tác giả '+(t.credit.authorUrl?'<a href="'+t.credit.authorUrl+'" target="_blank" rel="noopener">'+esc(t.credit.author)+'</a>':esc(t.credit.author))+(t.credit.postUrl?' &middot; <a href="'+t.credit.postUrl+'" target="_blank" rel="noopener">bài gốc</a>':''):'Nguồn: apimodels.app')+'</div>':'')+
    (t.media.video?'<div class="slot vid" style="--ar:'+ar+'"><video src="media/'+t.id+'/preview.mp4" poster="media/'+t.id+'/preview.jpg" controls loop muted preload="metadata"></video><div class="ph" hidden>Chưa tải media</div></div>':'<div class="nomedia">Chưa có video mẫu</div>')+

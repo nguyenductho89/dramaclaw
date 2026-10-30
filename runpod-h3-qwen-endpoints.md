@@ -134,11 +134,11 @@ Image hiện tại (`photoreal-h3-worker:0.37.2`) còn đủ cả Qwen+H3. Cần
 |---|---|---|---|
 | 1 | `pin_frames=39` không có tác dụng | `H3MultishotSampler` **không có input `pin_frames`** (đã đọc source xác nhận, cả 2.6.5 và 2.7.2) — tham số đó chỉ tồn tại ở node khác (`H3MultishotMemorySampler`, cần pack `ComfyUI-H3-Motion-Context` chưa cài). ComfyUI âm thầm bỏ qua widget lạ. | Module mới **không có** tham số `pin_frames` ở đâu cả — không thể vô tình gửi lại tham số chết này. |
 | 2 | Job dài bị tự hủy gần xong (mất ~39 phút GPU) | Client cũ tính timeout từ `submit()`, không phải từ `IN_PROGRESS` — cold start 2-6 phút ăn vào budget. | `run_h3_multishot_job()` **reset đồng hồ 1 lần** khi thấy status chuyển `IN_PROGRESS` lần đầu, rồi mới tính deadline `timeout_seconds` từ đó. |
-| 3 | Hết RAM host ở cuối job (không phải VRAM), mất trắng job | `H3MultishotSampler` giữ toàn bộ khung mọi shot trong RAM tới khi ghép cuối; `handler.py`'s `collect_outputs()` tải cả file vào RAM trước khi upload R2 (phần này ở ngoài repo dramaclaw, thuộc `comfy-trends`, **chưa vá**). | `build_h3_multishot_graph()` **luôn** ép `save_every_shot=True` (không expose làm tham số tắt được) — pack tự ghi mục đích "insurance for long chains". Giảm thêm rủi ro: `RUNPOD_H3_MULTISHOT_MAX_SHOTS` default 2 (chưa ai chạy chain dài hơn thật). |
+| 3 | Hết RAM host ở cuối job (không phải VRAM), mất trắng job | `H3MultishotSampler` giữ toàn bộ khung mọi shot trong RAM tới khi ghép cuối; `handler.py`'s `collect_outputs()` tải cả file vào RAM trước khi upload R2 (phần này ở ngoài repo dramaclaw, thuộc `comfy-trends`, **chưa vá**). | `build_h3_multishot_graph()` **luôn** ép `save_every_shot=True` (không expose làm tham số tắt được) — pack tự ghi mục đích "insurance for long chains". Giảm thêm rủi ro: `RUNPOD_H3_MULTISHOT_MAX_SHOTS` default 6 (đã đo 6 shot × 124 khung không OOM, xem mục 8c). |
 | 4 | Thử cu130 cho nhanh hơn → chậm hơn (eager mode) + vẫn OOM | Image tag `-cu130` thiếu runtime cu130 đầy đủ. | Không đổi runtime — endpoint vẫn dùng image cu128 hiện tại. |
 | 5 | `409 ENDPOINT_PAUSED` ngay sau khi bật worker | Độ trễ propagation RunPod. | `run_h3_multishot_job()` giữ đúng cơ chế retry 6 lần/10s như 1-shot H3. |
 | 6 | Phụ kiện (mũ) biến mất giữa shot | Pack không có bộ nhớ phụ kiện, frame relay chỉ truyền pixel. | Giảm nhẹ (chưa giải quyết hẳn): lặp nguyên văn mô tả nhân vật/phụ kiện mọi shot (việc của prompt builder, **chưa viết**) + `H3ChainNormalize` (từng wire mặc định; **đã tắt mặc định 2026-10-30**, xem mục 8d). |
-| 7 | Chưa ai test chain dài thật (3 shot×243 khung ước ~4.2h/$5.2) | Chưa test, không phải lỗi. | `RUNPOD_H3_MULTISHOT_MAX_SHOTS` default 2; tăng dần khi verify thật. |
+| 7 | Chưa ai test chain dài thật (3 shot×243 khung ước ~4.2h/$5.2) | Chưa test, không phải lỗi. | `RUNPOD_H3_MULTISHOT_MAX_SHOTS` default 6 (đã verify 3 và 6 shot × 124 khung, xem mục 8c). |
 
 ### 5b. Graph đã implement (`build_h3_multishot_graph`)
 
@@ -153,7 +153,7 @@ Node khác hẳn 1-shot: `H3ModelLoaderAny`/`H3ClipLoaderAny` (không phải `UN
 
 ### 5c. Job runner (`run_h3_multishot_job`)
 
-Upload R2 (dùng chung helper `nanobanana_grid.py`), submit (retry 409 ×6), poll (deadline reset tại `IN_PROGRESS` đầu tiên — fix lỗi #2), download + verify sha256. `config.py`: `RUNPOD_H3_MULTISHOT_ENDPOINT_ID` (= `u0hkrms7k1xeua`, chưa set giá trị thật trong `.env` — endpoint tồn tại nhưng GPU pool/workers.max chưa cấu hình lại theo khuyến nghị dưới), `RUNPOD_H3_MULTISHOT_TIMEOUT_SECONDS` (default 14000s, gần sát timeout job 4h của endpoint), `RUNPOD_H3_MULTISHOT_IDLE_TIMEOUT_SECONDS`, `RUNPOD_H3_MULTISHOT_MAX_SHOTS` (default 2), gate `_runpod_h3_multishot_configured()`.
+Upload R2 (dùng chung helper `nanobanana_grid.py`), submit (retry 409 ×6), poll (deadline reset tại `IN_PROGRESS` đầu tiên — fix lỗi #2), download + verify sha256. `config.py`: `RUNPOD_H3_MULTISHOT_ENDPOINT_ID` (= `u0hkrms7k1xeua`, chưa set giá trị thật trong `.env` — endpoint tồn tại nhưng GPU pool/workers.max chưa cấu hình lại theo khuyến nghị dưới), `RUNPOD_H3_MULTISHOT_TIMEOUT_SECONDS` (default 14000s, gần sát timeout job 4h của endpoint), `RUNPOD_H3_MULTISHOT_IDLE_TIMEOUT_SECONDS`, `RUNPOD_H3_MULTISHOT_MAX_SHOTS` (default 6), gate `_runpod_h3_multishot_configured()`.
 
 ### 5d. Data model + prompt nguồn + routes + runner — ĐÃ XONG (2026-10-19)
 

@@ -131,46 +131,78 @@
   "ref1": "https://v3b.fal.media/files/b/0aa44050/6h9GMfzActy_L4IyAiMZA_3-1-5-3_ref1.webp"
  },
  "add_cast_member": {
-  "vid": "https://media.pixo.video/blog/minimax-h3-prompts/astronaut-add-teammate-output-29d5eafe31.mp4"
+  "vid": "https://media.pixo.video/blog/minimax-h3-prompts/astronaut-add-teammate-output-29d5eafe31.mp4",
+  "ref1": "https://media.pixo.video/blog/minimax-h3-prompts/astronaut-add-teammate-input-poster-68e8c442ba.webp"
  },
  "scifi_trailer_beat": {
-  "vid": "https://media.pixo.video/models/minimax-h3/vid_003-853958c57e.mp4"
+  "vid": "https://media.pixo.video/models/minimax-h3/vid_003-853958c57e.mp4",
+  "ref1": "https://media.pixo.video/models/minimax-h3/img_006-8695a4b797.webp",
+  "ref2": "https://media.pixo.video/models/minimax-h3/img_007-8b50e4f570.webp"
  },
  "macro_match_morph": {
-  "vid": "https://media.pixo.video/blog/minimax-h3-prompts/coffee-desert-morph-output-af6985055f.mp4"
+  "vid": "https://media.pixo.video/blog/minimax-h3-prompts/coffee-desert-morph-output-af6985055f.mp4",
+  "ref1": "https://media.pixo.video/blog/minimax-h3-prompts/coffee-desert-morph-ref1-coffee-d4850a6984.webp",
+  "ref2": "https://media.pixo.video/blog/minimax-h3-prompts/coffee-desert-morph-ref2-desert-58f2cc0fa1.webp"
  },
  "product_trailer_spot": {
   "vid": "https://media.pixo.video/blog/minimax-h3-prompts/product-launch-film-17e7b49839.mp4"
  },
  "fashion_campaign": {
-  "vid": "https://media.pixo.video/models/minimax-h3/vid_004-1468935431.mp4"
+  "vid": "https://media.pixo.video/models/minimax-h3/vid_004-1468935431.mp4",
+  "ref1": "https://media.pixo.video/models/minimax-h3/img_008-e846472d0e.webp",
+  "ref2": "https://media.pixo.video/models/minimax-h3/img_009-8047ccdd80.webp",
+  "ref3": "https://media.pixo.video/models/minimax-h3/img_010-eab984894a.webp",
+  "ref4": "https://media.pixo.video/models/minimax-h3/img_011-b07584b392.webp"
  },
  "keyframe_brand_film": {
-  "vid": "https://media.pixo.video/blog/minimax-h3-prompts/minimax-binocular-film-output-68d97ea9ba.mp4"
+  "vid": "https://media.pixo.video/blog/minimax-h3-prompts/minimax-binocular-film-output-68d97ea9ba.mp4",
+  "ref1": "https://media.pixo.video/blog/minimax-h3-prompts/minimax-binocular-film-ref1-busstop-b2889fa6c5.webp",
+  "ref2": "https://media.pixo.video/blog/minimax-h3-prompts/minimax-binocular-film-ref2-rooftop-b8c0e287f2.webp",
+  "ref3": "https://media.pixo.video/blog/minimax-h3-prompts/minimax-binocular-film-ref3-banner-a917cb32e8.webp",
+  "ref4": "https://media.pixo.video/blog/minimax-h3-prompts/minimax-binocular-film-ref4-sunglasses-8cb7635286.webp"
  },
  "same_sku_three_scenes": {
-  "vid": "https://media.pixo.video/models/minimax-h3/vid_030-d5c1af74fe.mp4"
+  "vid": "https://media.pixo.video/models/minimax-h3/vid_030-d5c1af74fe.mp4",
+  "ref1": "https://media.pixo.video/models/minimax-h3/img_038-6f42bd8b77.webp",
+  "ref2": "https://media.pixo.video/models/minimax-h3/img_039-7376c9cd5e.webp"
  },
  "kitchen_action_moment": {
-  "vid": "https://media.pixo.video/models/minimax-h3/vid_054-a02700a64b.mp4"
+  "vid": "https://media.pixo.video/models/minimax-h3/vid_054-a02700a64b.mp4",
+  "ref1": "https://media.pixo.video/models/minimax-h3/img_076-a9f8cea021.webp",
+  "ref2": "https://media.pixo.video/models/minimax-h3/vid_053-poster-4c3d1b2897.webp"
  },
  "penthouse_contract": {
-  "vid": "https://media.pixo.video/blog/minimax-h3-prompts/vertical-drama-twohander-9f5768d7b2.mp4"
+  "vid": "https://media.pixo.video/blog/minimax-h3-prompts/vertical-drama-twohander-9f5768d7b2.mp4",
+  "ref1": "https://media.pixo.video/blog/minimax-h3-prompts/family-drama-son-ref-91a1c0570f.webp",
+  "ref2": "https://media.pixo.video/blog/minimax-h3-prompts/family-drama-mother-ref-9089c13020.webp"
  },
  "gothic_corridor_confession": {
-  "vid": "https://media.pixo.video/models/minimax-h3/vid_028-51a4318d21.mp4"
+  "vid": "https://media.pixo.video/models/minimax-h3/vid_028-51a4318d21.mp4",
+  "ref1": "https://media.pixo.video/models/minimax-h3/img_036-b277362884.webp",
+  "ref2": "https://media.pixo.video/models/minimax-h3/img_037-2b856699a1.webp"
  },
  "storyboard_character_pv": {
-  "vid": "https://media.pixo.video/blog/minimax-h3-prompts/otome-hero-pv-output-a78c68aff3.mp4"
+  "vid": "https://media.pixo.video/blog/minimax-h3-prompts/otome-hero-pv-output-a78c68aff3.mp4",
+  "ref1": "https://media.pixo.video/blog/minimax-h3-prompts/otome-hero-pv-ref1-storyboard-e0068d6230.webp",
+  "ref2": "https://media.pixo.video/blog/minimax-h3-prompts/otome-hero-pv-ref2-character-5a29b61c58.webp"
  },
  "wuxia_handoff": {
-  "vid": "https://media.pixo.video/models/minimax-h3/vid_026-b1c32164b2.mp4"
+  "vid": "https://media.pixo.video/models/minimax-h3/vid_026-b1c32164b2.mp4",
+  "ref1": "https://media.pixo.video/models/minimax-h3/img_028-6dfd5d6391.webp",
+  "ref2": "https://media.pixo.video/models/minimax-h3/img_029-ec4844ec34.webp"
  },
  "claymation_chase": {
-  "vid": "https://media.pixo.video/models/minimax-h3/vid_040-f2cf9c9a07.mp4"
+  "vid": "https://media.pixo.video/models/minimax-h3/vid_040-f2cf9c9a07.mp4",
+  "ref1": "https://media.pixo.video/models/minimax-h3/img_054-8a95a41129.webp"
  },
  "anime_title_sequence": {
-  "vid": "https://media.pixo.video/blog/minimax-h3-prompts/jazz-crime-title-output-57c198824f.mp4"
+  "vid": "https://media.pixo.video/blog/minimax-h3-prompts/jazz-crime-title-output-57c198824f.mp4",
+  "ref1": "https://media.pixo.video/blog/minimax-h3-prompts/jazz-crime-title-ref1-vinyl-15213e5730.webp",
+  "ref2": "https://media.pixo.video/blog/minimax-h3-prompts/jazz-crime-title-ref2-midnight-line-7826082f4b.webp",
+  "ref3": "https://media.pixo.video/blog/minimax-h3-prompts/jazz-crime-title-ref3-chase-panels-24999831f3.webp",
+  "ref4": "https://media.pixo.video/blog/minimax-h3-prompts/jazz-crime-title-ref4-evidence-board-cbf76b951d.webp",
+  "ref5": "https://media.pixo.video/blog/minimax-h3-prompts/jazz-crime-title-ref5-bridge-5697357f58.webp",
+  "ref6": "https://media.pixo.video/blog/minimax-h3-prompts/jazz-crime-title-ref6-jazz-finale-adb90a1749.webp"
  },
  "voice_cloned_narration": {
   "vid": "https://media.pixo.video/models/minimax-h3/vid_064-a2c3727b30.mp4"

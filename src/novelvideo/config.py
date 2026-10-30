@@ -1022,11 +1022,14 @@ RUNPOD_H3_MULTISHOT_OUTPUT_SCALE = _env_float("RUNPOD_H3_MULTISHOT_OUTPUT_SCALE"
 # chains of a minute or more). `off` (default) leaves the decoded frames alone.
 # `texture` softens high-detail frames only; `full` also histogram-matches every
 # frame, per channel, to ONE shot-1 frame (the pre-2026-10-30 behaviour).
-# Measured 2026-10-30 on a 2-shot ref2va chain: `full` forced the whole-frame
-# mean flat (66.6-67.7) by dragging the static sky band 118 -> 65 as the dark
-# uniform filled the frame, tinted frame 0 purple, and its softening dropped the
-# sharpness metric from 420 to 221 within 36 frames (the 1-shot graphs, which
-# have no such node, stayed within 5 levels of sky brightness).
+# Measured 2026-10-30, same inputs/seed, 2 shots with `full` vs 3 shots with the
+# node off (ref2va, turbo LoRA): with the node, frame 0 is tinted (sky band mean
+# 115 vs 143 in the start image) and sharpness falls 420 -> 221 within 36
+# frames (off: 458 -> 348, close to the 1-shot graphs); it also pins the
+# luma percentiles flat (p90 135-141, p50 55-59), while with it off they move
+# with the content (p90 161 -> 137 as the sky leaves the frame, p50 59 -> 37 as
+# the dark uniform fills it). Whether that flattening is a defect or a fix for
+# the brightness change seen by eye was NOT settled by these numbers.
 RUNPOD_H3_MULTISHOT_CHAIN_NORMALIZE = os.environ.get(
     "RUNPOD_H3_MULTISHOT_CHAIN_NORMALIZE", "off"
 ).strip().lower()

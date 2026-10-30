@@ -295,18 +295,20 @@ Dùng crest factor (`ffmpeg astats`) + spectrogram (`showspectrumpic`) để ch�
 
 **Hướng còn lại, chưa thử**: `RUNPOD_H3_AUDIO_REFINE_DENOISE=1.0` (refine toàn bộ thay vì 0.5 — khả năng thấp vì 0.5 đã không đổi gì); trọng số UNET không quantize (nếu có, tốn VRAM/chậm hơn nhiều); hoặc **chuyển hẳn sang TTS riêng + ghép audio vào video** thay vì để H3 tự sinh giọng — khuyến nghị cho các beat cần giọng rõ.
 
-### 8d. `H3ChainNormalize` làm nhòe khung đầu + kéo độ sáng nền (2026-10-30)
+### 8d. `H3ChainNormalize` trong multishot: khung đầu bị nhuộm + mờ hơn; độ sáng chưa kết luận (2026-10-30)
 
-Video multishot turbo (job `b95e4ef9…`, 2 shot × 124 khung, LoRA 8 bước) có khung đầu mờ và độ sáng đổi qua các khung. Nguyên nhân là node `H3ChainNormalize` mà graph multishot luôn chèn giữa sampler và `CreateVideo` (từ 2026-10-19, `colour_match=True`): nó histogram-match **từng khung, từng kênh màu** về một khung tham chiếu giữa shot 1 và làm mềm các khung có năng lượng chi tiết vượt 1,06× baseline (mức làm mềm tăng dần theo EMA, tối đa 0,85). Pack ghi node dành cho chuỗi dài (đo trên 84 giây).
+Video multishot turbo (job `b95e4ef9…`, 2 shot × 124 khung, LoRA 8 bước) có khung đầu mờ và độ sáng đổi qua các khung. Graph multishot luôn chèn node `H3ChainNormalize` (từ 2026-10-19, `colour_match=True`): nó histogram-match **từng khung, từng kênh màu** về một khung giữa shot 1 và làm mềm các khung có năng lượng chi tiết vượt 1,06× baseline (EMA, tối đa 0,85). Pack ghi node dành cho chuỗi dài (đo trên 84 giây).
 
-Đo theo khung (độ sáng trung bình; "dải trời" = 130 hàng trên cùng của khung 384×672, nền tĩnh; độ nét = phương sai Laplacian):
+A/B cùng ảnh đầu vào, prompt, seed (job `1c5d34c0…`: 3 shot, **không** node; so với `b95e4ef9…`: 2 shot, có node):
 
-| Video | Độ sáng cả khung | Độ sáng dải trời | Độ nét |
+| Chỉ số | Có node (2 shot) | Không node (3 shot) | 1-shot turbo6 / base20 (không node) |
 |---|---|---|---|
-| Multishot turbo, có node | 66,6–67,7 (bị ép phẳng) | 118 → 65 (dao động 53) | 420 → 221 sau 36 khung |
-| 1-shot turbo6, không node | 71,6–79,1 | 137–142 | 448 → 384 |
-| 1-shot base20, không node | 70,6–83,4 | 140–146 | 522 → 306 → 360 |
-| Multishot PDD cũ (`c4dd3b09`, `859365be`) | 29–30 (ép phẳng) | — | 370 → 43 ở khung 72 |
+| Dải trời khung 0 (ảnh gốc ~143) | 115 (nhuộm tím) | 143 | 142 / 146 |
+| Độ nét khung 0 → 36 → 48 | 420 → 221 → 249 | 458 → 360 → 348 | 448 → 384 → 376 / 522 → 306 → 336 |
+| p90 luma (đỉnh sáng) | 135–141 (phẳng) | 161 → 137 trong 60 khung đầu, sau đó 131–144 | — |
+| p50 luma | 55–59 (phẳng) | 59 → 37–44 ở các cảnh nhân vật chiếm khung | — |
+| Chạy GPU | 696s (2 shot) | 1023s (3 shot, ~340s/shot), không OOM | — |
 
-Sửa: `RUNPOD_H3_MULTISHOT_CHAIN_NORMALIZE` = `off` (mặc định, không có node "20"), `texture` (chỉ làm mềm, `colour_match=False`), `full` (hành vi cũ). Cũng nâng `RUNPOD_H3_MULTISHOT_MAX_SHOTS` mặc định 2 → 6 theo benchmark mục 8c (3 và 6 shot × 124 khung không OOM, RAM đỉnh không tăng theo số shot). Chưa thử > 6 shot, shot dài hơn 124 khung nhiều shot.
+Kết luận có căn cứ: node làm khung đầu mất màu thật và mờ hơn rõ rệt (độ nét khung 36 thấp hơn 39%). **Chưa kết luận được về độ sáng:** bản không node tối dần chủ yếu do nội dung (nhân vật tiến lại, đồng phục tối chiếm khung, trời ra khỏi khung), còn bản có node bị ép phẳng bằng histogram matching; số đo không phân biệt được "ép phẳng" là sửa hay làm hỏng thứ người xem thấy. Cần xem mắt hai video.
 
+Cũng nâng `RUNPOD_H3_MULTISHOT_MAX_SHOTS` mặc định 2 → 6 theo mục 8c; job 3 shot × 124 khung lần này xong 1023s, không OOM. Biến mới `RUNPOD_H3_MULTISHOT_CHAIN_NORMALIZE`: `off` (mặc định, không có node "20"), `texture` (`colour_match=False`), `full` (hành vi cũ). Chưa thử > 6 shot, shot dài hơn 124 khung nhiều shot.

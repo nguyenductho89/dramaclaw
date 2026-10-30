@@ -114,3 +114,6 @@ docs/superpowers/
 # Third-party sample media for the H3 template gallery; fetch with
 # scripts/fetch_h3_gallery_media.py
 docs/h3-templates/media/*/
+
+# H3 template picker media (third-party, fetched by scripts/sync_h3_picker_media.py)
+frontend/public/h3-templates/

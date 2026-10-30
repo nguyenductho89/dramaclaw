@@ -6214,6 +6214,11 @@
       "modeReference": "First frame + ảnh tham chiếu",
       "seconds": "{{count}} giây",
       "placeholderHint": "Đã điền sẵn giá trị mẫu. @image1 = <Picture 1> (first frame), @image2 = <Picture 2>…; mỗi ảnh đầu vào có prompt tạo ảnh có thể sửa, hoặc tải ảnh của bạn lên.",
+      "searchPlaceholder": "Tìm template (tên, prompt, id)…",
+      "searchResults": "{{count}} kết quả",
+      "noResults": "Không có template phù hợp.",
+      "samplePoster": "Video mẫu",
+      "sampleRef": "Ảnh tham chiếu {{index}}",
       "sources": {
         "fal": "Guide fal.ai",
         "pixo": "pixo.video",

@@ -6328,6 +6328,11 @@
       "modeReference": "First frame + references",
       "seconds": "{{count}}s",
       "placeholderHint": "Samples are filled in. @image1 = <Picture 1> (first frame), @image2 = <Picture 2>…; each picture input has an image prompt you can edit, or upload your own picture.",
+      "searchPlaceholder": "Search templates (title, prompt, id)…",
+      "searchResults": "{{count}} results",
+      "noResults": "No templates match.",
+      "samplePoster": "Sample video",
+      "sampleRef": "Reference {{index}}",
       "sources": {
         "fal": "fal.ai guide",
         "pixo": "pixo.video",

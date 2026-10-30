@@ -1,9 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { LayoutTemplate, X } from "lucide-react";
+import { LayoutTemplate, Search, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { loadCommunityH3Templates } from "@/features/canvas/domain/communityH3Templates";
+import {
+  type H3TemplateMediaManifest,
+  h3PosterUrl,
+  h3RefUrls,
+  loadH3TemplateMedia,
+} from "@/features/canvas/domain/h3TemplateMedia";
+import { searchH3Templates } from "@/features/canvas/domain/h3TemplateSearch";
 import {
   H3_PROMPT_TEMPLATES,
   H3_TEMPLATE_CATEGORIES,
@@ -47,10 +54,25 @@ export function H3TemplatePickerChip({ prompt, connectedImageCount, onApply }: H
   const [category, setCategory] = useState<H3TemplateCategory>("cinematic");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [community, setCommunity] = useState<readonly H3PromptTemplate[]>([]);
+  const [query, setQuery] = useState("");
+  const [media, setMedia] = useState<H3TemplateMediaManifest>({});
+  const searching = query.trim().length > 0;
 
-  // The community prompts are a large data file; fetch it only when its tab is opened.
   useEffect(() => {
-    if (source !== "community" || community.length > 0) return;
+    if (!isOpen) return;
+    let alive = true;
+    void loadH3TemplateMedia().then((manifest) => {
+      if (alive) setMedia(manifest);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [isOpen]);
+
+  // The community prompts are a large data file; fetch it only when its tab is
+  // opened or a search needs to cover it.
+  useEffect(() => {
+    if ((source !== "community" && !searching) || community.length > 0) return;
     let alive = true;
     void loadCommunityH3Templates().then((items) => {
       if (alive) setCommunity(items);
@@ -58,7 +80,7 @@ export function H3TemplatePickerChip({ prompt, connectedImageCount, onApply }: H
     return () => {
       alive = false;
     };
-  }, [source, community.length]);
+  }, [source, searching, community.length]);
 
   const pool = useMemo(
     () => (source === "community" ? community : H3_PROMPT_TEMPLATES),
@@ -74,8 +96,10 @@ export function H3TemplatePickerChip({ prompt, connectedImageCount, onApply }: H
   const activeCategory = categories.includes(category) ? category : (categories[0] ?? category);
   const visible = useMemo(
     () =>
-      pool.filter((item) => item.source === source && item.category === activeCategory),
-    [pool, source, activeCategory],
+      searching
+        ? searchH3Templates([...H3_PROMPT_TEMPLATES, ...community], query)
+        : pool.filter((item) => item.source === source && item.category === activeCategory),
+    [searching, query, community, pool, source, activeCategory],
   );
   const selected =
     visible.find((item) => item.id === selectedId) ?? visible[0] ?? null;
@@ -170,6 +194,32 @@ export function H3TemplatePickerChip({ prompt, connectedImageCount, onApply }: H
                 </button>
               </div>
 
+              <div className="flex shrink-0 px-4 pb-1.5">
+                <label className="flex h-8 w-full items-center gap-2 rounded-md border border-white/12 bg-white/[0.04] px-2.5 focus-within:border-accent">
+                  <Search className="size-3.5 shrink-0 text-text-muted" />
+                  <input
+                    value={query}
+                    onChange={(event) => {
+                      setQuery(event.target.value);
+                      setSelectedId(null);
+                    }}
+                    placeholder={t("canvas.h3Templates.searchPlaceholder")}
+                    className="min-w-0 flex-1 bg-transparent text-[12px] text-text-dark outline-none placeholder:text-text-muted"
+                  />
+                  {searching && (
+                    <button
+                      type="button"
+                      onClick={() => setQuery("")}
+                      className="text-text-muted hover:text-text-dark"
+                      aria-label={t("common.close")}
+                    >
+                      <X className="size-3" />
+                    </button>
+                  )}
+                </label>
+              </div>
+
+              {!searching && (
               <div className="flex shrink-0 gap-1.5 px-4 pb-1.5">
                 {(["fal", "pixo", "community"] as const).map((key) => (
                   <button
@@ -189,7 +239,9 @@ export function H3TemplatePickerChip({ prompt, connectedImageCount, onApply }: H
                   </button>
                 ))}
               </div>
+              )}
 
+              {!searching && (
               <div className="flex shrink-0 flex-wrap gap-1.5 px-4 pb-2">
                 {categories.map((key) => (
                   <button
@@ -209,14 +261,25 @@ export function H3TemplatePickerChip({ prompt, connectedImageCount, onApply }: H
                   </button>
                 ))}
               </div>
+              )}
+
+              {searching && (
+                <div className="shrink-0 px-4 pb-2 text-[11px] text-text-muted">
+                  {t("canvas.h3Templates.searchResults", { count: visible.length })}
+                </div>
+              )}
 
               <div className="flex min-h-0 flex-1 gap-3 px-4 pb-2">
                 <div className="ui-scrollbar flex w-[230px] shrink-0 flex-col gap-1.5 overflow-y-auto">
                   {source === "community" && community.length === 0 && (
                     <div className="px-1 text-[11px] text-text-muted">{t("canvas.h3Templates.loading")}</div>
                   )}
+                  {searching && visible.length === 0 && (
+                    <div className="px-1 text-[11px] text-text-muted">{t("canvas.h3Templates.noResults")}</div>
+                  )}
                   {visible.map((item) => {
                     const isSelected = selected?.id === item.id;
+                    const poster = h3PosterUrl(item.id, media);
                     return (
                       <button
                         key={item.id}
@@ -228,11 +291,18 @@ export function H3TemplatePickerChip({ prompt, connectedImageCount, onApply }: H
                             : "border-white/12 bg-white/[0.04] hover:border-white/20 hover:bg-white/[0.08]"
                         }`}
                       >
-                        <div className="text-[12px] font-medium text-text-dark">
-                          {h3TemplateText(item.title, i18n.language)}
-                        </div>
-                        <div className="mt-0.5 text-[11px] leading-snug text-text-muted">
-                          {h3TemplateText(item.description, i18n.language)}
+                        <div className="flex gap-2">
+                          {poster && <TemplateImage src={poster} className="h-10 w-[72px] shrink-0 rounded object-cover" />}
+                          <div className="min-w-0">
+                            <div className="text-[12px] font-medium text-text-dark">
+                              {h3TemplateText(item.title, i18n.language)}
+                            </div>
+                            <div className="mt-0.5 text-[11px] leading-snug text-text-muted">
+                              {searching
+                                ? `${t(`canvas.h3Templates.sources.${item.source}`)} · ${h3TemplateText(item.description, i18n.language)}`
+                                : h3TemplateText(item.description, i18n.language)}
+                            </div>
+                          </div>
                         </div>
                       </button>
                     );
@@ -252,6 +322,29 @@ export function H3TemplatePickerChip({ prompt, connectedImageCount, onApply }: H
                       {" · "}
                       {t("canvas.h3Templates.seconds", { count: selected.durationSec })}
                     </div>
+                    {(h3PosterUrl(selected.id, media) || h3RefUrls(selected.id, media).length > 0) && (
+                      <div className="flex shrink-0 gap-2 overflow-x-auto">
+                        {h3PosterUrl(selected.id, media) && (
+                          <figure className="m-0 shrink-0">
+                            <TemplateImage
+                              src={h3PosterUrl(selected.id, media) as string}
+                              className="h-[72px] rounded object-cover"
+                            />
+                            <figcaption className="mt-0.5 text-[10px] text-text-muted">
+                              {t("canvas.h3Templates.samplePoster")}
+                            </figcaption>
+                          </figure>
+                        )}
+                        {h3RefUrls(selected.id, media).map((url, index) => (
+                          <figure key={url} className="m-0 shrink-0">
+                            <TemplateImage src={url} className="h-[72px] rounded object-cover" />
+                            <figcaption className="mt-0.5 text-[10px] text-text-muted">
+                              {t("canvas.h3Templates.sampleRef", { index: index + 1 })}
+                            </figcaption>
+                          </figure>
+                        ))}
+                      </div>
+                    )}
                     <div className="flex flex-col gap-0.5">
                       <div className="text-[11px] font-medium text-text-dark">
                         {t("canvas.h3Templates.inputs")}
@@ -310,4 +403,11 @@ export function H3TemplatePickerChip({ prompt, connectedImageCount, onApply }: H
         )}
     </>
   );
+}
+
+/** Preview image that removes itself when the (third-party, git-ignored) file is missing. */
+function TemplateImage({ src, className }: { src: string; className: string }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) return null;
+  return <img src={src} alt="" loading="lazy" className={className} onError={() => setFailed(true)} />;
 }

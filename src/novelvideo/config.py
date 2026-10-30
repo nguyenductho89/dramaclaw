@@ -905,9 +905,11 @@ RUNPOD_H3_TURBO_STEPS_REF2VA = int(_env_float("RUNPOD_H3_TURBO_STEPS_REF2VA", 6.
 # the turbo LoRA above). Empty = off. The model card requires the trigger word at the
 # start of the prompt and calls 1.0 the intended strength (0.6-0.8 = lighter touch).
 # It says nothing about stacking with the turbo/PDD distillation, so A/B before
-# turning it on by default; see generators/comfy_lora.py.
+# turning it on by default; see generators/comfy_lora.py. A/B 2026-10-30 (3 shots,
+# seed fixed) showed no visible gain from either strength, so the file name stays
+# empty by default; strength defaults to 0.7 for machines that do turn it on.
 RUNPOD_H3_REALISM_LORA = os.environ.get("RUNPOD_H3_REALISM_LORA", "")
-RUNPOD_H3_REALISM_LORA_STRENGTH = _env_float("RUNPOD_H3_REALISM_LORA_STRENGTH", 1.0)
+RUNPOD_H3_REALISM_LORA_STRENGTH = _env_float("RUNPOD_H3_REALISM_LORA_STRENGTH", 0.7)
 RUNPOD_H3_REALISM_TRIGGER = os.environ.get("RUNPOD_H3_REALISM_TRIGGER", "r34l1sm")
 
 

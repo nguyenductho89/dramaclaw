@@ -487,3 +487,11 @@ Beat 1 YuiDrama (`01M5YQ80R0H4DJF6AHDJGMAZQ6`, mặt Yui trong khung chỉ ~60px
 - Muốn quay lại PDD: xoá dòng `RUNPOD_H3_PDD_REF2VA=` trong `.env` rồi recreate `api` theo quy trình ở trên (`up -d api` → `docker cp src/novelvideo` → cài `langfuse boto3` → `restart`).
 - Đã verify qua route sản phẩm `POST .../beats/1/video`: log task ghi `ref2va, base 20-step`, video 768×1344, 124 khung, có audio. Job `a2c7c0df…`.
 - Test chạy bằng `.venv` local đọc `.env`, nên các test cần giá trị PDD mặc định đã tự cố định qua `monkeypatch`.
+
+## LoRA realism `fal/MiniMax-H3-Realism-People-LoRA` cho H3 (2026-10-30)
+
+- File `h3-realism-people-t2v-i2v-r2v.safetensors` (131.229.656 B) nằm ở `/runpod-volume/models/loras/` trên volume `zyen2jmxt3`. Công tắc: `RUNPOD_H3_REALISM_LORA` (tên file, rỗng = tắt), `RUNPOD_H3_REALISM_LORA_STRENGTH` (mặc định code 0.7), `RUNPOD_H3_REALISM_TRIGGER` (`r34l1sm`, tự thêm vào đầu prompt từng shot). Áp cho ref2va, fl2va và multishot (ô 2 của `H3LoraStack`). Code: `generators/comfy_lora.py`, test `tests/test_h3_realism_lora.py`.
+- **Máy này bật bằng `.env`** (`RUNPOD_H3_REALISM_LORA=...`, `RUNPOD_H3_REALISM_LORA_STRENGTH=0.7`) theo yêu cầu người dùng. Mặc định trong code vẫn để tên file rỗng vì máy khác chưa có file trên volume. Đổi `.env` phải recreate `api` rồi vá lại (`docker cp src/novelvideo`, `uv pip install langfuse boto3`, restart).
+- **A/B 1-shot ref2va, cùng seed, 124 khung, A40 (turbo LoRA 6 bước):** không LoRA / 1.0 / 0.7 trên 3 đoạn (hai nhân vật cận cảnh; giây 11–13 và 13–15 của clip 30s). Tốc độ không đổi (~34s/bước, ~4,5 phút/job). Log worker không có cảnh báo `lora key not loaded`. Độ nét mặt (Laplacian) của bản có LoRA thấp hơn nhẹ (vd 61,5 / 61,2 / 66,6; 28,5 / 26,7 / 27,9). Bằng mắt: da, lông mi, ánh nến gần như giống hệt; riêng đoạn hai nhân vật, LoRA đổi cả bố cục hành động (tay đặt lên cổ). **Kết luận: chưa thấy lợi ích rõ, chỉ một seed.** Chưa chạy multishot 2 shot với turbo + realism để kiểm `H3LoraStack`.
+- Đã nhầm trước khi chạy đoạn "giây 11–13": mỗi shot dài 5,17s (không phải 5,88s), shot 3 chạy ~10,3–15,5s, nên khung 11,75s nằm giữa shot 3, không phải đầu shot.
+- **Bẫy RunPod:** khi tắt rồi bật lại worker, lần khởi động đó mất ~13 phút rồi RunPod tự dựng 3 worker cùng lúc (2 cái IDLE thừa, tốn tiền); job vẫn xếp hàng chạy được. `workers.max=0` sau khi xong thì dọn hết.

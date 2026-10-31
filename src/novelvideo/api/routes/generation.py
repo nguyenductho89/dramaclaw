@@ -78,6 +78,7 @@ from novelvideo.generators.nanobanana_grid import (
     build_regen_plan,
     compute_input_fingerprint,
     hash_plan,
+    resolve_identity_image_path,
 )
 from novelvideo.generators.render_identity_guard import render_ai_detection_error
 from novelvideo.manual_shots import pick_beats_by_number
@@ -5453,8 +5454,10 @@ def _h3_identity_references(character_map: dict, beat: dict) -> list[dict[str, s
             ),
             None,
         )
-        path = (match or {}).get("primary_reference") or ""
-        appearance = (match or {}).get("appearance_details") or ""
+        path = resolve_identity_image_path(info, identity_name)
+        appearance = (match or {}).get("appearance_details") or (
+            (info.get("identity_appearances") or {}).get(identity_name) or ""
+        )
         if not path or not Path(path).exists():
             path = info.get("portrait_path") or ""
         if not appearance:

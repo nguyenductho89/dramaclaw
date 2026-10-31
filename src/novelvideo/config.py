@@ -794,6 +794,17 @@ def _runpod_qwen_edit_configured() -> bool:
 # same reason).
 RUNPOD_QWEN21_RENDER_STEPS = int(_env_float("RUNPOD_QWEN21_RENDER_STEPS", 40.0))
 RUNPOD_QWEN21_RENDER_CFG = _env_float("RUNPOD_QWEN21_RENDER_CFG", 1.0)
+# Optional LoRA for the Qwen 2.1 render graph (added 2026-10-31, default OFF). Set to
+# a file name under the volume's `models/loras/`, e.g. the official Turbo LoRA
+# `qwen_image_2.1_turbo_lora_avg_rank_178_bf16.safetensors` (8 steps, cfg 1, per
+# docs.comfy.org's Qwen-Image 2.1 tutorial) or a Pruna 5/6/8-step one. With a LoRA the
+# step count becomes `RUNPOD_QWEN21_RENDER_LORA_STEPS`. The endpoint must map `loras`
+# (the H3 endpoints do via COMFY_EXTRA_ARGS; the Qwen-only image's baked yaml does not).
+RUNPOD_QWEN21_RENDER_LORA = os.getenv("RUNPOD_QWEN21_RENDER_LORA", "").strip()
+RUNPOD_QWEN21_RENDER_LORA_STRENGTH = _env_float("RUNPOD_QWEN21_RENDER_LORA_STRENGTH", 1.0)
+RUNPOD_QWEN21_RENDER_LORA_STEPS = int(_env_float("RUNPOD_QWEN21_RENDER_LORA_STEPS", 8.0))
+# Fixed seed for controlled A/B runs (empty = random per call, the default).
+RUNPOD_QWEN21_RENDER_SEED = os.getenv("RUNPOD_QWEN21_RENDER_SEED", "").strip()
 RUNPOD_QWEN21_RENDER_IMAGE_SIZE = os.environ.get("RUNPOD_QWEN21_RENDER_IMAGE_SIZE", "1K")
 # Masked multi-character inpaint pass ONLY (not the single-character `full`
 # path, not `scene_only` — both already verified working well at cfg=1/no

@@ -3917,8 +3917,47 @@ def build_qwen_edit_render_prompt(
     return " ".join(parts)
 
 
+# Added 2026-10-31. Official Qwen 2.1 rule: an image's rendering medium survives
+# an edit unless the prompt targets it. The old wording said "keep ... background
+# ... unchanged", which for a pencil-outline sketch meant keeping the line-art
+# background (YuiDrama beats 11-14: photoreal person on a washed-out outline set,
+# white noren curtain). The medium change must be named for the WHOLE image.
+_QWEN21_RENDER_WHOLE_IMAGE_NOTE = (
+    "Render the whole image, background and every object included and not "
+    "only the people, as real photographed materials in natural color, with "
+    "no pencil outlines, line art or white-paper look left anywhere."
+)
+
+
+# Added 2026-10-31. The sketch+identity render sent no scene photo at all, so the
+# model invented the materials of everything outside the figure (white, flat
+# "minimalist set" backgrounds in YuiDrama beats 11-14). Official multi-image
+# rule: every image gets its own tag and its own role.
+_QWEN21_RENDER_SCENE_REFERENCE_NOTE = (
+    "{tag} is a reference photo of the same location; take the materials, "
+    "colors, lighting and surface textures of the walls, floor, fabric and "
+    "objects from {tag}, and use it for nothing else: no person and no "
+    "layout from {tag}."
+)
+# Added 2026-10-31. With the whole identity sheet as <image2> every Yui came out
+# standing frontal (the sheet's full-body views) and faces drifted (the face is a
+# quarter of that picture). The face now comes from the sheet's close-up panel.
+_QWEN21_RENDER_IDENTITY_SHEET_NOTE = (
+    "{tag} is a character sheet of the same person; take only her outfit "
+    "from {tag}, and nothing else: not its pose and not its framing."
+)
+_QWEN21_RENDER_POSE_NOTE = (
+    "The pose, body position and action come only from the mannequin in "
+    "<image1>, never from any other image."
+)
+
+
 def build_qwen21_render_prompt(
-    beats: List[dict], stage: str = "full", subject_hints: Optional[List[str]] = None
+    beats: List[dict],
+    stage: str = "full",
+    subject_hints: Optional[List[str]] = None,
+    scene_reference: bool = False,
+    identity_sheet: bool = False,
 ) -> str:
     """Short, Qwen-Image-2.1-specific render prompt — the fixed replacement
     for the render dispatch's previous behavior of reusing the shared
@@ -3980,7 +4019,8 @@ def build_qwen21_render_prompt(
     """
     beat = beats[0] if beats else {}
     action = re.sub(r"\{\{[^}]*\}\}", "", str(beat.get("visual_description") or "")).strip()
-    action = action.replace('"', "")
+    action = re.sub(r"\[\[([^\]]*)\]\]", r"\1", action)  # `[[prop]]` -> `prop`
+    action = re.sub(r"\s+", " ", action.replace('"', "")).strip().rstrip(".")
     style_tail = (
         "Convert the rendering medium from sketch to a photorealistic "
         "photograph with natural lighting and real skin texture."
@@ -3991,7 +4031,8 @@ def build_qwen21_render_prompt(
             "photograph, rendering every mannequin figure as an ordinary, "
             "period-appropriate person with no recognizable identity, and "
             "keep the pose, body proportions and size, camera framing and "
-            "background composition unchanged.",
+            "layout of the scene unchanged.",
+            _QWEN21_RENDER_WHOLE_IMAGE_NOTE,
             style_tail,
         ]
         if subject_hints:
@@ -4008,14 +4049,34 @@ def build_qwen21_render_prompt(
             "Keep the result a photorealistic photograph.",
         ]
     else:
+        # `identity_sheet`: <image2> is only the face close-up, the whole
+        # character sheet comes last and supplies the outfit alone.
+        from_image2 = (
+            "face, ethnicity, gender, age and hairstyle"
+            if identity_sheet
+            else "face, ethnicity, gender, age, hairstyle and outfit"
+        )
         parts = [
-            "Replace the mannequin figure in <image1> with the person from "
-            "<image2>, taking face, ethnicity, gender, age, hairstyle and "
-            "outfit from <image2>; <image1> is the canvas, so keep its "
-            "pose, camera framing, background and every other element "
-            "unchanged.",
+            "Convert the sketch in <image1> into a photorealistic "
+            "photograph of the same scene, replacing the mannequin figure "
+            f"with the person from <image2>, taking {from_image2} from "
+            "<image2>; keep the pose, camera framing and layout of <image1> "
+            "exactly.",
+            _QWEN21_RENDER_WHOLE_IMAGE_NOTE,
             style_tail,
         ]
+        # Tags after <image2> follow the order the caller attaches them in:
+        # scene photo first, then the identity sheet.
+        next_tag = 3
+        if scene_reference:
+            parts.insert(-1, _QWEN21_RENDER_SCENE_REFERENCE_NOTE.format(tag=f"<image{next_tag}>"))
+            next_tag += 1
+        if identity_sheet:
+            parts.insert(
+                -1,
+                _QWEN21_RENDER_IDENTITY_SHEET_NOTE.format(tag=f"<image{next_tag}>"),
+            )
+        parts.insert(-1, _QWEN21_RENDER_POSE_NOTE)
     if action and stage != "inpaint":
         parts.insert(-1, f"Scene: {action}.")
     return " ".join(parts)
@@ -4150,6 +4211,154 @@ def _compose_staging_lines(staging: Optional[dict]) -> List[str]:
     if scale_note:
         lines.append(scale_note if scale_note.endswith(".") else f"{scale_note}.")
     return lines
+
+
+def _sketch_color_parts(raw: str) -> Tuple[str, str]:
+    """`"#FF6B00 FLUORESCENT ORANGE"` -> `("fluorescent orange", "#FF6B00")`.
+    Missing half comes back empty rather than raising: the colour map is
+    user-editable data."""
+    text = str(raw or "").strip()
+    match = re.search(r"#[0-9A-Fa-f]{6}", text)
+    hex_code = match.group(0).upper() if match else ""
+    name = (text.replace(match.group(0), "") if match else text).strip().lower()
+    return name, hex_code
+
+
+_SKETCH_LATER_MOMENT_RE = re.compile(
+    r",?\s*(?:and\s+)?\b(?:then|afterwards?|before|next)\b", re.IGNORECASE
+)
+# Clauses a mannequin sketch must not draw: outfit, hair, jewelry, expression.
+_SKETCH_DROP_CLAUSE_RE = re.compile(
+    r"\b(?:dressed|wearing|clad|attired|outfit|costume|uniform|robe|kosode|kimono|"
+    r"obi|sash|hair|bun|bracelet|kumihimo|necklace|earring|jewel\w*)\b"
+    r"|\b(?:look|expression)\b|\bsmil\w*\b|\bon (?:her|his|their) face\b",
+    re.IGNORECASE,
+)
+
+
+def _sketch_pose_only(action: str) -> str:
+    """Reduce a beat description to what a colour-coded mannequin can show.
+
+    Keeps only the first moment (a "…, then …" description made Qwen draw
+    the whole sequence as stacked frames) and drops comma clauses about
+    clothing, hair, accessories and facial expression (it painted the robe
+    and gave the mannequin a face). The first clause is always kept; if
+    nothing would survive the original text is returned unchanged.
+    """
+    first_moment = _SKETCH_LATER_MOMENT_RE.split(action, maxsplit=1)[0].strip()
+    clauses = [c.strip() for c in first_moment.split(",") if c.strip()]
+    kept = clauses[:1] + [c for c in clauses[1:] if not _SKETCH_DROP_CLAUSE_RE.search(c)]
+    result = ", ".join(kept).strip()
+    return result or action
+
+
+def build_qwen21_sketch_prompt(
+    beat: dict,
+    *,
+    identity_colors: Dict[str, str],
+    has_scene_ref: bool,
+) -> str:
+    """Qwen-Image 2.1 t2i sketch prompt — replaces the shared
+    `UnifiedPromptBuilder`/`SketchModeStrategy` output for provider
+    `runpod_qwen` in sketch mode (added 2026-10-31).
+
+    Why: that shared prompt is ~15k characters written for Gemini
+    ("Generate a 1x1 storyboard grid", "MANDATORY GRID FORMAT", "across the
+    16 panels", long DO-NOT lists). Qwen reads it literally and drew a
+    numbered multi-cell sheet full of gibberish text and dozens of stick
+    figures (real YuiDrama beats 10-14). The graph also runs cfg=1, so a
+    negative prompt does nothing — every constraint has to be a positive
+    statement in the prompt itself.
+
+    Follows the official Qwen 2.1 rules in
+    `agents/prompts/qwen21_render_rules.md`: a single input image takes no
+    `<imageN>` tag, and the rendering medium of an image survives an edit
+    unless the prompt targets it explicitly — so the photo -> line-drawing
+    conversion is named outright. One frame, one moment; no grid wording.
+
+    `identity_colors` is the episode's `sketch_colors` map
+    (`{identity_id: "#RRGGBB COLOUR NAME"}`). Identities without a colour
+    are drawn as gray mannequins.
+    """
+    detected = [
+        str(i)
+        for i in (beat.get("detected_identities") or [])
+        if i and str(i) != "__NO_CHARACTER__"
+    ]
+
+    def _figure(identity_id: str) -> str:
+        name, hex_code = _sketch_color_parts(identity_colors.get(identity_id, ""))
+        if not name and not hex_code:
+            return "gray"
+        return f"{name} ({hex_code})" if name and hex_code else (name or hex_code)
+
+    def _short(identity_id: str) -> str:
+        name, _hex = _sketch_color_parts(identity_colors.get(identity_id, ""))
+        return f"the {name} figure" if name else "a gray figure"
+
+    def _replace_identity(match: "re.Match[str]") -> str:
+        return _short(match.group(1))
+
+    def _replace_prop(match: "re.Match[str]") -> str:
+        return match.group(1)
+
+    action = str(beat.get("visual_description") or "")
+    action = action.replace('"', "").replace("\n", " ")
+    action = _COMPOSE_IDENTITY_MARKER_RE.sub(_replace_identity, action)
+    action = _COMPOSE_PROP_MARKER_RE.sub(_replace_prop, action)
+    action = re.sub(r"\s+", " ", action).strip().rstrip(".")
+    action = _sketch_pose_only(action)
+
+    if has_scene_ref:
+        parts = [
+            "Redraw the location in the image as one simple storyboard sketch: "
+            "thin clean black and gray pencil outlines on plain white paper, no "
+            "color, no shading, no photographic texture."
+        ]
+    else:
+        parts = [
+            "A simple storyboard sketch of one single moment on plain white "
+            "paper, with a minimal background of thin clean black and gray "
+            "pencil outlines, no shading."
+        ]
+
+    colored = [i for i in detected if _sketch_color_parts(identity_colors.get(i, ""))[0]]
+    if colored:
+        fills = ", ".join(_figure(i) for i in colored)
+        if len(colored) == 1:
+            subject = "The person is a plain featureless mannequin"
+            fill_rule = "Fill its head and body"
+        else:
+            subject = "The people are plain featureless mannequins"
+            fill_rule = "Fill each one's head and body"
+        parts.append(
+            f"{subject}: a blank oval head with no facial features or "
+            "expression, a single-line body, arms and legs, no hair, no "
+            f"clothing. {fill_rule} with one flat solid color: {fills}. Draw "
+            "only the people named in the action below; anyone else it names "
+            "is a plain gray mannequin with no fill."
+        )
+    else:
+        parts.append(
+            "Every person is a plain gray featureless mannequin: an oval head, a "
+            "single-line body, arms and legs, no face, no hair, no clothing."
+        )
+
+    if action:
+        parts.append(
+            f"Action: {action}. Use this only for pose, position and facing "
+            "direction; ignore any clothing, hair or accessory details in it."
+        )
+    parts.append(
+        "Show one single moment in one single frame, with the figures at a "
+        "readable size. Every object and the background stay thin black and "
+        "gray outlines, never filled with any color or tint."
+    )
+    parts.append(
+        "The image contains only this drawing, with no grid, no panels, no "
+        "borders, and no text, letters or numbers anywhere."
+    )
+    return " ".join(parts)
 
 
 def build_qwen21_compose_prompt(

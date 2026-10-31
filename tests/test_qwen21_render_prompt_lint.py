@@ -18,7 +18,8 @@ def test_default_full_template_has_no_lint_errors():
     assert lint.ok, [i.message for i in lint.errors]
     assert "<image1>" in prompt
     assert "<image2>" in prompt
-    assert prompt.strip().startswith("Replace")
+    # instruction first; names the medium change before the identity swap
+    assert prompt.strip().startswith("Convert the sketch in <image1>")
 
 
 def test_default_scene_only_template_has_no_lint_errors():
@@ -216,3 +217,45 @@ def test_too_long_is_a_hard_error():
     prompt = "Replace <image1> with <image2>. " + ("x" * 2100)
     lint = lint_qwen21_render_prompt(prompt, stage="full")
     assert any(i.code == "too_long" for i in lint.errors)
+
+
+def test_full_and_scene_only_target_the_whole_image_medium():
+    """The old "keep ... background ... unchanged" wording kept a line-art
+    background as line art (YuiDrama beats 11-14). Both stages that start
+    from a sketch must now name the medium change for the whole image."""
+    for stage in ("full", "scene_only"):
+        prompt = build_qwen21_render_prompt([_beat()], stage=stage)
+        assert "Render the whole image, background and every object" in prompt, stage
+        assert "background and every other element" not in prompt, stage
+        assert "background composition unchanged" not in prompt, stage
+    # inpaint starts from a photo, so its background really must stay as is
+    assert "the background" in build_qwen21_render_prompt([_beat()], stage="inpaint")
+
+
+def test_scene_text_drops_prop_brackets_and_double_period():
+    beat = {"visual_description": "{{A}} walks through the [[dark blue noren curtain]]."}
+    prompt = build_qwen21_render_prompt([beat], stage="full")
+    assert "[[" not in prompt and "]]" not in prompt
+    assert "Scene: walks through the dark blue noren curtain." in prompt
+    assert ".." not in prompt
+
+
+def test_scene_reference_adds_image3_role_only_in_full_stage():
+    plain = build_qwen21_render_prompt([_beat()], stage="full")
+    with_scene = build_qwen21_render_prompt([_beat()], stage="full", scene_reference=True)
+    assert "<image3>" not in plain
+    assert "<image3> is a reference photo of the same location" in with_scene
+    assert "no person and no layout from <image3>" in with_scene
+    # the other two stages never get a third image
+    for stage in ("scene_only", "inpaint"):
+        assert "<image3>" not in build_qwen21_render_prompt(
+            [_beat()], stage=stage, scene_reference=True
+        )
+
+
+def test_scene_reference_prompt_has_no_lint_errors_beyond_the_third_tag():
+    prompt = build_qwen21_render_prompt([_beat()], stage="full", scene_reference=True)
+    codes = {i.code for i in lint_qwen21_render_prompt(prompt, stage="full").errors}
+    # the lint only knows <image1>/<image2>; the generator does not lint this
+    # prompt (only the review route does, and it never passes scene_reference)
+    assert codes <= {"tag_out_of_range"}

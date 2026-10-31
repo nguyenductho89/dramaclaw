@@ -1020,6 +1020,15 @@ RUNPOD_H3_MULTISHOT_IDLE_TIMEOUT_SECONDS = int(
     _env_float("RUNPOD_H3_MULTISHOT_IDLE_TIMEOUT_SECONDS", 90.0)
 )
 RUNPOD_H3_MULTISHOT_MAX_SHOTS = int(_env_float("RUNPOD_H3_MULTISHOT_MAX_SHOTS", 6.0))
+# Segment multishot: tile each segment's beats (sketch, else rendered frame)
+# into one storyboard grid and send it as an extra shared reference
+# (`attribute_transfer`: framing/pose only). "0" turns it off.
+RUNPOD_H3_MULTISHOT_STORYBOARD = os.getenv("RUNPOD_H3_MULTISHOT_STORYBOARD", "1").strip().lower() not in (
+    "0",
+    "false",
+    "off",
+    "",
+)
 RUNPOD_H3_MULTISHOT_PACK_COMMIT = "d7d197709fc93c1afb125e3db1dfd4ac0ae28c60"
 # PDD acceleration for the multishot chain (2026-10-20): `H3MultishotSampler`
 # accepts an external MODEL + `sigmas`, so the same SigmaShift(12/3) ->

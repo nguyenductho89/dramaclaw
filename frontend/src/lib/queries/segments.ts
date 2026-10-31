@@ -235,6 +235,13 @@ export interface SegmentReviewItem {
   total_duration_seconds?: number;
   shots?: SegmentReviewShot[];
   start_frame_path?: string | null;
+  /** Layout-only grid (one panel per shot) sent as an extra H3 reference. */
+  storyboard?: {
+    tag: string;
+    url: string | null;
+    panels: { beat_number: number; source: "sketch" | "frame"; panel: number }[];
+  } | null;
+  warnings?: string[];
   issues?: string[];
   can_enqueue?: boolean;
   input_fingerprint?: string;

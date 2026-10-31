@@ -173,6 +173,15 @@ class MiniMaxH3BeatContext(BaseModel):
     first_frame_path: str = ""
     # What the vision step saw in the first frame (empty when none/unavailable).
     first_frame_look: str = ""
+    # Segment storyboard grid (ref2va only): a layout-only reference, NOT a
+    # `<Subject>` and deliberately not in `references` (every subject-count
+    # check keys off that list). `storyboard_tag` is the grid's `<Picture N>`
+    # tag; `storyboard_panel` is this shot's 1-based panel in it. It is never
+    # sent to the vision step or the writer as an image, so the writer cannot
+    # copy the sketch style.
+    storyboard_tag: str = ""
+    storyboard_panel: int = 0
+    storyboard_panel_count: int = 0
     references: list[MiniMaxH3Reference] = Field(default_factory=list)
 
 
@@ -520,6 +529,13 @@ def _coverage_note(context: MiniMaxH3BeatContext) -> str:
         lines.append(
             f"`subjects` must have exactly {len(context.references)} entries, one per "
             f"reference including locations and props, in this order: {order}."
+        )
+    if context.storyboard_tag:
+        lines.append(
+            f"{context.storyboard_tag} is a storyboard grid of {context.storyboard_panel_count} "
+            f"panels; this shot is panel {context.storyboard_panel}. It gives framing and pose "
+            "only, so it is NOT a subject and has no `subjects` entry. Do not describe the grid, "
+            "its panels or its sketch style, and do not mention it in your text."
         )
     lines.append(
         "Anything the beat description mentions that has NO reference above "
@@ -944,6 +960,7 @@ def assemble_minimax_h3_prompt(context: MiniMaxH3BeatContext, content: MiniMaxH3
         mode = "fl2va" if context.has_first_frame else "t2va"
     has_first_frame = context.has_first_frame and mode != "t2va"
     character_count = sum(1 for ref in references if ref.kind == "character")
+    storyboard_on = bool(context.storyboard_tag) and mode == "ref2va"
 
     first_frame_desc = _sanitize(content.first_frame_description) or "the scene and subjects as shown"
     style_line = _sanitize(content.style_line) or (
@@ -986,6 +1003,12 @@ def assemble_minimax_h3_prompt(context: MiniMaxH3BeatContext, content: MiniMaxH3
     body_parts = [
         opening,
         camera_sentence,
+        (
+            f"This shot matches panel {context.storyboard_panel} of {context.storyboard_tag} "
+            "in framing and pose."
+            if storyboard_on
+            else ""
+        ),
         _reference_usage_sentences(references) if mode == "ref2va" else "",
         action_sentences,
         dialogue_sentence,
@@ -995,7 +1018,8 @@ def assemble_minimax_h3_prompt(context: MiniMaxH3BeatContext, content: MiniMaxH3
             "happens at natural real-time speed, not slow motion."
         ),
         closing,
-        "There are no subtitles, captions, on-screen text, logos or watermarks anywhere in frame.",
+        "There are no subtitles, captions, on-screen text, logos or watermarks anywhere in frame."
+        + (" There are no grid lines or panel borders in frame." if storyboard_on else ""),
     ]
     description_body = style_line + "\n" + " ".join(p for p in body_parts if p)
 
@@ -1047,6 +1071,16 @@ def assemble_minimax_h3_prompt(context: MiniMaxH3BeatContext, content: MiniMaxH3
         subject_lines.append(f"<Picture 1> is the first frame of [Shot 1], showing {first_frame_desc}.")
         retention_lines.append(
             "<Picture 1> ([Shot 1] first frame): fully_preserved - the video starts exactly from its framing, pose and lighting."
+        )
+    if storyboard_on:
+        subject_lines.append(
+            f"{context.storyboard_tag} is the storyboard sheet: {context.storyboard_panel_count} "
+            "panels read left to right, top to bottom; it gives framing, pose and composition "
+            "only and never appears on screen."
+        )
+        retention_lines.append(
+            f"{context.storyboard_tag} ([Shot 1]): attribute_transfer - framing and pose of "
+            f"panel {context.storyboard_panel} only; the grid itself never appears on screen."
         )
     subject_definitions = "\n".join(subject_lines)
 

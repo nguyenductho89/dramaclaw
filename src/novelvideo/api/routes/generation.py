@@ -6367,6 +6367,63 @@ def _multishot_shared_references(
     return union, ""
 
 
+def _h3_storyboard_payload(ctx, output_dir: str, storyboard, picture_no: int):
+    """Review-response view of a chain's storyboard grid (`None` when absent)."""
+    if storyboard is None:
+        return None
+    return {
+        "tag": f"<Picture {picture_no}>",
+        "url": _h3_display_url(ctx, output_dir, storyboard.path),
+        "panels": [
+            {"beat_number": p.beat_number, "source": p.source, "panel": i + 1}
+            for i, p in enumerate(storyboard.panels)
+        ],
+    }
+
+
+def _chain_reference_plan(
+    character_map: dict,
+    chain_beats: list[dict],
+    output_dir: str,
+    episode_num: int,
+    chain_id: str,
+):
+    """`(character_refs, storyboard, error, warnings)` — the ONE place a chain's
+    reference list is decided, so the single-chain review, the single-chain
+    enqueue and the segment review all hash the same inputs (otherwise the
+    fingerprint drifts and the job comes back `input_stale`).
+
+    The storyboard grid (see `generators/segment_storyboard.py`) is added only
+    for segment chains, only when the chain already has a character (`fl2va`
+    takes no reference images) and only while a slot is free: characters keep
+    priority over the 3-image budget. It goes LAST so character `<Picture N>`
+    numbering is unchanged."""
+    from novelvideo.config import RUNPOD_H3_MULTISHOT_STORYBOARD
+
+    refs, error = _multishot_shared_references(character_map, chain_beats)
+    if error:
+        return refs, None, error, []
+    storyboard = None
+    warnings: list[str] = []
+    if (
+        RUNPOD_H3_MULTISHOT_STORYBOARD
+        and refs
+        and chain_id.startswith(_segment_prefix_for_episode(episode_num))
+    ):
+        if len(refs) >= MULTISHOT_MAX_UNION_REFERENCES:
+            warnings.append(
+                f"{len(refs)} characters already use all {MULTISHOT_MAX_UNION_REFERENCES} "
+                "reference slots — storyboard skipped"
+            )
+        else:
+            from novelvideo.generators.segment_storyboard import build_segment_storyboard
+
+            storyboard = build_segment_storyboard(output_dir, episode_num, chain_id, chain_beats)
+            if storyboard is None:
+                warnings.append("a beat has no sketch or frame yet — storyboard skipped")
+    return refs, storyboard, "", warnings
+
+
 def _multishot_review_fingerprint(
     *,
     chain_id: str,
@@ -6469,7 +6526,9 @@ async def review_multishot_video(
     character_map = await _build_character_map(
         store, beats, username, project_name, episode_num=episode_num
     )
-    shared_refs, ref_error = _multishot_shared_references(character_map, chain_beats)
+    shared_refs, storyboard, ref_error, ref_warnings = _chain_reference_plan(
+        character_map, chain_beats, output_dir, episode_num, chain_id
+    )
     checkpoint = "ref2va" if shared_refs else "fl2va"
     sampling = multishot_sampling_plan(checkpoint)
 
@@ -6526,7 +6585,7 @@ async def review_multishot_video(
         checkpoint=checkpoint,
         frames_per_shot=max_frames,
         frame_path=str(frame_path) if frame_exists else None,
-        reference_paths=[r["path"] for r in shared_refs],
+        reference_paths=[r["path"] for r in shared_refs] + ([storyboard.path] if storyboard else []),
         sampling=sampling,
     )
 
@@ -6543,6 +6602,8 @@ async def review_multishot_video(
         "total_duration_seconds": round(max_frames * len(chain_beats) / 24.0, 2),
         "shots": shots_out,
         "references": [{"tag": f"<Picture {i + 1}>", **r} for i, r in enumerate(shared_refs)],
+        "storyboard": _h3_storyboard_payload(ctx, output_dir, storyboard, len(shared_refs) + 2),
+        "warnings": ref_warnings,
         "script_preview": script[:800],
         "start_frame_path": _h3_display_url(
             ctx, output_dir, str(frame_path) if frame_exists else None
@@ -6614,7 +6675,9 @@ async def generate_multishot_video(
     character_map = await _build_character_map(
         store, beats, username, project_name, episode_num=episode_num
     )
-    shared_refs, ref_error = _multishot_shared_references(character_map, chain_beats)
+    shared_refs, storyboard, ref_error, _ref_warnings = _chain_reference_plan(
+        character_map, chain_beats, output_dir, episode_num, chain_id
+    )
     if ref_error:
         return {"ok": False, "error": ref_error}
     checkpoint = "ref2va" if shared_refs else "fl2va"
@@ -6647,7 +6710,7 @@ async def generate_multishot_video(
         checkpoint=checkpoint,
         frames_per_shot=max_frames,
         frame_path=str(frame_path),
-        reference_paths=[r["path"] for r in shared_refs],
+        reference_paths=[r["path"] for r in shared_refs] + ([storyboard.path] if storyboard else []),
         sampling=sampling,
     )
     if body.review_fingerprint is not None and body.review_fingerprint != fingerprint:
@@ -6663,7 +6726,8 @@ async def generate_multishot_video(
         "frames_per_shot": max_frames,
         "seed": new_seed(),
         "start_image_path": str(frame_path),
-        "reference_image_paths": [r["path"] for r in shared_refs],
+        "reference_image_paths": [r["path"] for r in shared_refs]
+        + ([storyboard.path] if storyboard else []),
         "sampling": sampling,
     }
 
@@ -7285,6 +7349,7 @@ async def _build_segment_shot_prompts(
     chain_beats: list[dict],
     shared_refs: list[dict[str, str]],
     character_map: dict,
+    storyboard: Any = None,
 ) -> list[dict[str, Any]]:
     """Generates and saves a fresh MiniMax H3 prompt for every beat in
     `chain_beats`, each numbered against the SAME `shared_refs` (the
@@ -7379,11 +7444,14 @@ async def _build_segment_shot_prompts(
             next_beat_narration=_h3_replace_identity_markers(next_narration, character_map),
             first_frame_path=first_frame_path,
             references=references,
+            storyboard_tag=f"<Picture {len(references) + 2}>" if storyboard else "",
+            storyboard_panel=k + 1 if storyboard else 0,
+            storyboard_panel_count=storyboard.panel_count if storyboard else 0,
         )
 
         result, lint_issues, fallback_used = await _generate_h3_prompt_result(
             context,
-            reference_count=len(references) + 1,
+            reference_count=len(references) + 1 + (1 if storyboard else 0),
             duration_seconds=duration,
             expects_dialogue=audio_type == "dialogue",
         )
@@ -7392,7 +7460,9 @@ async def _build_segment_shot_prompts(
             h3_config = parse_seedance2_config(beat.get("seedance2_config_json"))
             h3_config.final_prompt = result.final_prompt
             h3_config.prompt_source = "minimax_h3"
-            h3_config.reference_image_paths = [r["path"] for r in shared_refs]
+            h3_config.reference_image_paths = [r["path"] for r in shared_refs] + (
+                [storyboard.path] if storyboard else []
+            )
             h3_config.ratio = "9:16"
             await store.update_beat_asset(
                 episode_number=episode_num,
@@ -7492,7 +7562,9 @@ async def review_segment_videos(
         if not _runpod_h3_multishot_configured():
             issues.append("RUNPOD_H3_MULTISHOT_ENDPOINT_ID / RUNPOD_API_KEY / R2_* are not configured")
 
-        shared_refs, ref_error = _multishot_shared_references(character_map, chain_beats)
+        shared_refs, storyboard, ref_error, ref_warnings = _chain_reference_plan(
+            character_map, chain_beats, output_dir, episode_num, chain_id
+        )
         if ref_error:
             issues.append(ref_error)
             segments_out.append(
@@ -7511,6 +7583,7 @@ async def review_segment_videos(
             chain_beats=chain_beats,
             shared_refs=shared_refs,
             character_map=character_map,
+            storyboard=storyboard,
         )
         for shot in shots:
             for issue in shot["lint"]:
@@ -7527,7 +7600,7 @@ async def review_segment_videos(
             checkpoint=checkpoint,
             frames_per_shot=max_frames,
             frame_path=str(frame_path) if frame_exists else None,
-            reference_paths=[r["path"] for r in shared_refs],
+            reference_paths=[r["path"] for r in shared_refs] + ([storyboard.path] if storyboard else []),
             sampling=sampling,
         )
 
@@ -7549,6 +7622,8 @@ async def review_segment_videos(
                 "start_frame_path": _h3_display_url(
                     ctx, output_dir, str(frame_path) if frame_exists else None
                 ),
+                "storyboard": _h3_storyboard_payload(ctx, output_dir, storyboard, len(shared_refs) + 2),
+                "warnings": ref_warnings,
                 "issues": issues,
                 "can_enqueue": not issues,
                 "input_fingerprint": fingerprint,

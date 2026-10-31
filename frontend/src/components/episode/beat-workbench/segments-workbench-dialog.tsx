@@ -722,6 +722,25 @@ function VideoReviewRow({
       <span className="text-muted-foreground/75">
         {item.total_duration_seconds !== undefined ? `${item.total_duration_seconds.toFixed(1)}s` : ""}
       </span>
+      {item.storyboard?.url ? (
+        <img
+          src={resolveMediaUrl(item.storyboard.url) ?? undefined}
+          alt={t("episode.workbench.segments.storyboardAlt", {
+            defaultValue: "Storyboard grid ({{count}} panels)",
+            count: item.storyboard.panels.length,
+          })}
+          title={t("episode.workbench.segments.storyboardAlt", {
+            defaultValue: "Storyboard grid ({{count}} panels)",
+            count: item.storyboard.panels.length,
+          })}
+          className="h-8 w-auto rounded-[3px] border border-white/10 object-contain"
+        />
+      ) : null}
+      {(item.warnings ?? []).length > 0 ? (
+        <span className="text-amber-400" title={(item.warnings ?? []).join("; ")}>
+          <AlertTriangle className="inline size-3" />
+        </span>
+      ) : null}
       {errorCount > 0 ? (
         <span className="min-w-0 flex-1 truncate text-destructive" title={(item.issues ?? []).join("; ")}>
           <AlertTriangle className="mr-1 inline size-3" />

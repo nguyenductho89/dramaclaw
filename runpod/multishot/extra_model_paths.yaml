@@ -1,0 +1,8 @@
+# Lets ComfyUI find models on the Network Volume. Uses the new-style folder names, not the old unet/clip
+# names worker-comfyui uses: this image ships its own extra_model_paths.yaml and need not match it.
+runpod_volume:
+  base_path: /runpod-volume
+  diffusion_models: models/diffusion_models/
+  text_encoders: models/text_encoders/
+  vae: models/vae/
+  pdd_acc: models/pdd_acc/

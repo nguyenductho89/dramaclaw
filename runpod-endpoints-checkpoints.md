@@ -12,7 +12,7 @@ bảng tham chiếu nhanh, không lặp lại lý do từng quyết định.
 | Dùng chung bởi | Cả 3 endpoint dưới đây — cùng 1 bộ model trên đĩa, khác nhau ở `extra_model_paths.yaml` map được những thư mục nào |
 | Object storage output | Cloudflare R2, bucket `photoreal-drama-jobs` |
 | Container registry | `cmv2thumk00ccduuu6jxjfyl5` (GHCR) |
-| Repo chứa Dockerfile/build workflow | `~/Xuongphim/photoreal-short-drama-generator`, branch `tesla`, build qua GitHub Actions (`workflow_dispatch`, `.github/workflows/build-worker-image.yml`, chọn `image: qwen\|h3`, build trên `ubuntu-latest` native amd64, ~10-13 phút/lần) |
+| Repo chứa Dockerfile/build workflow | **Repo này** (từ 2026-10-31): `runpod/{qwen,h3,multishot}/` + `runpod/common/handler.py`, build qua GitHub Actions `.github/workflows/build-runpod-worker-image.yml` (`workflow_dispatch`, chọn `image: qwen\|h3\|multishot`, native amd64 trên `ubuntu-latest`, cần secret `GHCR_PAT`). Bản cũ ở `~/Xuongphim/photoreal-short-drama-generator` (`runpod*/`, branch `tesla`) là nguồn gốc nhưng không còn là nơi sửa; xem `runpod/README.md` |
 
 ---
 
@@ -134,7 +134,7 @@ Dùng cho: sinh video MiniMax H3 nhiều shot nối liền (multishot chain).
 | `env` riêng | `COMFY_EXTRA_ARGS=--use-sage-attention` |
 | `timeout` job | 14,400,000 ms (**4 giờ** — dài nhất, vì chain nhiều shot có thể chạy rất lâu) |
 | `extra_model_paths.yaml` (`runpod-multishot/extra_model_paths.yaml`) | `diffusion_models`, `text_encoders`, `vae`, `pdd_acc` — giống endpoint H3 1-shot, không có `checkpoints`/`detection`/`frame_interpolation` |
-| Build từ | Workflow CI của `photoreal-short-drama-generator` (`runpod-multishot/`, không phải từ `comfy-trends`) |
+| Build từ | Workflow CI của repo này (`runpod/multishot/`, từ 2026-10-31; trước đó là `photoreal-short-drama-generator`/`runpod-multishot/`, không bao giờ từ `comfy-trends`) |
 | Custom node pack | `ComfyUI-MiniMaxH3-Context-Loop` (nối shot qua khung cuối thật — đã xác nhận có trên image) |
 
 **Benchmark thật (A40, 768×1344, PDD 8 bước, cu130+Sage)**: 2 shot×124 khung: 1181s→631s sau khi

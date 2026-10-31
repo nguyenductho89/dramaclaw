@@ -1,0 +1,24 @@
+<!doctype html><html><body style="margin:0;background:#000"><canvas id="c" width="1344" height="768"></canvas>
+<script type="importmap">{"imports":{"three":"./node_modules/three/build/three.module.js"}}</script>
+<script type="module">
+import * as THREE from 'three';
+const r=new THREE.WebGLRenderer({canvas:document.getElementById('c'),antialias:true,preserveDrawingBuffer:true});
+r.setSize(1344,768,false);
+const s=new THREE.Scene(); s.background=new THREE.Color(0xdcdcdc);
+const flat=c=>new THREE.MeshBasicMaterial({color:c});
+const floor=new THREE.Mesh(new THREE.PlaneGeometry(40,40),flat(0xbdbdbd));floor.rotation.x=-Math.PI/2;s.add(floor);
+const wall=new THREE.Mesh(new THREE.PlaneGeometry(40,8),flat(0xe8e8e8));wall.position.set(0,4,-9);s.add(wall);
+function man(c,x,z,h){const g=new THREE.Group(),m=flat(c);
+ const b=new THREE.Mesh(new THREE.CapsuleGeometry(.22,h*.38,6,12),m);b.position.y=h*.58;g.add(b);
+ const hd=new THREE.Mesh(new THREE.SphereGeometry(.13,16,12),m);hd.position.y=h*.9;g.add(hd);
+ for(const dx of[-.1,.1]){const l=new THREE.Mesh(new THREE.CylinderGeometry(.07,.06,h*.4,10),m);l.position.set(dx,h*.2,0);g.add(l);}
+ g.position.set(x,0,z);s.add(g);return g;}
+man(0x00ffff,-1.4,-2,1.75);man(0xff00ff,1.2,-3.5,1.6);
+// crate prop
+const cr=new THREE.Mesh(new THREE.BoxGeometry(.8,.8,.8),flat(0x8b6b3d));cr.position.set(2.8,.4,-2);s.add(cr);
+const cam=new THREE.PerspectiveCamera(40,1344/768,.1,100);
+// shot 1 camera: medium-wide, then dolly-in 1.2m over shot
+cam.position.set(0,1.5,4.2);cam.lookAt(0,1.2,-2.5);
+window.cam=(t)=>{cam.position.set(0,1.5,4.2-1.2*t);cam.lookAt(0,1.2,-2.5);r.render(s,cam);};
+window.cam(0);window.ready=true;
+</script></body></html>

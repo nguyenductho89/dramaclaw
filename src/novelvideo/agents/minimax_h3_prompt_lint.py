@@ -119,8 +119,12 @@ def lint_minimax_h3_prompt(
     reference_count: int = 1,
     duration_seconds: float | None = None,
     expects_dialogue: bool = False,
+    expected_picture_numbers: list[int] | None = None,
 ) -> LintResult:
-    """`reference_count` is the total number of `<Picture N>` tags expected
+    """`expected_picture_numbers` overrides the contiguous 1..`reference_count`
+    expectation for a shot in a multishot chain that uses only some of the
+    chain's shared pictures (and has no first frame of its own).
+    `reference_count` is the total number of `<Picture N>` tags expected
     (first frame counts as 1; 0 for text-to-video). `mode` is one of
     ref2va / fl2va / flf2va / t2va. `duration_seconds`, if given, checks the
     last timestamp against it. `expects_dialogue=True` means the beat's
@@ -168,7 +172,11 @@ def lint_minimax_h3_prompt(
             result.issues.append(LintIssue("error", "missing_music_field", "The non_diegetic_music section is empty"))
 
     picture_numbers = [int(n) for n in PICTURE_TAG_RE.findall(text)]
-    expected = list(range(1, max(reference_count, 0) + 1))
+    expected = (
+        sorted(set(expected_picture_numbers))
+        if expected_picture_numbers is not None
+        else list(range(1, max(reference_count, 0) + 1))
+    )
     if sorted(set(picture_numbers)) != expected:
         result.issues.append(
             LintIssue(

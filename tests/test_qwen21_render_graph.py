@@ -142,3 +142,23 @@ def test_shared_sketch_character_scene_prop_graph_is_unaffected():
     assert graph["5"]["class_type"] == "EmptyLatentImage"
     assert graph["5"]["inputs"] == {"width": 512, "height": 768, "batch_size": 1}
     assert graph["6"]["inputs"]["latent_image"] == ["5", 0]
+
+
+def test_lora_inserted_after_unet_and_consumers_rewired():
+    graph = _runpod_qwen21_render_image_graph(
+        "p", "canvas.png", ["id.png"], 1, steps=8, cfg=1.0,
+        lora_name="turbo.safetensors", lora_strength=1.0,
+    )
+    lora = graph["80"]
+    assert lora["class_type"] == "LoraLoaderModelOnly"
+    assert lora["inputs"] == {"model": ["1", 0], "lora_name": "turbo.safetensors", "strength_model": 1.0}
+    # everything that took the UNET now takes the LoRA output
+    consumers = [n for k, n in graph.items() if k != "80" and ["1", 0] in n["inputs"].values()]
+    assert consumers == []
+    assert graph["9"]["inputs"]["model"] == ["80", 0]
+
+
+def test_no_lora_leaves_graph_unchanged():
+    graph = _runpod_qwen21_render_image_graph("p", "canvas.png", ["id.png"], 1, steps=40, cfg=1.0)
+    assert "80" not in graph
+    assert graph["9"]["inputs"]["model"] == ["1", 0]

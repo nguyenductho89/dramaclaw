@@ -108,6 +108,9 @@ class MiniMaxH3Reference(BaseModel):
     relying on `appearance_details` text alone."""
 
     tag: str = Field(description='e.g. "<Picture 2>" or "<Audio 1>"')
+    # Which identity (e.g. "Yui_edo_kosode") this picture shows; lets a
+    # multishot chain declare only the identities a given shot uses.
+    identity_id: str = ""
     kind: Literal["first_frame", "character", "scene", "prop", "voice"] = "character"
     name: str = Field(default="", description="Display name, e.g. a character name")
     appearance_details: str = Field(
@@ -627,7 +630,7 @@ _vision_agent: Optional[Agent] = None
 _vision_cache: dict[str, dict[str, str]] = {}
 _vision_locks: dict[tuple[int, str], asyncio.Lock] = {}
 _VISION_CACHE_MAX = 256
-_TAG_LINE_RE = re.compile(r"^[\W_]*(<\s*(?:Picture|Audio|Last)\s*\d*\s*>)\s*[:：\-–—]\s*(.+?)\s*$", re.IGNORECASE)
+_TAG_LINE_RE = re.compile(r"^[\W_]*(<\s*(?:Picture|Audio|Last)\s*\d*\s*>)\s*[:：\-–—]\s*(.+?)\s*$", re.IGNORECASE)  # no-cjk-exempt: fullwidth colon is matched on purpose
 
 
 def _get_vision_agent() -> Agent:
@@ -1430,6 +1433,7 @@ async def generate_minimax_h3_prompt_with_fallback(
     reference_count: int,
     duration_seconds: float,
     expects_dialogue: bool,
+    expected_picture_numbers: list[int] | None = None,
 ) -> tuple[MiniMaxH3PromptResult, list[dict[str, str]], bool]:
     """Shared retry/fallback/lint dance for one H3 prompt call.
 
@@ -1505,6 +1509,7 @@ async def generate_minimax_h3_prompt_with_fallback(
         reference_count=reference_count,
         duration_seconds=duration_seconds,
         expects_dialogue=expects_dialogue,
+        expected_picture_numbers=expected_picture_numbers,
     )
     lint_issues = [
         {"severity": i.severity, "code": i.code, "message": i.message} for i in lint.issues

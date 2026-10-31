@@ -66,6 +66,7 @@ from novelvideo.generators.prompt_builder import (
     build_gemini_compose_prompt,
     build_qwen21_compose_prompt,
     build_qwen21_render_prompt,
+    build_qwen21_sketch_prompt,
     build_qwen_edit_render_prompt,
     create_prompt_context,
 )
@@ -5328,6 +5329,68 @@ async def _runpod_run_graph_job(
     return data, "", ""
 
 
+_QWEN21_FACE_PANEL_MIN_SEAM_RATIO = 8.0
+
+
+def _qwen21_face_panel_bytes(data: bytes) -> bytes | None:
+    """The close-up face panel of a multi-panel identity sheet, as PNG bytes.
+
+    Identity sheets are landscape strips: one face close-up followed by
+    full-body front / side / back views. Sent whole as `<image2>`, the face
+    is a quarter of the picture and the frontal standing body leaks its pose
+    into the render (YuiDrama beats 10-14: every Yui stood facing the
+    camera, faces drifted). The sheet's panel layout is not stored anywhere,
+    so the seam after the first panel is found as the strongest vertical edge
+    in the left part of the image. Returns `None` for anything that does not
+    clearly look like such a sheet (single portraits, weak seams); the caller
+    then keeps using the whole image.
+    """
+    try:
+        import numpy as np
+        from PIL import Image
+
+        rgb = Image.open(io.BytesIO(data)).convert("RGB")
+        width, height = rgb.size
+        if height <= 0 or width / height < 1.4:
+            return None
+        gray = np.asarray(rgb.convert("L"), dtype=np.float32)
+        col_diff = np.abs(gray[:, 1:] - gray[:, :-1]).mean(axis=0)
+        lo, hi = int(width * 0.15), int(width * 0.45)
+        window = col_diff[lo:hi]
+        if window.size == 0:
+            return None
+        seam = lo + int(window.argmax()) + 1
+        if float(window.max()) < _QWEN21_FACE_PANEL_MIN_SEAM_RATIO * max(
+            float(np.median(col_diff)), 1.0
+        ):
+            return None
+        buf = io.BytesIO()
+        rgb.crop((0, 0, seam, height)).save(buf, format="PNG")
+        return buf.getvalue()
+    except Exception:
+        return None
+
+
+def _qwen21_first_scene_reference(submitted_refs: list[dict]) -> tuple[bytes, str] | None:
+    """Bytes and MIME of the first scene reference actually attached to this
+    render (`submitted_refs` is the audit list built beside `contents`), or
+    `None` when there is none or the file cannot be read."""
+    for ref in submitted_refs or []:
+        if ref.get("kind") != "scene":
+            continue
+        path = str(ref.get("path") or "")
+        if not path or not os.path.isfile(path):
+            continue
+        try:
+            with open(path, "rb") as fh:
+                data = fh.read()
+        except OSError:
+            continue
+        if data:
+            return data, mimetypes.guess_type(path)[0] or "image/png"
+    return None
+
+
 def _qwen21_prepare_render_image(
     data: bytes, target_area: int, *, multiple: int = 32
 ) -> tuple[bytes, tuple[int, int]]:
@@ -5408,6 +5471,8 @@ def _runpod_qwen21_render_image_graph(
     steps: int,
     cfg: float,
     negative_prompt: str = "",
+    lora_name: str = "",
+    lora_strength: float = 1.0,
 ) -> dict:
     """Build the ComfyUI API graph for the RunPod Qwen-Image 2.1 worker,
     render/identity-swap mode only (`runpod_qwen21_render(_multi)`
@@ -5512,6 +5577,10 @@ def _runpod_qwen21_render_image_graph(
     }
     # No SageAttention disable-patch — see the matching comment in
     # `_runpod_qwen_image_graph` above.
+    if lora_name:
+        from novelvideo.generators.comfy_lora import apply_model_lora
+
+        apply_model_lora(graph, "1", lora_name, lora_strength, node_id="80")
     return graph
 
 
@@ -5592,15 +5661,23 @@ async def _call_runpod_qwen21_render_image_api(
         mask_img.save(mask_buf, format="PNG")
         mask_prepared = (mask_name, mask_buf.getvalue(), "image/png")
 
+    from novelvideo import config as _cfg
+
+    # Read at call time (not import time) so a controlled A/B run can set them.
+    fixed_seed = str(_cfg.RUNPOD_QWEN21_RENDER_SEED or "").strip()
+    seed = int(fixed_seed) & 0xFFFFFFFF if fixed_seed else uuid.uuid4().int & 0xFFFFFFFF
+    lora_name = str(_cfg.RUNPOD_QWEN21_RENDER_LORA or "").strip()
     graph = _runpod_qwen21_render_image_graph(
         prompt,
         prepared[0][0],
         [name for name, _data, _mime in prepared[1:]],
-        uuid.uuid4().int & 0xFFFFFFFF,
+        seed,
         mask_name=mask_prepared[0] if mask_prepared else None,
-        steps=RUNPOD_QWEN21_RENDER_STEPS,
+        steps=_cfg.RUNPOD_QWEN21_RENDER_LORA_STEPS if lora_name else RUNPOD_QWEN21_RENDER_STEPS,
         cfg=cfg if cfg is not None else RUNPOD_QWEN21_RENDER_CFG,
         negative_prompt=negative_prompt,
+        lora_name=lora_name,
+        lora_strength=_cfg.RUNPOD_QWEN21_RENDER_LORA_STRENGTH,
     )
 
     upload_batch = list(prepared)
@@ -6022,6 +6099,41 @@ def _qwen_edit_char_name_for_identity(identity_id: str, character_map: dict) -> 
     return identity_id
 
 
+def resolve_identity_image_path(info: dict, identity_name: str) -> str:
+    """The image of ONE specific identity (e.g. `edo_kosode`) of a `character_map`
+    entry, or `""` when none can be found.
+
+    `character_map` entries describe a character as ONE default image (`ref_path` /
+    `portrait_path`) chosen from the FIRST identity among the beats the map was built
+    for, plus `identity_ref_images` for the other identities only when they have a
+    `face_prompt`. There is no `identities` list in that shape. Looking up a beat's
+    own identity only there made every beat of a mixed-identity batch (a schoolgirl
+    beat followed by kosode beats) render and animate with the first identity's face
+    (YuiDrama beats 12-14, 2026-10-31). Order: explicit identity rows, then
+    `identity_ref_images`, then the character's assets directory.
+    """
+    if not identity_name:
+        return ""
+    for ident in info.get("identities") or []:
+        if ident.get("identity_name") == identity_name:
+            candidate = ident.get("primary_reference") or ""
+            if candidate and os.path.exists(candidate):
+                return str(candidate)
+    candidate = (info.get("identity_ref_images") or {}).get(identity_name) or ""
+    if candidate and os.path.exists(candidate):
+        return str(candidate)
+    for key in ("portrait_path", "ref_path"):
+        known = info.get(key) or ""
+        if not known:
+            continue
+        parent = Path(known).parent
+        char_dir = parent.parent if parent.name == "identities" else parent
+        derived = char_dir / "identities" / f"{identity_name}.png"
+        if derived.is_file():
+            return str(derived)
+    return ""
+
+
 def qwen_edit_identity_references(character_map: Dict[str, dict], beat: dict) -> list[dict]:
     """Resolve `beat['detected_identities']` into `{identity_id, name, path,
     appearance_details}` entries for the Qwen-Image-Edit-2511 render path
@@ -6053,8 +6165,10 @@ def qwen_edit_identity_references(character_map: Dict[str, dict], beat: dict) ->
             ),
             None,
         )
-        path = (match or {}).get("primary_reference") or ""
-        appearance = (match or {}).get("appearance_details") or ""
+        path = resolve_identity_image_path(info, identity_name)
+        appearance = (match or {}).get("appearance_details") or (
+            (info.get("identity_appearances") or {}).get(identity_name) or ""
+        )
         if not path or not os.path.exists(path):
             path = info.get("portrait_path") or ""
         if not appearance:
@@ -7495,6 +7609,24 @@ class NanoBananaGridGenerator:
                 )
                 builder = UnifiedPromptBuilder(ctx)
                 prompt = builder.build()
+                if self.provider == "runpod_qwen":
+                    # Qwen 2.1 t2i drew the shared Gemini storyboard-grid prompt
+                    # literally (numbered cells, gibberish text, dozens of stick
+                    # figures), so it gets its own short single-frame prompt.
+                    if len(beats[:grid_capacity]) != 1 or grid_capacity != 1:
+                        return GridGenerationResult(
+                            success=False,
+                            error=(
+                                "Qwen sketch supports single-beat 1x1 modes only; "
+                                "use a 1x1 sketch mode (one request per beat)"
+                            ),
+                            generation_time=time.time() - start_time,
+                        )
+                    prompt = build_qwen21_sketch_prompt(
+                        beats[0],
+                        identity_colors=sketch_colors or {},
+                        has_scene_ref=bool(scene_refs.get(1)),
+                    )
 
             elif self.provider == "runpod_qwen21_compose":
                 # Sketch-FREE "compose" render mode (added 2026-10-18) — see
@@ -7851,6 +7983,12 @@ class NanoBananaGridGenerator:
                     verbose=True,
                     audit_refs=submitted_refs,
                 )
+
+            if sketch and self.provider == "runpod_qwen":
+                # One input image => no <imageN> tags (official Qwen 2.1 rule);
+                # keep only the first scene reference (master), drop the reverse.
+                contents = contents[:2]
+                submitted_refs = submitted_refs[:1]
 
             if output_path:
                 grid_dir = Path(output_path).parent
@@ -8281,22 +8419,59 @@ class NanoBananaGridGenerator:
                         inpaint_prompts_override=(qwen_edit_prompts or {}).get("inpaint_prompts"),
                     )
                 else:
-                    render_prompt = (qwen_edit_prompts or {}).get(
-                        "full_prompt"
-                    ) or build_qwen21_render_prompt(beats[:grid_capacity], stage="full")
-                    _qwen21_prompts_used = {"full_prompt": render_prompt}
+                    prompt_override = (qwen_edit_prompts or {}).get("full_prompt")
                     primary_beat = (beats[:grid_capacity] or [None])[0] or {}
                     picked_ref = qwen_edit_load_identity_ref_bytes(character_map, primary_beat)
-                    if picked_ref:
-                        reference_images = [
-                            (_webai_ref_filename(0, _canvas_mime), _canvas_bytes, _canvas_mime),
-                            picked_ref,
-                        ]
+                    # Extra images are only used with the built-in prompt: a
+                    # reviewed/hand-edited prompt does not mention them.
+                    # <image3> = the beat's scene photo (materials/colors),
+                    # <image4> = the whole identity sheet, outfit only — the
+                    # face goes in as <image2> from the sheet's close-up panel
+                    # so the frontal full-body views cannot leak their pose.
+                    scene_ref = (
+                        None
+                        if prompt_override or not (picked_ref or len(ref_bytes) >= 2)
+                        else _qwen21_first_scene_reference(submitted_refs)
+                    )
+                    face_png = (
+                        _qwen21_face_panel_bytes(picked_ref[1])
+                        if picked_ref and not prompt_override
+                        else None
+                    )
+                    render_prompt = prompt_override or build_qwen21_render_prompt(
+                        beats[:grid_capacity],
+                        stage="full",
+                        scene_reference=scene_ref is not None,
+                        identity_sheet=face_png is not None,
+                    )
+                    _qwen21_prompts_used = {"full_prompt": render_prompt}
+                    canvas_entry = (
+                        _webai_ref_filename(0, _canvas_mime),
+                        _canvas_bytes,
+                        _canvas_mime,
+                    )
+                    if picked_ref and face_png is not None:
+                        reference_images = [canvas_entry, (_webai_ref_filename(1, "image/png"), face_png, "image/png")]
+                    elif picked_ref:
+                        reference_images = [canvas_entry, picked_ref]
                     else:
                         reference_images = [
                             (_webai_ref_filename(i, mime), data, mime)
                             for i, (data, mime) in enumerate(ref_bytes[:2])
                         ]
+                    if scene_ref is not None and len(reference_images) == 2:
+                        scene_bytes, scene_mime = scene_ref
+                        reference_images.append(
+                            (_webai_ref_filename(2, scene_mime), scene_bytes, scene_mime)
+                        )
+                    if face_png is not None and picked_ref:
+                        reference_images.append(
+                            (
+                                _webai_ref_filename(len(reference_images), picked_ref[2]),
+                                picked_ref[1],
+                                picked_ref[2],
+                            )
+                        )
                     (
                         image_bytes,
                         _text,

@@ -312,3 +312,11 @@ A/B cùng ảnh đầu vào, prompt, seed (job `1c5d34c0…`: 3 shot, **không**
 Kết luận có căn cứ: node làm khung đầu mất màu thật và mờ hơn rõ rệt (độ nét khung 36 thấp hơn 39%). **Chưa kết luận được về độ sáng:** bản không node tối dần chủ yếu do nội dung (nhân vật tiến lại, đồng phục tối chiếm khung, trời ra khỏi khung), còn bản có node bị ép phẳng bằng histogram matching; số đo không phân biệt được "ép phẳng" là sửa hay làm hỏng thứ người xem thấy. Cần xem mắt hai video.
 
 Cũng nâng `RUNPOD_H3_MULTISHOT_MAX_SHOTS` mặc định 2 → 6 theo mục 8c; job 3 shot × 124 khung lần này xong 1023s, không OOM. Biến mới `RUNPOD_H3_MULTISHOT_CHAIN_NORMALIZE`: `off` (mặc định, không có node "20"), `texture` (`colour_match=False`), `full` (hành vi cũ). Chưa thử > 6 shot, shot dài hơn 124 khung nhiều shot.
+
+## Cập nhật 2026-10-31 — nguồn image worker đã chuyển về repo này
+
+- Toàn bộ nguồn 3 image worker (Qwen, H3 1-shot, H3 multishot) nay ở `runpod/` của repo này, dùng chung một build context và một `runpod/common/handler.py` (trước đây 3 bản `handler.py` giống hệt nhau nằm ở `photoreal-short-drama-generator`). Workflow build: `.github/workflows/build-runpod-worker-image.yml`. Hướng dẫn: `runpod/README.md`.
+- Lý do chuyển: image Qwen khởi chạy ComfyUI cứng trong `start.sh` (không đọc `COMFY_EXTRA_ARGS`) và `extra_model_paths.yaml` được nướng trong image, nên endpoint Qwen không nạp được LoRA dù file đã có trên volume; sửa phải build lại image từ repo khác. Bản mới: `runpod/qwen/start.sh` đọc `${COMFY_EXTRA_ARGS}` và yaml map thêm `loras/` và `model_patches/`.
+- **Chưa build/push bản mới.** Endpoint `q639jfhc6uaf3t` vẫn chạy image cũ `0.37.2-sam3-frameinterp`; cần chạy workflow (`image: qwen`), rồi đổi tag image của endpoint.
+- Các file nguồn được sao từ branch `tesla` của repo cũ tại thời điểm chuyển; chưa đối chiếu với từng tag đang deploy (`h3only-0.37.2-cu130`, `0.37.2-ms2.7.2-cu130`, `0.37.2-sam3-frameinterp`), nên build lại có thể khác image đang chạy nếu repo cũ đã đi trước hoặc sau tag đó.
+- Chú thích tiếng Trung trong nguồn gốc đã dịch sang tiếng Anh (cổng `check_no_cjk`). `populate_volume.sh` và README của phía máy Mac (`scripts/rp.py`, queue runner) vẫn ở repo cũ vì gắn với cấu hình dự án đó.

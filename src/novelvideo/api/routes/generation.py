@@ -78,6 +78,7 @@ from novelvideo.generators.nanobanana_grid import (
     build_regen_plan,
     compute_input_fingerprint,
     hash_plan,
+    resolve_identity_image_path,
 )
 from novelvideo.generators.render_identity_guard import render_ai_detection_error
 from novelvideo.manual_shots import pick_beats_by_number
@@ -5453,8 +5454,10 @@ def _h3_identity_references(character_map: dict, beat: dict) -> list[dict[str, s
             ),
             None,
         )
-        path = (match or {}).get("primary_reference") or ""
-        appearance = (match or {}).get("appearance_details") or ""
+        path = resolve_identity_image_path(info, identity_name)
+        appearance = (match or {}).get("appearance_details") or (
+            (info.get("identity_appearances") or {}).get(identity_name) or ""
+        )
         if not path or not Path(path).exists():
             path = info.get("portrait_path") or ""
         if not appearance:
@@ -6034,6 +6037,7 @@ async def _generate_h3_prompt_result(
     reference_count: int,
     duration_seconds: float,
     expects_dialogue: bool,
+    expected_picture_numbers: list[int] | None = None,
 ) -> tuple["MiniMaxH3PromptResult", list[dict[str, str]], bool]:
     """Thin alias — the implementation moved to
     `agents.minimax_h3_prompt_builder.generate_minimax_h3_prompt_with_fallback`
@@ -6050,6 +6054,7 @@ async def _generate_h3_prompt_result(
         reference_count=reference_count,
         duration_seconds=duration_seconds,
         expects_dialogue=expects_dialogue,
+        expected_picture_numbers=expected_picture_numbers,
     )
 
 
@@ -7375,16 +7380,18 @@ async def _build_segment_shot_prompts(
     paths = PathResolver(output_dir, episode_num)
     h3_min, h3_max = video_duration_bounds_for_backend("runpod_minimax_h3_multishot")
 
-    references = [
+    all_references = [
         MiniMaxH3Reference(
             tag=f"<Picture {i + 2}>",
             kind="character",
             name=r["name"],
             appearance_details=r["appearance_details"],
             image_path=r["path"],
+            identity_id=r.get("identity_id", ""),
         )
         for i, r in enumerate(shared_refs)
     ]
+    storyboard_picture_no = len(all_references) + 2
 
     first_beat_num = int(chain_beats[0]["beat_number"])
     all_index_by_num = {int(b["beat_number"]): i for i, b in enumerate(beats)}
@@ -7424,7 +7431,23 @@ async def _build_segment_shot_prompts(
                 next_beat.get("visual_description") or next_beat.get("narration_segment") or ""
             )
 
+        # Only the identities this beat actually uses are declared as
+        # subjects (a shot in a mixed-outfit chain otherwise lists both
+        # outfits of the same character as two people), but the Picture
+        # numbers stay those of the chain's shared batch.
+        beat_ids = {r["identity_id"] for r in _h3_identity_references(character_map, beat)}
+        references = [r for r in all_references if r.identity_id in beat_ids] or all_references
+        # Only the chain's first shot has a real first frame; later shots
+        # continue from the previous shot internally.
+        has_first_frame = k == 0
+        expected_pictures = sorted(
+            ({1} if has_first_frame else set())
+            | {int(r.tag[len("<Picture "):-1]) for r in references}
+            | ({storyboard_picture_no} if storyboard else set())
+        )
+
         context = MiniMaxH3BeatContext(
+            has_first_frame=has_first_frame,
             mode="ref2va" if references else "fl2va",
             visual_description=_h3_replace_identity_markers(
                 str(beat.get("visual_description") or ""), character_map
@@ -7444,7 +7467,7 @@ async def _build_segment_shot_prompts(
             next_beat_narration=_h3_replace_identity_markers(next_narration, character_map),
             first_frame_path=first_frame_path,
             references=references,
-            storyboard_tag=f"<Picture {len(references) + 2}>" if storyboard else "",
+            storyboard_tag=f"<Picture {storyboard_picture_no}>" if storyboard else "",
             storyboard_panel=k + 1 if storyboard else 0,
             storyboard_panel_count=storyboard.panel_count if storyboard else 0,
         )
@@ -7454,6 +7477,7 @@ async def _build_segment_shot_prompts(
             reference_count=len(references) + 1 + (1 if storyboard else 0),
             duration_seconds=duration,
             expects_dialogue=audio_type == "dialogue",
+            expected_picture_numbers=expected_pictures,
         )
 
         if hasattr(store, "update_beat_asset"):

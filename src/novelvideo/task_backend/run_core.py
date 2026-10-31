@@ -583,7 +583,11 @@ async def _emit_project_task_metrics(
 
 # Tasks whose whole job is a chain of long GPU jobs; the global default would
 # abandon them mid-way. They are resumable, so a lower bound is only a floor.
-_LONG_RUNNING_TASK_TIMEOUT_S = {"freezone_video_upscale_seedvr2": 6 * 3600}
+_LONG_RUNNING_TASK_TIMEOUT_S = {
+    "freezone_video_upscale_seedvr2": 6 * 3600,
+    # A 5-shot chain of 8 s clips is ~11 min per shot on an A40 plus cold start.
+    "multishot_video": 3 * 3600,
+}
 
 
 def _project_task_timeout_seconds() -> int:

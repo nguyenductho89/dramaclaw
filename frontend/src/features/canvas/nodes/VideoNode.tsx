@@ -80,11 +80,14 @@ import {
   MAX_AUDIO_REFERENCE_TOTAL_DURATION_MS,
   MIN_AUDIO_REFERENCE_DURATION_MS,
   referenceDurationLimitsMs,
-  findSeedance25VideoModel,
+  extendGateView,
+  findContinuationVideoModel,
+  isContinuationCapableModel,
   isHappyHorseVideoModel,
   isSeedance2VideoModel,
-  isSeedance25VideoModel,
+  modelContinuesFromLastFrame,
   isVideoModeSupportedByModel,
+  isVideoModeSupportedOnNode,
   resolveVideoKeyframeUrls,
   videoEmptyStateCtaModes,
   videoModeForcesAutomaticAspectRatio,
@@ -842,9 +845,10 @@ export const VideoNode = memo(
     // even after choosing Seedance 2.0 it would be blocked by "All reference only supports Seedance 2.0", and video/audio upstreams
     // would no longer auto-switch the mode. The CE fallback list happens to have id === apiModel, so this trap shows only in EE.
     const isSeedance20Model = isSeedance2VideoModel(selectedVideoModelId);
-    const supportsAllReference = isVideoModeSupportedByModel(
+    const supportsAllReference = isVideoModeSupportedOnNode(
       "allReference",
       selectedVideoModel,
+      Boolean(data.isExtendMode),
     );
     const supportsVideoEdit = isVideoModeSupportedByModel(
       "videoEdit",
@@ -1126,10 +1130,16 @@ export const VideoNode = memo(
       applyPromptRemap,
     );
 
-    const referenceCaps = useMemo(
-      () => referenceCapsForMode(selectedVideoModel, genMode),
-      [genMode, selectedVideoModel],
-    );
+    const isExtendNode = Boolean(data.isExtendMode);
+    const referenceCaps = useMemo(() => {
+      const caps = referenceCapsForMode(selectedVideoModel, genMode);
+      if (caps && isExtendNode && modelContinuesFromLastFrame(selectedVideoModel)) {
+        // The source video is consumed server-side (its last frame becomes the first frame), so it is not a model reference
+        // and one video must be allowed; one image slot is taken by that frame, so the connected images are capped one lower.
+        return { ...caps, image: Math.min(caps.image, 8), video: Math.max(caps.video, 1) };
+      }
+      return caps;
+    }, [genMode, isExtendNode, selectedVideoModel]);
 
     // Generic upstream traversal: get a unified view of text/imageUrl/videoUrl/audioUrl of all upstream nodes.
     // Video generation uses only the text field to prepend to the prompt; image/video/audio still go through
@@ -1214,8 +1224,12 @@ export const VideoNode = memo(
     const isExtendMode = Boolean(data.isExtendMode);
     // The prefix is used only for rendering and for concatenation at submit time, and is **not written into data.prompt**: if it were, one backspace
     // could chew off half of "Continue the 00:00-00:04 segment of X:", and the instruction the model receives would be broken.
+    // A model that continues from the last frame (MiniMax H3) takes the user's own H3-format prompt as is: the timecoded
+    // "Continue the segment of X:" line is Seedance wording and would only be noise there, so no prefix for it.
+    const extendUsesPrefix = !modelContinuesFromLastFrame(selectedVideoModel);
     const extendPrefixText =
       isExtendMode &&
+      extendUsesPrefix &&
       typeof data.extendStartMs === "number" &&
       typeof data.extendEndMs === "number"
         ? extendPromptPrefix(
@@ -1270,7 +1284,11 @@ export const VideoNode = memo(
           DEFAULT_WIDTH,
           DEFAULT_HEIGHT,
         );
-        const extendModel = findSeedance25VideoModel(availableVideoModels);
+        // The source clip's own model wins when it can be extended (a clip made by H3 is continued by H3), then Seedance 2.5.
+        const extendModel = findContinuationVideoModel(
+          availableVideoModels,
+          selectedVideoModelId,
+        );
         const newNodeId = addNode(CANVAS_NODE_TYPES.video, position, {
           displayName: extendNodeDisplayName(resolvedTitle),
           isExtendMode: true,
@@ -1298,6 +1316,7 @@ export const VideoNode = memo(
         availableVideoModels,
         id,
         resolvedTitle,
+        selectedVideoModelId,
         setSelectedNode,
         updateNodeData,
       ],
@@ -1311,8 +1330,10 @@ export const VideoNode = memo(
       if (videoModelsLoading) return;
       const patch: Record<string, unknown> = {};
       if (genMode !== "allReference") patch.genMode = "allReference";
-      const extendModel = findSeedance25VideoModel(availableVideoModels);
-      if (extendModel && !isSeedance25VideoModel(selectedVideoModelId)) {
+      // Any extendable model stays as chosen (Seedance 2.5 or one that continues from the last frame); only a model that cannot
+      // be extended at all is corrected.
+      const extendModel = findContinuationVideoModel(availableVideoModels, null);
+      if (extendModel && !isContinuationCapableModel(selectedVideoModel)) {
         patch.model = extendModel.id;
       }
       if (Object.keys(patch).length === 0) return;
@@ -1322,7 +1343,7 @@ export const VideoNode = memo(
       genMode,
       id,
       isExtendMode,
-      selectedVideoModelId,
+      selectedVideoModel,
       updateNodeData,
       videoModelsLoading,
     ]);
@@ -2020,6 +2041,10 @@ export const VideoNode = memo(
     useEffect(() => {
       if (isHappyHorseModel) return;
       if (videoModelsLoading) return;
+      // A smart-extend node's mode is owned by the lock effect above (always allReference). For a model that continues from the
+      // last frame (H3) allReference is not in its catalog modes, so this derivation would rewrite it to another mode and the
+      // lock effect would write it back every render: React #185 (maximum update depth). One data, one author.
+      if (isExtendMode) return;
       const counts = {
         ...upstreamTypeCounts,
         hasOtherReference: Boolean(data.referenceFileUrl || data.referenceLink?.trim()),
@@ -2037,6 +2062,7 @@ export const VideoNode = memo(
       selectedVideoModel,
       videoModelsLoading,
       genMode,
+      isExtendMode,
       isHappyHorseModel,
       upstreamTypeCounts,
       id,
@@ -2423,18 +2449,26 @@ export const VideoNode = memo(
           : upstreamCounts.images > 0;
     // Pre-submit guard: when the current model/mode cannot consume the connected assets (video/audio silently dropped, multi-image on non-2.0 non-
     // HappyHorse gets a backend 400), give the reason and disable submit, replacing silently dropping assets / a submit 400.
-    const mediaRejectionReasonKey = videoSubmitMediaRejectionReason(
-      genMode,
+    // A smart-extend node on a continues-from-last-frame model (H3) is judged as plain image reference with the source video taken
+    // out of the counts; see extendGateView. Every other node is judged exactly as stored.
+    const gateView = extendGateView(
       selectedVideoModel,
+      genMode,
       upstreamCounts,
+      isExtendMode,
+    );
+    const mediaRejectionReasonKey = videoSubmitMediaRejectionReason(
+      gateView.mode,
+      selectedVideoModel,
+      gateView.counts,
     );
     const mediaRejectionReason = mediaRejectionReasonKey
       ? t(mediaRejectionReasonKey)
       : null;
     const upstreamReferenceError = selectedVideoModelReferenceDisabledReason(
       selectedVideoModel,
-      upstreamCounts,
-      genMode,
+      gateView.counts,
+      gateView.mode,
       t,
     );
     const selectedModelReferenceError = (() => {

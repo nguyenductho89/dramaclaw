@@ -6452,7 +6452,7 @@
       "fullscreen": "Fullscreen",
       "notImplementedYet": "Coming soon",
       "requiresVideo": "Upload a video first",
-      "extendRequiresSeedance25": "Smart Extend requires Seedance 2.5, which is not enabled for this project",
+      "extendRequiresSeedance25": "Smart Extend requires Seedance 2.5 or MiniMax H3, and neither is enabled for this project",
       "extendPickHint": "Select the clip to extend from"
     },
     "audio": {
@@ -7562,7 +7562,7 @@
         "moreThanTwoImages": "Unavailable with more than 2 upstream images",
         "multishotCanvasOnly": "Multishot is only available from the canvas video node, not this panel"
       },
-      "extendLockReason": "Smart extend always uses Seedance 2.5; the model and mode cannot be changed",
+      "extendLockReason": "Smart extend only works with Seedance 2.5 or MiniMax H3; the mode cannot be changed",
       "extendPlaceholder": "Enter what you want to extend with",
       "modeRestrictedDefault": "This node doesn't support switching generation mode",
       "externalMedia": "External media",

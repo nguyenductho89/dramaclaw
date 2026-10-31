@@ -43,7 +43,9 @@ import {
 import { formatResolutionLabel } from "@/features/canvas/domain/mediaModelOptions";
 import {
   isHappyHorseVideoModel,
-  isSeedance25VideoModel,
+  extendGateView,
+  isContinuationCapableModel,
+  modelContinuesFromLastFrame,
   isVideoModeSupportedByModel,
   videoModeForcesAutomaticAspectRatio,
   videoModelDefaultGenerateAudio,
@@ -497,8 +499,11 @@ export function VideoOperationsPanel({
     // (change the prompt, generate another version); hiding the model/mode block entirely would make users think the node is a dead object.
     // So they are shown as usual, with the other options grayed out + a reason given.
     const isExtendMode = Boolean(data.isExtendMode);
+    // MiniMax H3 continues from the last frame and takes the user's own H3-format prompt, so the timecoded Seedance prefix is not shown.
+    const extendOnLastFrame = isExtendMode && modelContinuesFromLastFrame(selectedVideoModel);
     const extendPrefixText =
       isExtendMode &&
+      !extendOnLastFrame &&
       typeof data.extendStartMs === "number" &&
       typeof data.extendEndMs === "number"
         ? extendPromptPrefix(
@@ -955,7 +960,13 @@ export function VideoOperationsPanel({
                     modelId={
                       selectedVideoModel?.apiModel ?? selectedVideoModel?.id ?? modelId
                     }
-                    supportedModes={selectedVideoModel?.supportedModes}
+                    // The H3 catalog entry has no all_reference of its own; the extend node is stored as allReference, so the tab it
+                    // sits on has to be listed or the chip would show some other mode's label.
+                    supportedModes={
+                      extendOnLastFrame && selectedVideoModel?.supportedModes
+                        ? [...selectedVideoModel.supportedModes, "all_reference"]
+                        : selectedVideoModel?.supportedModes
+                    }
                     // HappyHorse's selectable modes are decided by the upstream node type (including empty nodes with no image filled),
                     // while other models still count by resolved asset URLs.
                     upstreamCounts={{
@@ -1207,8 +1218,7 @@ export function VideoOperationsPanel({
                     getOptionDisabledReason={(model) =>
                       // Smart continuation goes first: the timecode prefix is written for 2.5's all reference; switching to any
                       // other model would make this node's work pointless, so the remaining items are grayed out directly with a reason.
-                      (isExtendMode &&
-                      !isSeedance25VideoModel(model.apiModel ?? model.id)
+                      (isExtendMode && !isContinuationCapableModel(model)
                         ? t("node.videoOps.extendLockReason")
                         : null) ??
                       // Pass the whole ModelOption, do not collapse it to an id — the capability basis is the supportedModes
@@ -1216,14 +1226,14 @@ export function VideoOperationsPanel({
                       // changes entirely (for example, after the admin takes down HappyHorse's video edit, it is
                       // still selectable here, and once selected every mode is gray and submit is blocked too). Same source as VideoNode's
                       // submit guard.
-                      translateDisabledReason(videoModelReferenceDisabledReason(model, {
+                      translateDisabledReason(videoModelReferenceDisabledReason(model, extendGateView(model, genMode, {
                         images: upstreamCounts.images,
                         // Video / audio must use the same basis as the auto model-switch effect (by node type,
                         // empty nodes count too). If the "resolved URL" basis were used here, with an empty video node connected
                         // 1.x would not be grayed out and the user could select it back, only to be switched away by the effect at once, fighting back and forth.
                         videos: upstreamTypeCounts.videos,
                         audios: upstreamTypeCounts.audios,
-                      }))
+                      }, isExtendMode).counts))
                     }
                   />
                   <VideoConfigChip

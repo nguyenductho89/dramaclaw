@@ -67,6 +67,8 @@ export interface ModelOption {
   referenceFileTypes?: string[];
   /** Multishot only — shot-list add/remove bound (RUNPOD_H3_MULTISHOT_MAX_SHOTS server-side, read at request time). */
   maxShots?: number | null;
+  /** Smart extend works on this model by turning the source video's last frame into the first frame (MiniMax H3); see FreezoneVideoModelInfo. */
+  supportsContinuation?: boolean;
   referenceAudioMinSeconds?: number | null;
   referenceAudioMaxSeconds?: number | null;
   referenceAudioTotalMinSeconds?: number | null;

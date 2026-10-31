@@ -6338,7 +6338,7 @@
       "fullscreen": "Toàn màn hình",
       "notImplementedYet": "Sắp có",
       "requiresVideo": "Hãy tải video lên trước",
-      "extendRequiresSeedance25": "Viết tiếp thông minh chỉ hỗ trợ Seedance 2.5, dự án hiện chưa bật model này",
+      "extendRequiresSeedance25": "Viết tiếp thông minh cần Seedance 2.5 hoặc MiniMax H3, dự án hiện chưa bật model nào trong hai model này",
       "extendPickHint": "Hãy chọn đoạn video làm phần mở đầu để viết tiếp"
     },
     "audio": {
@@ -7439,7 +7439,7 @@
         "moreThanTwoImages": "Không dùng được khi phía trên có hơn 2 ảnh",
         "multishotCanvasOnly": "Multishot chỉ dùng được từ video node trên canvas, không phải bảng này"
       },
-      "extendLockReason": "Nối tiếp thông minh luôn dùng Seedance 2.5, không thể đổi model hoặc chế độ",
+      "extendLockReason": "Nối tiếp thông minh chỉ dùng được với Seedance 2.5 hoặc MiniMax H3, không thể đổi chế độ",
       "extendPlaceholder": "Nhập nội dung cần nối tiếp",
       "modeRestrictedDefault": "Node này không hỗ trợ chuyển chế độ tạo",
       "externalMedia": "Tư liệu bên ngoài",

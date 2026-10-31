@@ -344,6 +344,50 @@ def is_freezone_runpod_h3_multishot_backend(backend: str | None) -> bool:
     return str(backend or "").strip() == FREEZONE_RUNPOD_H3_MULTISHOT_BACKEND
 
 
+# Smart extend on H3 (2026-10-31). H3 has no "extend this video" task, so the
+# continuation is expressed the way the model already understands: the LAST
+# frame of the (already trimmed) source clip becomes `<Picture 1>`, pinned at
+# frame 0, and the images connected to the extend node stay as the character
+# sheets (`<Picture 2..N>`). The source video itself is not sent. A/B on a
+# two-character clip showed the preceding-video reference (`<Video 1>`) did
+# not improve identity and made the job ~2.7x slower, so it is not used; see
+# `.claude/CLAUDE.md` ("H3 extend").
+H3_EXTEND_MAX_REFERENCE_IMAGES = 8  # the model takes 9 images, one is the first frame
+
+
+def extract_last_frame_png(video_path: str | Path, out_path: str | Path) -> Path:
+    """Write the final frame of `video_path` to `out_path` (PNG) with ffmpeg."""
+    import shutil
+    import subprocess
+
+    if not shutil.which("ffmpeg"):
+        raise RuntimeError("ffmpeg not found on PATH")
+    video_path = Path(video_path)
+    out_path = Path(out_path)
+    if not video_path.exists():
+        raise FileNotFoundError(f"video not found: {video_path}")
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    # No `-frames:v 1`: that would stop after the FIRST frame past the seek point (~0.2s
+    # before the end). `-update 1` keeps overwriting the single output file, so the file
+    # ends up holding the last decoded frame.
+    cmd = [
+        "ffmpeg", "-v", "error", "-y", "-sseof", "-0.2", "-i", str(video_path),
+        "-update", "1", str(out_path),
+    ]
+    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+    if proc.returncode != 0 or not out_path.exists() or out_path.stat().st_size == 0:
+        raise RuntimeError(f"ffmpeg could not extract the last frame: {proc.stderr[-300:]}")
+    return out_path
+
+
+def h3_extend_aspect_ratio(frame_path: str | Path) -> str:
+    """H3 only takes 16:9 or 9:16; pick the one matching the source frame."""
+    from PIL import Image
+
+    with Image.open(frame_path) as im:
+        return "9:16" if im.height >= im.width else "16:9"
+
+
 def get_freezone_video_model_options() -> list[dict[str, Any]]:
     data: list[dict[str, Any]] = []
     for backend, label in _freezone_newapi_video_options().items():

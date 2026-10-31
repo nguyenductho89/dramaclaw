@@ -441,6 +441,19 @@ Dừng scene 9 ở đó (quá nhiều lớp vá cho 1 scene), quay lại hỏi: 
 
 **Quyết định**: cập nhật `examples/yui-ep01-edo-1703.md` — bỏ hẳn bước 4 (First frames, Qwen-Image compose) + bước 5 (Relight) cho MỌI cảnh cần Yui xuất hiện trong location, đi thẳng từ Locations (bước 3) sang Video (bước 6: location sạch làm first frame/start_image cho cả ref2va 1-shot lẫn multishot). **Cập nhật (2026-10-27, cùng ngày): đã xoá hẳn `scripts/sam3_pipeline/sam3lib/`** (theo yêu cầu user, "chỉ dùng H3") — không còn giữ làm dự phòng nữa. Nếu sau này cần lại kỹ thuật SAM3 ground-plane, phải viết lại từ đầu theo đúng mô tả ADR 0010 (script gốc đã mất 2 lần: lần 1 vì scratchpad ephemeral của 1 session Cloud khác, lần 2 vì xoá chủ động hôm nay).
 
+## H3 extend (nối tiếp clip): sheet nhân vật và video đuôi có cần không? (2026-10-31)
+
+A/B trên clip Freezone 2 nhân vật (ma cà rồng + cô gái, project `01M61JGB48KYBRCNHFJGP0PPYZ`, node `9d6f7815-...`), ref2va turbo LoRA 6 bước, 124 khung, 768×1344, cùng seed, A40. `<Picture 1>` = khung cuối clip nguồn; B/C thêm 2 sheet tách riêng (nam/nữ, `<Picture 2/3>`); C/D thêm `<Video 1>` = 5s đuôi + audio qua `LoadVideo` → `GetVideoComponents` → `ref_videos.ref_video_0` / `ref_video_audios.ref_video_audio_0` (handler RunPod nhận file mp4, node không báo lỗi).
+
+- **Mối nối tốt ở mọi biến thể** (lệch khung đầu ~4/255, tối hơn ~4 mức), kể cả chỉ dùng khung cuối.
+- **Sheet (B) chỉ hơn A chút ít** (cosine SFace mặt nữ 0,46 vs 0,31 ở 0,5s; còn lại gần bằng nhau). Mặt nam luôn dưới 0,36 ở mọi biến thể vì anh ta gần như ngoài khung, phép đo không phân định được. Nối lần 2 (A2 vs B2): không trôi mặt, A2 ≈ B2.
+- **Video đuôi (C/D) không cải thiện danh tính và chậm ~2,7 lần** (655-727s vs ~260s). Không dùng trừ khi cần giữ phòng/ánh sáng.
+- Chỉ 1 clip, 1 seed, 1 chỉ số: chưa kết luận chắc.
+- **Đã tích hợp vào nút Smart extend (2026-10-31)**, chi tiết + bẫy: `docs/adr/0011-h3-smart-extend.md`. Node extend giờ chọn được model H3 (cờ catalog `supportsContinuation`); backend `freezone_video_omni_gen` với `continuation=true` lấy khung cuối của đoạn đã cắt làm first frame (`<Picture 1>`), giữ ảnh nối vào làm sheet, bỏ video; frontend dùng `extendGateView()`. Người dùng tự gõ prompt H3 (không có tiền tố timecode). Nối mỗi nhân vật 1 sheet riêng. Chưa chạy GPU thật qua UI.
+- Bẫy: `ffmpeg -sseof -0.2 -update 1 -frames:v 1` chỉ lấy khung ~0,2s trước cuối, không phải khung cuối (lần nối thứ 2 của A/B dính lỗi này); bỏ `-frames:v 1`.
+- Bẫy: `realism_lora=None` nghĩa là "lấy từ .env" (bật LoRA realism + trigger), muốn tắt phải truyền `""`.
+- Script thí nghiệm không lưu trong repo (scratchpad của phiên).
+
 ## Đừng làm
 
 - Đừng tìm hay in `settings.db` / token chạy của DramaClaw (hệ thống chặn thao tác dò thông tin xác thực).

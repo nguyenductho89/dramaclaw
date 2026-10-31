@@ -1659,6 +1659,12 @@ export interface FreezoneVideoModelInfo extends ReferenceMediaLimits {
   referenceFileTypes?: string[];
   /** Multishot only — shot-list add/remove bound (RUNPOD_H3_MULTISHOT_MAX_SHOTS server-side, read at request time). */
   maxShots?: number | null;
+  /**
+   * Smart extend on a model that has no video-extend task of its own (MiniMax H3): the backend turns the last frame of the
+   * trimmed source video into the first frame and keeps the connected images as references. Missing/false = only models whose
+   * `isSeedance25VideoModel` is true can be extended.
+   */
+  supportsContinuation?: boolean;
   referenceAudioMinSeconds?: number | null;
   referenceAudioMaxSeconds?: number | null;
   referenceAudioTotalMinSeconds?: number | null;
@@ -1750,6 +1756,7 @@ function videoModelEntryFromObject(
     referenceLinkMax: pickNumber(entry, "referenceLinkMax", "reference_link_max"),
     referenceFileTypes: pickStringArray(entry, "referenceFileTypes", "reference_file_types"),
     maxShots: pickNumber(entry, "maxShots", "max_shots"),
+    supportsContinuation: pickBoolean(entry, "supportsContinuation", "supports_continuation"),
     referenceAudioMinSeconds: pickNumber(
       entry,
       "referenceAudioMinSeconds",

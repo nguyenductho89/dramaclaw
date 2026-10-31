@@ -6454,7 +6454,7 @@
       "fullscreen": "全屏播放",
       "notImplementedYet": "该功能暂未上线",
       "requiresVideo": "请先上传视频",
-      "extendRequiresSeedance25": "智能续写仅支持 Seedance 2.5，当前项目未开放该模型",
+      "extendRequiresSeedance25": "智能续写仅支持 Seedance 2.5 或 MiniMax H3，当前项目均未开放",
       "extendPickHint": "请截取续写前置视频"
     },
     "audio": {
@@ -7564,7 +7564,7 @@
         "moreThanTwoImages": "上游图片超过 2 张时不可用",
         "multishotCanvasOnly": "多镜头仅可在画布视频节点中使用，此面板不支持"
       },
-      "extendLockReason": "智能续写固定使用 Seedance 2.5，不能切换模型或模式",
+      "extendLockReason": "智能续写仅支持 Seedance 2.5 或 MiniMax H3，不能切换模式",
       "extendPlaceholder": "请输入需要续写的内容",
       "modeRestrictedDefault": "该节点不支持切换生成模式",
       "externalMedia": "外部素材",

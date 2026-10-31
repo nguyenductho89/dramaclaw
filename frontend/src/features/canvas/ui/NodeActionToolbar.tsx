@@ -135,7 +135,7 @@ import { resolveImageDisplayUrl } from "@/features/canvas/application/imageData"
 import { useSettingsStore } from "@/stores/settingsStore";
 import { useCanvasStore } from "@/stores/canvasStore";
 import { useFreezoneVideoModels } from "@/features/canvas/hooks/useFreezoneVideoModels";
-import { findSeedance25VideoModel } from "@/features/canvas/nodes/shared/videoModelCapabilities";
+import { findContinuationVideoModel } from "@/features/canvas/nodes/shared/videoModelCapabilities";
 import { openPresetProjectionInMyCanvas } from "@/features/freezone/openPresetProjection";
 import { analyzeVideoStory } from "@/features/canvas/application/videoAnalyzeStory";
 import { separateVideoAudio } from "@/features/canvas/application/videoSeparateAudio";
@@ -537,12 +537,12 @@ export const NodeActionToolbar = memo(
       (videoAnalyzeBillingRuleMissing
         ? t("common.billingRuleNotConfiguredShort")
         : null);
-    // Clip reshoot is a Seedance 2.5-exclusive capability (the timecodes are consumed by its video edit), so the entry's
-    // availability is decided directly by "whether this project's model catalog has 2.5". The catalog is a module-level shared
-    // store, so subscribing once more here does not send extra requests.
+    // Smart extend needs a model that can be extended: Seedance 2.5 (native video extend) or one that continues from the last
+    // frame (MiniMax H3), so the entry's availability is decided by "whether this project's model catalog has one of them". The
+    // catalog is a module-level shared store, so subscribing once more here does not send extra requests.
     const { models: videoModelsForExtend } = useFreezoneVideoModels();
     const extendModel = useMemo(
-      () => findSeedance25VideoModel(videoModelsForExtend),
+      () => findContinuationVideoModel(videoModelsForExtend),
       [videoModelsForExtend],
     );
     const isImageEdit = isImageEditNode(node);

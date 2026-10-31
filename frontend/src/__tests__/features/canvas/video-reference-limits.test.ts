@@ -140,6 +140,66 @@ describe("videoReferenceEnvelopeForNode — resolves the selected model's envelo
   });
 });
 
+describe("smart extend on MiniMax H3 — the source video must be connectable", () => {
+  // The catalog entry of H3: video reference cap 0 (the clip is consumed server-side, last frame -> first frame), flagged extendable.
+  const h3: ModelOption = {
+    id: "runpod_minimax_h3",
+    providerId: "seedance",
+    apiModel: "runpod_minimax_h3",
+    label: "MiniMax-H3",
+    referenceImageMax: 9,
+    referenceVideoMax: 0,
+    referenceAudioMax: 3,
+    supportsContinuation: true,
+  };
+
+  it("an extend node accepts one video and at most 8 images (one slot is the last frame)", () => {
+    const extend = node("v", CANVAS_NODE_TYPES.video, { model: "runpod_minimax_h3", isExtendMode: true });
+    expect(videoReferenceEnvelopeForNode(extend, [h3])).toEqual({ image: 8, video: 1, audio: 3, total: 12 });
+  });
+
+  it("a plain H3 node keeps video cap 0: this is not a general video reference", () => {
+    const plain = node("v", CANVAS_NODE_TYPES.video, { model: "runpod_minimax_h3" });
+    expect(videoReferenceEnvelopeForNode(plain, [h3]).video).toBe(0);
+  });
+
+  it("an extend node on a model without the flag is left alone", () => {
+    const extend = node("v", CANVAS_NODE_TYPES.video, { model: "runpod_minimax_h3", isExtendMode: true });
+    expect(videoReferenceEnvelopeForNode(extend, [{ ...h3, supportsContinuation: false }]).video).toBe(0);
+  });
+
+  it("the edge from the source video to the extend node is accepted, a second video is not", () => {
+    const extend = node("ext", CANVAS_NODE_TYPES.video, { model: "runpod_minimax_h3", isExtendMode: true });
+    const source = node("src", CANVAS_NODE_TYPES.video, { videoUrl: "/a.mp4" });
+    const other = node("other", CANVAS_NODE_TYPES.video, { videoUrl: "/b.mp4" });
+    const resolve = (n: CanvasNode) => videoReferenceEnvelopeForNode(n, [h3]);
+    expect(
+      videoReferenceConnectionRejection([extend, source], [], { source: "src", target: "ext" }, resolve),
+    ).toBeNull();
+    expect(
+      videoReferenceConnectionRejection(
+        [extend, source, other],
+        [{ source: "src", target: "ext" }],
+        { source: "other", target: "ext" },
+        resolve,
+      ),
+    ).not.toBeNull();
+    // the same edge into a plain H3 node is still refused (cap 0)
+    const plain = node("plain", CANVAS_NODE_TYPES.video, { model: "runpod_minimax_h3" });
+    expect(
+      videoReferenceConnectionRejection([plain, source], [], { source: "src", target: "plain" }, resolve),
+    ).not.toBeNull();
+  });
+
+  it("overflow cleanup keeps the source edge of an extend node", () => {
+    const extend = node("ext", CANVAS_NODE_TYPES.video, { model: "runpod_minimax_h3", isExtendMode: true });
+    const source = node("src", CANVAS_NODE_TYPES.video, { videoUrl: "/a.mp4" });
+    const edges = [{ id: "e1", source: "src", target: "ext" }];
+    const resolve = (n: CanvasNode) => videoReferenceEnvelopeForNode(n, [h3]);
+    expect(overflowingVideoReferenceEdgeIds([extend, source], edges, "ext", resolve)).toEqual([]);
+  });
+});
+
 describe("videoReferenceConnectionRejection — material cap when creating an edge", () => {
   const connect = (nodes: CanvasNode[], edges: { source: string; target: string }[], sourceId: string) =>
     videoReferenceConnectionRejection(nodes, edges, {

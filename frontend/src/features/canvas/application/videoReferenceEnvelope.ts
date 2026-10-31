@@ -6,7 +6,11 @@ import {
   type VideoReferenceEnvelope,
 } from '@/features/canvas/domain/videoReferenceLimits';
 import { readFreezoneVideoModels } from '@/features/canvas/hooks/useFreezoneVideoModels';
+import { modelContinuesFromLastFrame } from '@/features/canvas/nodes/shared/videoModelCapabilities';
 import type { ModelOption } from '@/features/canvas/ui/ProviderModelPicker';
+
+/** H3 smart extend: the backend uses one image slot for the last frame of the source video (see H3_EXTEND_MAX_REFERENCE_IMAGES). */
+const H3_EXTEND_MAX_IMAGES = 8;
 
 /**
  * Resolve a video node into the reference limit envelope of its **currently selected model**.
@@ -32,5 +36,14 @@ export function videoReferenceEnvelopeForNode(
   const model =
     (persisted ? models.find((entry) => entry.id === persisted) : undefined) ??
     models[0];
-  return videoReferenceEnvelopeForModel(model);
+  const envelope = videoReferenceEnvelopeForModel(model);
+  // A smart-extend node on a model that continues from the last frame (MiniMax H3) is wired to its source video, yet the model's own
+  // video reference cap is 0: the video is consumed server-side (its last frame becomes the first frame), not sent as a reference.
+  // Judged by the model cap alone, the edge to the source clip would be rejected and the node would have nothing to extend.
+  if (videoNode.data?.isExtendMode === true && modelContinuesFromLastFrame(model)) {
+    const image = Math.min(envelope.image, H3_EXTEND_MAX_IMAGES);
+    const video = Math.max(envelope.video, 1);
+    return { image, video, audio: envelope.audio, total: image + video + envelope.audio };
+  }
+  return envelope;
 }

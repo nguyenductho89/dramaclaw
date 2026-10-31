@@ -387,7 +387,11 @@ from novelvideo.freezone.video_node import (
     get_freezone_video_model_options,
     get_video_camera_template,
     get_video_camera_templates,
+    H3_EXTEND_MAX_REFERENCE_IMAGES,
+    extract_last_frame_png,
+    h3_extend_aspect_ratio,
     is_freezone_happyhorse_backend,
+    is_freezone_runpod_h3_backend,
     is_freezone_seedance2_backend,
     is_freezone_seedance_backend,
     library_folder_keys,
@@ -9634,6 +9638,11 @@ def _freezone_dev_media_model_catalog_entries(media_type: str) -> list[dict[str,
                     "referenceImageMax": 9,
                     "referenceVideoMax": 0,
                     "referenceAudioMax": 3,
+                    # Frontend-only field: the canvas "smart extend" may pick
+                    # this model. The source video is not a reference here (hence
+                    # referenceVideoMax stays 0): `freezone_video_omni_gen` turns
+                    # its last frame into `<Picture 1>` (2026-10-31).
+                    "supportsContinuation": True,
                 }
             )
 
@@ -11313,19 +11322,44 @@ async def freezone_video_omni_gen(
         mode=body.gen_mode,
         requester_user_id=ctx.requester_user_id,
     )
+    # Smart extend on H3: no "all_reference"/video-extend task exists for this
+    # backend, so the continuation is rebuilt below as first frame + images.
+    h3_extend = bool(body.continuation) and is_freezone_runpod_h3_backend(backend)
     mode_enabled = _catalog_mode_enabled(capabilities, "all_reference")
-    if mode_enabled is False:
-        raise HTTPException(400, "this model does not support omni reference mode")
-    if mode_enabled is None and is_freezone_happyhorse_backend(backend):
-        raise HTTPException(
-            400, "HappyHorse video does not support omni reference mode"
-        )
-    if mode_enabled is None and not is_freezone_seedance2_backend(backend):
-        raise HTTPException(
-            400, "omni video currently only supports Seedance 2.0 models"
-        )
+    if not h3_extend:
+        if mode_enabled is False:
+            raise HTTPException(400, "this model does not support omni reference mode")
+        if mode_enabled is None and is_freezone_happyhorse_backend(backend):
+            raise HTTPException(
+                400, "HappyHorse video does not support omni reference mode"
+            )
+        if mode_enabled is None and not is_freezone_seedance2_backend(backend):
+            raise HTTPException(
+                400, "omni video currently only supports Seedance 2.0 models"
+            )
 
     raw_reference_items = [item.model_dump() for item in body.references]
+    h3_extend_video_items: list[dict[str, Any]] = []
+    if h3_extend:
+        # The video is consumed server-side (last frame -> first frame), so it
+        # must not count against H3's referenceVideoMax of 0.
+        h3_extend_video_items = [
+            item for item in raw_reference_items if str(item.get("type") or "image") == "video"
+        ]
+        raw_reference_items = [
+            item for item in raw_reference_items if str(item.get("type") or "image") != "video"
+        ]
+        if not h3_extend_video_items:
+            raise HTTPException(400, "continuation requires a video reference")
+        if (
+            sum(1 for item in raw_reference_items if str(item.get("type") or "image") == "image")
+            > H3_EXTEND_MAX_REFERENCE_IMAGES
+        ):
+            raise HTTPException(
+                400,
+                f"H3 extend takes at most {H3_EXTEND_MAX_REFERENCE_IMAGES} reference images "
+                "(one more slot is used by the last frame of the source video)",
+            )
     reference_limits = _catalog_reference_limits(
         capabilities,
         image_default=9,
@@ -11415,20 +11449,49 @@ async def freezone_video_omni_gen(
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
 
-    if body.continuation and not any(
+    if body.continuation and not h3_extend and not any(
         item["type"] == "video" for item in reference_items
     ):
         raise HTTPException(400, "continuation requires a video reference")
 
-    final_prompt = build_freezone_omni_video_prompt(
-        user_prompt=body.prompt,
-        theme=body.theme,
-        camera_template_id=body.camera_template_id,
-        marks=[item.model_dump() for item in body.marks],
-        reference_items=reference_items,
-        continuation=body.continuation,
-    )
     job_id = _new_job_id()
+    omni_aspect_ratio = normalize_video_aspect_ratio(body.aspect_ratio)
+    omni_gen_mode = "video_extend" if body.continuation else "all_reference"
+    if h3_extend:
+        source_paths = _resolve_url_list(
+            project_dir, [str(h3_extend_video_items[0].get("url") or "")]
+        )
+        if not source_paths:
+            raise HTTPException(400, "continuation source video could not be resolved")
+        try:
+            first_frame = await asyncio.to_thread(
+                extract_last_frame_png,
+                source_paths[0],
+                outputs_dir(project_dir, "freezone_video_gen") / f"{job_id}_extend_first.png",
+            )
+        except (RuntimeError, FileNotFoundError) as exc:
+            raise HTTPException(400, f"could not read the source video: {exc}") from exc
+        # First image = first frame (`<Picture 1>`); the connected images
+        # (character sheets) keep their order after it.
+        reference_items = [
+            {"type": "image", "path": str(first_frame), "role": "first frame"},
+            *[item for item in reference_items if item["type"] != "video"],
+        ]
+        if omni_aspect_ratio == "auto":
+            omni_aspect_ratio = h3_extend_aspect_ratio(first_frame)
+        omni_gen_mode = "image_reference"
+        # The user's prompt is already in H3 format; the Seedance extend wording
+        # ("continue from the end of the input video...") would only confuse it.
+        final_prompt = body.prompt.strip()
+    else:
+        final_prompt = build_freezone_omni_video_prompt(
+            user_prompt=body.prompt,
+            theme=body.theme,
+            camera_template_id=body.camera_template_id,
+            marks=[item.model_dump() for item in body.marks],
+            reference_items=reference_items,
+            continuation=body.continuation,
+        )
 
     try:
         response = await _start_or_enqueue_freezone_video_gen(
@@ -11440,7 +11503,7 @@ async def freezone_video_omni_gen(
             job_id=job_id,
             prompt=final_prompt,
             reference_items=reference_items,
-            aspect_ratio=normalize_video_aspect_ratio(body.aspect_ratio),
+            aspect_ratio=omni_aspect_ratio,
             resolution=normalize_video_resolution_for_backend(
                 backend,
                 body.resolution,
@@ -11463,7 +11526,7 @@ async def freezone_video_omni_gen(
             catalog_id=_catalog_entry_id(capabilities) or None,
             # Smart continuation runs as a video-extend task (task type emits extend); billing,
             # catalog validation and node history still use requested_gen_mode, i.e. all-reference.
-            gen_mode="video_extend" if body.continuation else "all_reference",
+            gen_mode=omni_gen_mode,
             requested_gen_mode=body.gen_mode,
             model_params=model_params,
             request_schema=request_schema,

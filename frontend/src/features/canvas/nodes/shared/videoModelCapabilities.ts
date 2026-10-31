@@ -76,6 +76,80 @@ export function findSeedance25VideoModel<T extends { id: string; apiModel?: stri
 }
 
 /**
+ * Smart extend on a model that has no video-extend task of its own (MiniMax H3, catalog flag `supportsContinuation`).
+ *
+ * The backend rebuilds the continuation as "last frame of the trimmed source video = first frame, connected images = references"
+ * (`freezone_video_omni_gen`, `continuation=true`), so the source video is NOT a model reference. Seedance 2.5 keeps its native
+ * video-extend path and is deliberately excluded here.
+ */
+export function modelContinuesFromLastFrame(model: VideoModelRef): boolean {
+  return (
+    typeof model === "object" &&
+    model !== null &&
+    model.supportsContinuation === true &&
+    !isSeedance25VideoModel(videoModelIdOf(model))
+  );
+}
+
+/** Whether "Smart extend" may land on this model: Seedance 2.5, or a model that continues from the last frame. */
+export function isContinuationCapableModel(model: VideoModelRef): boolean {
+  return isSeedance25VideoModel(videoModelIdOf(model)) || modelContinuesFromLastFrame(model);
+}
+
+/**
+ * Which model a new smart-extend node should land on. The source node's own model wins when it can be extended (a clip made by
+ * H3 is continued by H3, so the face/look stays on the same model), then Seedance 2.5, then any other capable model; null when the
+ * catalog has none and the caller should gray the entry point out.
+ */
+export function findContinuationVideoModel<
+  T extends { id: string; apiModel?: string; supportsContinuation?: boolean },
+>(models: readonly T[], preferredModelId?: string | null): T | null {
+  const capable = models.filter((model) => isContinuationCapableModel(model));
+  const preferred = preferredModelId
+    ? capable.find((model) => model.id === preferredModelId || model.apiModel === preferredModelId)
+    : undefined;
+  return (
+    preferred ??
+    capable.find((model) => isSeedance25VideoModel(model.apiModel ?? model.id)) ??
+    capable[0] ??
+    null
+  );
+}
+
+/**
+ * `isVideoModeSupportedByModel` for a node that may be a smart-extend node. On such a node `allReference` is the stored mode even for a
+ * model that continues from the last frame (H3), which has no `all_reference` of its own; without this the submit guard answers
+ * "This model doesn't support omni reference" although the backend accepts the continuation.
+ */
+export function isVideoModeSupportedOnNode(
+  mode: VideoGenMode,
+  model: VideoModelRef,
+  isExtendNode: boolean,
+): boolean {
+  if (isExtendNode && mode === "allReference" && modelContinuesFromLastFrame(model)) return true;
+  return isVideoModeSupportedByModel(mode, model);
+}
+
+/**
+ * How the capability gates (mode support, reference caps, rejection reasons) should judge a smart-extend node.
+ *
+ * A continues-from-last-frame model has no `all_reference` mode and a video reference cap of 0, so judging the node as it is stored
+ * (`allReference`, one connected video) would reject every such model. Judged as plain `imageReference` with the source video taken
+ * out of the counts, the same gates answer correctly without a second set of rules. Everything else is judged unchanged.
+ */
+export function extendGateView(
+  model: VideoModelRef,
+  mode: VideoGenMode,
+  counts: { images: number; videos: number; audios: number },
+  isExtendNode: boolean,
+): { mode: VideoGenMode; counts: { images: number; videos: number; audios: number } } {
+  if (isExtendNode && modelContinuesFromLastFrame(model)) {
+    return { mode: "imageReference", counts: { ...counts, videos: Math.max(0, counts.videos - 1) } };
+  }
+  return { mode, counts };
+}
+
+/**
  * Whether the output ratio / duration is determined by the input video — this is how Seedance video editing works: the vendor hard-validates
  * that `ratio` must be `adaptive` and `duration` must be -1; specifying concrete values gets the whole order rejected
  * (`[InvalidParameter.TaskTypeConstraint] ... the output ratio and duration follow
@@ -181,6 +255,8 @@ export type VideoModelRef =
       supportsGenerateAudio?: boolean;
       /** Multishot only — shot-list add/remove bound, see FreezoneVideoModelInfo in api/ops.ts. */
       maxShots?: number | null;
+      /** Smart extend runs as last frame -> first frame (MiniMax H3), see FreezoneVideoModelInfo in api/ops.ts. */
+      supportsContinuation?: boolean;
     }
   | null
   | undefined;

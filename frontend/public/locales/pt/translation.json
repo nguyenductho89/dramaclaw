@@ -5894,7 +5894,7 @@
       "fullscreen": "Ecrã inteiro",
       "notImplementedYet": "Brevemente",
       "requiresVideo": "Carregue primeiro um vídeo",
-      "extendRequiresSeedance25": "O Prolongamento inteligente requer o Seedance 2.5, que não está ativado neste projeto",
+      "extendRequiresSeedance25": "O Prolongamento inteligente requer o Seedance 2.5 ou o MiniMax H3, e nenhum deles está ativado neste projeto",
       "extendPickHint": "Selecione o clipe a partir do qual pretende prolongar"
     },
     "audio": {
@@ -7140,7 +7140,7 @@
         "hasImageOrAudioRefs": "Indisponível enquanto forem referenciados recursos de imagem/áudio",
         "moreThanTwoImages": "Indisponível com mais de 2 imagens em nós anteriores"
       },
-      "extendLockReason": "O prolongamento inteligente utiliza sempre o Seedance 2.5; não é possível alterar o modelo nem o modo",
+      "extendLockReason": "O prolongamento inteligente só funciona com o Seedance 2.5 ou o MiniMax H3; não é possível alterar o modo",
       "extendPlaceholder": "Introduza o conteúdo com que pretende prolongar",
       "modeRestrictedDefault": "Este nó não permite mudar o modo de geração"
     },

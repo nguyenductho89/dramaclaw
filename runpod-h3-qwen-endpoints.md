@@ -25,7 +25,7 @@ Biến môi trường chung (secret, resolve qua RunPod Secrets):
 R2_ACCESS_KEY_ID     = {{ RUNPOD_SECRET_r2-access-key-id }}
 R2_SECRET_ACCESS_KEY = {{ RUNPOD_SECRET_r2-secret-access-key }}
 R2_BUCKET             = photoreal-drama-jobs
-R2_ENDPOINT           = https://5f508a4c92bfbd347b48e7c3877a647f.r2.cloudflarestorage.com
+R2_ENDPOINT           = https://<account-id>.r2.cloudflarestorage.com
 ```
 
 ---

@@ -27,7 +27,7 @@ async def main():
     for attempt in range(6):
         t0 = time.time()
         while not PHOTO.exists() and time.time() - t0 < 1700:
-            running = subprocess.run(["pgrep","-f","qwen_render.py"],capture_output=True).stdout.strip()
+            running = subprocess.run(["pgrep","-f","^[^ ]*python[^ ]* [^ ]*qwen_render[.]py"],capture_output=True).stdout.strip()
             if not running: break
             await asyncio.sleep(20)
         if PHOTO.exists(): break

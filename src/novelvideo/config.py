@@ -852,6 +852,13 @@ RUNPOD_H3_VIDEO_TIMEOUT_SECONDS = _env_float("RUNPOD_H3_VIDEO_TIMEOUT_SECONDS", 
 RUNPOD_H3_VIDEO_IDLE_TIMEOUT_SECONDS = int(
     _env_float("RUNPOD_H3_VIDEO_IDLE_TIMEOUT_SECONDS", 90.0)
 )
+# A job that sits IN_QUEUE this long with no worker running anything is
+# assumed to be stuck on a worker that never finished initializing (seen
+# 2026-10-31: 40 min IN_QUEUE, worker INITIALIZING, empty logs). The poll loops
+# then cycle `workers.max` 0 -> old value once. Slowest normal cold start seen
+# is ~13 min. 0 disables.
+RUNPOD_STUCK_WORKER_RECYCLE_SECONDS = _env_float("RUNPOD_STUCK_WORKER_RECYCLE_SECONDS", 900.0)
+RUNPOD_STUCK_WORKER_MAX_RECYCLES = int(_env_float("RUNPOD_STUCK_WORKER_MAX_RECYCLES", 1.0))
 RUNPOD_H3_UNET_REF2VA = os.environ.get(
     "RUNPOD_H3_UNET_REF2VA", "minimax_h3_ref2va_pruned_int8_convrot.safetensors"
 )
@@ -960,6 +967,12 @@ RUNPOD_H3_STAGE2_DENOISE = _env_float("RUNPOD_H3_STAGE2_DENOISE", 0.35)
 # (output = negative + cfg*(positive-negative) = positive at cfg=1) and can be
 # wired to the same conditioning as `positive`.
 RUNPOD_H3_AUDIO_REFINE_ENABLED = _env_bool("RUNPOD_H3_AUDIO_REFINE_ENABLED", False)
+# Smart extend on H3 also hands the preceding clip over as `<Video 1>` (2026-10-31), on top of its last frame as `<Picture 1>`. The node takes
+# reference videos of 2-15 s, so a longer clip is cut to its last RUNPOD_H3_EXTEND_VIDEO_MAX_SECONDS. A/B on one clip: no better face
+# identity than the last frame alone and ~2.7x slower (655-727 s vs ~260 s), so this can be switched off with
+# RUNPOD_H3_EXTEND_WITH_VIDEO=0 to fall back to last frame + sheets only.
+RUNPOD_H3_EXTEND_WITH_VIDEO = _env_bool("RUNPOD_H3_EXTEND_WITH_VIDEO", True)
+RUNPOD_H3_EXTEND_VIDEO_MAX_SECONDS = _env_float("RUNPOD_H3_EXTEND_VIDEO_MAX_SECONDS", 15.0)
 RUNPOD_H3_AUDIO_REFINE_STEPS = int(_env_float("RUNPOD_H3_AUDIO_REFINE_STEPS", 4.0))
 RUNPOD_H3_AUDIO_REFINE_CFG = _env_float("RUNPOD_H3_AUDIO_REFINE_CFG", 1.0)
 RUNPOD_H3_AUDIO_REFINE_DENOISE = _env_float("RUNPOD_H3_AUDIO_REFINE_DENOISE", 0.5)

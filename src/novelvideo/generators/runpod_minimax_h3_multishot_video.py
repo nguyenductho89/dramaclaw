@@ -507,6 +507,9 @@ async def run_h3_multishot_job(
     seen_in_progress = False
     status_resp: dict[str, Any] = {}
     last_poll_error = ""
+    from novelvideo.runpod_worker_control import StuckWorkerWatchdog
+
+    watchdog = StuckWorkerWatchdog(endpoint_id, log=log)
     try:
         async with httpx.AsyncClient(timeout=60.0) as client:
             while time.monotonic() < deadline:
@@ -519,6 +522,8 @@ async def run_h3_multishot_job(
                     last_poll_error = str(exc)
                     continue
                 current_status = status_resp.get("status")
+                if await watchdog.observe(current_status):
+                    deadline = max(deadline, time.monotonic() + timeout_seconds)
                 if current_status == "IN_PROGRESS" and not seen_in_progress:
                     seen_in_progress = True
                     deadline = time.monotonic() + timeout_seconds

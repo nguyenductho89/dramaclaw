@@ -121,6 +121,24 @@ def dims_for_ratio(aspect_ratio: str, profile: str = "formal") -> tuple[int, int
     return (long_, short) if landscape else (short, long_)
 
 
+def _video_has_audio_track(path: str) -> bool:
+    """True when `ffprobe` finds an audio stream. A probe failure counts as "no audio": feeding the reference-video soundtrack
+    input from a clip without one would hand the node an empty AUDIO and fail the whole job."""
+    import shutil
+    import subprocess
+
+    if not shutil.which("ffprobe"):
+        return False
+    try:
+        proc = subprocess.run(
+            ["ffprobe", "-v", "error", "-select_streams", "a:0", "-show_entries", "stream=codec_type", "-of", "csv=p=0", str(path)],
+            capture_output=True, text=True, timeout=30,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return proc.returncode == 0 and "audio" in proc.stdout
+
+
 def _fit_canvas_bytes(data: bytes, width: int, height: int) -> bytes:
     """Scale-to-cover + center-crop to exactly width x height. Mirrors the
     photoreal project's `fit_canvas`: `MiniMaxH3ImageToVideo.first_frame`
@@ -200,6 +218,8 @@ def build_h3_ref2va_graph(
     turbo_steps: int | None = None,
     realism_lora: str | None = None,
     realism_strength: float | None = None,
+    video_names: list[str] | None = None,
+    video_has_audio: list[bool] | None = None,
 ) -> dict[str, Any]:
     """`MiniMaxH3ReferenceToVideo` + PDD 8-step acceleration. With
     `pin_first_frame` (default) `image_names[0]` is the first frame
@@ -408,6 +428,17 @@ def build_h3_ref2va_graph(
     for k, name in enumerate(audio_names):
         graph[str(200 + k)] = {"class_type": "LoadAudio", "inputs": {"audio": name}}
         graph["7"]["inputs"][f"ref_audios.ref_audio_{k}"] = [str(200 + k), 0]
+    # Reference videos (`<Video N>`): the node takes the frames and, separately, the soundtrack of the same-numbered video. A clip
+    # with no audio track must not feed `ref_video_audios` (GetVideoComponents would hand back an empty AUDIO).
+    for k, name in enumerate((video_names or [])[:3]):
+        graph[str(300 + k)] = {"class_type": "LoadVideo", "inputs": {"file": name}}
+        graph[str(320 + k)] = {
+            "class_type": "GetVideoComponents",
+            "inputs": {"video": [str(300 + k), 0]},
+        }
+        graph["7"]["inputs"][f"ref_videos.ref_video_{k}"] = [str(320 + k), 0]
+        if video_has_audio is None or (k < len(video_has_audio) and video_has_audio[k]):
+            graph["7"]["inputs"][f"ref_video_audios.ref_video_audio_{k}"] = [str(320 + k), 1]
 
     chain: list[tuple[str, int]] = [("100", 0)] if (pin_first_frame and image_names) else []
     if end_frame_name:
@@ -762,6 +793,8 @@ class RunPodMiniMaxH3VideoGenerator(VideoGeneratorBase):
             if item.type == "image" and str(item.path) not in frame_paths
         ]
         audio_refs = [item for item in (references or []) if item.type == "audio"]
+        # Smart extend on H3 hands over the preceding clip as `<Video 1>` (2s..15s, 24 fps, prepared by the route).
+        video_refs = [item for item in (references or []) if item.type == "video"][:3]
 
         image_payloads: list[tuple[str, bytes, str]] = (
             [("h3_first_frame.png", first_frame_png, "image/png")] if first_frame_png else []
@@ -786,6 +819,17 @@ class RunPodMiniMaxH3VideoGenerator(VideoGeneratorBase):
             ext = Path(ref.path).suffix or ".wav"
             audio_payloads.append((f"h3_ref_audio_{idx}{ext}", data, mimetypes.guess_type(ref.path)[0] or "audio/wav"))
 
+        video_payloads: list[tuple[str, bytes, str]] = []
+        video_has_audio: list[bool] = []
+        for idx, ref in enumerate(video_refs):
+            try:
+                data = await asyncio.to_thread(_read, ref.path)
+            except OSError as exc:
+                log(f"Skipping unreadable reference video {ref.path}: {exc}")
+                continue
+            video_payloads.append((f"h3_ref_video_{idx}.mp4", data, "video/mp4"))
+            video_has_audio.append(await asyncio.to_thread(_video_has_audio_track, ref.path))
+
         end_frame_payload: tuple[str, bytes, str] | None = None
         if last_frame_path:
             try:
@@ -797,13 +841,17 @@ class RunPodMiniMaxH3VideoGenerator(VideoGeneratorBase):
 
         seed = uuid.uuid4().int & 0xFFFFFFFF
         if h3_mode == "auto":
-            mode = "ref2va" if (len(image_payloads) > 1 or audio_payloads) else "fl2va"
+            mode = (
+                "ref2va"
+                if (len(image_payloads) > 1 or audio_payloads or video_payloads)
+                else "fl2va"
+            )
         elif h3_mode == "ref2va":
             mode = "ref2va"
-            if not image_payloads and not audio_payloads:
+            if not image_payloads and not audio_payloads and not video_payloads:
                 return VideoGenResult(
                     status=VideoGenStatus.FAILED,
-                    error="H3 reference mode needs at least one reference image or audio",
+                    error="H3 reference mode needs at least one reference image, video or audio",
                 )
         else:
             mode = "fl2va"  # t2va / fl2va / flf2va all use MiniMaxH3ImageToVideo
@@ -827,6 +875,8 @@ class RunPodMiniMaxH3VideoGenerator(VideoGeneratorBase):
                 prompt=prompt,
                 image_names=image_names,
                 audio_names=audio_names,
+                video_names=[name for name, _d, _m in video_payloads],
+                video_has_audio=video_has_audio,
                 seed=seed,
                 width=width,
                 height=height,
@@ -847,7 +897,12 @@ class RunPodMiniMaxH3VideoGenerator(VideoGeneratorBase):
                 turbo_lora=turbo_lora,
                 turbo_steps=RUNPOD_H3_TURBO_STEPS_REF2VA,
             )
-            upload_payloads = list(image_payloads) + ([end_frame_payload] if end_frame_payload else []) + audio_payloads
+            upload_payloads = (
+                list(image_payloads)
+                + ([end_frame_payload] if end_frame_payload else [])
+                + audio_payloads
+                + video_payloads
+            )
         else:
             # two_stage/audio_refine only apply to ref2va for now (see
             # module docstring) — fl2va is unaffected even if the .env
@@ -924,6 +979,9 @@ class RunPodMiniMaxH3VideoGenerator(VideoGeneratorBase):
         deadline = time.monotonic() + RUNPOD_H3_VIDEO_TIMEOUT_SECONDS
         status_resp: dict = {}
         last_poll_error = ""
+        from novelvideo.runpod_worker_control import StuckWorkerWatchdog
+
+        watchdog = StuckWorkerWatchdog(RUNPOD_H3_VIDEO_ENDPOINT_ID, log=log)
         async with httpx.AsyncClient(timeout=60.0) as client:
             while time.monotonic() < deadline:
                 await asyncio.sleep(5)
@@ -937,6 +995,8 @@ class RunPodMiniMaxH3VideoGenerator(VideoGeneratorBase):
                 except httpx.HTTPError as exc:
                     last_poll_error = str(exc)
                     continue
+                if await watchdog.observe(status_resp.get("status")):
+                    deadline = max(deadline, time.monotonic() + RUNPOD_H3_VIDEO_TIMEOUT_SECONDS)
                 if status_resp.get("status") not in ("IN_QUEUE", "IN_PROGRESS"):
                     break
                 if on_progress:

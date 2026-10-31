@@ -200,6 +200,76 @@ def _status_payload(
     }
 
 
+class StuckWorkerWatchdog:
+    """Recycle an endpoint's worker when a job stays IN_QUEUE too long.
+
+    Poll loops call `observe(status)` every iteration. Once a job has been
+    IN_QUEUE for `RUNPOD_STUCK_WORKER_RECYCLE_SECONDS` and the endpoint is idle
+    (nothing running or in progress), `workers.max` is cycled to 0 and back so
+    RunPod provisions a fresh worker; the queued job stays queued and is picked
+    up by it. Never raises: this is a best-effort rescue, not a failure path.
+    """
+
+    _CHECK_INTERVAL_SECONDS = 60.0
+    _GAP_SECONDS = 10.0
+
+    def __init__(self, endpoint_id: str, *, log: Callable[[str], None] | None = None, clock: Callable[[], float] | None = None) -> None:
+        import time
+
+        self._endpoint_id = endpoint_id
+        self._log = log or (lambda _msg: None)
+        self._clock = clock or time.monotonic
+        self._queued_since: float | None = None
+        self._last_check: float | None = None
+        self._recycles = 0
+
+    async def observe(self, status: str | None) -> bool:
+        threshold = float(config.RUNPOD_STUCK_WORKER_RECYCLE_SECONDS)
+        if threshold <= 0 or self._recycles >= int(config.RUNPOD_STUCK_WORKER_MAX_RECYCLES):
+            return False
+        now = self._clock()
+        if status != "IN_QUEUE":
+            self._queued_since = None
+            return False
+        if self._queued_since is None:
+            self._queued_since = now
+        if now - self._queued_since < threshold:
+            return False
+        if self._last_check is not None and now - self._last_check < self._CHECK_INTERVAL_SECONDS:
+            return False
+        self._last_check = now
+        try:
+            return await self._recycle_if_idle(now)
+        except Exception as exc:  # noqa: BLE001 - rescue must never fail the job
+            self._log(f"stuck-worker check failed ({exc}); continuing to wait")
+            return False
+
+    async def _recycle_if_idle(self, now: float) -> bool:
+        import asyncio
+
+        endpoint_cfg = await _ctrl_get(self._endpoint_id)
+        workers_cfg = endpoint_cfg.get("workers") or {}
+        max_workers = int(workers_cfg.get("max") or 0)
+        if max_workers <= 0:
+            return False  # user turned the worker off; keep the existing error
+        health = await _job_health(self._endpoint_id) or {}
+        live = health.get("workers") or {}
+        jobs = health.get("jobs") or {}
+        if int(live.get("running") or 0) > 0 or int(jobs.get("inProgress") or 0) > 0:
+            return False  # endpoint is busy (shared with other projects); don't kill it
+        idle_timeout = int(workers_cfg.get("idleTimeout") or 0)
+        self._log(
+            f"job IN_QUEUE for {now - (self._queued_since or now):.0f}s with no running worker; "
+            f"recycling workers.max {max_workers} -> 0 -> {max_workers}"
+        )
+        await _ctrl_patch_workers(self._endpoint_id, 0, idle_timeout)
+        await asyncio.sleep(self._GAP_SECONDS)
+        await _ctrl_patch_workers(self._endpoint_id, max_workers, idle_timeout)
+        self._recycles += 1
+        self._queued_since = None
+        return True
+
+
 async def get_status(key: str) -> dict[str, Any]:
     spec = _spec(key)
     if not spec.configured_fn():

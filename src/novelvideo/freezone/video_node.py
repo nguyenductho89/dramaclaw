@@ -380,6 +380,71 @@ def extract_last_frame_png(video_path: str | Path, out_path: str | Path) -> Path
     return out_path
 
 
+H3_EXTEND_VIDEO_MIN_SECONDS = 2.0  # MiniMaxH3ReferenceToVideo: reference video 2-15 s at 24 fps
+
+
+def prepare_h3_extend_reference_video(
+    video_path: str | Path,
+    out_path: str | Path,
+    max_seconds: float = 15.0,
+) -> tuple[Path, float] | None:
+    """Cut the preceding clip into what H3 accepts as `<Video 1>`: its last `max_seconds`, 24 fps, audio kept when present.
+
+    Returns (file, seconds) or None when the clip is shorter than the model's 2 s minimum (the caller then continues from the last
+    frame alone). Raises RuntimeError when ffmpeg fails.
+    """
+    import shutil
+    import subprocess
+
+    if not shutil.which("ffmpeg") or not shutil.which("ffprobe"):
+        raise RuntimeError("ffmpeg/ffprobe not found on PATH")
+    video_path = Path(video_path)
+    out_path = Path(out_path)
+    probe = subprocess.run(
+        ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(video_path)],
+        capture_output=True, text=True, timeout=60,
+    )
+    try:
+        duration = float(probe.stdout.strip())
+    except ValueError as exc:
+        raise RuntimeError(f"could not read the duration of {video_path}") from exc
+    if duration < H3_EXTEND_VIDEO_MIN_SECONDS:
+        return None
+    seconds = min(duration, float(max_seconds))
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    cmd = ["ffmpeg", "-v", "error", "-y"]
+    if duration > seconds:
+        cmd += ["-sseof", f"-{seconds:.3f}"]
+    cmd += [
+        "-i", str(video_path), "-map", "0:v:0", "-map", "0:a:0?", "-vf", "fps=24",
+        "-c:v", "libx264", "-crf", "14", "-pix_fmt", "yuv420p", "-c:a", "aac", str(out_path),
+    ]
+    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+    if proc.returncode != 0 or not out_path.exists() or out_path.stat().st_size == 0:
+        raise RuntimeError(f"ffmpeg could not prepare the reference video: {proc.stderr[-300:]}")
+    return out_path, seconds
+
+
+def ensure_h3_video_reference_defined(prompt: str, seconds: float) -> str:
+    """Make sure the prompt says what `<Video 1>` is. H3 only uses a reference it is told about; a user who wrote
+    `<Picture N>` lines for the sheets but never mentioned the clip would otherwise send a video the prompt ignores."""
+    if "<Video 1>" in prompt:
+        return prompt
+    line = (
+        f"<Video 1> is the preceding {seconds:.0f} seconds of the same take, showing the room, lighting, colour grade "
+        "and motion to continue from."
+    )
+    marker = "subject_definitions:"
+    idx = prompt.find(marker)
+    if idx == -1:
+        return f"{line}\n{prompt}"
+    # end of the subject_definitions block = the first blank line after its header
+    block_end = prompt.find("\n\n", idx)
+    if block_end == -1:
+        return f"{prompt}\n{line}"
+    return f"{prompt[:block_end]}\n{line}{prompt[block_end:]}"
+
+
 def h3_extend_aspect_ratio(frame_path: str | Path) -> str:
     """H3 only takes 16:9 or 9:16; pick the one matching the source frame."""
     from PIL import Image

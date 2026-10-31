@@ -388,6 +388,7 @@ from novelvideo.freezone.video_node import (
     get_video_camera_template,
     get_video_camera_templates,
     H3_EXTEND_MAX_REFERENCE_IMAGES,
+    ensure_h3_video_reference_defined,
     extract_last_frame_png,
     h3_extend_aspect_ratio,
     is_freezone_happyhorse_backend,
@@ -401,6 +402,7 @@ from novelvideo.freezone.video_node import (
     normalize_freezone_seedance2_scene_optimize,
     normalize_video_aspect_ratio,
     normalize_video_duration_for_backend,
+    prepare_h3_extend_reference_video,
     normalize_video_resolution_for_backend,
     rename_video_character_library_item,
     resolve_freezone_video_backend,
@@ -11471,11 +11473,34 @@ async def freezone_video_omni_gen(
             )
         except (RuntimeError, FileNotFoundError) as exc:
             raise HTTPException(400, f"could not read the source video: {exc}") from exc
+        # The preceding clip itself goes in as `<Video 1>` too (its last <=15 s, 24 fps, audio kept), so H3 sees the room, light and
+        # motion it has to continue and not only the last frame. RUNPOD_H3_EXTEND_WITH_VIDEO=0 turns this off.
+        from novelvideo.config import (
+            RUNPOD_H3_EXTEND_VIDEO_MAX_SECONDS,
+            RUNPOD_H3_EXTEND_WITH_VIDEO,
+        )
+
+        prepared_video = None
+        if RUNPOD_H3_EXTEND_WITH_VIDEO:
+            try:
+                prepared_video = await asyncio.to_thread(
+                    prepare_h3_extend_reference_video,
+                    source_paths[0],
+                    outputs_dir(project_dir, "freezone_video_gen") / f"{job_id}_extend_ref.mp4",
+                    RUNPOD_H3_EXTEND_VIDEO_MAX_SECONDS,
+                )
+            except RuntimeError as exc:
+                raise HTTPException(400, f"could not prepare the source video: {exc}") from exc
         # First image = first frame (`<Picture 1>`); the connected images
-        # (character sheets) keep their order after it.
+        # (character sheets) keep their order after it, then the clip (`<Video 1>`).
         reference_items = [
             {"type": "image", "path": str(first_frame), "role": "first frame"},
             *[item for item in reference_items if item["type"] != "video"],
+            *(
+                [{"type": "video", "path": str(prepared_video[0]), "role": "video extension source"}]
+                if prepared_video
+                else []
+            ),
         ]
         if omni_aspect_ratio == "auto":
             omni_aspect_ratio = h3_extend_aspect_ratio(first_frame)
@@ -11483,6 +11508,8 @@ async def freezone_video_omni_gen(
         # The user's prompt is already in H3 format; the Seedance extend wording
         # ("continue from the end of the input video...") would only confuse it.
         final_prompt = body.prompt.strip()
+        if prepared_video:
+            final_prompt = ensure_h3_video_reference_defined(final_prompt, prepared_video[1])
     else:
         final_prompt = build_freezone_omni_video_prompt(
             user_prompt=body.prompt,

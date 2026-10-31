@@ -5124,6 +5124,9 @@ async def _call_runpod_qwen_image_api(
     deadline = time.monotonic() + RUNPOD_QWEN_IMAGE_TIMEOUT_SECONDS
     status_resp: dict = {}
     last_poll_error = ""
+    from novelvideo.runpod_worker_control import StuckWorkerWatchdog
+
+    watchdog = StuckWorkerWatchdog(RUNPOD_QWEN_IMAGE_ENDPOINT_ID, log=logger.info)
     async with httpx.AsyncClient(timeout=60.0) as client:
         while time.monotonic() < deadline:
             await asyncio.sleep(5)
@@ -5137,6 +5140,8 @@ async def _call_runpod_qwen_image_api(
             except httpx.HTTPError as exc:
                 last_poll_error = str(exc)
                 continue
+            if await watchdog.observe(status_resp.get("status")):
+                deadline = max(deadline, time.monotonic() + RUNPOD_QWEN_IMAGE_TIMEOUT_SECONDS)
             if status_resp.get("status") not in ("IN_QUEUE", "IN_PROGRESS"):
                 break
         else:
@@ -5251,6 +5256,9 @@ async def _runpod_run_graph_job(
     deadline = time.monotonic() + timeout_seconds
     status_resp: dict = {}
     last_poll_error = ""
+    from novelvideo.runpod_worker_control import StuckWorkerWatchdog
+
+    watchdog = StuckWorkerWatchdog(endpoint_id, log=logger.info)
     async with httpx.AsyncClient(timeout=60.0) as client:
         while time.monotonic() < deadline:
             await asyncio.sleep(5)
@@ -5264,6 +5272,8 @@ async def _runpod_run_graph_job(
             except httpx.HTTPError as exc:
                 last_poll_error = str(exc)
                 continue
+            if await watchdog.observe(status_resp.get("status")):
+                deadline = max(deadline, time.monotonic() + timeout_seconds)
             if status_resp.get("status") not in ("IN_QUEUE", "IN_PROGRESS"):
                 break
         else:
@@ -5824,6 +5834,9 @@ async def _call_runpod_qwen_edit_image_api(
     deadline = time.monotonic() + RUNPOD_QWEN_EDIT_TIMEOUT_SECONDS
     status_resp: dict = {}
     last_poll_error = ""
+    from novelvideo.runpod_worker_control import StuckWorkerWatchdog
+
+    watchdog = StuckWorkerWatchdog(RUNPOD_QWEN_EDIT_ENDPOINT_ID, log=logger.info)
     async with httpx.AsyncClient(timeout=60.0) as client:
         while time.monotonic() < deadline:
             await asyncio.sleep(5)
@@ -5837,6 +5850,8 @@ async def _call_runpod_qwen_edit_image_api(
             except httpx.HTTPError as exc:
                 last_poll_error = str(exc)
                 continue
+            if await watchdog.observe(status_resp.get("status")):
+                deadline = max(deadline, time.monotonic() + RUNPOD_QWEN_EDIT_TIMEOUT_SECONDS)
             if status_resp.get("status") not in ("IN_QUEUE", "IN_PROGRESS"):
                 break
         else:

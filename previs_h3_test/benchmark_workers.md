@@ -11,3 +11,11 @@ File này ghi những gì chỉ lấy được từ RunPod MCP (loại GPU, data
   - Không có A40 / Ada 48 GB còn hàng, nên RunPod đặt vào pool Blackwell (giá serverless $3,49/giờ so với A40 $1,22/giờ).
 - H3 multishot (`u0hkrms7k1xeua`): worker `buokl91cpvk4cc` cũng ở EUR-IS-2, RTX PRO 6000 Blackwell Server (96 GB), image `comfy-trends-h3-multishot:0.37.2-ms2.7.2-cu130`, startedAt 14:05:19 UTC. Worker dựng lên ngay khi bật `workers.max=1` dù chưa có job (chưa có ảnh Qwen), nên tính phí chờ.
 - Qwen job chuyển sang inProgress lúc 14:11:37 UTC (gửi 14:06:00; worker startedAt 14:05:06; cold start đầu tiên ở EUR-IS-2 gồm kéo image Docker ~6,7 GB + nạp model từ global volume).
+
+### Nhật ký nạp model của worker Qwen `t87t5iyopdoluh` (từ log container, UTC)
+- 14:11:14 ComfyUI khởi động xong; 14:11:17 nhận prompt (job Qwen, Turbo LoRA 8 bước).
+- Mọi model đọc từ `/runpod-volume/models/...` trên global volume → **global volume mount đúng và đọc được**.
+- Text encoder dùng cho Qwen 2.1: `qwen3vl_8b_int8_convrot.safetensors` (xác nhận, 8,9 GB staged) — giả định trước đó đã đúng.
+- VAE `qwen_image_2.1_vae_bf16` (644 MB): 14:11:18 → staged 14:11:29 (~11 s, ~60 MB/s).
+- Text encoder 8,9 GB: yêu cầu nạp 14:11:35 → staged 14:11:41 (~6 s).
+- ComfyUI báo `Using pytorch attention` (Qwen image chưa bật Sage; endpoint Qwen không có `--use-sage-attention`).

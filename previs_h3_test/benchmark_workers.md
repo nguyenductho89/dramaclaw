@@ -40,3 +40,8 @@ Mốc từ log worker `buokl91cpvk4cc` (UTC), shot 1/2:
 - Sampling bước đầu tiên **321,8 s** (khởi tạo mô hình/stream lần đầu), 7 bước còn lại **~7,5–8,0 s/bước** → 8 bước ≈ 60 s sau khi khởi tạo. So với ghi chú cũ trên A40 (~55 s/bước): **Blackwell nhanh ~7 lần mỗi bước**.
 - 14:35:28 → 14:37:48 decode VAE video + VAE audio ~2,3 phút; shot 1 lưu xong **14:37:48** (tổng shot 1 ≈ 19,5 phút kể từ nhận prompt, trong đó cold start/encode/khởi tạo chiếm phần lớn).
 - Shot 2 bắt đầu 14:37:48; DiT đã nạp lại 14:38:03 (nhanh hơn nhiều vì trọng số còn trong RAM).
+
+### Bản B (previs video làm `<Video 1>`, ref2va, Turbo LoRA 6 bước) — endpoint H3 1-shot `a31613hf7l83r5`
+- Job gửi 14:45:59 UTC (lần đầu gặp 409 ENDPOINT_PAUSED vì endpoint vừa bật, generator tự thử lại).
+- Worker chạy job: `6vumpq8p34inti`, **CA-MTL-3 (Canada)**, RTX PRO 6000 Blackwell Server, startedAt 14:49:50.
+- Quan sát chi phí: endpoint `workers.max=1` nhưng RunPod dựng 3 worker (1 RUNNING ở CA-MTL-3, 2 INITIALIZING ở EUR-IS-2).

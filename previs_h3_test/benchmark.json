@@ -2,7 +2,15 @@
   "started_utc": "2026-11-01T14:06:00Z",
   "stages": {
     "qwen_photo": {
-      "wall_start_utc": "14:06:00"
+      "wall_start_utc": "14:06:00",
+      "wall_seconds": 731.9,
+      "attempts": 1,
+      "size": [
+        1344,
+        768
+      ],
+      "bytes": 2025106,
+      "note": "wall time includes queue wait + cold start + generation (RunPod does not return executionTime to this client)"
     }
   },
   "config": {

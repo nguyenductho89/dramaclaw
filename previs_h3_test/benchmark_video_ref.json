@@ -1,0 +1,20 @@
+{
+  "variant": "B: previs video as <Video 1> (ref2va)",
+  "started_utc": "2026-11-01T14:45:58Z",
+  "stages": {
+    "h3_ref2va": {
+      "wall_start_utc": "14:45:59"
+    }
+  },
+  "config": {
+    "endpoint": "a31613hf7l83r5",
+    "pdd_ref2va": "",
+    "turbo_lora": "minimax_h3_ref2v_turbo_4step_v0.1_comfyui_bf16.safetensors",
+    "turbo_steps": 6,
+    "mode": "ref2va",
+    "resolution": "1344x768 (16:9, formal)",
+    "frames": 124,
+    "first_frame": "photo_f0.png (Qwen photoreal)",
+    "ref_video": "previs_shot1.mp4 (Three.js previs, 124 frames @24fps)"
+  }
+}

@@ -45,3 +45,5 @@ Mốc từ log worker `buokl91cpvk4cc` (UTC), shot 1/2:
 - Job gửi 14:45:59 UTC (lần đầu gặp 409 ENDPOINT_PAUSED vì endpoint vừa bật, generator tự thử lại).
 - Worker chạy job: `6vumpq8p34inti`, **CA-MTL-3 (Canada)**, RTX PRO 6000 Blackwell Server, startedAt 14:49:50.
 - Quan sát chi phí: endpoint `workers.max=1` nhưng RunPod dựng 3 worker (1 RUNNING ở CA-MTL-3, 2 INITIALIZING ở EUR-IS-2).
+- Worker `6vumpq8p34inti` (CA-MTL-3): startedAt 14:49:50 → ComfyUI sẵn sàng 14:50:16 (~26 s) → nhận prompt 14:50:18 (ref2va).
+- **DiT ref2va INT8 21 GB nạp từ global volume trong ~19 s (14:50:20,8 → 14:50:39,4, ~1,1 GB/s)**, so với ~99 s (~210 MB/s) ở EUR-IS-2. Tốc độ đọc global volume khác nhau rõ rệt giữa data center (có thể do bộ nhớ đệm hoặc vị trí backend). Chưa kiểm chứng nguyên nhân.

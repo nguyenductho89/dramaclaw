@@ -24,3 +24,9 @@ File này ghi những gì chỉ lấy được từ RunPod MCP (loại GPU, data
 - Tổng thời gian từ lúc gửi job đến khi có ảnh: **731,9 s** (14:06:00 → ~14:18:12 UTC), gồm kéo image Docker ở data center mới, cold start, nạp model từ global volume và sinh ảnh. Qwen 2.1, Turbo LoRA 8 bước, 1344×768.
 - Chất lượng: bố cục, vị trí nhân vật, tỉ lệ người/thùng và góc máy giữ đúng theo previs; chất liệu phẳng chuyển hoàn toàn sang ảnh thật. Chưa dùng sheet identity nên mặt/trang phục là do model tự chọn theo prompt.
 - GPU: RTX PRO 6000 Blackwell Server (96 GB) tại EUR-IS-2.
+
+### Nhật ký worker H3 multishot `buokl91cpvk4cc` (UTC)
+- 14:18:18 worker bắt đầu (image đã có sẵn ở EUR-IS-2 từ lần dựng worker trước 14:05); 14:18:33 ComfyUI sẵn sàng; 14:18:35 nhận prompt (shot 1/2, fl2va, PDD 8 bước).
+- DiT `minimax_h3_fl2va_pruned_int8_convrot` (21 GB) nạp từ global volume: 14:18:36 → 14:20:15 = **~99 s (~210 MB/s)**. Kiểm tra `partition check ok: fl2va file on fl2va model`.
+- VAE video fp16 đọc từ `/runpod-volume/models/vae/...` (global volume mount đúng).
+- Quan sát chi phí: endpoint đặt `workers.max=1` nhưng RunPod dựng **2 worker** cùng lúc (`dty3wzm3oqxjw7` IDLE, bắt đầu 14:18:23, thừa). Mỗi worker Blackwell tính $3,49/giờ khi chạy/idle; hiện tượng này đã gặp trước đó với endpoint dùng chung.

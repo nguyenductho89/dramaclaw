@@ -1,0 +1,18 @@
+{
+  "started_utc": "2026-11-01T14:06:00Z",
+  "stages": {
+    "qwen_photo": {
+      "wall_start_utc": "14:06:00"
+    }
+  },
+  "config": {
+    "qwen_lora": "p_q_image_2.1_8_steps_v0.1_comfyui_bf16.safetensors",
+    "qwen_lora_steps": "8",
+    "qwen_endpoint": "q639jfhc6uaf3t",
+    "h3_multishot_endpoint": "u0hkrms7k1xeua",
+    "pdd_fl2va": "MiniMax-H3-FL2VA-Acc-8Step.safetensors",
+    "pdd_nfe": "8",
+    "volume": "global:cmvxurab1000007i6htuo1i1j",
+    "pools": "AMPERE_48,ADA_48_PRO,BLACKWELL_96"
+  }
+}

@@ -1,7 +1,13 @@
 """Autonomous: wait/retry Qwen photo -> H3 multishot (fl2va, 2 shots) -> save -> git push."""
-import asyncio, os, subprocess, sys, time
+import asyncio, json, os, subprocess, sys, time
 from pathlib import Path
 R = Path("/home/user/dramaclaw"); T = R / "previs_h3_test"; LOG = T / "pipeline.log"
+BENCH = T / "benchmark.json"
+BM = {"started_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "stages": {}}
+def bench_save():
+    BENCH.write_text(json.dumps(BM, indent=2, ensure_ascii=False, default=str))
+def stage(name, **kw):
+    BM["stages"].setdefault(name, {}).update(kw); bench_save()
 def log(m):
     with open(LOG, "a") as f: f.write(f"{time.strftime('%H:%M:%S')} {m}\n")
 def git_push(msg):
@@ -23,6 +29,11 @@ SHOT2 = ("integrated_multimodal_description:\nLive-action film footage, naturali
 "overall_soundscape:\nSoft evening ambience, a faint breeze, a quiet wooden creak.\n\nnon_diegetic_music:\nN/A")
 async def main():
     sys.path.insert(0, str(R / "src"))
+    BM["config"] = {"qwen_lora": os.environ.get("RUNPOD_QWEN21_RENDER_LORA"), "qwen_lora_steps": os.environ.get("RUNPOD_QWEN21_RENDER_LORA_STEPS"),
+        "qwen_endpoint": os.environ.get("RUNPOD_QWEN_IMAGE_ENDPOINT_ID"), "h3_multishot_endpoint": os.environ.get("RUNPOD_H3_MULTISHOT_ENDPOINT_ID"),
+        "pdd_fl2va": os.environ.get("RUNPOD_H3_PDD_FL2VA"), "pdd_nfe": os.environ.get("RUNPOD_H3_MULTISHOT_PDD_NFE"),
+        "volume": "global:cmvxurab1000007i6htuo1i1j", "pools": "AMPERE_48,ADA_48_PRO,BLACKWELL_96"}
+    t_q0 = time.time(); stage("qwen_photo", wall_start_utc=time.strftime("%H:%M:%S", time.gmtime()))
     # 1) photo: wait for the already-running render, else retry up to 6 times
     for attempt in range(6):
         t0 = time.time()
@@ -38,13 +49,25 @@ async def main():
     src = Path("/tmp/claude-0/-home-user-dramaclaw/67ca8485-b069-53b4-8729-882b0a4e87a6/scratchpad/photo_f0.png")
     if not PHOTO.exists() and src.exists(): PHOTO.write_bytes(src.read_bytes())
     if not PHOTO.exists(): log("FAILED: no photo"); git_push("previs h3 test: pipeline log (photo failed)"); return
+    from PIL import Image
+    _im = Image.open(PHOTO)
+    stage("qwen_photo", wall_seconds=round(time.time() - t_q0, 1), attempts=attempt + 1, size=_im.size, bytes=PHOTO.stat().st_size,
+          note="wall time includes queue wait + cold start + generation (RunPod does not return executionTime to this client)")
     log("photo ok"); git_push("previs h3 test: previs + photoreal frame")
     # 2) H3 multishot
     from novelvideo.generators.runpod_minimax_h3_multishot_video import (run_multishot_from_files, dims_for_multishot, multishot_sampling_plan, join_shots_script, new_seed)
     w, h = dims_for_multishot("16:9"); sampling = multishot_sampling_plan("fl2va"); log(f"sampling={sampling} {w}x{h}")
+    t_h0 = time.time(); stage("h3_multishot", wall_start_utc=time.strftime("%H:%M:%S", time.gmtime()), checkpoint="fl2va", resolution=f"{w}x{h}", shots=2, frames_per_shot=124, sampling=sampling)
     data, info, err = await run_multishot_from_files(script=join_shots_script([SHOT1, SHOT2]), shot_count=2, width=w, height=h, frames_per_shot=124,
         seed=new_seed(), checkpoint="fl2va", sampling=sampling, start_image_path=str(PHOTO), reference_image_paths=[], on_log=lambda m: log(f"job: {m}"), fit_start_image=True)
-    if data: (T/"video_h3_multishot.mp4").write_bytes(data); log(f"video ok {len(data)} bytes")
+    stage("h3_multishot", wall_seconds=round(time.time() - t_h0, 1), runpod_status=info, error=err or None, video_bytes=len(data or b""))
+    BM["total_wall_seconds"] = round(time.time() - t_q0, 1); bench_save()
+    if data:
+        (T/"video_h3_multishot.mp4").write_bytes(data)
+        pr = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "stream=codec_name,width,height,r_frame_rate,nb_frames,duration:format=duration,size", "-of", "json", str(T/"video_h3_multishot.mp4")], capture_output=True, text=True)
+        try: stage("h3_multishot", ffprobe=json.loads(pr.stdout))
+        except Exception: stage("h3_multishot", ffprobe_error=pr.stderr[-200:])
+        log(f"video ok {len(data)} bytes")
     else: log(f"FAILED video: {err}")
     git_push("previs h3 test: H3 multishot video" if data else "previs h3 test: video failed log")
 asyncio.run(main())

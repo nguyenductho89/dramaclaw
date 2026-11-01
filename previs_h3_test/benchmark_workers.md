@@ -47,3 +47,10 @@ Mốc từ log worker `buokl91cpvk4cc` (UTC), shot 1/2:
 - Quan sát chi phí: endpoint `workers.max=1` nhưng RunPod dựng 3 worker (1 RUNNING ở CA-MTL-3, 2 INITIALIZING ở EUR-IS-2).
 - Worker `6vumpq8p34inti` (CA-MTL-3): startedAt 14:49:50 → ComfyUI sẵn sàng 14:50:16 (~26 s) → nhận prompt 14:50:18 (ref2va).
 - **DiT ref2va INT8 21 GB nạp từ global volume trong ~19 s (14:50:20,8 → 14:50:39,4, ~1,1 GB/s)**, so với ~99 s (~210 MB/s) ở EUR-IS-2. Tốc độ đọc global volume khác nhau rõ rệt giữa data center (có thể do bộ nhớ đệm hoặc vị trí backend). Chưa kiểm chứng nguyên nhân.
+
+### Kết quả bản B: THẤT BẠI (timeout) — previs video làm `<Video 1>`, ref2va, Turbo LoRA 6 bước
+- Job `034aa4c0-0fc3-41f3-93cf-cd11799b69e2-u1` (endpoint `a31613hf7l83r5`, worker `6vumpq8p34inti`, CA-MTL-3, RTX PRO 6000 Blackwell): gửi 14:46:12, script hết hạn 2400 s lúc 15:26:16 và **hủy job** (RunPod: `CANCELLED`, `executionTime` 2162,7 s ≈ 36 phút, `delayTime` 241 s). Không có video.
+- Mốc log: DiT ref2va nạp 19 s (Canada nhanh hơn Iceland); text encoder staged 14:56:33; **encode text ~15 phút** (14:56:33 → 15:11:46, so với ~4,3 phút ở baseline không có video tham chiếu); sampling bắt đầu 15:11:49 và chưa xong trong ~14 phút kế tiếp.
+- Chi phí lãng phí: ~36 phút × $3,49/giờ ≈ **$2,1** + thời gian worker ấm.
+- Kết luận tạm: video previs làm `<Video 1>` làm bước encode text chậm hơn ~3,5 lần (qua text encoder 32B xử lý cả video), nhất quán với phép đo trước đó (chậm ~2,7 lần). Chưa chứng minh được video có giữ camera hay không vì job không hoàn tất.
+- Đã đặt `workers.max=0` cho cả 4 endpoint sau lần chạy này.

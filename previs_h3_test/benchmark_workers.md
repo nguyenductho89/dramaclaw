@@ -19,3 +19,8 @@ File này ghi những gì chỉ lấy được từ RunPod MCP (loại GPU, data
 - VAE `qwen_image_2.1_vae_bf16` (644 MB): 14:11:18 → staged 14:11:29 (~11 s, ~60 MB/s).
 - Text encoder 8,9 GB: yêu cầu nạp 14:11:35 → staged 14:11:41 (~6 s).
 - ComfyUI báo `Using pytorch attention` (Qwen image chưa bật Sage; endpoint Qwen không có `--use-sage-attention`).
+
+### Kết quả bước Qwen (previs Three.js → ảnh photoreal)
+- Tổng thời gian từ lúc gửi job đến khi có ảnh: **731,9 s** (14:06:00 → ~14:18:12 UTC), gồm kéo image Docker ở data center mới, cold start, nạp model từ global volume và sinh ảnh. Qwen 2.1, Turbo LoRA 8 bước, 1344×768.
+- Chất lượng: bố cục, vị trí nhân vật, tỉ lệ người/thùng và góc máy giữ đúng theo previs; chất liệu phẳng chuyển hoàn toàn sang ảnh thật. Chưa dùng sheet identity nên mặt/trang phục là do model tự chọn theo prompt.
+- GPU: RTX PRO 6000 Blackwell Server (96 GB) tại EUR-IS-2.

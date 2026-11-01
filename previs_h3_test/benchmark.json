@@ -11,6 +11,21 @@
       ],
       "bytes": 2025106,
       "note": "wall time includes queue wait + cold start + generation (RunPod does not return executionTime to this client)"
+    },
+    "h3_multishot": {
+      "wall_start_utc": "14:18:15",
+      "checkpoint": "fl2va",
+      "resolution": "1344x768",
+      "shots": 2,
+      "frames_per_shot": 124,
+      "sampling": {
+        "pdd_nfe": "8",
+        "pdd_file": "MiniMax-H3-FL2VA-Acc-8Step.safetensors",
+        "turbo_lora": "",
+        "chain_normalize": "off",
+        "steps": 8,
+        "output_scale": 1.0
+      }
     }
   },
   "config": {

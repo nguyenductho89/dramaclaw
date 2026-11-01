@@ -7,3 +7,11 @@
 12:59:57 photo missing, launching qwen_render attempt 1
 14:06:00 photo missing, launching qwen_render attempt 1
 14:18:12 photo ok
+14:18:12 add rc=0 
+14:18:12 commit rc=0 
+14:18:14 push rc=0 To https://github.com/nguyenductho89/dramaclaw
+   713bf81..ffad838  claude/gracious-darwin-bj3gkz -> claude/gracious-darwin-bj3gkz
+
+14:18:15 sampling={'pdd_nfe': '8', 'pdd_file': 'MiniMax-H3-FL2VA-Acc-8Step.safetensors', 'turbo_lora': '', 'chain_normalize': 'off', 'steps': 8, 'output_scale': 1.0} 1344x768
+14:18:18 job: RunPod job e1307426-8fb8-47b8-b03d-263db213487b-u2 submitted, polling (up to 14000s, counted from IN_PROGRESS)...
+14:18:34 job: job e1307426-8fb8-47b8-b03d-263db213487b-u2 entered IN_PROGRESS, restarting the 14000s timer

@@ -30,3 +30,13 @@ File này ghi những gì chỉ lấy được từ RunPod MCP (loại GPU, data
 - DiT `minimax_h3_fl2va_pruned_int8_convrot` (21 GB) nạp từ global volume: 14:18:36 → 14:20:15 = **~99 s (~210 MB/s)**. Kiểm tra `partition check ok: fl2va file on fl2va model`.
 - VAE video fp16 đọc từ `/runpod-volume/models/vae/...` (global volume mount đúng).
 - Quan sát chi phí: endpoint đặt `workers.max=1` nhưng RunPod dựng **2 worker** cùng lúc (`dty3wzm3oqxjw7` IDLE, bắt đầu 14:18:23, thừa). Mỗi worker Blackwell tính $3,49/giờ khi chạy/idle; hiện tượng này đã gặp trước đó với endpoint dùng chung.
+
+### H3 multishot fl2va, PDD 8 bước, 1344×768, 124 khung/shot — RTX PRO 6000 Blackwell 96 GB (EUR-IS-2)
+Mốc từ log worker `buokl91cpvk4cc` (UTC), shot 1/2:
+- 14:18:35 nhận prompt; 14:20:15 DiT nạp xong từ global volume (~99 s); 14:20:47 PDD áp xong.
+- 14:20:48 → 14:23:52 nạp text encoder 32B NVFP4 (15 GB staged).
+- 14:23:52 → 14:28:13 **encode text ~4,3 phút** (pha chậm nhất ngoài sampling lần đầu).
+- 14:28:34 nạp DiT vào VRAM (reserve 77,3 GB, ~12,3 GB trọng số phải stream).
+- Sampling bước đầu tiên **321,8 s** (khởi tạo mô hình/stream lần đầu), 7 bước còn lại **~7,5–8,0 s/bước** → 8 bước ≈ 60 s sau khi khởi tạo. So với ghi chú cũ trên A40 (~55 s/bước): **Blackwell nhanh ~7 lần mỗi bước**.
+- 14:35:28 → 14:37:48 decode VAE video + VAE audio ~2,3 phút; shot 1 lưu xong **14:37:48** (tổng shot 1 ≈ 19,5 phút kể từ nhận prompt, trong đó cold start/encode/khởi tạo chiếm phần lớn).
+- Shot 2 bắt đầu 14:37:48; DiT đã nạp lại 14:38:03 (nhanh hơn nhiều vì trọng số còn trong RAM).

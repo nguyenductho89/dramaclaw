@@ -15,3 +15,4 @@
 14:18:15 sampling={'pdd_nfe': '8', 'pdd_file': 'MiniMax-H3-FL2VA-Acc-8Step.safetensors', 'turbo_lora': '', 'chain_normalize': 'off', 'steps': 8, 'output_scale': 1.0} 1344x768
 14:18:18 job: RunPod job e1307426-8fb8-47b8-b03d-263db213487b-u2 submitted, polling (up to 14000s, counted from IN_PROGRESS)...
 14:18:34 job: job e1307426-8fb8-47b8-b03d-263db213487b-u2 entered IN_PROGRESS, restarting the 14000s timer
+14:45:03 video ok 13180576 bytes

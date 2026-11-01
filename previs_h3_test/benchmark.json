@@ -25,6 +25,86 @@
         "chain_normalize": "off",
         "steps": 8,
         "output_scale": 1.0
+      },
+      "wall_seconds": 1607.5,
+      "runpod_status": {
+        "delayTime": 13558,
+        "executionTime": 1586949,
+        "id": "e1307426-8fb8-47b8-b03d-263db213487b-u2",
+        "output": {
+          "outputs": {
+            "31": {
+              "animated": [
+                true
+              ],
+              "images": [
+                {
+                  "filename": "dramaclaw_h3_multishot_00001_.mp4",
+                  "r2_key": "jobs/e1307426-8fb8-47b8-b03d-263db213487b-u2/dramaclaw_h3_multishot_00001_.mp4",
+                  "sha256": "4dea79b402cebd6ac807bf6acd64467d398521fedbf3e850701f59eb8f628d11",
+                  "subfolder": "",
+                  "type": "output"
+                }
+              ]
+            }
+          },
+          "prompt_id": "92e3da46-760d-4fad-a40d-3a4c40d2f3ab",
+          "status": {
+            "completed": true,
+            "messages": [
+              [
+                "execution_start",
+                {
+                  "prompt_id": "92e3da46-760d-4fad-a40d-3a4c40d2f3ab",
+                  "timestamp": 1793542715495
+                }
+              ],
+              [
+                "execution_cached",
+                {
+                  "nodes": [],
+                  "prompt_id": "92e3da46-760d-4fad-a40d-3a4c40d2f3ab",
+                  "timestamp": 1793542715507
+                }
+              ],
+              [
+                "execution_success",
+                {
+                  "prompt_id": "92e3da46-760d-4fad-a40d-3a4c40d2f3ab",
+                  "timestamp": 1793544295345
+                }
+              ]
+            ],
+            "status_str": "success"
+          }
+        },
+        "status": "COMPLETED",
+        "workerId": "buokl91cpvk4cc"
+      },
+      "error": null,
+      "video_bytes": 13180576,
+      "ffprobe": {
+        "programs": [],
+        "streams": [
+          {
+            "codec_name": "h264",
+            "width": 1344,
+            "height": 768,
+            "r_frame_rate": "24/1",
+            "duration": "10.291667",
+            "nb_frames": "247"
+          },
+          {
+            "codec_name": "aac",
+            "r_frame_rate": "0/0",
+            "duration": "10.268344",
+            "nb_frames": "322"
+          }
+        ],
+        "format": {
+          "duration": "10.291667",
+          "size": "13180576"
+        }
       }
     }
   },
@@ -37,5 +117,6 @@
     "pdd_nfe": "8",
     "volume": "global:cmvxurab1000007i6htuo1i1j",
     "pools": "AMPERE_48,ADA_48_PRO,BLACKWELL_96"
-  }
+  },
+  "total_wall_seconds": 2343.0
 }

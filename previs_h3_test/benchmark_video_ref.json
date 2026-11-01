@@ -3,7 +3,10 @@
   "started_utc": "2026-11-01T14:45:58Z",
   "stages": {
     "h3_ref2va": {
-      "wall_start_utc": "14:45:59"
+      "wall_start_utc": "14:45:59",
+      "wall_seconds": 2416.9,
+      "status": "VideoGenStatus.FAILED",
+      "error": "RunPod H3 job 034aa4c0-0fc3-41f3-93cf-cd11799b69e2-u1 timed out (2400s), still IN_PROGRESS (endpoint workers.max may be 0)"
     }
   },
   "config": {

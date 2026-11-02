@@ -527,3 +527,45 @@ Beat 1 YuiDrama (`01M5YQ80R0H4DJF6AHDJGMAZQ6`, mặt Yui trong khung chỉ ~60px
 - Job nằm `IN_QUEUE` quá `RUNPOD_STUCK_WORKER_RECYCLE_SECONDS` (mặc định 900s, `0` = tắt) mà endpoint không có worker đang chạy thì vòng poll tự quay vòng `workers.max` về 0 rồi trả lại giá trị cũ (tối đa `RUNPOD_STUCK_WORKER_MAX_RECYCLES`=1 lần/job), job vẫn xếp hàng để worker mới nhận; deadline được gia hạn. Bỏ qua khi `workers.max=0` hoặc endpoint đang bận (endpoint dùng chung với `comfy-trends`).
 - Code: `StuckWorkerWatchdog` trong `runpod_worker_control.py`, nối vào 5 vòng poll (H3 1-shot, multishot, `_call_runpod_qwen_image_api`, `_call_runpod_qwen_edit_image_api`, `_runpod_run_graph_job`). Test: `tests/test_runpod_stuck_worker_watchdog.py`. Chưa kiểm bằng GPU thật.
 
+
+## Pilot Three.js previs → MiniMax H3, chuyển sang global volume (2026-11-01/02) — ghi tạm, cần tìm hiểu thêm
+
+Mã, video và số đo gốc: `previs_h3_test/` (PR #10, squash `1245f98`). Chi tiết từng mốc log: `previs_h3_test/benchmark_workers.md`, `benchmark.json`, `benchmark_video_ref.json`.
+
+### Kết quả pilot
+- **Baseline (đã chạy xong):** khung đầu từ scene Three.js (Playwright + `/opt/pw-browsers/chromium`, `three@0.170.0`; trình duyệt Playwright mới cài lệch bản nên phải truyền `executablePath`) → `runpod_qwen21_render` Turbo LoRA 8 bước (`p_q_image_2.1_8_steps_v0.1_comfyui_bf16.safetensors`) → H3 multishot `fl2va`, 2 shot × 124 khung, 1344×768, PDD 8. Video 10,29 s (247 khung, có audio). Qwen 732 s, H3 1607,5 s (`executionTime` 1586,9 s), tổng 2343 s.
+- **Chất lượng baseline:** bố cục, tỉ lệ nhân vật và chuyển tiếp giữa 2 shot ổn; **camera gần như không dolly-in** (khung cuối giống khung đầu). Chưa dùng sheet identity nên mặt chỉ nhất quán theo ảnh đầu.
+- **Bản B (video previs làm `<Video 1>`, ref2va, Turbo LoRA 6 bước): THẤT BẠI.** Encode text mất ~15 phút (baseline 4,3 phút) vì text encoder 32B xử lý cả video; job chạy ~36 phút rồi script hết hạn 2400 s và **tự hủy job** (RunPod `CANCELLED`), không có video, ~$2,1 GPU. **Câu hỏi "H3 có bám camera từ video previs không" vẫn chưa có đáp án.** Hướng thử tiếp: video tham chiếu độ phân giải thấp (ví dụ 640×352) và ít khung, nâng `RUNPOD_H3_VIDEO_TIMEOUT_SECONDS` lên 5400, hoặc bỏ video và mô tả camera bằng chữ lấy từ dữ liệu Three.js.
+
+### Nút thắt thời gian H3 (shot 1 = 19,2 phút trên worker lạnh, RTX PRO 6000 Blackwell 96 GB)
+- Nạp DiT 21 GB 99 s; nạp text encoder ~3 phút; **encode text ~4,3 phút**; **bước sampling đầu tiên 321 s** (khởi tạo/stream model); **sampling 8 bước thật chỉ ~60 s (7,5 s/bước, nhanh hơn A40 ~7 lần)**; decode VAE video+audio ~2,3 phút. Shot 2 chỉ ~7 phút vì trọng số đã trong RAM.
+- Giả thuyết **chưa kiểm chứng:** log chỉ báo "Staged" rồi dữ liệu thật mới được đọc lần đầu khi dùng, và đọc từ global volume rất chậm (~60–70 MB/s) → ~10 phút của 19 là đọc lười từ volume. Cách thử: thêm bước đọc trước file (`cat file > /dev/null` hoặc `VolumeCache` của RunPod) vào `runpod/h3/start.sh` rồi build lại image, đo lại.
+- Tốc độ đọc global volume khác nhau theo data center: DiT 21 GB nạp 19 s ở CA-MTL-3 so với 99 s ở EUR-IS-2.
+- Qwen 2.1: cold start ở data center mới gồm kéo image ~6,7 GB (~6 phút); text encoder của Qwen 2.1 đúng là `qwen3vl_8b_int8_convrot.safetensors`.
+
+### Gợi ý tăng tốc (đang xem xét, chưa làm)
+- Turbo LoRA / hạ độ phân giải / cache attention chỉ nhắm vào sampling (~7% thời gian trên Blackwell); trên A40 (~55 s/bước) thì Turbo LoRA có lợi lớn trở lại. Ưu tiên theo số đo: đọc trước model, giữ worker ấm (tốn $3,49/giờ), chọn data center đọc nhanh, rồi mới tới sampling/decode.
+- "TE-Speed-MiniMaxH3" (repo `HELPMEEADICE/TE-Speed-MiniMaxH3-OSS`, theo một bài trên Hugging Face) là **cache residual lúc sampling** (~43% ở 14–20 bước, báo cáo của người dùng), không tăng tốc text encoder. Cũng có node Spectrum (~30%) và SageAttention (~2 lần sampling). Chưa kiểm chứng.
+
+### Hạ tầng RunPod đã đổi (2026-11-01)
+- **Network volume `zyen2jmxt3` (CA-MTL-1) dùng như đã mất:** CA-MTL-1 không nhận pod hay worker mới (pod A40/CPU/A6000/4090 đều lỗi "không còn instance"), không có trong catalog data center, không hỗ trợ S3 API. Volume **chưa xoá** (còn RIFE/FILM, ACE-Step, biến thể INT8/fp16 thừa của H3).
+- **Global volume mới `dramaclaw-models-global` (`cmvxurab1000007i6htuo1i1j`), 125,2 GB, 28 file + `extra_paths_loras.yaml`** (đọc ở `/runpod-volume`). Điền bằng pod RTX 4090 ở EUR-IS-2 (alpine + curl, tải từng file về đĩa container rồi `cp`, đối chiếu kích thước từng byte). Nguồn HF: `Comfy-Org/MiniMax-H3`, `Comfy-Org/Qwen-Image-2.1`, `Comfy-Org/Qwen-Image-Edit` (`split_files/diffusion_models/qwen_image_edit_2511_int8_convrot`), `Comfy-Org/Qwen-Image` (`split_files/` text encoder 7B fp8 + VAE), `Comfy-Org/SeedVR2`, `Comfy-Org/sam3.1`, `Comfy-Org/sam-3d-body`, `Comfy-Org/SDPose`, `alibaba-pai/MiniMax-H3-Acc-LoRAs` (PDD fl2va + ref2va), `fal/MiniMax-H3-Realism-People-LoRA`. **Chưa tải:** `rife_v4.26`, `film_net_fp16` (không tìm ra nguồn, code không gọi), file ACE-Step.
+- Global volume: object storage, nhất quán dần, không có khoá file/đổi tên nguyên tử, tính phí lưu + yêu cầu ($0,005/1000 ghi, $0,0005/1000 đọc); một endpoint chỉ gắn một global volume và không gắn kèm network volume; chỉ GPU. Không có công cụ đổi network volume thành global volume (phải tạo mới và chép).
+- **4 endpoint** (`q639jfhc6uaf3t` Qwen t2i, `u0hkrms7k1xeua` H3 multishot, `a31613hf7l83r5` H3 1-shot, `cekzpt4p7680pt` Edit-2511): đã `mounts.global` = volume trên, bỏ network volume; `dataCenterIds` = CA-MTL-3/4, EUR-IS-1..5, EUR-NO-1/2, AP-JP-1, AP-IN-1, OC-AU-1; `gpu.pools` = **`AMPERE_48`, `ADA_48_PRO` (chỉ 48 GB, theo yêu cầu người dùng; đã gỡ `BLACKWELL_96`)**; cả 4 `workers.max=0` (đang tắt).
+- **Cảnh báo:** các data center được phép hiện không liệt kê A40/L40S/RTX 6000 Ada (chỉ L40 ở US-KS-2, bị loại) → với pool 48 GB job có thể không bao giờ chạy. Khi cho phép Blackwell, worker đã dựng ở EUR-IS-2 và CA-MTL-3.
+- Hiện tượng RunPod: endpoint đặt `workers.max=1` vẫn có lúc dựng 2–3 worker cùng lúc (tính phí); submit ngay sau khi bật endpoint trả 409 `ENDPOINT_PAUSED` (generator tự thử lại); quay vòng `workers.max` giết luôn worker đang chạy job.
+
+### Giấy phép và vùng (nguồn thứ cấp, cần đối chiếu văn bản gốc)
+- **MiniMax H3 Community License loại trừ EU, Anh, Hàn Quốc và Mỹ**, và hạn chế áp dụng cả cho kết quả sinh ra; doanh nghiệp trên 20 triệu USD doanh thu cần phép riêng; API của MiniMax không bị giới hạn vùng. Iceland và Na Uy không thuộc EU nhưng có nằm trong EEA hay không theo cách MiniMax hiểu thì chưa rõ. Đây không phải tư vấn pháp lý.
+- **Qwen-Image 2.1 dùng Qwen Research License:** chỉ nghiên cứu/đánh giá, cấm thương mại nếu không mua phép riêng; không thấy giới hạn theo vùng.
+
+### CI và merge
+- PR #10 merge khi kiểm tra `dco` **đỏ** theo yêu cầu rõ của người dùng: các commit do phiên Claude tạo không có `Signed-off-by`, và tôi không ký thay người dùng.
+- Hai kiểm tra đỏ có sẵn trên `main`, không do PR này: `banned-words` (hai dòng chứa từ bị cấm trong `docs/h3-templates/index.html:60` và `docs/plans/yui-pilot-handoff.md:52`, xem `scripts/lint_banned_words.py`) và `deps` (lỗi ruff F401/E402/F811 trong `tests/*.py`). Chưa sửa.
+
+### Việc cần làm / tìm hiểu sau
+1. Thêm bước đọc trước model vào `runpod/h3/start.sh` (và Qwen), build lại image, đo lại cold start.
+2. Quyết định bản B: thử lại với video tham chiếu nhỏ hoặc chuyển sang mô tả camera bằng chữ.
+3. Giải bài toán GPU 48 GB trong vùng được phép (hiện có thể không có chỗ), cân nhắc nới vùng hoặc thêm lại Blackwell làm lựa chọn cuối.
+4. Quyết định xoá network volume `zyen2jmxt3` sau khi một worker thật chạy ổn trên global volume (đã chạy thật trên Blackwell: Qwen và H3 đều nạp model đúng từ `/runpod-volume`).
+5. Đối chiếu văn bản giấy phép H3 và Qwen; kiểm chứng TE-Speed/Spectrum bằng một lần chạy.

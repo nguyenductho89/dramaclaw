@@ -46,3 +46,37 @@ khớp với log `TE evicted; 17.7 GB free for the DiT` mỗi shot (text encoder
   + `memory.max_usage_in_bytes` (v1), rồi `free -m`; và in `Cached`/`Active(file)` từ `/proc/meminfo` để thấy page cache.
 - Chạy lại một job 2 shot (không cần 6) để xem shot 2 có còn bước khởi tạo 5–6 phút không.
 - Thử `--disable-pinned-memory` hoặc đọc trước file model vào RAM để kiểm tra giả thuyết page cache.
+
+---
+
+# Phần 2: job 2 shot với bộ đo RAM mới (2026-11-03 04:24 → 04:53 UTC)
+
+Job `31d5e9dc-734a-459f-88d3-3e6111804b15-u1`, cùng worker `cvojuwf3756xze`, cùng cấu hình, 2 shot × 124 khung, seed 1234.
+Bộ đo mới (`scripts/memmon.sh`, đưa vào worker qua biến env `MEMMON_B64` + `cmd` của endpoint) đọc cgroup **v1**
+(worker dùng cgroup v1, nên bản đo trước đọc `memory.current` của v2 bị rỗng) và `/proc/<pid>/status` của ComfyUI.
+
+## Số liệu thật
+- `executionTime` 29,5 phút (04:24:07 → 04:53:38), `delayTime` 14 s (worker ấm, image đã có). Video 247 khung, 10,29 s, 14,2 MB.
+- Shot 1: 04:28:31 → 04:43:04 = **14,6 phút** (job 1: 16,8 phút). Trước shot 1 có ~4,4 phút chuẩn bị (04:24:07 → 04:28:31).
+- Shot 2: 04:43:04 → ~04:53:38 = **~10,6 phút** (job 1: 10,4 phút), tức không nhanh hơn dù worker ấm.
+- **RAM container đỉnh 53.861 MiB (~52,6 GiB)** (`memory.max_usage_in_bytes`) trên giới hạn 82.970 MB (~65%). Tiến trình ComfyUI VmRSS đỉnh 52.646 MiB.
+  `VmLck` = 0 và `VmPin` = 0 trong mọi mẫu.
+- RAM tăng đều suốt shot 1 (1,2 GB lúc 04:24 → 24,8 GB lúc 04:33 → 50,6 GB lúc 04:42) rồi **tụt còn ~18,5 GB** ở đầu shot 2 (04:45).
+  Tức trọng số bị giải phóng khỏi RAM giữa hai shot.
+- VRAM đỉnh 23.825 MiB, giống job 1.
+- `cgroup cache` chỉ 3,7 GB: page cache của file model không tính vào cgroup của container nên không đo được qua cột này.
+  `Cached` của /proc/meminfo là của cả máy chủ (~274 GB), không dùng được.
+
+## Dữ liệu bị mất (nói thẳng)
+Tôi chỉ kịp lưu log của worker đến 04:45:46 (CSV: `bench_4090_ms2_ram_mem.csv`, 259 mẫu, 5 s/mẫu). Sau khi job xong tôi gọi `update-endpoint` (`workers.max=0`)
+trước khi lấy phần log còn lại, và khi lấy thì RunPod trả `worker not found`. Không rõ worker biến mất do lệnh đó hay do `idleTimeout` 90 s.
+Hậu quả:
+- **Không có đỉnh RAM/VRAM của shot 2** (đỉnh RAM 53.861 MiB là của shot 1; `memory.max_usage_in_bytes` là đỉnh tích lũy nên shot 2 có thể cao hơn).
+- **Không tách được pha của shot 2**, nên chưa trả lời được "khởi tạo DiT ở shot 2 còn 5–6 phút không". Chỉ có tổng 10,6 phút, khớp với job 1 (10,4 phút), nên khả năng cao là còn.
+- Bài học cho lần sau: lấy hết log trước khi đặt `workers.max=0`, hoặc ghi log ra nơi khác (R2) từ trong worker.
+
+## Suy luận (chưa kiểm chứng)
+- Với giới hạn RAM 81 GiB, worker 4090 này không thiếu RAM. Đỉnh 52,6 GiB lớn hơn giới hạn 46,6 GiB mà ghi chú dự án từng ghi cho worker A40,
+  nên việc A40 từng OOM RAM phù hợp với ngưỡng đó quá thấp so với mức model cần, chứ không chỉ do clip dài.
+- RAM tụt giữa hai shot cho thấy trọng số được nạp lại ở mỗi shot, phù hợp với việc "Model Initializing" lặp lại ở mỗi shot.
+  Cần job đo đầy đủ pha của shot 2 để chốt.

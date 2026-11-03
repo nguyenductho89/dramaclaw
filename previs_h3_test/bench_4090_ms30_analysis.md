@@ -80,3 +80,15 @@ Hậu quả:
   nên việc A40 từng OOM RAM phù hợp với ngưỡng đó quá thấp so với mức model cần, chứ không chỉ do clip dài.
 - RAM tụt giữa hai shot cho thấy trọng số được nạp lại ở mỗi shot, phù hợp với việc "Model Initializing" lặp lại ở mỗi shot.
   Cần job đo đầy đủ pha của shot 2 để chốt.
+
+---
+
+# Phần 3: thử "model ở ổ cục bộ" bị hủy (2026-11-03 05:14 → 05:30 UTC)
+
+Mục tiêu: kiểm chứng giả thuyết "khởi tạo DiT lặp mỗi shot là do đọc lại model qua global volume" bằng cách chép 5 file model (~41 GB) vào `/local-models`
+(`scripts/localcopy.sh`, `disk` 60 GB, `--extra-model-paths-config /tmp/local_paths.yaml` với `is_default: true`) rồi chạy lại job 2 shot.
+
+Kết quả: **không có số liệu.** Job `d2f6571e-5a20-421d-b062-349c31718270-u1` ở `IN_QUEUE` suốt ~13 phút. Ba worker (EUR-IS-2) kéo xong image (05:22–05:23, ~8 phút) nhưng ở
+trạng thái `THROTTLED` (4090 tồn kho `Low`), không container nào chạy. Job đã hủy lúc ~05:30, endpoint `workers.max=0`, `idleTimeout` 90.
+Chưa biết: thời gian chép model, ComfyUI có thật sự dùng `/local-models` hay không, và `fast_disk` có đổi thành `True` không.
+Cần chạy lại khi có GPU (hoặc dùng GPU 48 GB để tách "VRAM nhỏ" khỏi "ổ chậm").

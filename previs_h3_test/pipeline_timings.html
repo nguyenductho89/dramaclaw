@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pipeline previs → H3: thời gian từng bước</title>
+<style>
+:root{
+  --bg:#f6f7f9; --card:#ffffff; --ink:#1b1f27; --muted:#5b6575; --line:#dfe3ea;
+  --accent:#2f5bd8; --warn-bg:#fff4e0; --warn-ink:#7a4a00; --warn-line:#f0c97a;
+  --ok-bg:#e8f6ec; --ok-ink:#17602f; --ok-line:#9fd4b0; --todo-bg:#eef0f4; --todo-ink:#3d4756; --todo-line:#c9cfda;
+  --bad:#c23b3b;
+  --c-load:#6b8afd; --c-te:#9a6bff; --c-enc:#e0813a; --c-init:#d94f4f; --c-samp:#2f9e5b; --c-dec:#c9a227; --c-misc:#9aa3b2; --c-pull:#4aa3c9;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#12151b; --card:#1b2029; --ink:#e7eaf0; --muted:#9aa4b5; --line:#2b3240;
+    --accent:#7d9bff; --warn-bg:#352a14; --warn-ink:#f2c879; --warn-line:#6b5521;
+    --ok-bg:#15301f; --ok-ink:#8fd6a6; --ok-line:#2c5c3d; --todo-bg:#222936; --todo-ink:#b6bfcd; --todo-line:#39435a;
+    --bad:#ef7676;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#12151b; --card:#1b2029; --ink:#e7eaf0; --muted:#9aa4b5; --line:#2b3240;
+  --accent:#7d9bff; --warn-bg:#352a14; --warn-ink:#f2c879; --warn-line:#6b5521;
+  --ok-bg:#15301f; --ok-ink:#8fd6a6; --ok-line:#2c5c3d; --todo-bg:#222936; --todo-ink:#b6bfcd; --todo-line:#39435a;
+  --bad:#ef7676;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:1040px;margin:0 auto;padding:24px 16px 64px}
+h1{font-size:1.55rem;margin:0 0 4px}
+h2{font-size:1.2rem;margin:36px 0 12px}
+h3{font-size:1.02rem;margin:0}
+p{margin:8px 0}
+.sub{color:var(--muted);margin:0 0 16px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin:16px 0}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.kpi b{display:block;font-size:1.35rem}
+.kpi span{color:var(--muted);font-size:.85rem}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin:14px 0}
+.card header{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px}
+.num{background:var(--accent);color:#fff;border-radius:999px;min-width:26px;height:26px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem;padding:0 8px}
+.where{color:var(--muted);font-size:.85rem}
+.flow{display:flex;gap:8px;align-items:stretch;flex-wrap:wrap;margin:14px 0}
+.node{flex:1 1 150px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-width:140px}
+.node b{display:block;font-size:.95rem}
+.node small{color:var(--muted)}
+.node.dash{border-style:dashed}
+.arrow{align-self:center;color:var(--muted);font-size:1.2rem}
+.bars{margin:10px 0}
+.row{display:grid;grid-template-columns:minmax(120px,230px) 1fr auto;gap:10px;align-items:center;margin:6px 0;font-size:.9rem}
+.row .lab{color:var(--ink)}
+.row .lab small{display:block;color:var(--muted)}
+.track{background:var(--bg);border:1px solid var(--line);border-radius:6px;height:18px;overflow:hidden}
+.fill{height:100%;background:var(--accent)}
+.val{font-variant-numeric:tabular-nums;white-space:nowrap}
+.stack{display:flex;height:34px;border-radius:8px;overflow:hidden;border:1px solid var(--line);margin:10px 0}
+.stack div{height:100%}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.82rem;color:var(--muted);margin:6px 0 4px}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.note{border-radius:8px;padding:9px 12px;margin:10px 0;font-size:.92rem;border:1px solid}
+.note>b:first-child{display:block;margin-bottom:2px;font-size:.82rem;text-transform:uppercase;letter-spacing:.03em}
+.why{background:var(--warn-bg);color:var(--warn-ink);border-color:var(--warn-line)}
+.done{background:var(--ok-bg);color:var(--ok-ink);border-color:var(--ok-line)}
+.todo{background:var(--todo-bg);color:var(--todo-ink);border-color:var(--todo-line)}
+table{width:100%;border-collapse:collapse;font-size:.87rem}
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--card)}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{background:var(--bg);font-weight:600;position:sticky;top:0}
+td.n{font-variant-numeric:tabular-nums}
+.na{color:var(--muted);font-style:italic}
+.bad{color:var(--bad);font-weight:600}
+code{background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:0 4px;font-size:.88em}
+.foot{color:var(--muted);font-size:.84rem;margin-top:28px}
+.tag{display:inline-block;font-size:.72rem;border:1px solid var(--line);border-radius:999px;padding:0 8px;color:var(--muted);margin-left:6px}
+@media (max-width:640px){
+  .row{grid-template-columns:1fr;gap:3px}
+  .arrow{display:none}
+  .val{justify-self:start}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Pipeline previs Three.js → MiniMax H3: thời gian từng bước</h1>
+<p class="sub">Số đo từ log worker và <code>benchmark.json</code> của lần chạy 2026-11-01 (RunPod, global volume). Chỗ nào chưa đo thì ghi rõ <em>chưa đo</em>; số A40 lấy từ các lần đo tháng 10 trong <code>.claude/CLAUDE.md</code> nên <b>không so sánh trực tiếp được</b> (khác pipeline, worker ấm/lạnh, loại volume).</p>
+
+<div class="kpis">
+  <div class="kpi"><b>39 phút</b><span>Tổng pipeline baseline (2343 s): Qwen 732 s + H3 1607,5 s</span></div>
+  <div class="kpi"><b>~5%</b><span>Phần sampling thật trong shot 1 (60 s / 1153 s)</span></div>
+  <div class="kpi"><b>~7,5 s/bước</b><span>Sampling H3 trên Blackwell, so với ~55 s/bước trên A40</span></div>
+  <div class="kpi"><b>~$2,3</b><span>Ước tính tiền GPU lần chạy này (≈ 39 phút × $3,49/giờ, tính cả cold start)</span></div>
+</div>
+
+<h2>Các bước của pipeline</h2>
+<div class="flow">
+  <div class="node"><b>0. Previs Three.js</b><small>Playwright render 124 khung → mp4</small></div><div class="arrow">→</div>
+  <div class="node"><b>1. Qwen photoreal</b><small>khung đầu → ảnh thật (Turbo LoRA 8 bước)</small></div><div class="arrow">→</div>
+  <div class="node"><b>2. H3 multishot · shot 1</b><small>fl2va, PDD 8 bước, 124 khung</small></div><div class="arrow">→</div>
+  <div class="node"><b>3. H3 multishot · shot 2</b><small>nối từ khung cuối shot 1</small></div><div class="arrow">→</div>
+  <div class="node"><b>Video 10,29 s</b><small>247 khung, 1344×768, có audio</small></div>
+</div>
+<div class="flow">
+  <div class="node dash"><b>Bản B (thất bại)</b><small>Video previs làm <code>&lt;Video 1&gt;</code> trong H3 ref2va, job bị hủy sau 36 phút</small></div>
+</div>
+
+<!-- ============ BƯỚC 0 ============ -->
+<div class="card">
+  <header><span class="num">0</span><h3>Previs Three.js (dựng cảnh và render video previs)</h3><span class="where">chạy cục bộ, CPU, không tốn GPU</span></header>
+  <div class="bars">
+    <div class="row"><div class="lab">Render 124 khung + ffmpeg<small>swiftshader, 1344×768</small></div><div class="track"><div class="fill" style="width:6%"></div></div><div class="val na">chưa đo chính xác (vài giây đến dưới 1 phút)</div></div>
+  </div>
+  <div class="note why"><b>Vì sao (không) chậm</b>Không phải nút thắt. Output chỉ 107 KB (<code>previs_shot1.mp4</code>), flat-colour mannequin nên render rất nhẹ.</div>
+  <div class="note done"><b>Đã làm</b>Render headless bằng Playwright với trình duyệt Chromium có sẵn (<code>executablePath</code>), không cần GPU, không cần thư viện CDN.</div>
+</div>
+
+<!-- ============ BƯỚC 1 ============ -->
+<div class="card">
+  <header><span class="num">1</span><h3>Qwen-Image 2.1: khung previs → ảnh photoreal</h3><span class="where">endpoint Qwen t2i · RTX PRO 6000 Blackwell · EUR-IS-2 · worker lạnh</span></header>
+  <p>Tổng <b>731,9 s</b> kể từ lúc gửi job đến lúc có ảnh:</p>
+  <div class="stack" role="img" aria-label="Phân bổ thời gian bước Qwen">
+    <div style="width:43%;background:var(--c-pull)" title="Chờ worker và kéo image Docker: 314 s"></div>
+    <div style="width:3.3%;background:var(--c-load)" title="Nạp VAE và text encoder: ~24 s"></div>
+    <div style="width:53.7%;background:var(--c-samp)" title="Nạp UNet, sinh ảnh, tải về: ~394 s"></div>
+  </div>
+  <div class="legend"><span><i style="background:var(--c-pull)"></i>Chờ worker + kéo image Docker 314 s (43%)</span><span><i style="background:var(--c-load)"></i>Nạp VAE + text encoder ~24 s</span><span><i style="background:var(--c-samp)"></i>Nạp UNet + sinh ảnh + tải về ~394 s (chưa tách được)</span></div>
+  <div class="bars">
+    <div class="row"><div class="lab">Blackwell, lạnh, EUR-IS-2<small>Turbo LoRA 8 bước · 1344×768 · 2026-11-01</small></div><div class="track"><div class="fill" style="width:100%"></div></div><div class="val">732 s</div></div>
+    <div class="row"><div class="lab">A40, ấm (đo tháng 10)<small>Turbo LoRA 8 bước · endpoint H3</small></div><div class="track"><div class="fill" style="width:9%"></div></div><div class="val">60–66 s / ảnh</div></div>
+    <div class="row"><div class="lab">A40, không LoRA (đo tháng 10)<small>40 bước nền</small></div><div class="track"><div class="fill" style="width:41%"></div></div><div class="val">~301 s</div></div>
+  </div>
+  <div class="note why"><b>Vì sao chậm lần này</b>Đây là lần đầu worker chạy ở data center EUR-IS-2 nên phải <b>kéo image Docker ~6,7 GB (~6 phút)</b>, chiếm gần nửa thời gian. Phần sinh ảnh thật ít hơn nhiều: trên A40 ấm chỉ ~1 phút. Ngoài ra model đọc từ global volume (object storage) chứ không phải đĩa cục bộ.</div>
+  <div class="note done"><b>Đã làm</b>Turbo LoRA 8 bước (301 s → ~63 s trên A40). Đã xác nhận global volume mount đúng (<code>/runpod-volume/models/…</code>) và text encoder Qwen 2.1 là <code>qwen3vl_8b_int8_convrot</code>.</div>
+  <div class="note todo"><b>Chưa làm / thử tiếp</b>Chạy lại ở cùng data center để bỏ bước kéo image (chỉ lần đầu); giữ worker ấm; đọc trước model vào RAM. Chưa đo riêng phần sinh ảnh trên Blackwell vì log không tách được.</div>
+</div>
+
+<!-- ============ BƯỚC 2 ============ -->
+<div class="card">
+  <header><span class="num">2</span><h3>H3 multishot · shot 1 (fl2va, PDD 8 bước, 124 khung, 1344×768)</h3><span class="where">endpoint multishot · RTX PRO 6000 Blackwell · EUR-IS-2 · worker lạnh</span></header>
+  <p>Shot 1 mất <b>1153 s (19,2 phút)</b> kể từ lúc nhận prompt đến khi lưu xong. Sampling thật chỉ ~5%:</p>
+  <div class="stack" role="img" aria-label="Phân bổ thời gian shot 1">
+    <div style="width:8.6%;background:var(--c-load)" title="Nạp DiT 21 GB: 99 s"></div>
+    <div style="width:2.8%;background:var(--c-misc)" title="Áp PDD và khởi tạo: 32 s"></div>
+    <div style="width:16%;background:var(--c-te)" title="Nạp text encoder 15 GB: 184 s"></div>
+    <div style="width:22.6%;background:var(--c-enc)" title="Encode text: 261 s"></div>
+    <div style="width:4.2%;background:var(--c-misc)" title="Chuẩn bị VAE/đẩy model: ~49 s"></div>
+    <div style="width:27.9%;background:var(--c-init)" title="Bước sampling đầu tiên: 322 s"></div>
+    <div style="width:5.2%;background:var(--c-samp)" title="Sampling 8 bước thật: ~60 s"></div>
+    <div style="width:12.1%;background:var(--c-dec)" title="Decode VAE video + audio: 140 s"></div>
+    <div style="width:0.6%;background:var(--c-misc)" title="Khác"></div>
+  </div>
+  <div class="legend">
+    <span><i style="background:var(--c-load)"></i>Nạp DiT 99 s (8,6%)</span>
+    <span><i style="background:var(--c-misc)"></i>PDD + chuẩn bị + khác ~87 s (7,6%)</span>
+    <span><i style="background:var(--c-te)"></i>Nạp text encoder 184 s (16%)</span>
+    <span><i style="background:var(--c-enc)"></i>Encode text 261 s (22,6%)</span>
+    <span><i style="background:var(--c-init)"></i>Bước sampling đầu 322 s (27,9%)</span>
+    <span><i style="background:var(--c-samp)"></i>Sampling 8 bước ~60 s (5,2%)</span>
+    <span><i style="background:var(--c-dec)"></i>Decode VAE 140 s (12,1%)</span>
+  </div>
+
+  <div class="note why"><b>Vì sao chậm: nạp DiT, nạp text encoder (~4,7 phút cộng lại)</b>Hai file 21 GB và 15 GB đọc từ global volume (object storage) với tốc độ ~210 MB/s ở EUR-IS-2. Ở CA-MTL-3 cùng DiT 21 GB chỉ mất 19 s (~1,1 GB/s), tức tốc độ đọc phụ thuộc data center.</div>
+  <div class="note why"><b>Vì sao chậm: encode text 261 s</b>Cùng một encoder chỉ mất ~17 s trên A40 khi model đã ấm. Chênh lệch ~15 lần cho thấy đây chủ yếu là <b>đọc file lần đầu</b> (log chỉ báo "Staged", dữ liệu thật được đọc khi dùng), không phải tính toán. <i>Giả thuyết, chưa kiểm chứng.</i></div>
+  <div class="note why"><b>Vì sao chậm: bước sampling đầu tiên 322 s</b>Bước đầu cũng là lúc DiT 21 GB được đọc thật vào VRAM (khởi tạo/stream model), sau đó 7 bước còn lại chạy ~7,5–8,0 s/bước. Cùng nguyên nhân đọc lần đầu như trên.</div>
+  <div class="note why"><b>Vì sao chậm: decode VAE 140 s</b>Decode video 124 khung ở 1344×768 và VAE audio. Tỉ lệ thuận với số pixel và số khung.</div>
+
+  <div class="note done"><b>Đã làm</b>
+    PDD 8 bước thay base 20 bước (A40: 741–768 s → ~382 s, 1-shot); Turbo LoRA 6 bước cho ref2va (A40: 284,7 s); image cu130 + SageAttention (A40: 718 s → 382 s 1-shot, multishot 1181 s → 631 s); chuyển sang global volume khi CA-MTL-1 ngừng dựng worker; đặt <code>dataCenterIds</code> theo vùng giấy phép H3 cho phép; ghi benchmark tự động (<code>benchmark.json</code>).</div>
+  <div class="note todo"><b>Chưa làm / thử tiếp</b>(1) Đọc trước model vào RAM hoặc đĩa cục bộ khi worker khởi động (nhắm vào ~14 phút đọc lần đầu). (2) Giữ worker ấm ($3,49/giờ). (3) Ưu tiên data center đọc nhanh như CA-MTL-3. (4) Gói multishot có chế độ <code>H3RemoteEncode</code> (chạy encoder như dịch vụ riêng), chưa tìm hiểu cách bật. (5) Hạ độ phân giải để dựng nháp (giảm decode).</div>
+</div>
+
+<!-- ============ BƯỚC 3 ============ -->
+<div class="card">
+  <header><span class="num">3</span><h3>H3 multishot · shot 2 (nối từ khung cuối shot 1)</h3><span class="where">cùng worker, đã ấm</span></header>
+  <div class="bars">
+    <div class="row"><div class="lab">Shot 1<small>worker lạnh</small></div><div class="track"><div class="fill" style="width:100%"></div></div><div class="val">1153 s</div></div>
+    <div class="row"><div class="lab">Shot 2<small>worker ấm, trọng số đã trong RAM</small></div><div class="track"><div class="fill" style="width:38%;background:var(--c-samp)"></div></div><div class="val">~437 s</div></div>
+  </div>
+  <div class="note why"><b>Vì sao vẫn chậm</b>Mỗi shot vẫn phải encode text và decode VAE riêng (decode ~2 phút). Chỉ phần đọc model từ volume được bỏ qua nhờ cache trong RAM.</div>
+  <div class="note done"><b>Đã làm</b>Nối shot bằng khung cuối thật của shot trước (không chạy lại từ ảnh đầu), nên seam liền mạch.</div>
+  <div class="note todo"><b>Chưa làm / thử tiếp</b>Mỗi shot thêm vào vẫn tốn ~7 phút, nên giảm số shot hoặc dùng ít shot dài hơn nếu cần tiết kiệm. Chưa đo shot > 124 khung nhiều shot.</div>
+</div>
+
+<!-- ============ BƯỚC 4 ============ -->
+<div class="card">
+  <header><span class="num">B</span><h3>Bản B: video previs làm <code>&lt;Video 1&gt;</code> (H3 ref2va 1-shot, Turbo LoRA 6 bước)</h3><span class="where">endpoint H3 1-shot · RTX PRO 6000 Blackwell · CA-MTL-3</span></header>
+  <div class="bars">
+    <div class="row"><div class="lab">Khởi động worker → ComfyUI sẵn sàng</div><div class="track"><div class="fill" style="width:1%"></div></div><div class="val">26 s</div></div>
+    <div class="row"><div class="lab">Nạp DiT ref2va 21 GB</div><div class="track"><div class="fill" style="width:1%"></div></div><div class="val">19 s</div></div>
+    <div class="row"><div class="lab">Encode text (có video tham chiếu)</div><div class="track"><div class="fill" style="width:42%;background:var(--c-enc)"></div></div><div class="val bad">~15 phút</div></div>
+    <div class="row"><div class="lab">Sampling + decode</div><div class="track"><div class="fill" style="width:39%;background:var(--c-init)"></div></div><div class="val bad">chưa xong sau ~14 phút</div></div>
+    <div class="row"><div class="lab">Tổng thực thi trước khi bị hủy</div><div class="track"><div class="fill" style="width:100%;background:var(--bad)"></div></div><div class="val bad">2162,7 s (~36 phút)</div></div>
+  </div>
+  <div class="note why"><b>Vì sao thất bại</b>Encode text mất ~15 phút (baseline 4,3 phút) vì text encoder 32B phải xử lý cả video tham chiếu, sinh rất nhiều token. Script hết hạn 2400 s nên hủy job; RunPod ghi <code>CANCELLED</code>, không có video. Tốn khoảng $2,1 GPU.</div>
+  <div class="note done"><b>Đã làm</b>Render video previs độ phân giải đầy đủ và gửi làm <code>&lt;Video 1&gt;</code> với prompt nói rõ video chỉ định camera và bố trí, không mang màu phẳng. Ghi đủ benchmark để so sánh.</div>
+  <div class="note todo"><b>Chưa làm / thử tiếp</b>Video tham chiếu độ phân giải thấp (ví dụ 640×352) và ít khung; nâng giới hạn chờ lên 5400 s; hoặc bỏ video và mô tả camera bằng chữ từ dữ liệu Three.js. Câu hỏi "H3 có bám camera từ video previs không" vẫn chưa có đáp án.</div>
+</div>
+
+<h2>So sánh theo cấu hình GPU và data center</h2>
+<p class="sub">Các cột không cùng điều kiện, xem dòng ghi chú ở dưới mỗi cột. Ô "chưa đo" nghĩa là chưa có số liệu.</p>
+<div class="tw">
+<table>
+<thead><tr>
+  <th>Chỉ số</th>
+  <th>A40 48 GB<br><small>CA-MTL-1, network volume, worker ấm (tháng 10)</small></th>
+  <th>Blackwell 96 GB<br><small>EUR-IS-2, global volume, worker lạnh (11-01)</small></th>
+  <th>Blackwell 96 GB<br><small>CA-MTL-3, global volume (11-01, bản B)</small></th>
+  <th>L40S / RTX 6000 Ada / A6000<br><small>48 GB</small></th>
+</tr></thead>
+<tbody>
+<tr><td>Giá serverless</td><td class="n">$1,22/giờ</td><td class="n">$3,49/giờ</td><td class="n">$3,49/giờ</td><td class="n">giá theo pool</td></tr>
+<tr><td>Khởi động worker → ComfyUI sẵn sàng</td><td class="n">~7 phút lần đầu (image + nạp model)</td><td class="n">~6 phút lần đầu (kéo image ~6,7 GB); ~15 s khi image đã có</td><td class="n">26 s</td><td class="na">chưa đo</td></tr>
+<tr><td>Nạp DiT H3 21 GB</td><td class="na">không ghi riêng</td><td class="n">99 s (~210 MB/s)</td><td class="n">19 s (~1,1 GB/s)</td><td class="na">chưa đo</td></tr>
+<tr><td>Nạp text encoder 15 GB</td><td class="na">không ghi riêng</td><td class="n">184 s</td><td class="na">không ghi riêng</td><td class="na">chưa đo</td></tr>
+<tr><td>Encode text</td><td class="n">~17 s (NVFP4, ấm)</td><td class="n">261 s (lạnh)</td><td class="n bad">~15 phút (có video tham chiếu)</td><td class="na">chưa đo</td></tr>
+<tr><td>Bước sampling đầu tiên</td><td class="na">không ghi riêng</td><td class="n">322 s</td><td class="na">chưa đo (job bị hủy)</td><td class="na">chưa đo</td></tr>
+<tr><td>Thời gian mỗi bước sampling</td><td class="n">~55 s</td><td class="n">7,5–8,0 s</td><td class="na">chưa đo</td><td class="na">chưa đo</td></tr>
+<tr><td>Decode VAE</td><td class="n">~32 s</td><td class="n">~140 s</td><td class="na">chưa đo</td><td class="na">chưa đo</td></tr>
+<tr><td>Tổng 1 job</td>
+  <td class="n">ref2va 1-shot PDD 8: 518 s · Turbo LoRA 6 bước: 284,7 s · multishot 2×124: 631 s</td>
+  <td class="n">fl2va 2 shot: 1607,5 s (shot 1: 1153 s, shot 2: ~437 s)</td>
+  <td class="n bad">chưa xong: bị hủy sau 2162,7 s</td>
+  <td class="na">chưa đo</td></tr>
+<tr><td>Tình trạng tồn kho lúc đo</td><td>CA-MTL-1 hiện không dựng được worker</td><td>có hàng (Iceland)</td><td>có hàng (Canada)</td><td>không có hàng ở các vùng được phép lúc kiểm tra</td></tr>
+</tbody>
+</table>
+</div>
+<p class="foot" style="margin-top:8px"><b>Cách đọc:</b> Blackwell nhanh hơn A40 ~7 lần mỗi bước sampling, nhưng trên worker lạnh với global volume, thời gian nạp và encode lần đầu lấn át hoàn toàn mức tăng tốc đó. Cột A40 là worker ấm trên network volume (NVMe), nên số nạp model thấp hơn không phải do GPU.</p>
+
+<h2>Những gì đã thực hiện để giảm thời gian</h2>
+<div class="tw">
+<table>
+<thead><tr><th>Giải pháp</th><th>Tác động đã đo</th><th>Ghi chú</th></tr></thead>
+<tbody>
+<tr><td>PDD 8 bước thay 20 bước</td><td class="n">741–768 s → ~382 s (A40, 1-shot)</td><td>PDD làm mặt nhòe ở ref2va nên ref2va đã quay lại base hoặc Turbo LoRA trong vài trường hợp.</td></tr>
+<tr><td>Turbo LoRA (H3 ref2va)</td><td class="n">284,7 s so với 741 s (A40, 6 bước)</td><td>Công tắc <code>RUNPOD_H3_TURBO_LORA_REF2VA</code>, mặc định tắt.</td></tr>
+<tr><td>Image cu130 + SageAttention</td><td class="n">718 s → 382 s (1-shot) · 1181 s → 631 s (multishot 2 shot)</td><td>Đo trên A40.</td></tr>
+<tr><td>Turbo LoRA cho Qwen 2.1 (8 bước)</td><td class="n">~301 s → ~63 s mỗi ảnh (A40)</td><td>Chất lượng không kém trên mẫu nhỏ.</td></tr>
+<tr><td>Global volume thay network volume</td><td class="na">chưa đo tác động tốc độ</td><td>Giải quyết việc CA-MTL-1 không dựng được worker; đổi lại đọc model lần đầu chậm hơn.</td></tr>
+<tr><td>Chọn data center</td><td class="n">DiT 99 s (EUR-IS-2) → 19 s (CA-MTL-3)</td><td>Phát hiện qua log; chưa đặt thứ tự ưu tiên data center.</td></tr>
+<tr><td>Gỡ pool Blackwell, chỉ dùng 48 GB (theo yêu cầu)</td><td class="na">không giảm thời gian, giảm giá/giờ</td><td class="bad">Có thể khiến job không có GPU (không thấy A40/L40S/6000 Ada ở các vùng được phép).</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2>Gợi ý đang chờ kiểm chứng</h2>
+<div class="note todo"><b>1. Đọc trước model</b>Thêm <code>cat file &gt; /dev/null</code> hoặc <code>VolumeCache</code> trong <code>runpod/h3/start.sh</code>, build lại image rồi đo lại. Nhắm vào ~14 phút đọc lần đầu (nạp DiT + text encoder + encode + bước đầu).</div>
+<div class="note todo"><b>2. Giữ worker ấm</b>Job thứ hai trên cùng worker nhanh hơn rõ (shot 2 chỉ 7 phút so với 19). Đổi lại tính phí khi chờ.</div>
+<div class="note todo"><b>3. Tách encoder thành dịch vụ riêng</b>Log multishot có dòng <code>H3RemoteEncode</code>. Chưa tìm hiểu cách bật.</div>
+<div class="note todo"><b>4. Tăng tốc sampling</b>Turbo LoRA, cache residual (TE-Speed), Spectrum, SageAttention chỉ giúp phần sampling (~5% trên Blackwell). Đáng kể hơn nếu quay lại A40 (~55 s/bước).</div>
+
+<p class="foot">
+<b>Nguồn số liệu:</b> log container và log hệ thống của worker RunPod (trích lúc chạy), <code>benchmark.json</code>, <code>benchmark_video_ref.json</code>, <code>benchmark_workers.md</code> và ghi chú đo trong <code>.claude/CLAUDE.md</code>. <b>Số liệu chỉ phản ánh một lần chạy mỗi cấu hình</b>, nên chưa có phương sai. Các giả thuyết về nguyên nhân (đọc lần đầu từ volume) được gắn nhãn <i>giả thuyết</i> và chưa được kiểm chứng bằng thí nghiệm riêng.
+</p>
+</div>
+</body>
+</html>

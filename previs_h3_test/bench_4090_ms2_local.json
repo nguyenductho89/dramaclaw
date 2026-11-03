@@ -1,0 +1,25 @@
+{
+  "label": "4090_ms2_local",
+  "started_utc": "2026-11-03T05:14:41Z",
+  "resolution": "1344x768",
+  "shots": 2,
+  "frames_per_shot": 124,
+  "sampling": {
+    "pdd_nfe": "8",
+    "pdd_file": "MiniMax-H3-FL2VA-Acc-8Step.safetensors",
+    "turbo_lora": "",
+    "chain_normalize": "off",
+    "steps": 8,
+    "output_scale": 1.0
+  },
+  "logs": [
+    "    2.0s RunPod job d2f6571e-5a20-421d-b062-349c31718270-u1 submitted, polling (up to 7200s, counted from IN_PROGRESS)..."
+  ],
+  "wall_seconds": 828.1,
+  "runpod_status": {
+    "id": "d2f6571e-5a20-421d-b062-349c31718270-u1",
+    "status": "CANCELLED"
+  },
+  "error": "job CANCELLED: {\"id\": \"d2f6571e-5a20-421d-b062-349c31718270-u1\", \"status\": \"CANCELLED\"}",
+  "video_bytes": 0
+}

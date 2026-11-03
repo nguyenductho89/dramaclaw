@@ -5,7 +5,7 @@ records wall time and the job log. Run with the TEST endpoint:
   RUNPOD_H3_MULTISHOT_ENDPOINT_ID=<test endpoint> RUNPOD_H3_MULTISHOT_TIMEOUT_SECONDS=10800 \
   python previs_h3_test/scripts/bench_multishot30.py <label>
 """
-import asyncio, json, sys, time
+import asyncio, json, os, sys, time
 from pathlib import Path
 
 R = Path(__file__).resolve().parents[2]
@@ -23,7 +23,7 @@ BEATS = [
     "Same courtyard, medium-wide shot, the camera slowly pulls back. At 0.00 seconds the man lets the lid fall closed. At 2.50 seconds both stand up and look toward the dark archway at the back. At 4.50 seconds the woman steps toward the archway.",
     "Same courtyard, medium-wide shot from behind the two figures. At 0.00 seconds the man follows the woman toward the archway. At 2.50 seconds they stop together at its edge. At 4.50 seconds the woman glances back once at the crate before they continue into the shadow.",
 ]
-SHOTS = [HEAD + f"[Shot 1] {b} " + TAIL for b in BEATS]
+SHOTS = [HEAD + f"[Shot 1] {b} " + TAIL for b in BEATS][: int(os.environ.get("BENCH_SHOTS", "6"))]
 
 
 async def main():
@@ -35,10 +35,17 @@ async def main():
     rec = {"label": LABEL, "started_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "resolution": f"{w}x{h}", "shots": len(SHOTS),
            "frames_per_shot": 124, "sampling": sampling, "logs": []}
     t0 = time.time()
+    live = open(T / f"bench_{LABEL}.live.log", "a")  # survives a crash of this script: job id is in here
+
+    def on_log(m):
+        line = f"{time.time() - t0:7.1f}s {m}"
+        rec["logs"].append(line)
+        live.write(line + "\n"); live.flush()
+
     data, info, err = await run_multishot_from_files(
         script=join_shots_script(SHOTS), shot_count=len(SHOTS), width=w, height=h, frames_per_shot=124, seed=1234, checkpoint="fl2va",
         sampling=sampling, start_image_path=str(T / "photo_f0.png"), reference_image_paths=[],
-        on_log=lambda m: rec["logs"].append(f"{time.time() - t0:7.1f}s {m}"), fit_start_image=True)
+        on_log=on_log, fit_start_image=True)
     rec.update(wall_seconds=round(time.time() - t0, 1), runpod_status=info, error=err or None, video_bytes=len(data or b""))
     if data:
         (T / f"bench_{LABEL}.mp4").write_bytes(data)

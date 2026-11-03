@@ -1,0 +1,20 @@
+{
+  "label": "tile1024_64",
+  "kind": "seedvr2_upscale",
+  "src": "/opt/bench/skit.mp4",
+  "src_res": "1344x768",
+  "out_res": "2688x1536",
+  "model": "7b",
+  "frames": 17,
+  "total_frames": 727,
+  "segment": 17,
+  "overlap": 4,
+  "color": "lab",
+  "tile": 1024,
+  "tile_overlap": 64,
+  "segments": [],
+  "error": "segment 0: {\"status_str\": \"error\", \"completed\": false, \"messages\": [[\"execution_start\", {\"prompt_id\": \"89f47d86-245a-4761-b816-1eaab06fe1cc\", \"timestamp\": 1793699946022}], [\"execution_cached\", {\"nodes\": [\"3\", \"4\"], \"prompt_id\": \"89f47d86-245a-4761-b816-1eaab06fe1cc\", \"timestamp\": 1793699946024}], [\"execution_error\", {\"prompt_id\": \"89f47d86-245a-4761-b816-1eaab06fe1cc\", \"node_id\": \"9\", \"node_type\": \"VAEDecodeTiled\", \"executed\": [\"7\", \"5\", \"2\", \"8\", \"1\", \"6\"], \"exception_message\": \"Allocation on device 0 would exceed allowed memory. (out of memory)\\nCurrently allocated     : 10.74 GiB\\nRequested               : 2.50 GiB\\nDevice limit            : 23.60 GiB\\nFree (according to CUDA): 17.94 MiB\\nPyTorch limit (set by user-supplied memory fraction)\\n                        : 17179869184.00 GiB\\nThis error means you ran out of memory on your GPU.\\n\\nTIPS: If the workflow worked before you might have accidentally set the batch_size to a large number.\", \"exception_type\": \"torch.OutOfMemoryError\", \"traceback\": [\"  File \\\"/opt/comfyui/execution.py\\\", line 547, in execute\\n    output_data, output_ui, has_subgraph, has_pending_tasks = await get_output_data(prompt_id, unique_id, obj, input_data_all, execution_block_cb=execution_block_cb, pre_execute_cb=pre_execute_cb, v3_data=v3_data)\\n                                                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\n\",",
+  "started_utc": "2026-11-03T09:59:05Z",
+  "wall_seconds": 28.0,
+  "avg_segment_seconds": null
+}

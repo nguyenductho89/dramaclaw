@@ -1,0 +1,94 @@
+/opt/dramaclaw/previs_h3_test/scripts/snapshot_box.sh: line 29: /proc/sys/vm/drop_caches: Read-only file system
+snapshot -> /opt/dramaclaw/previs_h3_test/runs/20261103T095652Z_magenta-fox_tile512_128/meta.json
+{'i': 0, 'frames': '0-16', 'seconds': 52.0, 'gpu_seconds': 51.1}
+postrun done: box comfy.log mem.csv meta.json quality.json result.json segs steps.json sysmon.csv video.mp4 
+{
+  "label": "tile512_128",
+  "kind": "seedvr2_upscale",
+  "src": "/opt/bench/skit.mp4",
+  "src_res": "1344x768",
+  "out_res": "2688x1536",
+  "model": "7b",
+  "frames": 17,
+  "total_frames": 727,
+  "segment": 17,
+  "overlap": 4,
+  "color": "lab",
+  "tile": 512,
+  "tile_overlap": 128,
+  "error": null,
+  "started_utc": "2026-11-03T09:56:58Z",
+  "wall_seconds": 55.2,
+  "avg_segment_seconds": 52.0
+}
+run dir: /opt/dramaclaw/previs_h3_test/runs/20261103T095652Z_magenta-fox_tile512_128
+/opt/dramaclaw/previs_h3_test/scripts/snapshot_box.sh: line 29: /proc/sys/vm/drop_caches: Read-only file system
+snapshot -> /opt/dramaclaw/previs_h3_test/runs/20261103T095759Z_magenta-fox_tile768_96/meta.json
+{'i': 0, 'frames': '0-16', 'seconds': 46.0, 'gpu_seconds': 45.1}
+postrun done: box comfy.log mem.csv meta.json quality.json result.json segs steps.json sysmon.csv video.mp4 
+{
+  "label": "tile768_96",
+  "kind": "seedvr2_upscale",
+  "src": "/opt/bench/skit.mp4",
+  "src_res": "1344x768",
+  "out_res": "2688x1536",
+  "model": "7b",
+  "frames": 17,
+  "total_frames": 727,
+  "segment": 17,
+  "overlap": 4,
+  "color": "lab",
+  "tile": 768,
+  "tile_overlap": 96,
+  "error": null,
+  "started_utc": "2026-11-03T09:58:04Z",
+  "wall_seconds": 49.9,
+  "avg_segment_seconds": 46.0
+}
+run dir: /opt/dramaclaw/previs_h3_test/runs/20261103T095759Z_magenta-fox_tile768_96
+/opt/dramaclaw/previs_h3_test/scripts/snapshot_box.sh: line 29: /proc/sys/vm/drop_caches: Read-only file system
+snapshot -> /opt/dramaclaw/previs_h3_test/runs/20261103T095859Z_magenta-fox_tile1024_64/meta.json
+postrun done: box comfy.log mem.csv meta.json result.json segs steps.json sysmon.csv 
+{
+  "label": "tile1024_64",
+  "kind": "seedvr2_upscale",
+  "src": "/opt/bench/skit.mp4",
+  "src_res": "1344x768",
+  "out_res": "2688x1536",
+  "model": "7b",
+  "frames": 17,
+  "total_frames": 727,
+  "segment": 17,
+  "overlap": 4,
+  "color": "lab",
+  "tile": 1024,
+  "tile_overlap": 64,
+  "error": "segment 0: {\"status_str\": \"error\", \"completed\": false, \"messages\": [[\"execution_start\", {\"prompt_id\": \"89f47d86-245a-4761-b816-1eaab06fe1cc\", \"timestamp\": 1793699946022}], [\"execution_cached\", {\"nodes\": [\"3\", \"4\"], \"prompt_id\": \"89f47d86-245a-4761-b816-1eaab06fe1cc\", \"timestamp\": 1793699946024}], [\"execution_error\", {\"prompt_id\": \"89f47d86-245a-4761-b816-1eaab06fe1cc\", \"node_id\": \"9\", \"node_type\": \"VAEDecodeTiled\", \"executed\": [\"7\", \"5\", \"2\", \"8\", \"1\", \"6\"], \"exception_message\": \"Allocation on device 0 would exceed allowed memory. (out of memory)\\nCurrently allocated     : 10.74 GiB\\nRequested               : 2.50 GiB\\nDevice limit            : 23.60 GiB\\nFree (according to CUDA): 17.94 MiB\\nPyTorch limit (set by user-supplied memory fraction)\\n                        : 17179869184.00 GiB\\nThis error means you ran out of memory on your GPU.\\n\\nTIPS: If the workflow worked before you might have accidentally set the batch_size to a large number.\", \"exception_type\": \"torch.OutOfMemoryError\", \"traceback\": [\"  File \\\"/opt/comfyui/execution.py\\\", line 547, in execute\\n    output_data, output_ui, has_subgraph, has_pending_tasks = await get_output_data(prompt_id, unique_id, obj, input_data_all, execution_block_cb=execution_block_cb, pre_execute_cb=pre_execute_cb, v3_data=v3_data)\\n                                                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\n\",",
+  "started_utc": "2026-11-03T09:59:05Z",
+  "wall_seconds": 28.0,
+  "avg_segment_seconds": null
+}
+run dir: /opt/dramaclaw/previs_h3_test/runs/20261103T095859Z_magenta-fox_tile1024_64
+/opt/dramaclaw/previs_h3_test/scripts/snapshot_box.sh: line 29: /proc/sys/vm/drop_caches: Read-only file system
+snapshot -> /opt/dramaclaw/previs_h3_test/runs/20261103T095939Z_magenta-fox_tile1536_64/meta.json
+postrun done: box comfy.log mem.csv meta.json result.json segs steps.json sysmon.csv 
+{
+  "label": "tile1536_64",
+  "kind": "seedvr2_upscale",
+  "src": "/opt/bench/skit.mp4",
+  "src_res": "1344x768",
+  "out_res": "2688x1536",
+  "model": "7b",
+  "frames": 17,
+  "total_frames": 727,
+  "segment": 17,
+  "overlap": 4,
+  "color": "lab",
+  "tile": 1536,
+  "tile_overlap": 64,
+  "error": "segment 0: {\"status_str\": \"error\", \"completed\": false, \"messages\": [[\"execution_start\", {\"prompt_id\": \"2ed9307c-2950-4a52-be08-2d9ac08fbb62\", \"timestamp\": 1793699986024}], [\"execution_cached\", {\"nodes\": [\"3\", \"4\"], \"prompt_id\": \"2ed9307c-2950-4a52-be08-2d9ac08fbb62\", \"timestamp\": 1793699986026}], [\"execution_error\", {\"prompt_id\": \"2ed9307c-2950-4a52-be08-2d9ac08fbb62\", \"node_id\": \"6\", \"node_type\": \"VAEEncodeTiled\", \"executed\": [\"2\", \"5\", \"1\"], \"exception_message\": \"Allocation on device 0 would exceed allowed memory. (out of memory)\\nCurrently allocated     : 18.55 GiB\\nRequested               : 2.81 GiB\\nDevice limit            : 23.60 GiB\\nFree (according to CUDA): 27.94 MiB\\nPyTorch limit (set by user-supplied memory fraction)\\n                        : 17179869184.00 GiB\\nThis error means you ran out of memory on your GPU.\\n\\nTIPS: If the workflow worked before you might have accidentally set the batch_size to a large number.\", \"exception_type\": \"torch.OutOfMemoryError\", \"traceback\": [\"  File \\\"/opt/comfyui/execution.py\\\", line 547, in execute\\n    output_data, output_ui, has_subgraph, has_pending_tasks = await get_output_data(prompt_id, unique_id, obj, input_data_all, execution_block_cb=execution_block_cb, pre_execute_cb=pre_execute_cb, v3_data=v3_data)\\n                                                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\n\", \"  File \\\"/opt",
+  "started_utc": "2026-11-03T09:59:45Z",
+  "wall_seconds": 4.0,
+  "avg_segment_seconds": null
+}
+run dir: /opt/dramaclaw/previs_h3_test/runs/20261103T095939Z_magenta-fox_tile1536_64

@@ -1,0 +1,5 @@
+    0.0s submitted prompt 66dafc56-fa4c-4c62-ad95-bea7677dfd6c
+    5.0s running=1 pending=0
+  100.4s event execution_start {"prompt_id": "66dafc56-fa4c-4c62-ad95-bea7677dfd6c", "timestamp": 1793690013619}
+  100.4s event execution_cached {"nodes": [], "prompt_id": "66dafc56-fa4c-4c62-ad95-bea7677dfd6c", "timestamp": 1793690013623}
+  100.4s event execution_success {"prompt_id": "66dafc56-fa4c-4c62-ad95-bea7677dfd6c", "timestamp": 1793690113652}

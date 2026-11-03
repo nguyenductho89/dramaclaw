@@ -1,0 +1,158 @@
+2026-11-03T09:59:46 [32m[INFO][0m got prompt
+2026-11-03T09:59:46 [32m[INFO][0m Requested to load VideoAutoencoderKLWrapper
+2026-11-03T09:59:46 [32m[INFO][0m loaded completely;  478.07 MB loaded, full load: True
+2026-11-03T09:59:47 [1m[31m[ERROR][0m !!! Exception during processing !!! Allocation on device 0 would exceed allowed memory. (out of memory)
+2026-11-03T09:59:47 Currently allocated     : 18.55 GiB
+2026-11-03T09:59:47 Requested               : 2.81 GiB
+2026-11-03T09:59:47 Device limit            : 23.60 GiB
+2026-11-03T09:59:47 Free (according to CUDA): 27.94 MiB
+2026-11-03T09:59:47 PyTorch limit (set by user-supplied memory fraction)
+2026-11-03T09:59:47                         : 17179869184.00 GiB
+2026-11-03T09:59:47 [1m[31m[ERROR][0m Traceback (most recent call last):
+2026-11-03T09:59:47   File "/opt/comfyui/execution.py", line 547, in execute
+2026-11-03T09:59:47     output_data, output_ui, has_subgraph, has_pending_tasks = await get_output_data(prompt_id, unique_id, obj, input_data_all, execution_block_cb=execution_block_cb, pre_execute_cb=pre_execute_cb, v3_data=v3_data)
+2026-11-03T09:59:47                                                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:59:47   File "/opt/comfyui/execution.py", line 352, in get_output_data
+2026-11-03T09:59:47     return_values = await _async_map_node_over_list(prompt_id, unique_id, obj, input_data_all, obj.FUNCTION, allow_interrupt=True, execution_block_cb=execution_block_cb, pre_execute_cb=pre_execute_cb, v3_data=v3_data)
+2026-11-03T09:59:47                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:59:47   File "/opt/comfyui/execution.py", line 326, in _async_map_node_over_list
+2026-11-03T09:59:47     await process_inputs(input_dict, i)
+2026-11-03T09:59:47   File "/opt/comfyui/execution.py", line 314, in process_inputs
+2026-11-03T09:59:47     result = f(**inputs)
+2026-11-03T09:59:47              ^^^^^^^^^^^
+2026-11-03T09:59:47   File "/opt/comfyui/nodes.py", line 409, in encode
+2026-11-03T09:59:47     t = vae.encode_tiled(pixels, tile_x=tile_size, tile_y=tile_size, overlap=overlap, tile_t=temporal_size, overlap_t=temporal_overlap)
+2026-11-03T09:59:47         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:59:47   File "/opt/comfyui/comfy/sd.py", line 1480, in encode_tiled
+2026-11-03T09:59:47     samples = self._encode_tiled_owned(pixel_samples, **self._owned_tiled_args(tile_x, tile_y, overlap, tile_t, overlap_t))
+2026-11-03T09:59:47               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:59:47   File "/opt/comfyui/comfy/sd.py", line 1234, in _encode_tiled_owned
+2026-11-03T09:59:47     out = self.first_stage_model.encode_tiled(x, **kwargs)
+2026-11-03T09:59:47           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:59:47   File "/opt/comfyui/comfy/ldm/seedvr/vae.py", line 1564, in encode_tiled
+2026-11-03T09:59:47     return tiled_vae(
+2026-11-03T09:59:47            ^^^^^^^^^^
+2026-11-03T09:59:47   File "/opt/comfyui/comfy/ldm/seedvr/vae.py", line 163, in tiled_vae
+2026-11-03T09:59:47     for _, y_idx, y_end, x_idx, x_end, tile_out in ordered_tile_outputs:
+2026-11-03T09:59:47                                                    ^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:59:47   File "/opt/comfyui/comfy/ldm/seedvr/vae.py", line 159, in <genexpr>
+2026-11-03T09:59:47     run_tile(tile_index, tile_range)
+2026-11-03T09:59:47   File "/opt/comfyui/comfy/ldm/seedvr/vae.py", line 155, in run_tile
+2026-11-03T09:59:47     tile_out = run_temporal_chunks(tile_x)
+2026-11-03T09:59:47                ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:59:47   File "/opt/comfyui/comfy/ldm/seedvr/vae.py", line 118, in run_temporal_chunks
+2026-11-03T09:59:47     out = model.encode(t_chunk)
+2026-11-03T09:59:47           ^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:59:47   File "/opt/comfyui/comfy/ldm/seedvr/vae.py", line 1467, in encode
+2026-11-03T09:59:47     z, _ = self._encode_with_raw_latent(x)
+2026-11-03T09:59:47            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:59:47   File "/opt/comfyui/comfy/ldm/seedvr/vae.py", line 1462, in _encode_with_raw_latent
+2026-11-03T09:59:47     p = super().encode(x)
+2026-11-03T09:59:47         ^^^^^^^^^^^^^^^^^
+2026-11-03T09:59:47   File "/opt/comfyui/comfy/ldm/seedvr/vae.py", line 1349, in encode
+2026-11-03T09:59:47     h = self.slicing_encode(x)
+2026-11-03T09:59:47         ^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:59:47   File "/opt/comfyui/comfy/ldm/seedvr/vae.py", line 1394, in slicing_encode
+2026-11-03T09:59:47     self._encode(
+2026-11-03T09:59:47   File "/opt/comfyui/comfy/ldm/seedvr/vae.py", line 1371, in _encode
+2026-11-03T09:59:47     h = self.encoder(_x, memory_state=memory_state, memory_cache=memory_cache)
+2026-11-03T09:59:47         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:59:47   File "/opt/venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1779, in _wrapped_call_impl
+2026-11-03T09:59:47     return self._call_impl(*args, **kwargs)
+2026-11-03T09:59:47            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:59:47   File "/opt/venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1790, in _call_impl
+2026-11-03T09:59:47     return forward_call(*args, **kwargs)
+2026-11-03T09:59:47            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:59:47   File "/opt/comfyui/comfy/ldm/seedvr/vae.py", line 1187, in forward
+2026-11-03T09:59:47     sample = down_block(sample, memory_state=memory_state, memory_cache=memory_cache)
+2026-11-03T09:59:47              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:59:47   File "/opt/venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1779, in _wrapped_call_impl
+2026-11-03T09:59:47     return self._call_impl(*args, **kwargs)
+2026-11-03T09:59:47            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:59:47   File "/opt/venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1790, in _call_impl
+2026-11-03T09:59:47     return forward_call(*args, **kwargs)
+2026-11-03T09:59:47            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:59:47   File "/opt/comfyui/comfy/ldm/seedvr/vae.py", line 934, in forward
+2026-11-03T09:59:47     hidden_states = resnet(hidden_states, temb=None, memory_state=memory_state, memory_cache=memory_cache)
+2026-11-03T09:59:47                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:59:47   File "/opt/venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1779, in _wrapped_call_impl
+2026-11-03T09:59:47     return self._call_impl(*args, **kwargs)
+2026-11-03T09:59:47            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:59:47   File "/opt/venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1790, in _call_impl
+2026-11-03T09:59:47     return forward_call(*args, **kwargs)
+2026-11-03T09:59:47            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:59:47   File "/opt/comfyui/comfy/ldm/seedvr/vae.py", line 867, in forward
+2026-11-03T09:59:47     hidden_states = self.conv2(hidden_states, memory_state=memory_state, memory_cache=memory_cache)
+2026-11-03T09:59:47                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:59:47   File "/opt/venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1779, in _wrapped_call_impl
+2026-11-03T09:59:47     return self._call_impl(*args, **kwargs)
+2026-11-03T09:59:47            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:59:47   File "/opt/venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1790, in _call_impl
+2026-11-03T09:59:47     return forward_call(*args, **kwargs)
+2026-11-03T09:59:47            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:59:47   File "/opt/comfyui/comfy/ldm/seedvr/vae.py", line 591, in forward
+2026-11-03T09:59:47     return self.slicing_forward(input, memory_state, memory_cache)
+2026-11-03T09:59:47            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:59:47   File "/opt/comfyui/comfy/ldm/seedvr/vae.py", line 656, in slicing_forward
+2026-11-03T09:59:47     input[i] = self.memory_limit_conv(
+2026-11-03T09:59:47                ^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:59:47   File "/opt/comfyui/comfy/ldm/seedvr/vae.py", line 571, in memory_limit_conv
+2026-11-03T09:59:47     output = torch.cat(x, dim=split_dim)
+2026-11-03T09:59:47              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:59:47 torch.OutOfMemoryError: Allocation on device 0 would exceed allowed memory. (out of memory)
+2026-11-03T09:59:47 Currently allocated     : 18.55 GiB
+2026-11-03T09:59:47 Requested               : 2.81 GiB
+2026-11-03T09:59:47 Device limit            : 23.60 GiB
+2026-11-03T09:59:47 Free (according to CUDA): 27.94 MiB
+2026-11-03T09:59:47 PyTorch limit (set by user-supplied memory fraction)
+2026-11-03T09:59:47                         : 17179869184.00 GiB
+2026-11-03T09:59:47 [32m[INFO][0m Memory summary:
+2026-11-03T09:59:47 |===========================================================================|
+2026-11-03T09:59:47 |                  PyTorch CUDA memory summary, device ID 0                 |
+2026-11-03T09:59:47 |---------------------------------------------------------------------------|
+2026-11-03T09:59:47 |            CUDA OOMs: 0            |        cudaMalloc retries: 0         |
+2026-11-03T09:59:47 |===========================================================================|
+2026-11-03T09:59:47 |        Metric         | Cur Usage  | Peak Usage | Tot Alloc  | Tot Freed  |
+2026-11-03T09:59:47 |---------------------------------------------------------------------------|
+2026-11-03T09:59:47 | Allocated memory      |  18996 MiB |  22326 MiB |      0 B   |      0 B   |
+2026-11-03T09:59:47 |       from large pool |      0 MiB |      0 MiB |      0 B   |      0 B   |
+2026-11-03T09:59:47 |       from small pool |      0 MiB |      0 MiB |      0 B   |      0 B   |
+2026-11-03T09:59:47 |---------------------------------------------------------------------------|
+2026-11-03T09:59:47 | Active memory         |  18996 MiB |  22326 MiB |      0 B   |      0 B   |
+2026-11-03T09:59:47 |       from large pool |      0 MiB |      0 MiB |      0 B   |      0 B   |
+2026-11-03T09:59:47 |       from small pool |      0 MiB |      0 MiB |      0 B   |      0 B   |
+2026-11-03T09:59:47 |---------------------------------------------------------------------------|
+2026-11-03T09:59:47 | Requested memory      |      0 B   |      0 B   |      0 B   |      0 B   |
+2026-11-03T09:59:47 |       from large pool |      0 B   |      0 B   |      0 B   |      0 B   |
+2026-11-03T09:59:47 |       from small pool |      0 B   |      0 B   |      0 B   |      0 B   |
+2026-11-03T09:59:47 |---------------------------------------------------------------------------|
+2026-11-03T09:59:47 | GPU reserved memory   |  19136 MiB |  23584 MiB |      0 B   |      0 B   |
+2026-11-03T09:59:47 |       from large pool |      0 MiB |      0 MiB |      0 B   |      0 B   |
+2026-11-03T09:59:47 |       from small pool |      0 MiB |      0 MiB |      0 B   |      0 B   |
+2026-11-03T09:59:47 |---------------------------------------------------------------------------|
+2026-11-03T09:59:47 | Non-releasable memory |      0 B   |      0 B   |      0 B   |      0 B   |
+2026-11-03T09:59:47 |       from large pool |      0 B   |      0 B   |      0 B   |      0 B   |
+2026-11-03T09:59:47 |       from small pool |      0 B   |      0 B   |      0 B   |      0 B   |
+2026-11-03T09:59:47 |---------------------------------------------------------------------------|
+2026-11-03T09:59:47 | Allocations           |       0    |       0    |       0    |       0    |
+2026-11-03T09:59:47 |       from large pool |       0    |       0    |       0    |       0    |
+2026-11-03T09:59:47 |       from small pool |       0    |       0    |       0    |       0    |
+2026-11-03T09:59:47 |---------------------------------------------------------------------------|
+2026-11-03T09:59:47 | Active allocs         |       0    |       0    |       0    |       0    |
+2026-11-03T09:59:47 |       from large pool |       0    |       0    |       0    |       0    |
+2026-11-03T09:59:47 |       from small pool |       0    |       0    |       0    |       0    |
+2026-11-03T09:59:47 |---------------------------------------------------------------------------|
+2026-11-03T09:59:47 | GPU reserved segments |       0    |       0    |       0    |       0    |
+2026-11-03T09:59:47 |       from large pool |       0    |       0    |       0    |       0    |
+2026-11-03T09:59:47 |       from small pool |       0    |       0    |       0    |       0    |
+2026-11-03T09:59:47 |---------------------------------------------------------------------------|
+2026-11-03T09:59:47 | Non-releasable allocs |       0    |       0    |       0    |       0    |
+2026-11-03T09:59:47 |       from large pool |       0    |       0    |       0    |       0    |
+2026-11-03T09:59:47 |       from small pool |       0    |       0    |       0    |       0    |
+2026-11-03T09:59:47 |---------------------------------------------------------------------------|
+2026-11-03T09:59:47 | Oversize allocations  |       0    |       0    |       0    |       0    |
+2026-11-03T09:59:47 |---------------------------------------------------------------------------|
+2026-11-03T09:59:47 | Oversize GPU segments |       0    |       0    |       0    |       0    |
+2026-11-03T09:59:47 |===========================================================================|
+2026-11-03T09:59:47 [1m[31m[ERROR][0m Got an OOM, unloading all loaded models.
+2026-11-03T09:59:47 [32m[INFO][0m [32mPrompt executed in 1.80 seconds[0m

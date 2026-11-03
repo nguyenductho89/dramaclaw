@@ -1,0 +1,41 @@
+{
+  "file": "/opt/dramaclaw/previs_h3_test/runs/20261103T095759Z_magenta-fox_tile768_96/video.mp4",
+  "ffprobe": {
+    "programs": [],
+    "streams": [
+      {
+        "codec_name": "h264",
+        "codec_type": "video",
+        "width": 2688,
+        "height": 1536,
+        "r_frame_rate": "24/1",
+        "duration": "0.708333",
+        "bit_rate": "14167216",
+        "nb_frames": "17"
+      }
+    ],
+    "format": {
+      "duration": "0.709000",
+      "size": "1255468",
+      "bit_rate": "14166070"
+    }
+  },
+  "luma": {
+    "samples": 3,
+    "mean": 78.75,
+    "first": 79.31,
+    "last": 78.32,
+    "min": 78.32,
+    "max": 79.31,
+    "max_jump": 0.71,
+    "first_tenth_mean": 79.31,
+    "last_tenth_mean": 78.32
+  },
+  "frame_bytes": {
+    "count": 17,
+    "mean": 73788,
+    "min": 8123,
+    "max": 316222
+  },
+  "laplacian_var": "skipped: ModuleNotFoundError"
+}

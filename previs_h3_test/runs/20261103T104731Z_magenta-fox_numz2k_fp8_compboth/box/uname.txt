@@ -1,0 +1,1 @@
+Linux magenta-fox 7.2.10-sp1 #1 SMP PREEMPT_DYNAMIC Wed Oct 14 07:35:29 UTC 2026 x86_64 x86_64 x86_64 GNU/Linux

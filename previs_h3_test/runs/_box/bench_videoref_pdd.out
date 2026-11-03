@@ -1,0 +1,14 @@
+/opt/dramaclaw/previs_h3_test/scripts/snapshot_box.sh: line 29: /proc/sys/vm/drop_caches: Read-only file system
+snapshot -> /opt/dramaclaw/previs_h3_test/runs/20261103T083900Z_magenta-fox_videoref_pdd/meta.json
+postrun done: box comfy.log graph.json mem.csv meta.json quality.json result.json steps.json sysmon.csv video.mp4 
+{
+  "label": "videoref_pdd",
+  "variant": "B video-ref mode=pdd use_video=True",
+  "frames": 124,
+  "resolution": "1344x768",
+  "started_utc": "2026-11-03T08:39:05Z",
+  "wall_seconds": 420.1,
+  "video_bytes": 9383873,
+  "helper_errors": []
+}
+run dir: /opt/dramaclaw/previs_h3_test/runs/20261103T083900Z_magenta-fox_videoref_pdd

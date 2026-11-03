@@ -1,0 +1,24 @@
+/opt/dramaclaw/previs_h3_test/scripts/snapshot_box.sh: line 29: /proc/sys/vm/drop_caches: Read-only file system
+snapshot -> /opt/dramaclaw/previs_h3_test/runs/20261103T075535Z_magenta-fox_probe2x294_base20/meta.json
+{
+  "label": "probe2x294_base20",
+  "box": "rented-4090-local",
+  "started_utc": "2026-11-03T07:55:46Z",
+  "run_dir": "20261103T075535Z_magenta-fox_probe2x294_base20",
+  "comfy_url": "http://127.0.0.1:8188",
+  "resolution": "1344x768",
+  "shots": 2,
+  "frames_per_shot": 294,
+  "sampling": {
+    "pdd_nfe": "",
+    "pdd_file": "",
+    "turbo_lora": "",
+    "chain_normalize": "off",
+    "steps": 20,
+    "output_scale": 1.0
+  },
+  "wall_seconds": 2145.7,
+  "error": null,
+  "video_bytes": 23344267
+}
+run dir: /opt/dramaclaw/previs_h3_test/runs/20261103T075535Z_magenta-fox_probe2x294_base20

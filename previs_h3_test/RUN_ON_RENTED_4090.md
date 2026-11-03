@@ -31,14 +31,32 @@ nvidia-smi --query-gpu=name,driver_version --format=csv
 Đạt khi: thấy 4090, import `torch, triton, sageattention` OK, `object_info` có các node H3/Multishot, ô chọn của `UNETLoader`/`CLIPLoader`/`VAELoader` hiện đủ tên file model.
 
 ## 4. Chạy benchmark
-Để đo RAM/VRAM, chạy song song `previs_h3_test/scripts/memmon.sh` (script này đọc cgroup v1 của RunPod; trên máy thường cần sửa sang `free -m` / `/proc/meminfo`).
+```bash
+cd /opt/dramaclaw && BENCH_SHOTS=2 BENCH_FRAMES=25 BENCH_NOTE="nvme, ram đầy đủ" /opt/venv/bin/python previs_h3_test/scripts/bench_multishot30_local.py t2x25_pdd
+```
+Mỗi lần chạy tự lưu đủ căn cứ vào `previs_h3_test/runs/<UTC ts>_<host>_<label>/`:
+- `meta.json` + `box/`: GPU/driver, CPU, RAM, cgroup `MemoryMax`, ổ chứa model (model, ROTA, TRAN), tốc độ đọc ổ đo bằng `dd` (lạnh nếu drop được cache), `pip freeze`, commit ComfyUI/custom node/repo, `run_comfy.sh`, yaml model, kích thước file model, biến `BENCH_*`/`RUNPOD_H3_*`.
+- `mem.csv` (2 s/dòng): VRAM, GPU util/power/nhiệt, RAM available/cached/dirty, swap, cgroup, RSS/HWM của ComfyUI, MB/s đọc đĩa.
+- `comfy.log`: đoạn log server ComfyUI của đúng lần chạy (có dấu giờ, từ `/opt/bench/comfy_server.log`).
+- `phases.json`: thời gian từng pha từng shot (encode text, DiT, init, sampling, s/bước, decode video/audio) tách bằng `parse_h3_log.py`. Parser đã khớp đúng bảng RunPod trong `bench_4090_ms30_analysis.md`.
+- `sysmon.csv` (`sysmon.py`): CPU %, load, CPU/threads của ComfyUI, **MB/s model nạp thật** (đọc `/proc/<pid>/io`, đúng cả khi ổ là overlay), xung nhịp GPU (SM/mem, max), **mã throttle GPU** (vd `0x4` = chạm giới hạn công suất), PCIe gen/width, nhiệt, mạng.
+- `steps.json` (`parse_steps.py`): thời gian từng bước sampling của từng shot/pass (bước đầu gồm Model Initializing).
+- `quality.json` (`video_quality.py`): ffprobe (độ phân giải, fps, bitrate, audio), độ sáng trung bình/đầu/cuối/nhảy lớn nhất, kích thước frame, Laplacian (nếu có OpenCV). Chỉ để so giữa các lần chạy, không thay cho xem bằng mắt.
+- `graph.json`, `result.json`, `live.log`, `video.mp4`. `postrun.sh <run_dir>` chạy lại `steps.json`/`quality.json` cho run cũ.
+- Một dòng thêm vào `previs_h3_test/runs/index.csv` để so các lần thuê/cấu hình.
 
-**Việc còn thiếu:** `previs_h3_test/scripts/bench_multishot30_local.py` chưa được viết. Ý định: tái dùng `BEATS`/`SHOTS` của `bench_multishot30.py` và `build_h3_multishot_graph()`, `dims_for_multishot`, `multishot_sampling_plan`, `join_shots_script` trong `src/novelvideo/generators/runpod_minimax_h3_multishot_video.py`; thay phần R2/RunPod bằng `POST /upload/image` (ảnh `photo_f0.png`), `POST /prompt`, theo dõi `/history/{id}`, tải video qua `/view`. Ghi kết quả `bench_4090local_ms30.json` cùng định dạng bản RunPod.
+Đổi cấu hình (mỗi biến thể một lần 2×25, label và `BENCH_NOTE` mô tả cấu hình; khởi động lại ComfyUI với biến tương ứng):
+- RAM: không giới hạn nhân tạo, luôn dùng RAM thật của máy thuê. Muốn so RAM khác thì thuê máy cấu hình khác; dung lượng thật được ghi vào `meta.json` và `index.csv`.
+- Ổ: chép model sang thư mục khác (vd `/dev/shm/models` khi RAM đủ) và đặt `COMFY_MODEL_PATHS=<yaml khác>`, `BENCH_MODELS=<thư mục đó>` để `dd` đo đúng ổ.
+- Cờ ComfyUI: `COMFY_EXTRA_ARGS="..."`.
 
-Thứ tự chạy:
-1. `BENCH_SHOTS=2` (~15–25 phút) để bắt lỗi graph.
-2. Đủ 6 shot, **lần 1** (page cache trống).
-3. Đủ 6 shot, **lần 2** ngay sau (trọng số còn trong page cache). Hai lần tách "đọc đĩa" khỏi "khởi tạo DiT".
+Thứ tự chạy (đã tối ưu, ước ~2,5 giờ thay vì ~4 giờ):
+1. `BENCH_SHOTS=2 BENCH_FRAMES=25` có PDD (~10–15 phút): bắt lỗi graph. Init không phụ thuộc số khung nên vẫn thấy "Model Initializing" mỗi shot. Nếu init vẫn 5–6 phút/shot khi model nằm trên NVMe + RAM 120 GB thì không phải do ổ chậm.
+2. `BENCH_SHOTS=2 BENCH_FRAMES=25 BENCH_PDD=""` (chẩn đoán, bỏ PDD): nếu init giảm hẳn thì nút thắt là việc vá PDD lên DiT mỗi shot (giả thuyết, chưa kiểm).
+3. Đọc `python main.py --help` và mã node `ComfyUI-H3-Multishot` tìm cờ giữ trọng số giữa các shot; chỉ thử cái có thật.
+4. Làm nóng cache: `cat /opt/models/*/*.safetensors > /dev/null`, rồi chạy **một** lần đủ 6 shot (`bench_multishot30_local.py run1`). Bỏ lần "page cache trống" vì NVMe đọc 41 GB chỉ ~7 s.
+
+Script setup đã tải model nền song song và kiểm import `novelvideo` (cần `PYTHONPATH=/opt/dramaclaw/src`). Script bench tự đặt PDD 8 và tắt realism LoRA để khớp bản RunPod.
 
 ## 5. Đọc kết quả
 Chỉ số: thời gian từng shot; thời gian Model Initializing / encode text / 8 bước sampling / decode VAE (từ log ComfyUI); đỉnh RAM; đỉnh VRAM; có OOM không. So với bản RunPod 4090: tổng 91,4 phút, init 5,4–6,8 phút mỗi shot, sampling 8 bước ~90 s.
@@ -47,4 +65,4 @@ Chỉ số: thời gian từng shot; thời gian Model Initializing / encode tex
 - Ghi kết quả vào `previs_h3_test/bench_4090_ms30_analysis.md` và `.claude/CLAUDE.md`.
 
 ## 6. Chi phí và dọn dẹp
-Cài ~1 giờ; mỗi lần bench 30 s ~1,5 giờ; tổng ~4 giờ ≈ 90.000đ. **Tắt/xoá máy khi xong.** Copy video và JSON kết quả về trước khi xoá.
+Cài ~1 giờ; mỗi lần bench 30 s ~1,5 giờ; tổng ~2,5 giờ ≈ 60.000đ. **Tắt/xoá máy khi xong.** Trước khi xoá máy, chép về: `rsync -av <box>:/opt/dramaclaw/previs_h3_test/runs/ previs_h3_test/runs/` và `scp <box>:/opt/bench/comfy_server.log previs_h3_test/runs/`. Commit toàn bộ thư mục `runs/` (meta, box, mem.csv, comfy.log, phases.json, result.json, index.csv, video).

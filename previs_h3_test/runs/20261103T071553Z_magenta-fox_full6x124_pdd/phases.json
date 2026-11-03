@@ -1,0 +1,114 @@
+{
+  "shots": [
+    {
+      "shot": 1,
+      "of": 6,
+      "start": "2026-11-03T07:16:04",
+      "encode_text_s": 17.0,
+      "dit_s": null,
+      "init_s": 13.85,
+      "sampling_s": 97,
+      "s_per_step": 12.41,
+      "decode_video_s": null,
+      "decode_audio_s": 3.0,
+      "shot_total_s": 136.0,
+      "dit_free_gb": 21.2,
+      "missing": [
+        "dit_s",
+        "decode_video_s"
+      ]
+    },
+    {
+      "shot": 2,
+      "of": 6,
+      "start": "2026-11-03T07:18:20",
+      "encode_text_s": 17.0,
+      "dit_s": 102.0,
+      "init_s": 14.4,
+      "sampling_s": 94,
+      "s_per_step": 12.34,
+      "decode_video_s": 17.0,
+      "decode_audio_s": 4.0,
+      "shot_total_s": 140.0,
+      "dit_free_gb": 18.3,
+      "missing": []
+    },
+    {
+      "shot": 3,
+      "of": 6,
+      "start": "2026-11-03T07:20:40",
+      "encode_text_s": 16.0,
+      "dit_s": 102.0,
+      "init_s": 14.71,
+      "sampling_s": 94,
+      "s_per_step": 12.38,
+      "decode_video_s": 18.0,
+      "decode_audio_s": 4.0,
+      "shot_total_s": 140.0,
+      "dit_free_gb": 18.3,
+      "missing": []
+    },
+    {
+      "shot": 4,
+      "of": 6,
+      "start": "2026-11-03T07:23:00",
+      "encode_text_s": 17.0,
+      "dit_s": 102.0,
+      "init_s": 14.33,
+      "sampling_s": 94,
+      "s_per_step": 12.39,
+      "decode_video_s": 17.0,
+      "decode_audio_s": 3.0,
+      "shot_total_s": 139.0,
+      "dit_free_gb": 18.3,
+      "missing": []
+    },
+    {
+      "shot": 5,
+      "of": 6,
+      "start": "2026-11-03T07:25:20",
+      "encode_text_s": 16.0,
+      "dit_s": 102.0,
+      "init_s": 14.13,
+      "sampling_s": 94,
+      "s_per_step": 12.38,
+      "decode_video_s": 17.0,
+      "decode_audio_s": 4.0,
+      "shot_total_s": 139.0,
+      "dit_free_gb": 18.3,
+      "missing": []
+    },
+    {
+      "shot": 6,
+      "of": 6,
+      "start": "2026-11-03T07:27:39",
+      "encode_text_s": 17.0,
+      "dit_s": 102.0,
+      "init_s": 14.57,
+      "sampling_s": 94,
+      "s_per_step": 12.36,
+      "decode_video_s": 17.0,
+      "decode_audio_s": 4.0,
+      "shot_total_s": 140.0,
+      "dit_free_gb": 18.3,
+      "missing": []
+    }
+  ],
+  "storage_policy": [],
+  "staged_mb": {
+    "MiniMaxH3TEModel_": 14956,
+    "MiniMaxH3VideoVAE": 4965,
+    "MiniMaxH3": 19995,
+    "MiniMaxH3AudioVAE": 576
+  },
+  "avg": {
+    "encode_text_s": 16.7,
+    "dit_s": 102.0,
+    "init_s": 14.3,
+    "sampling_s": 94.5,
+    "s_per_step": 12.4,
+    "decode_video_s": 17.2,
+    "decode_audio_s": 3.7,
+    "shot_total_s": 139.0
+  }
+}

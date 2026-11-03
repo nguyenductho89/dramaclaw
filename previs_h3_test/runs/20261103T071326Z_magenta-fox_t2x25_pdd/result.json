@@ -1,0 +1,29 @@
+{
+  "label": "t2x25_pdd",
+  "box": "rented-4090-local",
+  "started_utc": "2026-11-03T07:13:33Z",
+  "run_dir": "20261103T071326Z_magenta-fox_t2x25_pdd",
+  "comfy_url": "http://127.0.0.1:8188",
+  "resolution": "1344x768",
+  "shots": 2,
+  "frames_per_shot": 25,
+  "sampling": {
+    "pdd_nfe": "8",
+    "pdd_file": "MiniMax-H3-FL2VA-Acc-8Step.safetensors",
+    "turbo_lora": "",
+    "chain_normalize": "off",
+    "steps": 8,
+    "output_scale": 1.0
+  },
+  "logs": [
+    "    0.0s submitted prompt 66dafc56-fa4c-4c62-ad95-bea7677dfd6c",
+    "    5.0s running=1 pending=0",
+    "  100.4s event execution_start {\"prompt_id\": \"66dafc56-fa4c-4c62-ad95-bea7677dfd6c\", \"timestamp\": 1793690013619}",
+    "  100.4s event execution_cached {\"nodes\": [], \"prompt_id\": \"66dafc56-fa4c-4c62-ad95-bea7677dfd6c\", \"timestamp\": 1793690013623}",
+    "  100.4s event execution_success {\"prompt_id\": \"66dafc56-fa4c-4c62-ad95-bea7677dfd6c\", \"timestamp\": 1793690113652}"
+  ],
+  "wall_seconds": 100.4,
+  "error": null,
+  "video_bytes": 3597062,
+  "helper_errors": []
+}

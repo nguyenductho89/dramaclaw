@@ -1,0 +1,213 @@
+2026-11-03T09:29:57 [32m[INFO][0m got prompt
+2026-11-03T09:29:58 [32m[INFO][0m Model storage policy: fast_disk=False paths=['/opt/models/vae/seedvr2_ema_vae_fp16.safetensors']
+2026-11-03T09:29:58 [32m[INFO][0m Using pytorch attention in VAE
+2026-11-03T09:29:58 [32m[INFO][0m Using pytorch attention in VAE
+2026-11-03T09:29:58 [32m[INFO][0m VAE load device: cuda:0, offload device: cpu, dtype: torch.float16
+2026-11-03T09:29:58 [32m[INFO][0m Requested to load VideoAutoencoderKLWrapper
+2026-11-03T09:30:01 [32m[INFO][0m loaded completely;  478.07 MB loaded, full load: True
+2026-11-03T09:30:31 [32m[INFO][0m Found quantization metadata version 1
+2026-11-03T09:30:31 [32m[INFO][0m Detected mixed precision quantization
+2026-11-03T09:30:31 [32m[INFO][0m Using mixed precision operations
+2026-11-03T09:30:31 [32m[INFO][0m Native ops: float8_e4m3fn, float8_e5m2, int8_tensorwise, convrot_w4a4, asym_w4a8_int8 , emulated ops: nvfp4, mxfp8
+2026-11-03T09:30:31 [32m[INFO][0m model weight dtype torch.bfloat16, manual cast: torch.bfloat16
+2026-11-03T09:30:31 [32m[INFO][0m model_type FLOW
+2026-11-03T09:30:31 [32m[INFO][0m Model storage policy: fast_disk=False paths=['/opt/models/diffusion_models/seedvr2_7b_int8_convrot.safetensors']
+2026-11-03T09:30:32 [32m[INFO][0m Requested to load SeedVR2
+2026-11-03T09:30:32 [32m[INFO][0m 0 models unloaded.
+2026-11-03T09:30:32 [32m[INFO][0m Model SeedVR2 prepared for dynamic VRAM loading. 7944MB Staged. 0 patches attached. Force pre-loaded 576 weights: 3853 KB.
+2026-11-03T09:30:32   0%|          | 0/1 [00:00<?, ?it/s]
+2026-11-03T09:30:35   0%|          | 0/1 [00:00<?, ?it/s,   Model Initializing ...  ]
+2026-11-03T09:30:35   0%|          | 0/1 [00:02<?, ?it/s,   Model Initializing ...  ]
+2026-11-03T09:30:35 [1m[31m[ERROR][0m !!! Exception during processing !!! Allocation on device 0 would exceed allowed memory. (out of memory)
+2026-11-03T09:30:35 Currently allocated     : 19.90 GiB
+2026-11-03T09:30:35 Requested               : 2.03 GiB
+2026-11-03T09:30:35 Device limit            : 23.60 GiB
+2026-11-03T09:30:35 Free (according to CUDA): 3.94 MiB
+2026-11-03T09:30:35 PyTorch limit (set by user-supplied memory fraction)
+2026-11-03T09:30:35                         : 17179869184.00 GiB
+2026-11-03T09:30:35 [1m[31m[ERROR][0m Traceback (most recent call last):
+2026-11-03T09:30:35   File "/opt/comfyui/execution.py", line 547, in execute
+2026-11-03T09:30:35     output_data, output_ui, has_subgraph, has_pending_tasks = await get_output_data(prompt_id, unique_id, obj, input_data_all, execution_block_cb=execution_block_cb, pre_execute_cb=pre_execute_cb, v3_data=v3_data)
+2026-11-03T09:30:35                                                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:30:35   File "/opt/comfyui/execution.py", line 352, in get_output_data
+2026-11-03T09:30:35     return_values = await _async_map_node_over_list(prompt_id, unique_id, obj, input_data_all, obj.FUNCTION, allow_interrupt=True, execution_block_cb=execution_block_cb, pre_execute_cb=pre_execute_cb, v3_data=v3_data)
+2026-11-03T09:30:35                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:30:35   File "/opt/comfyui/execution.py", line 326, in _async_map_node_over_list
+2026-11-03T09:30:35     await process_inputs(input_dict, i)
+2026-11-03T09:30:35   File "/opt/comfyui/execution.py", line 314, in process_inputs
+2026-11-03T09:30:35     result = f(**inputs)
+2026-11-03T09:30:35              ^^^^^^^^^^^
+2026-11-03T09:30:35   File "/opt/comfyui/nodes.py", line 1624, in sample
+2026-11-03T09:30:35     return common_ksampler(model, seed, steps, cfg, sampler_name, scheduler, positive, negative, latent_image, denoise=denoise)
+2026-11-03T09:30:35            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:30:35   File "/opt/comfyui/nodes.py", line 1588, in common_ksampler
+2026-11-03T09:30:35     samples = comfy.sample.sample(model, noise, steps, cfg, sampler_name, scheduler, positive, negative, latent_image,
+2026-11-03T09:30:35               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:30:35   File "/opt/comfyui/comfy/sample.py", line 82, in sample
+2026-11-03T09:30:35     samples = sampler.sample(noise, positive, negative, cfg=cfg, latent_image=latent_image, start_step=start_step, last_step=last_step, force_full_denoise=force_full_denoise, denoise_mask=noise_mask, sigmas=sigmas, callback=callback, disable_pbar=disable_pbar, seed=seed)
+2026-11-03T09:30:35               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:30:35   File "/opt/comfyui/comfy/samplers.py", line 1463, in sample
+2026-11-03T09:30:35     return sample(self.model, noise, positive, negative, cfg, self.device, sampler, sigmas, self.model_options, latent_image=latent_image, denoise_mask=denoise_mask, callback=callback, disable_pbar=disable_pbar, seed=seed)
+2026-11-03T09:30:35            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:30:35   File "/opt/comfyui/comfy/samplers.py", line 1353, in sample
+2026-11-03T09:30:35     return cfg_guider.sample(noise, latent_image, sampler, sigmas, denoise_mask, callback, disable_pbar, seed)
+2026-11-03T09:30:35            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:30:35   File "/opt/comfyui/comfy/samplers.py", line 1335, in sample
+2026-11-03T09:30:35     output = executor.execute(noise, latent_image, sampler, sigmas, denoise_mask, callback, disable_pbar, seed, latent_shapes=latent_shapes)
+2026-11-03T09:30:35              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:30:35   File "/opt/comfyui/comfy/patcher_extension.py", line 113, in execute
+2026-11-03T09:30:35     return self.original(*args, **kwargs)
+2026-11-03T09:30:35            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:30:35   File "/opt/comfyui/comfy/samplers.py", line 1262, in outer_sample
+2026-11-03T09:30:35     output = self.inner_sample(noise, latent_image, device, sampler, sigmas, denoise_mask, callback, disable_pbar, seed, latent_shapes=latent_shapes)
+2026-11-03T09:30:35              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:30:35   File "/opt/comfyui/comfy/samplers.py", line 1237, in inner_sample
+2026-11-03T09:30:35     samples = executor.execute(self, sigmas, extra_args, callback, noise, latent_image, denoise_mask, disable_pbar)
+2026-11-03T09:30:35               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:30:35   File "/opt/comfyui/comfy/patcher_extension.py", line 113, in execute
+2026-11-03T09:30:35     return self.original(*args, **kwargs)
+2026-11-03T09:30:35            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:30:35   File "/opt/comfyui/comfy/samplers.py", line 1005, in sample
+2026-11-03T09:30:35     samples = self.sampler_function(model_k, noise, sigmas, extra_args=extra_args, callback=k_callback, disable=disable_pbar, **self.extra_options)
+2026-11-03T09:30:35               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:30:35   File "/opt/venv/lib/python3.12/site-packages/torch/utils/_contextlib.py", line 124, in decorate_context
+2026-11-03T09:30:35     return func(*args, **kwargs)
+2026-11-03T09:30:35            ^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:30:35   File "/opt/comfyui/comfy/k_diffusion/sampling.py", line 205, in sample_euler
+2026-11-03T09:30:35     denoised = model(x, sigma_hat * s_in, **extra_args)
+2026-11-03T09:30:35                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:30:35   File "/opt/comfyui/comfy/samplers.py", line 640, in __call__
+2026-11-03T09:30:35     out = self.inner_model(x, sigma, model_options=model_options, seed=seed)
+2026-11-03T09:30:35           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:30:35   File "/opt/comfyui/comfy/samplers.py", line 1208, in __call__
+2026-11-03T09:30:35     return self.outer_predict_noise(*args, **kwargs)
+2026-11-03T09:30:35            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:30:35   File "/opt/comfyui/comfy/samplers.py", line 1215, in outer_predict_noise
+2026-11-03T09:30:35     ).execute(x, timestep, model_options, seed)
+2026-11-03T09:30:35       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:30:35   File "/opt/comfyui/comfy/patcher_extension.py", line 113, in execute
+2026-11-03T09:30:35     return self.original(*args, **kwargs)
+2026-11-03T09:30:35            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:30:35   File "/opt/comfyui/comfy/samplers.py", line 1218, in predict_noise
+2026-11-03T09:30:35     return sampling_function(self.inner_model, x, timestep, self.conds.get("negative", None), self.conds.get("positive", None), self.cfg, model_options=model_options, seed=seed)
+2026-11-03T09:30:35            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:30:35   File "/opt/comfyui/comfy/samplers.py", line 620, in sampling_function
+2026-11-03T09:30:35     out = calc_cond_batch(model, conds, x, timestep, model_options)
+2026-11-03T09:30:35           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:30:35   File "/opt/comfyui/comfy/samplers.py", line 211, in calc_cond_batch
+2026-11-03T09:30:35     return _calc_cond_batch_outer(model, conds, x_in, timestep, model_options)
+2026-11-03T09:30:35            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:30:35   File "/opt/comfyui/comfy/samplers.py", line 219, in _calc_cond_batch_outer
+2026-11-03T09:30:35     return executor.execute(model, conds, x_in, timestep, model_options)
+2026-11-03T09:30:35            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:30:35   File "/opt/comfyui/comfy/patcher_extension.py", line 113, in execute
+2026-11-03T09:30:35     return self.original(*args, **kwargs)
+2026-11-03T09:30:35            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:30:35   File "/opt/comfyui/comfy/samplers.py", line 335, in _calc_cond_batch
+2026-11-03T09:30:35     output = model.apply_model(input_x, timestep_, **c).chunk(batch_chunks)
+2026-11-03T09:30:35              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:30:35   File "/opt/comfyui/comfy/model_base.py", line 210, in apply_model
+2026-11-03T09:30:35     return comfy.patcher_extension.WrapperExecutor.new_class_executor(
+2026-11-03T09:30:35            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:30:35   File "/opt/comfyui/comfy/patcher_extension.py", line 113, in execute
+2026-11-03T09:30:35     return self.original(*args, **kwargs)
+2026-11-03T09:30:35            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:30:35   File "/opt/comfyui/comfy/model_base.py", line 254, in _apply_model
+2026-11-03T09:30:35     model_output = self.diffusion_model(xc, t, context=context, control=control, transformer_options=transformer_options, **extra_conds)
+2026-11-03T09:30:35                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:30:35   File "/opt/venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1779, in _wrapped_call_impl
+2026-11-03T09:30:35     return self._call_impl(*args, **kwargs)
+2026-11-03T09:30:35            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:30:35   File "/opt/venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1790, in _call_impl
+2026-11-03T09:30:35     return forward_call(*args, **kwargs)
+2026-11-03T09:30:35            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:30:35   File "/opt/comfyui/comfy/ldm/seedvr/model.py", line 1336, in forward
+2026-11-03T09:30:35     vid, txt, vid_shape, txt_shape = block(
+2026-11-03T09:30:35                                      ^^^^^^
+2026-11-03T09:30:35   File "/opt/venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1779, in _wrapped_call_impl
+2026-11-03T09:30:35     return self._call_impl(*args, **kwargs)
+2026-11-03T09:30:35            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:30:35   File "/opt/venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1790, in _call_impl
+2026-11-03T09:30:35     return forward_call(*args, **kwargs)
+2026-11-03T09:30:35            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:30:35   File "/opt/comfyui/comfy/ldm/seedvr/model.py", line 861, in forward
+2026-11-03T09:30:35     vid_attn, txt_attn = self.attn(vid_attn, txt_attn, vid_shape, txt_shape, cache)
+2026-11-03T09:30:35                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:30:35   File "/opt/venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1779, in _wrapped_call_impl
+2026-11-03T09:30:35     return self._call_impl(*args, **kwargs)
+2026-11-03T09:30:35            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:30:35   File "/opt/venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1790, in _call_impl
+2026-11-03T09:30:35     return forward_call(*args, **kwargs)
+2026-11-03T09:30:35            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:30:35   File "/opt/comfyui/comfy/ldm/seedvr/model.py", line 655, in forward
+2026-11-03T09:30:35     vid_q, vid_k = self.rope(vid_q, vid_k, window_shape, cache_win)
+2026-11-03T09:30:35                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:30:35   File "/opt/venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1779, in _wrapped_call_impl
+2026-11-03T09:30:35     return self._call_impl(*args, **kwargs)
+2026-11-03T09:30:35            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:30:35   File "/opt/venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1790, in _call_impl
+2026-11-03T09:30:35     return forward_call(*args, **kwargs)
+2026-11-03T09:30:35            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:30:35   File "/opt/comfyui/comfy/ldm/seedvr/model.py", line 279, in forward
+2026-11-03T09:30:35     q = _apply_seedvr2_rotary_emb(freqs, q.float()).to(q.dtype)
+2026-11-03T09:30:35         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:30:35   File "/opt/comfyui/comfy/ldm/seedvr/model.py", line 357, in _apply_seedvr2_rotary_emb
+2026-11-03T09:30:35     return torch.cat((t_left, t_middle, t_right), dim=-1).to(dtype)
+2026-11-03T09:30:35            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T09:30:35 torch.OutOfMemoryError: Allocation on device 0 would exceed allowed memory. (out of memory)
+2026-11-03T09:30:35 Currently allocated     : 19.90 GiB
+2026-11-03T09:30:35 Requested               : 2.03 GiB
+2026-11-03T09:30:35 Device limit            : 23.60 GiB
+2026-11-03T09:30:35 Free (according to CUDA): 3.94 MiB
+2026-11-03T09:30:35 PyTorch limit (set by user-supplied memory fraction)
+2026-11-03T09:30:35                         : 17179869184.00 GiB
+2026-11-03T09:30:35 [32m[INFO][0m Memory summary:
+2026-11-03T09:30:35 |===========================================================================|
+2026-11-03T09:30:35 |                  PyTorch CUDA memory summary, device ID 0                 |
+2026-11-03T09:30:35 |---------------------------------------------------------------------------|
+2026-11-03T09:30:35 |            CUDA OOMs: 0            |        cudaMalloc retries: 0         |
+2026-11-03T09:30:35 |===========================================================================|
+2026-11-03T09:30:35 |        Metric         | Cur Usage  | Peak Usage | Tot Alloc  | Tot Freed  |
+2026-11-03T09:30:35 |---------------------------------------------------------------------------|
+2026-11-03T09:30:35 | Allocated memory      |  20377 MiB |  22326 MiB |      0 B   |      0 B   |
+2026-11-03T09:30:35 |       from large pool |      0 MiB |      0 MiB |      0 B   |      0 B   |
+2026-11-03T09:30:35 |       from small pool |      0 MiB |      0 MiB |      0 B   |      0 B   |
+2026-11-03T09:30:35 |---------------------------------------------------------------------------|
+2026-11-03T09:30:35 | Active memory         |  20377 MiB |  22326 MiB |      0 B   |      0 B   |
+2026-11-03T09:30:35 |       from large pool |      0 MiB |      0 MiB |      0 B   |      0 B   |
+2026-11-03T09:30:35 |       from small pool |      0 MiB |      0 MiB |      0 B   |      0 B   |
+2026-11-03T09:30:35 |---------------------------------------------------------------------------|
+2026-11-03T09:30:35 | Requested memory      |      0 B   |      0 B   |      0 B   |      0 B   |
+2026-11-03T09:30:35 |       from large pool |      0 B   |      0 B   |      0 B   |      0 B   |
+2026-11-03T09:30:35 |       from small pool |      0 B   |      0 B   |      0 B   |      0 B   |
+2026-11-03T09:30:35 |---------------------------------------------------------------------------|
+2026-11-03T09:30:35 | GPU reserved memory   |  20544 MiB |  23424 MiB |      0 B   |      0 B   |
+2026-11-03T09:30:35 |       from large pool |      0 MiB |      0 MiB |      0 B   |      0 B   |
+2026-11-03T09:30:35 |       from small pool |      0 MiB |      0 MiB |      0 B   |      0 B   |
+2026-11-03T09:30:35 |---------------------------------------------------------------------------|
+2026-11-03T09:30:35 | Non-releasable memory |      0 B   |      0 B   |      0 B   |      0 B   |
+2026-11-03T09:30:35 |       from large pool |      0 B   |      0 B   |      0 B   |      0 B   |
+2026-11-03T09:30:35 |       from small pool |      0 B   |      0 B   |      0 B   |      0 B   |
+2026-11-03T09:30:35 |---------------------------------------------------------------------------|
+2026-11-03T09:30:35 | Allocations           |       0    |       0    |       0    |       0    |
+2026-11-03T09:30:35 |       from large pool |       0    |       0    |       0    |       0    |
+2026-11-03T09:30:35 |       from small pool |       0    |       0    |       0    |       0    |
+2026-11-03T09:30:35 |---------------------------------------------------------------------------|
+2026-11-03T09:30:35 | Active allocs         |       0    |       0    |       0    |       0    |
+2026-11-03T09:30:35 |       from large pool |       0    |       0    |       0    |       0    |
+2026-11-03T09:30:35 |       from small pool |       0    |       0    |       0    |       0    |
+2026-11-03T09:30:35 |---------------------------------------------------------------------------|
+2026-11-03T09:30:35 | GPU reserved segments |       0    |       0    |       0    |       0    |
+2026-11-03T09:30:35 |       from large pool |       0    |       0    |       0    |       0    |
+2026-11-03T09:30:35 |       from small pool |       0    |       0    |       0    |       0    |
+2026-11-03T09:30:35 |---------------------------------------------------------------------------|
+2026-11-03T09:30:35 | Non-releasable allocs |       0    |       0    |       0    |       0    |
+2026-11-03T09:30:35 |       from large pool |       0    |       0    |       0    |       0    |
+2026-11-03T09:30:35 |       from small pool |       0    |       0    |       0    |       0    |
+2026-11-03T09:30:35 |---------------------------------------------------------------------------|
+2026-11-03T09:30:35 | Oversize allocations  |       0    |       0    |       0    |       0    |
+2026-11-03T09:30:35 |---------------------------------------------------------------------------|
+2026-11-03T09:30:35 | Oversize GPU segments |       0    |       0    |       0    |       0    |
+2026-11-03T09:30:35 |===========================================================================|
+2026-11-03T09:30:35 [1m[31m[ERROR][0m Got an OOM, unloading all loaded models.
+2026-11-03T09:30:36 [32m[INFO][0m [32mPrompt executed in 38.55 seconds[0m

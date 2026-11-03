@@ -1,0 +1,10 @@
+2026-11-03T10:00:58 [32m[INFO][0m got prompt
+2026-11-03T10:01:09 [32m[INFO][0m Model SeedVR2 prepared for dynamic VRAM loading. 7944MB Staged. 0 patches attached. Force pre-loaded 576 weights: 3853 KB.
+2026-11-03T10:01:09   0%|          | 0/1 [00:00<?, ?it/s]
+2026-11-03T10:01:14   0%|          | 0/1 [00:00<?, ?it/s,   Model Initializing ...  ]
+2026-11-03T10:01:14   0%|          | 0/1 [00:04<?, ?it/s,  Model Initialization complete!  ]
+2026-11-03T10:01:14 100%|██████████| 1/1 [00:04<00:00,  4.89s/it,  Model Initialization complete!  ]
+2026-11-03T10:01:15 100%|██████████| 1/1 [00:04<00:00,  4.89s/it,  Model Initialization complete!  ]
+2026-11-03T10:01:15 [32m[INFO][0m Requested to load VideoAutoencoderKLWrapper
+2026-11-03T10:01:15 [32m[INFO][0m loaded completely;  478.07 MB loaded, full load: True
+2026-11-03T10:01:40 [32m[INFO][0m [32mPrompt executed in 41.30 seconds[0m

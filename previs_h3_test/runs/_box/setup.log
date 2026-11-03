@@ -1,0 +1,935 @@
+== 1. kiểm máy
+name, driver_version, memory.total [MiB]
+NVIDIA GeForce RTX 4090, 615.71.09, 24564 MiB
+               total        used        free      shared  buff/cache   available
+Mem:             120           0         118           0           1         119
+overlay         250G  1.1G  249G   1% /
+== 2. gói hệ thống
+Hit:1 http://archive.ubuntu.mirror.rafal.ca/ubuntu jammy InRelease
+Hit:2 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64  InRelease
+Hit:3 http://archive.ubuntu.mirror.rafal.ca/ubuntu jammy-updates InRelease
+Hit:4 http://archive.ubuntu.mirror.rafal.ca/ubuntu jammy-backports InRelease
+Hit:5 http://archive.ubuntu.mirror.rafal.ca/ubuntu jammy-security InRelease
+Reading package lists...
+Reading package lists...
+Building dependency tree...
+Reading state information...
+gcc is already the newest version (4:11.2.0-1ubuntu1).
+libgl1 is already the newest version (1.4.0-1).
+libsm6 is already the newest version (2:1.2.3-1build2).
+libtcmalloc-minimal4 is already the newest version (2.9.1-0ubuntu3).
+libxext6 is already the newest version (2:1.3.4-1build1).
+libxrender1 is already the newest version (1:0.9.10-1build4).
+aria2 is already the newest version (1.36.0-1).
+curl is already the newest version (7.81.0-1ubuntu1.30).
+git is already the newest version (1:2.34.1-1ubuntu1.18).
+jq is already the newest version (1.6-2.1ubuntu3.2).
+libglib2.0-0 is already the newest version (2.72.4-0ubuntu2.10).
+tmux is already the newest version (3.2a-4ubuntu0.3).
+wget is already the newest version (1.21.2-2ubuntu1.5).
+ffmpeg is already the newest version (7:4.4.2-0ubuntu0.22.04.1).
+0 upgraded, 0 newly installed, 0 to remove and 162 not upgraded.
+== 2b. tải model nền (log: /opt/download.log)
+== 3. uv + venv + ComfyUI
+downloading uv 0.13.7 x86_64-unknown-linux-gnu
+installing to /root/.local/bin
+  uv
+  uvx
+everything's installed!
+
+To add $HOME/.local/bin to your PATH, either restart your shell or run:
+
+    source $HOME/.local/bin/env (sh, bash, zsh)
+    source $HOME/.local/bin/env.fish (fish)
+Downloading cpython-3.12.16-linux-x86_64-gnu (download) (32.9MiB)
+ Downloaded cpython-3.12.16-linux-x86_64-gnu (download)
+Using CPython 3.12.16
+Creating virtual environment at: /opt/venv
+Activate with: source /opt/venv/bin/activate
+Using Python 3.12.16 environment at: /opt/venv
+Resolved 50 packages in 290ms
+Downloading ruff (10.1MiB)
+Downloading pip (1.9MiB)
+Downloading uv (16.4MiB)
+ Downloaded pip
+ Downloaded ruff
+ Downloaded uv
+Prepared 31 packages in 153ms
+Installed 50 packages in 141ms
+ + annotated-doc==0.0.5
+ + anyio==4.16.0
+ + arrow==1.4.0
+ + backoff==2.2.1
+ + binaryornot==0.6.0
+ + certifi==2026.10.23
+ + charset-normalizer==3.5.2
+ + click==8.5.0
+ + comfy-cli==1.13.0
+ + cookiecutter==2.7.1
+ + distro==1.9.0
+ + gitdb==4.0.12
+ + gitpython==3.2.1
+ + h11==0.16.0
+ + httpcore==1.0.9
+ + httpx==0.28.1
+ + idna==3.20
+ + jinja2==3.1.6
+ + markdown-it-py==4.2.0
+ + markupsafe==3.0.4
+ + mdurl==0.1.2
+ + mixpanel==4.11.1
+ + packaging==26.3
+ + pathspec==1.1.1
+ + pip==26.3
+ + posthog==7.82.2
+ + prompt-toolkit==3.0.53
+ + psutil==7.2.2
+ + pygments==2.21.0
+ + python-dateutil==4.0.0
+ + python-slugify==9.1.3
+ + pyyaml==6.0.3
+ + questionary==2.1.1
+ + requests==2.34.2
+ + rich==15.0.0
+ + ruff==0.17.3
+ + semver==3.0.4
+ + setuptools==84.2.1
+ + shellingham==1.5.4
+ + smmap==5.0.3
+ + text-unidecode==1.3
+ + tomlkit==0.15.2
+ + typer==0.27.3
+ + typing-extensions==4.16.0
+ + tzdata==2026.6
+ + urllib3==2.8.0
+ + uv==0.13.7
+ + wcwidth==0.9.4
+ + websocket-client==1.9.2
+ + wheel==0.48.0
+Using explicit CUDA version: 13.0 (cu130)
+Installing from repository 'https://github.com/comfyanonymous/ComfyUI' to 
+'/opt/comfyui'
+Cloning into '/opt/comfyui'...
+Looking for ComfyUI version '0.37.2'...
+╭────────── ComfyUI Checkout ───────────╮
+│ Checking out ComfyUI version: v0.37.2 │
+╰───────────────────────────────────────╯
+Successfully checked out tag: v0.37.2
+Creating workspace virtual environment at /opt/comfyui/.venv
+Using Python: /opt/comfyui/.venv/bin/python
+Looking in indexes: https://download.pytorch.org/whl/cu130
+Collecting torch
+  Downloading torch-2.14.1%2Bcu130-cp312-cp312-manylinux_2_28_x86_64.whl.metadata (37 kB)
+Collecting torchvision
+  Downloading torchvision-0.29.1%2Bcu130-cp312-cp312-manylinux_2_28_x86_64.whl.metadata (5.7 kB)
+Collecting torchaudio
+  Downloading torchaudio-2.11.0%2Bcu130-cp312-cp312-manylinux_2_28_x86_64.whl.metadata (6.9 kB)
+Collecting filelock (from torch)
+  Downloading filelock-4.2.4-py3-none-any.whl.metadata (2.0 kB)
+Collecting typing-extensions>=4.10.0 (from torch)
+  Downloading typing_extensions-4.16.0-py3-none-any.whl.metadata (3.3 kB)
+Collecting setuptools>=77.0.3 (from torch)
+  Downloading setuptools-78.1.0-py3-none-any.whl.metadata (6.6 kB)
+Collecting sympy>=1.13.3 (from torch)
+  Downloading sympy-1.14.0-py3-none-any.whl.metadata (12 kB)
+Collecting networkx>=2.5.1 (from torch)
+  Downloading networkx-3.7-py3-none-any.whl.metadata (6.7 kB)
+Collecting jinja2 (from torch)
+  Downloading jinja2-3.1.6-py3-none-any.whl.metadata (2.9 kB)
+Collecting fsspec>=0.8.5 (from torch)
+  Downloading fsspec-2026.9.0-py3-none-any.whl.metadata (10 kB)
+Collecting cuda-toolkit==13.0.3 (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch)
+  Downloading cuda_toolkit-13.0.3.0-py2.py3-none-any.whl (2.5 kB)
+Collecting cuda-bindings<14,>=13.0.3 (from torch)
+  Downloading cuda_bindings-13.4.4-cp312-cp312-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl.metadata (2.4 kB)
+Collecting nvidia-cudnn-cu13==9.24.0.43 (from torch)
+  Downloading nvidia_cudnn_cu13-9.24.0.43-py3-none-manylinux_2_27_x86_64.whl (553.1 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 553.1/553.1 MB 167.9 MB/s  0:00:03
+Collecting nvidia-cusparselt-cu13==0.8.1 (from torch)
+  Downloading nvidia_cusparselt_cu13-0.8.1-py3-none-manylinux2014_x86_64.whl (170.1 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 170.1/170.1 MB 175.1 MB/s  0:00:00
+Collecting nvidia-nccl-cu13==2.30.7 (from torch)
+  Downloading nvidia_nccl_cu13-2.30.7-py3-none-manylinux_2_18_x86_64.whl.metadata (2.1 kB)
+Collecting nvidia-nvshmem-cu13==3.4.5 (from torch)
+  Downloading nvidia_nvshmem_cu13-3.4.5-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (60.4 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 60.4/60.4 MB 173.5 MB/s  0:00:00
+Collecting triton~=3.8.0 (from torch)
+  Downloading triton-3.8.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (978 bytes)
+Collecting nvidia-cublas==13.1.1.3.* (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch)
+  Downloading nvidia_cublas-13.1.1.3-py3-none-manylinux_2_27_x86_64.whl (423.1 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 423.1/423.1 MB 173.8 MB/s  0:00:02
+Collecting nvidia-cuda-nvrtc==13.0.88.* (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch)
+  Downloading nvidia_cuda_nvrtc-13.0.88-py3-none-manylinux2010_x86_64.manylinux_2_12_x86_64.whl (90.2 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 90.2/90.2 MB 181.9 MB/s  0:00:00
+Collecting nvidia-cuda-runtime==13.0.96.* (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch)
+  Downloading nvidia_cuda_runtime-13.0.96-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (2.2 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.2/2.2 MB 211.4 MB/s  0:00:00
+Collecting nvidia-cufft==12.0.0.61.* (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch)
+  Downloading nvidia_cufft-12.0.0.61-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (214.1 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 214.1/214.1 MB 172.0 MB/s  0:00:01
+Collecting nvidia-nvjitlink<14,>=13.0.88 (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch)
+  Downloading nvidia_nvjitlink-13.4.92-py3-none-manylinux2010_x86_64.manylinux_2_12_x86_64.whl (42.5 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 42.5/42.5 MB 165.5 MB/s  0:00:00
+Collecting nvidia-cufile==1.15.1.6.* (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch)
+  Downloading nvidia_cufile-1.15.1.6-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (1.2 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.2/1.2 MB 223.0 MB/s  0:00:00
+Collecting nvidia-cuda-cupti==13.0.85.* (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch)
+  Downloading nvidia_cuda_cupti-13.0.85-py3-none-manylinux_2_25_x86_64.whl (10.7 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 10.7/10.7 MB 136.5 MB/s  0:00:00
+Collecting nvidia-curand==10.4.0.35.* (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch)
+  Downloading nvidia_curand-10.4.0.35-py3-none-manylinux_2_27_x86_64.whl (59.5 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 59.5/59.5 MB 171.6 MB/s  0:00:00
+Collecting nvidia-cusolver==12.0.4.66.* (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch)
+  Downloading nvidia_cusolver-12.0.4.66-py3-none-manylinux_2_27_x86_64.whl (200.9 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 200.9/200.9 MB 142.5 MB/s  0:00:01
+Collecting nvidia-cusparse==12.6.3.3.* (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch)
+  Downloading nvidia_cusparse-12.6.3.3-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (145.9 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 145.9/145.9 MB 163.6 MB/s  0:00:00
+Collecting nvidia-nvtx==13.0.85.* (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch)
+  Downloading nvidia_nvtx-13.0.85-py3-none-manylinux1_x86_64.manylinux_2_5_x86_64.whl (148 kB)
+Collecting cuda-pathfinder>=1.4.2 (from cuda-bindings<14,>=13.0.3->torch)
+  Downloading cuda_pathfinder-1.8.4-py3-none-any.whl.metadata (1.9 kB)
+Collecting numpy (from torchvision)
+  Downloading numpy-2.5.4-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (6.6 kB)
+Collecting pillow!=8.3.*,>=5.3.0 (from torchvision)
+  Downloading pillow-13.0.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (9.1 kB)
+Collecting mpmath<1.4,>=1.1.0 (from sympy>=1.13.3->torch)
+  Downloading mpmath-1.3.0-py3-none-any.whl.metadata (8.6 kB)
+Collecting MarkupSafe>=2.0 (from jinja2->torch)
+  Downloading markupsafe-3.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (2.7 kB)
+Downloading torch-2.14.1%2Bcu130-cp312-cp312-manylinux_2_28_x86_64.whl (554.6 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 554.6/554.6 MB 271.3 MB/s  0:00:02
+Downloading nvidia_nccl_cu13-2.30.7-py3-none-manylinux_2_18_x86_64.whl (216.0 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 216.0/216.0 MB 230.9 MB/s  0:00:00
+Downloading cuda_bindings-13.4.4-cp312-cp312-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl (7.2 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 7.2/7.2 MB 303.7 MB/s  0:00:00
+Downloading triton-3.8.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (246.8 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 246.8/246.8 MB 252.9 MB/s  0:00:00
+Downloading torchvision-0.29.1%2Bcu130-cp312-cp312-manylinux_2_28_x86_64.whl (7.4 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 7.4/7.4 MB 200.8 MB/s  0:00:00
+Downloading torchaudio-2.11.0%2Bcu130-cp312-cp312-manylinux_2_28_x86_64.whl (1.7 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.7/1.7 MB 231.1 MB/s  0:00:00
+Downloading cuda_pathfinder-1.8.4-py3-none-any.whl (62 kB)
+Downloading fsspec-2026.9.0-py3-none-any.whl (221 kB)
+Downloading networkx-3.7-py3-none-any.whl (2.1 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.1/2.1 MB 266.5 MB/s  0:00:00
+Downloading pillow-13.0.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (7.1 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 7.1/7.1 MB 297.3 MB/s  0:00:00
+Downloading setuptools-78.1.0-py3-none-any.whl (1.3 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.3/1.3 MB 224.5 MB/s  0:00:00
+Downloading sympy-1.14.0-py3-none-any.whl (6.3 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 6.3/6.3 MB 261.9 MB/s  0:00:00
+Downloading mpmath-1.3.0-py3-none-any.whl (536 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 536.2/536.2 kB 79.1 MB/s  0:00:00
+Downloading typing_extensions-4.16.0-py3-none-any.whl (45 kB)
+Downloading filelock-4.2.4-py3-none-any.whl (162 kB)
+Downloading jinja2-3.1.6-py3-none-any.whl (134 kB)
+Downloading markupsafe-3.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (22 kB)
+Downloading numpy-2.5.4-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (16.7 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 16.7/16.7 MB 256.2 MB/s  0:00:00
+Installing collected packages: torchaudio, nvidia-cusparselt-cu13, mpmath, cuda-toolkit, typing-extensions, triton, sympy, setuptools, pillow, nvidia-nvtx, nvidia-nvshmem-cu13, nvidia-nvjitlink, nvidia-nccl-cu13, nvidia-curand, nvidia-cufile, nvidia-cuda-runtime, nvidia-cuda-nvrtc, nvidia-cuda-cupti, numpy, networkx, MarkupSafe, fsspec, filelock, cuda-pathfinder, nvidia-cusparse, nvidia-cufft, nvidia-cublas, jinja2, cuda-bindings, nvidia-cusolver, nvidia-cudnn-cu13, torch, torchvision
+
+Successfully installed MarkupSafe-3.0.3 cuda-bindings-13.4.4 cuda-pathfinder-1.8.4 cuda-toolkit-13.0.3.0 filelock-4.2.4 fsspec-2026.9.0 jinja2-3.1.6 mpmath-1.3.0 networkx-3.7 numpy-2.5.4 nvidia-cublas-13.1.1.3 nvidia-cuda-cupti-13.0.85 nvidia-cuda-nvrtc-13.0.88 nvidia-cuda-runtime-13.0.96 nvidia-cudnn-cu13-9.24.0.43 nvidia-cufft-12.0.0.61 nvidia-cufile-1.15.1.6 nvidia-curand-10.4.0.35 nvidia-cusolver-12.0.4.66 nvidia-cusparse-12.6.3.3 nvidia-cusparselt-cu13-0.8.1 nvidia-nccl-cu13-2.30.7 nvidia-nvjitlink-13.4.92 nvidia-nvshmem-cu13-3.4.5 nvidia-nvtx-13.0.85 pillow-13.0.0 setuptools-78.1.0 sympy-1.14.0 torch-2.14.1+cu130 torchaudio-2.11.0+cu130 torchvision-0.29.1+cu130 triton-3.8.0 typing-extensions-4.16.0
+Collecting comfyui-frontend-package==1.52.7 (from -r requirements.txt (line 1))
+  Downloading comfyui_frontend_package-1.52.7-py3-none-any.whl.metadata (117 bytes)
+Collecting comfyui-workflow-templates==0.11.69 (from -r requirements.txt (line 2))
+  Downloading comfyui_workflow_templates-0.11.69-py3-none-any.whl.metadata (24 kB)
+Collecting comfyui-embedded-docs==0.5.12 (from -r requirements.txt (line 3))
+  Downloading comfyui_embedded_docs-0.5.12-py3-none-any.whl.metadata (5.3 kB)
+Requirement already satisfied: torch in ./.venv/lib/python3.12/site-packages (from -r requirements.txt (line 4)) (2.14.1+cu130)
+Collecting torchsde (from -r requirements.txt (line 5))
+  Downloading torchsde-0.2.6-py3-none-any.whl.metadata (5.3 kB)
+Requirement already satisfied: torchvision in ./.venv/lib/python3.12/site-packages (from -r requirements.txt (line 6)) (0.29.1+cu130)
+Requirement already satisfied: torchaudio in ./.venv/lib/python3.12/site-packages (from -r requirements.txt (line 7)) (2.11.0+cu130)
+Requirement already satisfied: numpy>=1.25.0 in ./.venv/lib/python3.12/site-packages (from -r requirements.txt (line 8)) (2.5.4)
+Collecting einops (from -r requirements.txt (line 9))
+  Downloading einops-0.8.2-py3-none-any.whl.metadata (13 kB)
+Collecting transformers>=4.50.3 (from -r requirements.txt (line 10))
+  Downloading transformers-5.22.1-py3-none-any.whl.metadata (31 kB)
+Collecting tokenizers>=0.13.3 (from -r requirements.txt (line 11))
+  Downloading tokenizers-0.23.3-cp310-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (9.8 kB)
+Collecting sentencepiece (from -r requirements.txt (line 12))
+  Downloading sentencepiece-0.2.2-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (33 kB)
+Collecting safetensors>=0.4.2 (from -r requirements.txt (line 13))
+  Downloading safetensors-0.8.0-cp310-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (4.2 kB)
+Collecting aiohttp>=3.11.8 (from -r requirements.txt (line 14))
+  Downloading aiohttp-3.14.5-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (8.3 kB)
+Collecting yarl>=1.18.0 (from -r requirements.txt (line 15))
+  Downloading yarl-1.25.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (111 kB)
+Collecting pyyaml (from -r requirements.txt (line 16))
+  Downloading pyyaml-6.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (2.4 kB)
+Requirement already satisfied: Pillow in ./.venv/lib/python3.12/site-packages (from -r requirements.txt (line 17)) (13.0.0)
+Collecting scipy (from -r requirements.txt (line 18))
+  Downloading scipy-1.18.1-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (62 kB)
+Collecting tqdm (from -r requirements.txt (line 19))
+  Downloading tqdm-4.70.1-py3-none-any.whl.metadata (57 kB)
+Collecting psutil (from -r requirements.txt (line 20))
+  Downloading psutil-7.2.2-cp36-abi3-manylinux2010_x86_64.manylinux_2_12_x86_64.manylinux_2_28_x86_64.whl.metadata (22 kB)
+Collecting alembic (from -r requirements.txt (line 21))
+  Downloading alembic-1.20.1-py3-none-any.whl.metadata (7.3 kB)
+Collecting SQLAlchemy>=2.0.0 (from -r requirements.txt (line 22))
+  Downloading sqlalchemy-2.1.6-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (9.7 kB)
+Requirement already satisfied: filelock in ./.venv/lib/python3.12/site-packages (from -r requirements.txt (line 23)) (4.2.4)
+Collecting av>=17.0.0 (from -r requirements.txt (line 24))
+  Downloading av-19.0.2-cp312-abi3-manylinux_2_28_x86_64.whl.metadata (5.0 kB)
+Collecting comfy-kitchen==0.2.35 (from -r requirements.txt (line 25))
+  Downloading comfy_kitchen-0.2.35-cp312-abi3-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (15 kB)
+Collecting comfy-aimdo==0.5.5 (from -r requirements.txt (line 26))
+  Downloading comfy_aimdo-0.5.5-cp39-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (4.4 kB)
+Collecting requests (from -r requirements.txt (line 27))
+  Downloading requests-2.34.2-py3-none-any.whl.metadata (4.8 kB)
+Collecting simpleeval>=1.0.0 (from -r requirements.txt (line 28))
+  Downloading simpleeval-1.0.8-py3-none-any.whl.metadata (20 kB)
+Collecting blake3 (from -r requirements.txt (line 29))
+  Downloading blake3-1.0.11-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (4.9 kB)
+Collecting kornia>=0.7.1 (from -r requirements.txt (line 32))
+  Downloading kornia-0.9.0-py3-none-any.whl.metadata (26 kB)
+Collecting spandrel (from -r requirements.txt (line 33))
+  Downloading spandrel-0.4.2-py3-none-any.whl.metadata (15 kB)
+Collecting pydantic~=2.0 (from -r requirements.txt (line 34))
+  Downloading pydantic-2.14.2-py3-none-any.whl.metadata (137 kB)
+Collecting pydantic-settings~=2.0 (from -r requirements.txt (line 35))
+  Downloading pydantic_settings-2.16.2-py3-none-any.whl.metadata (4.0 kB)
+Collecting PyOpenGL>=3.1.8 (from -r requirements.txt (line 36))
+  Downloading pyopengl-3.1.10-py3-none-any.whl.metadata (3.3 kB)
+Collecting comfy-angle (from -r requirements.txt (line 37))
+  Downloading comfy_angle-0.1.1-py3-none-manylinux_2_28_x86_64.whl.metadata (2.2 kB)
+Collecting comfyui-workflow-templates-core==0.3.360 (from comfyui-workflow-templates==0.11.69->-r requirements.txt (line 2))
+  Downloading comfyui_workflow_templates_core-0.3.360-py3-none-any.whl.metadata (260 bytes)
+Collecting comfyui-workflow-templates-json==0.1.95 (from comfyui-workflow-templates==0.11.69->-r requirements.txt (line 2))
+  Downloading comfyui_workflow_templates_json-0.1.95-py3-none-any.whl.metadata (265 bytes)
+Collecting comfyui-workflow-templates-media-api==0.3.84 (from comfyui-workflow-templates==0.11.69->-r requirements.txt (line 2))
+  Downloading comfyui_workflow_templates_media_api-0.3.84-py3-none-any.whl.metadata (290 bytes)
+Collecting comfyui-workflow-templates-media-video==0.3.101 (from comfyui-workflow-templates==0.11.69->-r requirements.txt (line 2))
+  Downloading comfyui_workflow_templates_media_video-0.3.101-py3-none-any.whl.metadata (283 bytes)
+Collecting comfyui-workflow-templates-media-image==0.3.160 (from comfyui-workflow-templates==0.11.69->-r requirements.txt (line 2))
+  Downloading comfyui_workflow_templates_media_image-0.3.160-py3-none-any.whl.metadata (283 bytes)
+Collecting comfyui-workflow-templates-media-other==0.3.229 (from comfyui-workflow-templates==0.11.69->-r requirements.txt (line 2))
+  Downloading comfyui_workflow_templates_media_other-0.3.229-py3-none-any.whl.metadata (306 bytes)
+Collecting comfyui-workflow-templates-media-assets-01==0.1.48 (from comfyui-workflow-templates==0.11.69->-r requirements.txt (line 2))
+  Downloading comfyui_workflow_templates_media_assets_01-0.1.48-py3-none-any.whl.metadata (290 bytes)
+Collecting comfyui-workflow-templates-media-assets-02==0.1.5 (from comfyui-workflow-templates==0.11.69->-r requirements.txt (line 2))
+  Downloading comfyui_workflow_templates_media_assets_02-0.1.5-py3-none-any.whl.metadata (289 bytes)
+Collecting annotated-types>=0.6.0 (from pydantic~=2.0->-r requirements.txt (line 34))
+  Downloading annotated_types-0.8.0-py3-none-any.whl.metadata (15 kB)
+Collecting pydantic-core==2.50.2 (from pydantic~=2.0->-r requirements.txt (line 34))
+  Downloading pydantic_core-2.50.2-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (6.5 kB)
+Requirement already satisfied: typing-extensions>=4.16.0 in ./.venv/lib/python3.12/site-packages (from pydantic~=2.0->-r requirements.txt (line 34)) (4.16.0)
+Collecting typing-inspection>=0.4.4 (from pydantic~=2.0->-r requirements.txt (line 34))
+  Downloading typing_inspection-0.4.4-py3-none-any.whl.metadata (2.6 kB)
+Collecting python-dotenv>=1.2.2 (from pydantic-settings~=2.0->-r requirements.txt (line 35))
+  Downloading python_dotenv-1.2.4-py3-none-any.whl.metadata (29 kB)
+Requirement already satisfied: setuptools>=77.0.3 in ./.venv/lib/python3.12/site-packages (from torch->-r requirements.txt (line 4)) (78.1.0)
+Requirement already satisfied: sympy>=1.13.3 in ./.venv/lib/python3.12/site-packages (from torch->-r requirements.txt (line 4)) (1.14.0)
+Requirement already satisfied: networkx>=2.5.1 in ./.venv/lib/python3.12/site-packages (from torch->-r requirements.txt (line 4)) (3.7)
+Requirement already satisfied: jinja2 in ./.venv/lib/python3.12/site-packages (from torch->-r requirements.txt (line 4)) (3.1.6)
+Requirement already satisfied: fsspec>=0.8.5 in ./.venv/lib/python3.12/site-packages (from torch->-r requirements.txt (line 4)) (2026.9.0)
+Requirement already satisfied: cuda-toolkit==13.0.3 in ./.venv/lib/python3.12/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 4)) (13.0.3.0)
+Requirement already satisfied: cuda-bindings<14,>=13.0.3 in ./.venv/lib/python3.12/site-packages (from torch->-r requirements.txt (line 4)) (13.4.4)
+Requirement already satisfied: nvidia-cudnn-cu13==9.24.0.43 in ./.venv/lib/python3.12/site-packages (from torch->-r requirements.txt (line 4)) (9.24.0.43)
+Requirement already satisfied: nvidia-cusparselt-cu13==0.8.1 in ./.venv/lib/python3.12/site-packages (from torch->-r requirements.txt (line 4)) (0.8.1)
+Requirement already satisfied: nvidia-nccl-cu13==2.30.7 in ./.venv/lib/python3.12/site-packages (from torch->-r requirements.txt (line 4)) (2.30.7)
+Requirement already satisfied: nvidia-nvshmem-cu13==3.4.5 in ./.venv/lib/python3.12/site-packages (from torch->-r requirements.txt (line 4)) (3.4.5)
+Requirement already satisfied: triton~=3.8.0 in ./.venv/lib/python3.12/site-packages (from torch->-r requirements.txt (line 4)) (3.8.0)
+Requirement already satisfied: nvidia-cublas==13.1.1.3.* in ./.venv/lib/python3.12/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 4)) (13.1.1.3)
+Requirement already satisfied: nvidia-cuda-nvrtc==13.0.88.* in ./.venv/lib/python3.12/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 4)) (13.0.88)
+Requirement already satisfied: nvidia-cuda-runtime==13.0.96.* in ./.venv/lib/python3.12/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 4)) (13.0.96)
+Requirement already satisfied: nvidia-cufft==12.0.0.61.* in ./.venv/lib/python3.12/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 4)) (12.0.0.61)
+Requirement already satisfied: nvidia-nvjitlink<14,>=13.0.88 in ./.venv/lib/python3.12/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 4)) (13.4.92)
+Requirement already satisfied: nvidia-cufile==1.15.1.6.* in ./.venv/lib/python3.12/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 4)) (1.15.1.6)
+Requirement already satisfied: nvidia-cuda-cupti==13.0.85.* in ./.venv/lib/python3.12/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 4)) (13.0.85)
+Requirement already satisfied: nvidia-curand==10.4.0.35.* in ./.venv/lib/python3.12/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 4)) (10.4.0.35)
+Requirement already satisfied: nvidia-cusolver==12.0.4.66.* in ./.venv/lib/python3.12/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 4)) (12.0.4.66)
+Requirement already satisfied: nvidia-cusparse==12.6.3.3.* in ./.venv/lib/python3.12/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 4)) (12.6.3.3)
+Requirement already satisfied: nvidia-nvtx==13.0.85.* in ./.venv/lib/python3.12/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 4)) (13.0.85)
+Requirement already satisfied: cuda-pathfinder>=1.4.2 in ./.venv/lib/python3.12/site-packages (from cuda-bindings<14,>=13.0.3->torch->-r requirements.txt (line 4)) (1.8.4)
+Collecting trampoline>=0.1.2 (from torchsde->-r requirements.txt (line 5))
+  Downloading trampoline-0.1.2-py3-none-any.whl.metadata (10 kB)
+Collecting huggingface-hub<3.0,>=1.31.0 (from transformers>=4.50.3->-r requirements.txt (line 10))
+  Downloading huggingface_hub-2.4.0-py3-none-any.whl.metadata (16 kB)
+Collecting packaging>=20.0 (from transformers>=4.50.3->-r requirements.txt (line 10))
+  Downloading packaging-26.3-py3-none-any.whl.metadata (3.5 kB)
+Collecting regex>=2025.10.22 (from transformers>=4.50.3->-r requirements.txt (line 10))
+  Downloading regex-2026.9.29-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (40 kB)
+Collecting typer (from transformers>=4.50.3->-r requirements.txt (line 10))
+  Downloading typer-0.27.3-py3-none-any.whl.metadata (16 kB)
+Collecting click<9.0.0,>=8.4.2 (from huggingface-hub<3.0,>=1.31.0->transformers>=4.50.3->-r requirements.txt (line 10))
+  Downloading click-8.5.0-py3-none-any.whl.metadata (2.6 kB)
+Collecting hf-xet<2.0.0,>=1.6.0 (from huggingface-hub<3.0,>=1.31.0->transformers>=4.50.3->-r requirements.txt (line 10))
+  Downloading hf_xet-1.8.0-cp38-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (4.9 kB)
+Collecting httpx2<3,>=2.0.0 (from huggingface-hub<3.0,>=1.31.0->transformers>=4.50.3->-r requirements.txt (line 10))
+  Downloading httpx2-2.16.0-py3-none-any.whl.metadata (10 kB)
+Collecting anyio>=4.10 (from httpx2<3,>=2.0.0->huggingface-hub<3.0,>=1.31.0->transformers>=4.50.3->-r requirements.txt (line 10))
+  Downloading anyio-4.16.0-py3-none-any.whl.metadata (4.7 kB)
+Collecting httpcore2==2.16.0 (from httpx2<3,>=2.0.0->huggingface-hub<3.0,>=1.31.0->transformers>=4.50.3->-r requirements.txt (line 10))
+  Downloading httpcore2-2.16.0-py3-none-any.whl.metadata (27 kB)
+Collecting idna>=3.18 (from httpx2<3,>=2.0.0->huggingface-hub<3.0,>=1.31.0->transformers>=4.50.3->-r requirements.txt (line 10))
+  Downloading idna-3.20-py3-none-any.whl.metadata (7.2 kB)
+Collecting truststore>=0.10 (from httpx2<3,>=2.0.0->huggingface-hub<3.0,>=1.31.0->transformers>=4.50.3->-r requirements.txt (line 10))
+  Downloading truststore-0.10.5-py3-none-any.whl.metadata (4.5 kB)
+Collecting h11>=0.16 (from httpcore2==2.16.0->httpx2<3,>=2.0.0->huggingface-hub<3.0,>=1.31.0->transformers>=4.50.3->-r requirements.txt (line 10))
+  Downloading h11-0.16.0-py3-none-any.whl.metadata (8.3 kB)
+Collecting aiohappyeyeballs>=2.5.0 (from aiohttp>=3.11.8->-r requirements.txt (line 14))
+  Downloading aiohappyeyeballs-2.7.1-py3-none-any.whl.metadata (5.9 kB)
+Collecting aiosignal>=1.4.0 (from aiohttp>=3.11.8->-r requirements.txt (line 14))
+  Downloading aiosignal-1.4.0-py3-none-any.whl.metadata (3.7 kB)
+Collecting attrs>=17.3.0 (from aiohttp>=3.11.8->-r requirements.txt (line 14))
+  Downloading attrs-26.1.0-py3-none-any.whl.metadata (8.8 kB)
+Collecting frozenlist>=1.1.1 (from aiohttp>=3.11.8->-r requirements.txt (line 14))
+  Downloading frozenlist-1.8.0-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl.metadata (20 kB)
+Collecting multidict<8.0,>=4.5 (from aiohttp>=3.11.8->-r requirements.txt (line 14))
+  Downloading multidict-7.2.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (6.1 kB)
+Collecting propcache>=0.2.0 (from aiohttp>=3.11.8->-r requirements.txt (line 14))
+  Downloading propcache-0.5.4-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (25 kB)
+Collecting Mako (from alembic->-r requirements.txt (line 21))
+  Downloading mako-1.4.3-py3-none-any.whl.metadata (2.9 kB)
+Collecting charset_normalizer<4,>=2 (from requests->-r requirements.txt (line 27))
+  Downloading charset_normalizer-3.5.2-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (46 kB)
+Collecting urllib3<3,>=1.26 (from requests->-r requirements.txt (line 27))
+  Downloading urllib3-2.8.0-py3-none-any.whl.metadata (7.4 kB)
+Collecting certifi>=2023.5.7 (from requests->-r requirements.txt (line 27))
+  Downloading certifi-2026.10.23-py3-none-any.whl.metadata (2.5 kB)
+Collecting kornia-rs>=0.2.0 (from kornia>=0.7.1->-r requirements.txt (line 32))
+  Downloading kornia_rs-0.2.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (19 kB)
+Requirement already satisfied: mpmath<1.4,>=1.1.0 in ./.venv/lib/python3.12/site-packages (from sympy>=1.13.3->torch->-r requirements.txt (line 4)) (1.3.0)
+Requirement already satisfied: MarkupSafe>=2.0 in ./.venv/lib/python3.12/site-packages (from jinja2->torch->-r requirements.txt (line 4)) (3.0.3)
+Collecting shellingham>=1.3.0 (from typer->transformers>=4.50.3->-r requirements.txt (line 10))
+  Downloading shellingham-1.5.4-py2.py3-none-any.whl.metadata (3.5 kB)
+Collecting rich>=13.8.0 (from typer->transformers>=4.50.3->-r requirements.txt (line 10))
+  Downloading rich-15.0.0-py3-none-any.whl.metadata (18 kB)
+Collecting annotated-doc>=0.0.2 (from typer->transformers>=4.50.3->-r requirements.txt (line 10))
+  Downloading annotated_doc-0.0.5-py3-none-any.whl.metadata (6.5 kB)
+Collecting markdown-it-py>=2.2.0 (from rich>=13.8.0->typer->transformers>=4.50.3->-r requirements.txt (line 10))
+  Downloading markdown_it_py-4.2.0-py3-none-any.whl.metadata (7.4 kB)
+Collecting pygments<3.0.0,>=2.13.0 (from rich>=13.8.0->typer->transformers>=4.50.3->-r requirements.txt (line 10))
+  Downloading pygments-2.21.0-py3-none-any.whl.metadata (2.5 kB)
+Collecting mdurl~=0.1 (from markdown-it-py>=2.2.0->rich>=13.8.0->typer->transformers>=4.50.3->-r requirements.txt (line 10))
+  Downloading mdurl-0.1.2-py3-none-any.whl.metadata (1.6 kB)
+Downloading comfyui_frontend_package-1.52.7-py3-none-any.whl (24.2 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 24.2/24.2 MB 98.0 MB/s  0:00:00
+Downloading comfyui_workflow_templates-0.11.69-py3-none-any.whl (10 kB)
+Downloading comfyui_embedded_docs-0.5.12-py3-none-any.whl (19.5 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 19.5/19.5 MB 187.9 MB/s  0:00:00
+Downloading comfy_kitchen-0.2.35-cp312-abi3-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (47.2 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 47.2/47.2 MB 178.4 MB/s  0:00:00
+Downloading comfy_aimdo-0.5.5-cp39-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (432 kB)
+Downloading comfyui_workflow_templates_core-0.3.360-py3-none-any.whl (77 kB)
+Downloading comfyui_workflow_templates_json-0.1.95-py3-none-any.whl (3.6 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 3.6/3.6 MB 29.7 MB/s  0:00:00
+Downloading comfyui_workflow_templates_media_api-0.3.84-py3-none-any.whl (100.1 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 100.1/100.1 MB 107.1 MB/s  0:00:00
+Downloading comfyui_workflow_templates_media_assets_01-0.1.48-py3-none-any.whl (94.2 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 94.2/94.2 MB 187.4 MB/s  0:00:00
+Downloading comfyui_workflow_templates_media_assets_02-0.1.5-py3-none-any.whl (9.0 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 9.0/9.0 MB 29.2 MB/s  0:00:00
+Downloading comfyui_workflow_templates_media_image-0.3.160-py3-none-any.whl (89.4 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 89.4/89.4 MB 126.2 MB/s  0:00:00
+Downloading comfyui_workflow_templates_media_other-0.3.229-py3-none-any.whl (89.1 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 89.1/89.1 MB 125.5 MB/s  0:00:00
+Downloading comfyui_workflow_templates_media_video-0.3.101-py3-none-any.whl (104.3 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 104.3/104.3 MB 193.8 MB/s  0:00:00
+Downloading pydantic-2.14.2-py3-none-any.whl (490 kB)
+Downloading pydantic_core-2.50.2-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (2.2 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.2/2.2 MB 111.2 MB/s  0:00:00
+Downloading pydantic_settings-2.16.2-py3-none-any.whl (81 kB)
+Downloading torchsde-0.2.6-py3-none-any.whl (61 kB)
+Downloading einops-0.8.2-py3-none-any.whl (65 kB)
+Downloading transformers-5.22.1-py3-none-any.whl (13.1 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 13.1/13.1 MB 25.6 MB/s  0:00:00
+Downloading tokenizers-0.23.3-cp310-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (3.4 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 3.4/3.4 MB 257.1 MB/s  0:00:00
+Downloading huggingface_hub-2.4.0-py3-none-any.whl (857 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 857.0/857.0 kB 127.8 MB/s  0:00:00
+Downloading click-8.5.0-py3-none-any.whl (125 kB)
+Downloading hf_xet-1.8.0-cp38-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (4.3 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 4.3/4.3 MB 271.1 MB/s  0:00:00
+Downloading httpx2-2.16.0-py3-none-any.whl (97 kB)
+Downloading httpcore2-2.16.0-py3-none-any.whl (85 kB)
+Downloading sentencepiece-0.2.2-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (1.4 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.4/1.4 MB 164.7 MB/s  0:00:00
+Downloading safetensors-0.8.0-cp310-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (516 kB)
+Downloading aiohttp-3.14.5-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (1.9 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.9/1.9 MB 155.7 MB/s  0:00:00
+Downloading yarl-1.25.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (117 kB)
+Downloading multidict-7.2.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (516 kB)
+Downloading pyyaml-6.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (807 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 807.9/807.9 kB 135.6 MB/s  0:00:00
+Downloading scipy-1.18.1-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (35.3 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 35.3/35.3 MB 279.0 MB/s  0:00:00
+Downloading tqdm-4.70.1-py3-none-any.whl (80 kB)
+Downloading psutil-7.2.2-cp36-abi3-manylinux2010_x86_64.manylinux_2_12_x86_64.manylinux_2_28_x86_64.whl (155 kB)
+Downloading alembic-1.20.1-py3-none-any.whl (270 kB)
+Downloading sqlalchemy-2.1.6-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (4.7 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 4.7/4.7 MB 209.9 MB/s  0:00:00
+Downloading av-19.0.2-cp312-abi3-manylinux_2_28_x86_64.whl (35.0 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 35.0/35.0 MB 313.9 MB/s  0:00:00
+Downloading requests-2.34.2-py3-none-any.whl (73 kB)
+Downloading charset_normalizer-3.5.2-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (257 kB)
+Downloading idna-3.20-py3-none-any.whl (69 kB)
+Downloading urllib3-2.8.0-py3-none-any.whl (135 kB)
+Downloading simpleeval-1.0.8-py3-none-any.whl (18 kB)
+Downloading blake3-1.0.11-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (381 kB)
+Downloading kornia-0.9.0-py3-none-any.whl (1.9 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.9/1.9 MB 237.3 MB/s  0:00:00
+Downloading spandrel-0.4.2-py3-none-any.whl (320 kB)
+Downloading pyopengl-3.1.10-py3-none-any.whl (3.2 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 3.2/3.2 MB 201.5 MB/s  0:00:00
+Downloading comfy_angle-0.1.1-py3-none-manylinux_2_28_x86_64.whl (5.1 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 5.1/5.1 MB 238.1 MB/s  0:00:00
+Downloading aiohappyeyeballs-2.7.1-py3-none-any.whl (15 kB)
+Downloading aiosignal-1.4.0-py3-none-any.whl (7.5 kB)
+Downloading annotated_types-0.8.0-py3-none-any.whl (13 kB)
+Downloading anyio-4.16.0-py3-none-any.whl (134 kB)
+Downloading attrs-26.1.0-py3-none-any.whl (67 kB)
+Downloading certifi-2026.10.23-py3-none-any.whl (135 kB)
+Downloading frozenlist-1.8.0-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl (242 kB)
+Downloading h11-0.16.0-py3-none-any.whl (37 kB)
+Downloading kornia_rs-0.2.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (5.3 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 5.3/5.3 MB 207.8 MB/s  0:00:00
+Downloading packaging-26.3-py3-none-any.whl (129 kB)
+Downloading propcache-0.5.4-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (250 kB)
+Downloading python_dotenv-1.2.4-py3-none-any.whl (23 kB)
+Downloading regex-2026.9.29-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (807 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 807.8/807.8 kB 175.8 MB/s  0:00:00
+Downloading trampoline-0.1.2-py3-none-any.whl (5.2 kB)
+Downloading truststore-0.10.5-py3-none-any.whl (19 kB)
+Downloading typing_inspection-0.4.4-py3-none-any.whl (14 kB)
+Downloading mako-1.4.3-py3-none-any.whl (80 kB)
+Downloading typer-0.27.3-py3-none-any.whl (123 kB)
+Downloading annotated_doc-0.0.5-py3-none-any.whl (5.3 kB)
+Downloading rich-15.0.0-py3-none-any.whl (310 kB)
+Downloading pygments-2.21.0-py3-none-any.whl (1.3 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.3/1.3 MB 116.2 MB/s  0:00:00
+Downloading markdown_it_py-4.2.0-py3-none-any.whl (91 kB)
+Downloading mdurl-0.1.2-py3-none-any.whl (10.0 kB)
+Downloading shellingham-1.5.4-py2.py3-none-any.whl (9.8 kB)
+Installing collected packages: trampoline, PyOpenGL, urllib3, typing-inspection, truststore, tqdm, SQLAlchemy, simpleeval, shellingham, sentencepiece, scipy, safetensors, regex, pyyaml, python-dotenv, pygments, pydantic-core, psutil, propcache, packaging, multidict, mdurl, Mako, kornia-rs, idna, hf-xet, h11, frozenlist, einops, comfyui-workflow-templates-media-video, comfyui-workflow-templates-media-other, comfyui-workflow-templates-media-image, comfyui-workflow-templates-media-assets-02, comfyui-workflow-templates-media-assets-01, comfyui-workflow-templates-media-api, comfyui-workflow-templates-json, comfyui-workflow-templates-core, comfyui-frontend-package, comfyui-embedded-docs, comfy-kitchen, comfy-angle, comfy-aimdo, click, charset_normalizer, certifi, blake3, av, attrs, annotated-types, annotated-doc, aiohappyeyeballs, yarl, requests, pydantic, markdown-it-py, httpcore2, comfyui-workflow-templates, anyio, alembic, aiosignal, rich, pydantic-settings, httpx2, aiohttp, typer, huggingface-hub, torchsde, tokenizers, kornia, transformers, spandrel
+
+Successfully installed Mako-1.4.3 PyOpenGL-3.1.10 SQLAlchemy-2.1.6 aiohappyeyeballs-2.7.1 aiohttp-3.14.5 aiosignal-1.4.0 alembic-1.20.1 annotated-doc-0.0.5 annotated-types-0.8.0 anyio-4.16.0 attrs-26.1.0 av-19.0.2 blake3-1.0.11 certifi-2026.10.23 charset_normalizer-3.5.2 click-8.5.0 comfy-aimdo-0.5.5 comfy-angle-0.1.1 comfy-kitchen-0.2.35 comfyui-embedded-docs-0.5.12 comfyui-frontend-package-1.52.7 comfyui-workflow-templates-0.11.69 comfyui-workflow-templates-core-0.3.360 comfyui-workflow-templates-json-0.1.95 comfyui-workflow-templates-media-api-0.3.84 comfyui-workflow-templates-media-assets-01-0.1.48 comfyui-workflow-templates-media-assets-02-0.1.5 comfyui-workflow-templates-media-image-0.3.160 comfyui-workflow-templates-media-other-0.3.229 comfyui-workflow-templates-media-video-0.3.101 einops-0.8.2 frozenlist-1.8.0 h11-0.16.0 hf-xet-1.8.0 httpcore2-2.16.0 httpx2-2.16.0 huggingface-hub-2.4.0 idna-3.20 kornia-0.9.0 kornia-rs-0.2.0 markdown-it-py-4.2.0 mdurl-0.1.2 multidict-7.2.1 packaging-26.3 propcache-0.5.4 psutil-7.2.2 pydantic-2.14.2 pydantic-core-2.50.2 pydantic-settings-2.16.2 pygments-2.21.0 python-dotenv-1.2.4 pyyaml-6.0.3 regex-2026.9.29 requests-2.34.2 rich-15.0.0 safetensors-0.8.0 scipy-1.18.1 sentencepiece-0.2.2 shellingham-1.5.4 simpleeval-1.0.8 spandrel-0.4.2 tokenizers-0.23.3 torchsde-0.2.6 tqdm-4.70.1 trampoline-0.1.2 transformers-5.22.1 truststore-0.10.5 typer-0.27.3 typing-inspection-0.4.4 urllib3-2.8.0 yarl-1.25.1
+
+[notice] A new release of pip is available: 26.2.2 -> 26.3
+[notice] To update, run: /opt/comfyui/.venv/bin/python -m pip install --upgrade pip
+
+
+Installing ComfyUI-Manager..
+[ComfyUI-Manager] Using GitPython backend
+FETCH DATA from: /opt/comfyui/.venv/lib/python3.12/site-packages/comfyui_manager/custom-node-list.json [DONE]
+FETCH DATA from: /opt/comfyui/.venv/lib/python3.12/site-packages/comfyui_manager/custom-node-list.json [DONE]
+
+ComfyUI is installed at: /opt/comfyui
+== 1. kiểm máy
+name, driver_version, memory.total [MiB]
+NVIDIA GeForce RTX 4090, 615.71.09, 24564 MiB
+               total        used        free      shared  buff/cache   available
+Mem:             120           0          69           0          49         119
+overlay         250G   50G  201G  20% /
+== 2. gói hệ thống
+Hit:1 http://archive.ubuntu.mirror.rafal.ca/ubuntu jammy InRelease
+Hit:2 http://archive.ubuntu.mirror.rafal.ca/ubuntu jammy-updates InRelease
+Hit:3 http://archive.ubuntu.mirror.rafal.ca/ubuntu jammy-backports InRelease
+Hit:4 http://archive.ubuntu.mirror.rafal.ca/ubuntu jammy-security InRelease
+Hit:5 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64  InRelease
+Reading package lists...
+Reading package lists...
+Building dependency tree...
+Reading state information...
+gcc is already the newest version (4:11.2.0-1ubuntu1).
+libgl1 is already the newest version (1.4.0-1).
+libsm6 is already the newest version (2:1.2.3-1build2).
+libtcmalloc-minimal4 is already the newest version (2.9.1-0ubuntu3).
+libxext6 is already the newest version (2:1.3.4-1build1).
+libxrender1 is already the newest version (1:0.9.10-1build4).
+aria2 is already the newest version (1.36.0-1).
+curl is already the newest version (7.81.0-1ubuntu1.30).
+git is already the newest version (1:2.34.1-1ubuntu1.18).
+jq is already the newest version (1.6-2.1ubuntu3.2).
+libglib2.0-0 is already the newest version (2.72.4-0ubuntu2.10).
+tmux is already the newest version (3.2a-4ubuntu0.3).
+wget is already the newest version (1.21.2-2ubuntu1.5).
+ffmpeg is already the newest version (7:4.4.2-0ubuntu0.22.04.1).
+0 upgraded, 0 newly installed, 0 to remove and 162 not upgraded.
+== 2b. tải model nền (log: /opt/download.log)
+== 3. uv + venv + ComfyUI
+Using Python 3.12.16 environment at: /opt/venv
+Checked 4 packages in 14ms
+== 4. custom node (ghim commit)
+Cloning into '/opt/comfyui/custom_nodes/ComfyUI-MiniMax-H3-PDD-Acc'...
+Note: switching to '311a65dd53832d8a5f8177a9d5fb923c09e35a90'.
+
+You are in 'detached HEAD' state. You can look around, make experimental
+changes and commit them, and you can discard any commits you make in this
+state without impacting any branches by switching back to a branch.
+
+If you want to create a new branch to retain commits you create, you may
+do so (now or later) by using -c with the switch command. Example:
+
+  git switch -c <new-branch-name>
+
+Or undo this operation with:
+
+  git switch -
+
+Turn off this advice by setting config variable advice.detachedHead to false
+
+HEAD is now at 311a65d Merge pull request #5 from wkdtjs/main
+Cloning into '/opt/comfyui/custom_nodes/ComfyUI-GGUF'...
+Note: switching to '6ea2651e7df66d7585f6ffee804b20e92fb38b8a'.
+
+You are in 'detached HEAD' state. You can look around, make experimental
+changes and commit them, and you can discard any commits you make in this
+state without impacting any branches by switching back to a branch.
+
+If you want to create a new branch to retain commits you create, you may
+do so (now or later) by using -c with the switch command. Example:
+
+  git switch -c <new-branch-name>
+
+Or undo this operation with:
+
+  git switch -
+
+Turn off this advice by setting config variable advice.detachedHead to false
+
+HEAD is now at 6ea2651 Only include metadata on new comfy versions
+Cloning into '/opt/comfyui/custom_nodes/ComfyUI-H3-Multishot'...
+Note: switching to 'd7d197709fc93c1afb125e3db1dfd4ac0ae28c60'.
+
+You are in 'detached HEAD' state. You can look around, make experimental
+changes and commit them, and you can discard any commits you make in this
+state without impacting any branches by switching back to a branch.
+
+If you want to create a new branch to retain commits you create, you may
+do so (now or later) by using -c with the switch command. Example:
+
+  git switch -c <new-branch-name>
+
+Or undo this operation with:
+
+  git switch -
+
+Turn off this advice by setting config variable advice.detachedHead to false
+
+HEAD is now at d7d1977 2.7.2: split multi-statement lines (E702) - the rule that actually flagged 2.7.0 and 2.7.1
+== 5. torch cu130 + sage
+Using Python 3.12.16 environment at: /opt/venv
+Resolved 33 packages in 591ms
+Downloading pillow (6.8MiB)
+Downloading networkx (2.0MiB)
+Downloading setuptools (1.2MiB)
+Downloading numpy (16.0MiB)
+Downloading sympy (6.0MiB)
+Downloading torch (506.5MiB)
+Downloading cuda-bindings (6.8MiB)
+Downloading nvidia-nccl-cu13 (187.4MiB)
+Downloading torchaudio (1.6MiB)
+Downloading nvidia-cusolver (191.6MiB)
+Downloading triton (179.6MiB)
+Downloading nvidia-nvjitlink (38.8MiB)
+Downloading nvidia-curand (56.8MiB)
+Downloading torchvision (7.2MiB)
+ Downloaded setuptools
+Downloading nvidia-cublas (403.5MiB)
+Downloading nvidia-cusparse (139.2MiB)
+Downloading nvidia-cufile (1.2MiB)
+Downloading nvidia-cuda-cupti (10.2MiB)
+Downloading nvidia-cudnn-cu13 (349.1MiB)
+Downloading nvidia-nvshmem-cu13 (57.6MiB)
+Downloading nvidia-cuda-nvrtc (86.0MiB)
+Downloading nvidia-cufft (204.2MiB)
+Downloading nvidia-cusparselt-cu13 (162.0MiB)
+ Downloaded torchaudio
+Downloading nvidia-cuda-runtime (2.1MiB)
+ Downloaded networkx
+ Downloaded nvidia-cufile
+ Downloaded cuda-bindings
+ Downloaded pillow
+ Downloaded torchvision
+ Downloaded nvidia-cuda-runtime
+ Downloaded sympy
+ Downloaded numpy
+ Downloaded nvidia-cuda-cupti
+ Downloaded nvidia-nvjitlink
+ Downloaded triton
+ Downloaded nvidia-curand
+ Downloaded nvidia-nccl-cu13
+ Downloaded nvidia-nvshmem-cu13
+ Downloaded nvidia-cuda-nvrtc
+ Downloaded nvidia-cusparse
+ Downloaded torch
+ Downloaded nvidia-cufft
+ Downloaded nvidia-cusolver
+ Downloaded nvidia-cusparselt-cu13
+ Downloaded nvidia-cudnn-cu13
+ Downloaded nvidia-cublas
+Prepared 30 packages in 7.89s
+Uninstalled 1 package in 17ms
+Installed 30 packages in 3.08s
+ + cuda-bindings==13.4.4
+ + cuda-pathfinder==1.8.4
+ + cuda-toolkit==13.0.2
+ + filelock==4.2.4
+ + fsspec==2026.9.0
+ + mpmath==1.3.0
+ + networkx==3.7
+ + numpy==2.5.4
+ + nvidia-cublas==13.1.0.3
+ + nvidia-cuda-cupti==13.0.85
+ + nvidia-cuda-nvrtc==13.0.88
+ + nvidia-cuda-runtime==13.0.96
+ + nvidia-cudnn-cu13==9.19.0.56
+ + nvidia-cufft==12.0.0.61
+ + nvidia-cufile==1.15.1.6
+ + nvidia-curand==10.4.0.35
+ + nvidia-cusolver==12.0.4.66
+ + nvidia-cusparse==12.6.3.3
+ + nvidia-cusparselt-cu13==0.8.0
+ + nvidia-nccl-cu13==2.28.9
+ + nvidia-nvjitlink==13.0.88
+ + nvidia-nvshmem-cu13==3.4.5
+ + nvidia-nvtx==13.0.85
+ + pillow==13.0.0
+ - setuptools==84.2.1
+ + setuptools==78.1.0
+ + sympy==1.14.0
+ + torch==2.11.0+cu130
+ + torchaudio==2.11.0+cu130
+ + torchvision==0.26.0+cu130
+ + triton==3.6.0
+Using Python 3.12.16 environment at: /opt/venv
+Resolved 110 packages in 483ms
+Downloading pynacl (1.3MiB)
+Downloading cryptography (4.5MiB)
+Downloading uvloop (4.3MiB)
+Downloading brotli (1.4MiB)
+Downloading pydantic-core (2.1MiB)
+Downloading hf-xet (4.1MiB)
+Downloading botocore (15.4MiB)
+Downloading aiohttp (1.8MiB)
+ Downloaded brotli
+ Downloaded pynacl
+ Downloaded aiohttp
+ Downloaded pydantic-core
+ Downloaded hf-xet
+ Downloaded uvloop
+ Downloaded cryptography
+ Downloaded botocore
+Prepared 76 packages in 302ms
+Uninstalled 1 package in 1ms
+Installed 79 packages in 483ms
+ + agent-detector==2.0.0
+ + aiodns==4.0.4
+ + aiohappyeyeballs==2.7.1
+ + aiohttp==3.14.5
+ + aiohttp-retry==2.9.1
+ + aiosignal==1.4.0
+ + annotated-types==0.8.0
+ + attrs==26.1.0
+ + backports-zstd==1.8.0
+ + bcrypt==5.0.0
+ + boto3==1.43.123
+ + botocore==1.43.123
+ + brotli==1.2.1
+ + cffi==2.1.1
+ + cloudpickle==3.1.2
+ + colorama==0.4.6
+ + cryptography==50.0.2
+ + detect-installer==0.2.1
+ + dnspython==2.9.1
+ + email-validator==2.3.0
+ + fastapi==0.162.0
+ + fastapi-cli==0.0.32
+ + fastapi-cloud-cli==0.26.0
+ + fastar==0.12.0
+ + frozenlist==1.8.0
+ + googleapis-common-protos==1.76.0
+ + hf-xet==1.8.0
+ + httpcore2==2.16.0
+ + httptools==0.9.0
+ + httpx2==2.16.0
+ + huggingface-hub==2.4.0
+ + inquirerpy==0.3.4
+ + invoke==3.0.3
+ + itsdangerous==2.2.0
+ + jmespath==1.1.0
+ + multidict==7.2.1
+ + opentelemetry-api==1.45.2
+ + opentelemetry-exporter-http-transport==0.66b2
+ + opentelemetry-exporter-otlp-common==0.66b2
+ + opentelemetry-exporter-otlp-proto-common==1.45.2
+ + opentelemetry-exporter-otlp-proto-http==1.45.2
+ + opentelemetry-proto==1.45.2
+ + opentelemetry-sdk==1.45.2
+ + opentelemetry-semantic-conventions==0.66b2
+ + paramiko==5.1.0
+ + pfzy==0.3.4
+ + prettytable==3.18.0
+ + propcache==0.5.4
+ + protobuf==7.36.2
+ + py-cpuinfo==9.0.0
+ + pycares==5.2.1
+ + pycparser==3.12
+ + pydantic==2.14.2
+ + pydantic-core==2.50.2
+ + pydantic-extra-types==2.11.1
+ + pydantic-settings==2.16.2
+ + pynacl==1.6.2
+ - python-dateutil==4.0.0
+ + python-dateutil==2.9.0.post0
+ + python-dotenv==1.2.4
+ + python-multipart==0.0.33
+ + rich-toolkit==0.20.6
+ + rignore==0.8.1
+ + runpod==2.0.0
+ + s3transfer==0.19.3
+ + sageattention==1.0.6
+ + sentry-sdk==2.73.0
+ + six==1.17.0
+ + starlette==1.10.0
+ + tomli==2.5.0
+ + tqdm==4.70.1
+ + tqdm-loggable==0.4.1
+ + truststore==0.10.5
+ + typing-inspection==0.4.4
+ + uvicorn==0.54.0
+ + uvloop==0.23.0
+ + watchdog==7.0.0
+ + watchfiles==1.3.0
+ + websockets==17.4
+ + yarl==1.25.1
+Using Python 3.12.16 environment at: /opt/venv
+Resolved 104 packages in 337ms
+Downloading pyopengl (3.0MiB)
+Downloading av (33.4MiB)
+Downloading sqlalchemy (4.5MiB)
+Downloading comfyui-workflow-templates-media-image (85.3MiB)
+Downloading comfyui-workflow-templates-json (3.4MiB)
+Downloading scipy (33.7MiB)
+Downloading comfyui-embedded-docs (18.6MiB)
+Downloading tokenizers (3.2MiB)
+Downloading sentencepiece (1.3MiB)
+Downloading comfyui-workflow-templates-media-api (95.5MiB)
+Downloading comfyui-workflow-templates-media-other (85.0MiB)
+Downloading kornia (1.9MiB)
+Downloading comfyui-workflow-templates-media-assets-02 (8.6MiB)
+Downloading kornia-rs (5.1MiB)
+Downloading transformers (12.4MiB)
+Downloading comfyui-frontend-package (23.1MiB)
+Downloading comfy-angle (4.9MiB)
+Downloading comfy-kitchen (45.0MiB)
+Downloading comfyui-workflow-templates-media-assets-01 (89.8MiB)
+Downloading comfyui-workflow-templates-media-video (99.5MiB)
+ Downloaded sentencepiece
+ Downloaded kornia
+ Downloaded tokenizers
+ Downloaded comfyui-workflow-templates-json
+ Downloaded sqlalchemy
+ Downloaded comfy-angle
+ Downloaded kornia-rs
+ Downloaded pyopengl
+ Downloaded comfyui-workflow-templates-media-assets-02
+ Downloaded transformers
+ Downloaded comfyui-frontend-package
+ Downloaded av
+ Downloaded scipy
+ Downloaded comfy-kitchen
+ Downloaded comfyui-embedded-docs
+ Downloaded comfyui-workflow-templates-media-image
+ Downloaded comfyui-workflow-templates-media-assets-01
+ Downloaded comfyui-workflow-templates-media-api
+ Downloaded comfyui-workflow-templates-media-other
+ Downloaded comfyui-workflow-templates-media-video
+Prepared 33 packages in 1.86s
+Installed 33 packages in 2.33s
+ + alembic==1.20.1
+ + av==19.0.2
+ + blake3==1.0.11
+ + comfy-aimdo==0.5.5
+ + comfy-angle==0.1.1
+ + comfy-kitchen==0.2.35
+ + comfyui-embedded-docs==0.5.12
+ + comfyui-frontend-package==1.52.7
+ + comfyui-workflow-templates==0.11.69
+ + comfyui-workflow-templates-core==0.3.360
+ + comfyui-workflow-templates-json==0.1.95
+ + comfyui-workflow-templates-media-api==0.3.84
+ + comfyui-workflow-templates-media-assets-01==0.1.48
+ + comfyui-workflow-templates-media-assets-02==0.1.5
+ + comfyui-workflow-templates-media-image==0.3.160
+ + comfyui-workflow-templates-media-other==0.3.229
+ + comfyui-workflow-templates-media-video==0.3.101
+ + einops==0.8.2
+ + kornia==0.9.0
+ + kornia-rs==0.2.0
+ + mako==1.4.3
+ + pyopengl==3.1.10
+ + regex==2026.9.29
+ + safetensors==0.8.0
+ + scipy==1.18.1
+ + sentencepiece==0.2.2
+ + simpleeval==1.0.8
+ + spandrel==0.4.2
+ + sqlalchemy==2.1.6
+ + tokenizers==0.23.3
+ + torchsde==0.2.6
+ + trampoline==0.1.2
+ + transformers==5.22.1
+Using Python 3.12.16 environment at: /opt/venv
+Resolved 11 packages in 141ms
+Prepared 1 package in 13ms
+Installed 1 package in 12ms
+ + gguf==0.19.0
+2.11.0+cu130 13.0 True
+== 6. chờ tải model xong
+!! tải model lỗi, xem /opt/download.log
+== 1. kiểm máy
+name, driver_version, memory.total [MiB]
+NVIDIA GeForce RTX 4090, 615.71.09, 24564 MiB
+               total        used        free      shared  buff/cache   available
+Mem:             120           0          62           0          56         119
+overlay         250G   62G  189G  25% /
+== 2. gói hệ thống
+Hit:1 http://archive.ubuntu.mirror.rafal.ca/ubuntu jammy InRelease
+Hit:2 http://archive.ubuntu.mirror.rafal.ca/ubuntu jammy-updates InRelease
+Hit:3 http://archive.ubuntu.mirror.rafal.ca/ubuntu jammy-backports InRelease
+Hit:4 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64  InRelease
+Hit:5 http://archive.ubuntu.mirror.rafal.ca/ubuntu jammy-security InRelease
+Reading package lists...
+Reading package lists...
+Building dependency tree...
+Reading state information...
+gcc is already the newest version (4:11.2.0-1ubuntu1).
+libgl1 is already the newest version (1.4.0-1).
+libsm6 is already the newest version (2:1.2.3-1build2).
+libtcmalloc-minimal4 is already the newest version (2.9.1-0ubuntu3).
+libxext6 is already the newest version (2:1.3.4-1build1).
+libxrender1 is already the newest version (1:0.9.10-1build4).
+aria2 is already the newest version (1.36.0-1).
+curl is already the newest version (7.81.0-1ubuntu1.30).
+git is already the newest version (1:2.34.1-1ubuntu1.18).
+jq is already the newest version (1.6-2.1ubuntu3.2).
+libglib2.0-0 is already the newest version (2.72.4-0ubuntu2.10).
+tmux is already the newest version (3.2a-4ubuntu0.3).
+wget is already the newest version (1.21.2-2ubuntu1.5).
+ffmpeg is already the newest version (7:4.4.2-0ubuntu0.22.04.1).
+0 upgraded, 0 newly installed, 0 to remove and 162 not upgraded.
+== 2b. tải model nền (log: /opt/download.log)
+== 3. uv + venv + ComfyUI
+Using Python 3.12.16 environment at: /opt/venv
+Checked 4 packages in 8ms
+== 4. custom node (ghim commit)
+HEAD is now at 311a65d Merge pull request #5 from wkdtjs/main
+HEAD is now at 6ea2651 Only include metadata on new comfy versions
+HEAD is now at d7d1977 2.7.2: split multi-statement lines (E702) - the rule that actually flagged 2.7.0 and 2.7.1
+== 5. torch cu130 + sage
+Using Python 3.12.16 environment at: /opt/venv
+Checked 3 packages in 7ms
+Using Python 3.12.16 environment at: /opt/venv
+Checked 7 packages in 19ms
+Using Python 3.12.16 environment at: /opt/venv
+Checked 35 packages in 16ms
+Using Python 3.12.16 environment at: /opt/venv
+Checked 3 packages in 5ms
+2.11.0+cu130 13.0 True
+== 6. chờ tải model xong
+import novelvideo OK
+XONG. Chạy: tmux new -d -s comfy /opt/run_comfy.sh ; curl -s 127.0.0.1:8188/system_stats | jq .system

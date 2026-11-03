@@ -1,0 +1,1 @@
+dd /opt/models/diffusion_models/minimax_h3_ref2va_pruned_int8_convrot.safetensors bytes=20970379616 mode="warm(no drop_caches)" MBps=7892

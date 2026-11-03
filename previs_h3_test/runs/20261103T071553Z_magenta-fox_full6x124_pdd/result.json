@@ -1,0 +1,29 @@
+{
+  "label": "full6x124_pdd",
+  "box": "rented-4090-local",
+  "started_utc": "2026-11-03T07:16:04Z",
+  "run_dir": "20261103T071553Z_magenta-fox_full6x124_pdd",
+  "comfy_url": "http://127.0.0.1:8188",
+  "resolution": "1344x768",
+  "shots": 6,
+  "frames_per_shot": 124,
+  "sampling": {
+    "pdd_nfe": "8",
+    "pdd_file": "MiniMax-H3-FL2VA-Acc-8Step.safetensors",
+    "turbo_lora": "",
+    "chain_normalize": "off",
+    "steps": 8,
+    "output_scale": 1.0
+  },
+  "logs": [
+    "    0.0s submitted prompt 1287ae2c-eaeb-4711-a764-9cfafe5e311a",
+    "    5.0s running=1 pending=0",
+    "  860.6s event execution_start {\"prompt_id\": \"1287ae2c-eaeb-4711-a764-9cfafe5e311a\", \"timestamp\": 1793690164889}",
+    "  860.6s event execution_cached {\"nodes\": [\"1\", \"2\", \"3\", \"4\", \"5\", \"6\", \"100\"], \"prompt_id\": \"1287ae2c-eaeb-4711-a764-9cfafe5e311a\", \"timestamp\": 1793690164892}",
+    "  860.6s event execution_success {\"prompt_id\": \"1287ae2c-eaeb-4711-a764-9cfafe5e311a\", \"timestamp\": 1793691022119}"
+  ],
+  "wall_seconds": 860.6,
+  "error": null,
+  "video_bytes": 45468533,
+  "helper_errors": []
+}

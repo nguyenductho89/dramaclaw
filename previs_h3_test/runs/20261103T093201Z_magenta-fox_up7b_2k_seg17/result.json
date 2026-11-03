@@ -1,0 +1,37 @@
+{
+  "label": "up7b_2k_seg17",
+  "kind": "seedvr2_upscale",
+  "src": "/opt/bench/skit.mp4",
+  "src_res": "1344x768",
+  "out_res": "2688x1536",
+  "model": "7b",
+  "frames": 34,
+  "total_frames": 727,
+  "segment": 17,
+  "overlap": 4,
+  "color": "lab",
+  "segments": [
+    {
+      "i": 0,
+      "frames": "0-16",
+      "seconds": 55.0,
+      "gpu_seconds": 54.1
+    },
+    {
+      "i": 1,
+      "frames": "13-29",
+      "seconds": 52.1,
+      "gpu_seconds": 51.2
+    },
+    {
+      "i": 2,
+      "frames": "17-33",
+      "seconds": 52.1,
+      "gpu_seconds": 51.1
+    }
+  ],
+  "error": null,
+  "started_utc": "2026-11-03T09:32:06Z",
+  "wall_seconds": 167.4,
+  "avg_segment_seconds": 53.1
+}

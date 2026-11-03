@@ -1,0 +1,599 @@
+2026-11-03T10:40:09 [32m[INFO][0m got prompt
+2026-11-03T10:42:50 [10:42:50.869] 🎨   Encoding tile 6 / 6
+2026-11-03T10:43:01 W1103 10:43:01.257000 111858 torch/_dynamo/convert_frame.py:1743] [4/128] torch._dynamo hit config.recompile_limit (128)
+2026-11-03T10:43:01 W1103 10:43:01.257000 111858 torch/_dynamo/convert_frame.py:1743] [4/128]    function: 'memory_limit_conv' (/opt/comfyui/custom_nodes/ComfyUI-SeedVR2_VideoUpscaler/src/models/video_vae_v3/modules/causal_inflation_lib.py:115)
+2026-11-03T10:43:01 W1103 10:43:01.257000 111858 torch/_dynamo/convert_frame.py:1743] [4/128]    last reason: 4/127: tensor 'x' size mismatch at index 2. expected 7, actual 5
+2026-11-03T10:43:01 W1103 10:43:01.257000 111858 torch/_dynamo/convert_frame.py:1743] [4/128] To log all recompilation reasons, use TORCH_LOGS="recompiles".
+2026-11-03T10:43:01 W1103 10:43:01.257000 111858 torch/_dynamo/convert_frame.py:1743] [4/128] To diagnose recompilation issues, see https://docs.pytorch.org/docs/main/user_guide/torch_compiler/compile/programming_model.recompilation.html
+2026-11-03T10:43:34 [10:43:34.771] ℹ️   Latents shape: torch.Size([5, 192, 336, 16])
+2026-11-03T10:43:34 [10:43:34.771] 🔄   Moving latent_1 from CUDA:0 to CPU (storing encoded latents for upscaling)
+2026-11-03T10:43:34 [10:43:34.772] 🎨 Encoding batch 2/3
+2026-11-03T10:43:34 [10:43:34.773] 🔄   Moving video_batch_2 from CPU to CUDA:0, torch.float32 → torch.bfloat16 (VAE encoding)
+2026-11-03T10:43:34 [10:43:34.795] 📹   Sequence of 17 frames
+2026-11-03T10:43:34 [10:43:34.806] 🎨   Using VAE tiled encoding (Tile: (1024, 1024), Overlap: (128, 128))
+2026-11-03T10:43:34 [10:43:34.806] 🎨 Encoding 6 tiles (Tile: (1024, 1024), Overlap: (128, 128))
+2026-11-03T10:43:34 [10:43:34.806] 🎨   Encoding tiles 1-5 / 6
+2026-11-03T10:43:42 [10:43:42.700] 🎨   Encoding tile 6 / 6
+2026-11-03T10:43:43 [10:43:43.766] ℹ️   Latents shape: torch.Size([5, 192, 336, 16])
+2026-11-03T10:43:43 [10:43:43.766] 🔄   Moving latent_2 from CUDA:0 to CPU (storing encoded latents for upscaling)
+2026-11-03T10:43:43 [10:43:43.767] 🎨 Encoding batch 3/3
+2026-11-03T10:43:43 [10:43:43.767] 🔄   Moving video_batch_3 from CPU to CUDA:0, torch.float32 → torch.bfloat16 (VAE encoding)
+2026-11-03T10:43:43 [10:43:43.783] 📹   Sequence of 15 frames
+2026-11-03T10:43:43 [10:43:43.783] 📹   Padding batch: 2 frames added (15 → 17) to meet 4n+1 constraint
+2026-11-03T10:43:43 [10:43:43.792] 🎨   Using VAE tiled encoding (Tile: (1024, 1024), Overlap: (128, 128))
+2026-11-03T10:43:43 [10:43:43.792] 🎨 Encoding 6 tiles (Tile: (1024, 1024), Overlap: (128, 128))
+2026-11-03T10:43:43 [10:43:43.792] 🎨   Encoding tiles 1-5 / 6
+2026-11-03T10:43:51 [10:43:51.693] 🎨   Encoding tile 6 / 6
+2026-11-03T10:43:52 [10:43:52.761] ℹ️   Latents shape: torch.Size([5, 192, 336, 16])
+2026-11-03T10:43:52 [10:43:52.761] 🔄   Moving latent_3 from CUDA:0 to CPU (storing encoded latents for upscaling)
+2026-11-03T10:43:52 [10:43:52.763] 🔄 Moving VAE from CUDA:0 to CPU (VAE offload)
+2026-11-03T10:43:52 [10:43:52.829] ⚡ Phase 1: VAE encoding complete: 411.76s
+2026-11-03T10:43:52 [10:43:52.829] ⚡   └─ Encoded batch 1: 391.40s
+2026-11-03T10:43:52 [10:43:52.829] ⚡   └─ Encoded batch 3: 9.00s
+2026-11-03T10:43:52 [10:43:52.829] ⚡   └─ Encoded batch 2: 8.99s
+2026-11-03T10:43:52 [10:43:52.829] ⚡   └─ VAE submodules compiled: encoder, decoder: 2.24s
+2026-11-03T10:43:52 [10:43:52.829] ⚡   └─ VAE moved to CPU: 0.07s
+2026-11-03T10:43:52 [10:43:52.829] ⚡   └─ VAE moved to CUDA:0: 0.05s
+2026-11-03T10:43:52 [10:43:52.831] 📊 After phase 1 (VAE encoding):
+2026-11-03T10:43:52 [10:43:52.831] 📊   [VRAM] 0.01GB allocated / 21.31GB reserved / Peak: 19.93GB / 1.78GB free / 23.60GB total
+2026-11-03T10:43:52 [10:43:52.831] 📊   [RAM] 21.59GB process / 0.12GB others / 98.30GB free / 120.00GB total
+2026-11-03T10:43:52 [10:43:52.831] 📊   Memory changes: VRAM -0.46GB, RAM +2.44GB
+2026-11-03T10:43:52 [10:43:52.831] 📊 Resetting VRAM peak memory statistics
+2026-11-03T10:43:52 [10:43:52.831]  
+2026-11-03T10:43:52 [10:43:52.831]  ━━━━━━━━ Phase 2: DiT upscaling ━━━━━━━━
+2026-11-03T10:43:52 [10:43:52.832] 🚀 Applying updated DiT configuration
+2026-11-03T10:43:52 [10:43:52.832] ♻️ Reusing existing DiT compatibility wrapper
+2026-11-03T10:43:52 [10:43:52.832] 🔧 Applying sdpa attention mode and torch.bfloat16 compute dtype to model
+2026-11-03T10:43:52 [10:43:52.833] ✅ Applied sdpa and compute_dtype=torch.bfloat16 to 36 modules
+2026-11-03T10:43:52 [10:43:52.833] 🔧 Configuring torch.compile for DiT...
+2026-11-03T10:43:52 [10:43:52.833] 🔧   Backend: inductor | Mode: default | Fullgraph: False | Dynamic: False
+2026-11-03T10:43:52 [10:43:52.833] 🔧   Dynamo cache_size_limit: 64 | recompile_limit: 128
+2026-11-03T10:43:52 [10:43:52.833] ✅   torch._dynamo configured successfully
+2026-11-03T10:43:52 [10:43:52.836] ℹ️   Actual compilation will happen on first batch (expect initial delay, then speedup)
+2026-11-03T10:43:52 [10:43:52.836] 🎯 Model precision: DiT=torch.float16, VAE=torch.bfloat16, compute=torch.bfloat16
+2026-11-03T10:43:52 [10:43:52.836] 🔄 Moving DiT from CPU to CUDA:0 (inference requirement)
+2026-11-03T10:43:54 [10:43:54.029] 📊 After DiT loading for upscaling:
+2026-11-03T10:43:54 [10:43:54.029] 📊   [VRAM] 15.38GB allocated / 21.31GB reserved / Peak: 15.38GB / 1.78GB free / 23.60GB total
+2026-11-03T10:43:54 [10:43:54.029] 📊   [RAM] 21.52GB process / 0.12GB others / 98.37GB free / 120.00GB total
+2026-11-03T10:43:54 [10:43:54.029] 📊   Memory changes: VRAM +15.37GB, RAM -0.07GB
+2026-11-03T10:43:54 [10:43:54.029] 📊 Resetting VRAM peak memory statistics
+2026-11-03T10:43:54 [10:43:54.029] 🎬 Upscaling batch 1/3
+2026-11-03T10:43:54 [10:43:54.030] 🚀 Using seed: 42 for deterministic generation
+2026-11-03T10:43:54 [10:43:54.030] 🔄   Moving latent_1 from CPU to CUDA:0 (DiT upscaling)
+2026-11-03T10:44:46 EulerSampler:   0%|          | 0/1 [00:00<?, ?it/s][10:44:46.049] ❌ [ERROR] Forward pass error: Allocation on device 0 would exceed allowed memory. (out of memory)
+2026-11-03T10:44:46 Currently allocated     : 22.40 GiB
+2026-11-03T10:44:46 Requested               : 945.00 MiB
+2026-11-03T10:44:46 Device limit            : 23.60 GiB
+2026-11-03T10:44:46 Free (according to CUDA): 21.94 MiB
+2026-11-03T10:44:46 PyTorch limit (set by user-supplied memory fraction)
+2026-11-03T10:44:46                         : 17179869184.00 GiB
+2026-11-03T10:44:46 [10:44:46.049] ℹ️ torch.float16 model - no conversion applied
+2026-11-03T10:44:46 [10:44:46.049] ❌ [ERROR] Error in Phase 2 (Upscaling): Allocation on device 0 would exceed allowed memory. (out of memory)
+2026-11-03T10:44:46 Currently allocated     : 22.40 GiB
+2026-11-03T10:44:46 Requested               : 945.00 MiB
+2026-11-03T10:44:46 Device limit            : 23.60 GiB
+2026-11-03T10:44:46 Free (according to CUDA): 21.94 MiB
+2026-11-03T10:44:46 PyTorch limit (set by user-supplied memory fraction)
+2026-11-03T10:44:46                         : 17179869184.00 GiB
+2026-11-03T10:44:46 [10:44:46.049] 🧹 Cleaning up DiT components
+2026-11-03T10:44:46 [10:44:46.052] 🔄 Moving DiT from CUDA:0 to CPU (model caching)
+2026-11-03T10:44:47 [10:44:47.223] 🧹 Cleaned up text embeddings: texts_pos, texts_neg
+2026-11-03T10:44:47 [10:44:47.223] 🧹 Starting partial cleanup
+2026-11-03T10:44:47 [10:44:47.223] 🧹 Cleaning up DiT components
+2026-11-03T10:44:47 [10:44:47.225] 🧹 Cleaning up VAE components
+2026-11-03T10:44:47 [10:44:47.227] 🧹 Clearing memory caches (deep)...
+2026-11-03T10:44:48 [10:44:48.541] 💾 Models cached for next run: DiT (seedvr2_ema_7b_fp16.safetensors) and VAE (ema_vae_fp16.safetensors)
+2026-11-03T10:44:48 [10:44:48.541] ✅ Completed partial cleanup
+2026-11-03T10:44:48 [1m[31m[ERROR][0m !!! Exception during processing !!! Allocation on device 0 would exceed allowed memory. (out of memory)
+2026-11-03T10:44:48 Currently allocated     : 22.40 GiB
+2026-11-03T10:44:48 Requested               : 945.00 MiB
+2026-11-03T10:44:48 Device limit            : 23.60 GiB
+2026-11-03T10:44:48 Free (according to CUDA): 21.94 MiB
+2026-11-03T10:44:48 PyTorch limit (set by user-supplied memory fraction)
+2026-11-03T10:44:48                         : 17179869184.00 GiB
+2026-11-03T10:44:48 [1m[31m[ERROR][0m Traceback (most recent call last):
+2026-11-03T10:44:48   File "/opt/comfyui/execution.py", line 547, in execute
+2026-11-03T10:44:48     output_data, output_ui, has_subgraph, has_pending_tasks = await get_output_data(prompt_id, unique_id, obj, input_data_all, execution_block_cb=execution_block_cb, pre_execute_cb=pre_execute_cb, v3_data=v3_data)
+2026-11-03T10:44:48                                                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T10:44:48   File "/opt/comfyui/execution.py", line 352, in get_output_data
+2026-11-03T10:44:48     return_values = await _async_map_node_over_list(prompt_id, unique_id, obj, input_data_all, obj.FUNCTION, allow_interrupt=True, execution_block_cb=execution_block_cb, pre_execute_cb=pre_execute_cb, v3_data=v3_data)
+2026-11-03T10:44:48                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T10:44:48   File "/opt/comfyui/execution.py", line 326, in _async_map_node_over_list
+2026-11-03T10:44:48     await process_inputs(input_dict, i)
+2026-11-03T10:44:48   File "/opt/comfyui/execution.py", line 314, in process_inputs
+2026-11-03T10:44:48     result = f(**inputs)
+2026-11-03T10:44:48              ^^^^^^^^^^^
+2026-11-03T10:44:48   File "/opt/comfyui/comfy_api/internal/__init__.py", line 149, in wrapped_func
+2026-11-03T10:44:48     return method(locked_class, **inputs)
+2026-11-03T10:44:48            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T10:44:48   File "/opt/comfyui/comfy_api/latest/_io.py", line 2053, in EXECUTE_NORMALIZED
+2026-11-03T10:44:48     to_return = cls.execute(*args, **kwargs)
+2026-11-03T10:44:48                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T10:44:48   File "/opt/comfyui/custom_nodes/ComfyUI-SeedVR2_VideoUpscaler/src/interfaces/video_upscaler.py", line 580, in execute
+2026-11-03T10:44:48     raise e
+2026-11-03T10:44:48   File "/opt/comfyui/custom_nodes/ComfyUI-SeedVR2_VideoUpscaler/src/interfaces/video_upscaler.py", line 486, in execute
+2026-11-03T10:44:48     ctx = upscale_all_batches(
+2026-11-03T10:44:48           ^^^^^^^^^^^^^^^^^^^^
+2026-11-03T10:44:48   File "/opt/comfyui/custom_nodes/ComfyUI-SeedVR2_VideoUpscaler/src/core/generation_phases.py", line 720, in upscale_all_batches
+2026-11-03T10:44:48     upscaled_latents = runner.inference(
+2026-11-03T10:44:48                        ^^^^^^^^^^^^^^^^^
+2026-11-03T10:44:48   File "/opt/venv/lib/python3.12/site-packages/torch/utils/_contextlib.py", line 124, in decorate_context
+2026-11-03T10:44:48     return func(*args, **kwargs)
+2026-11-03T10:44:48            ^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T10:44:48   File "/opt/comfyui/custom_nodes/ComfyUI-SeedVR2_VideoUpscaler/src/core/infer.py", line 358, in inference
+2026-11-03T10:44:48     latents = self.sampler.sample(
+2026-11-03T10:44:48               ^^^^^^^^^^^^^^^^^^^^
+2026-11-03T10:44:48   File "/opt/comfyui/custom_nodes/ComfyUI-SeedVR2_VideoUpscaler/src/common/diffusion/samplers/euler.py", line 61, in sample
+2026-11-03T10:44:48     pred = f(SamplerModelArgs(x, t, i))
+2026-11-03T10:44:48            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T10:44:48   File "/opt/comfyui/custom_nodes/ComfyUI-SeedVR2_VideoUpscaler/src/core/infer.py", line 360, in <lambda>
+2026-11-03T10:44:48     f=lambda args: classifier_free_guidance_dispatcher(
+2026-11-03T10:44:48                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T10:44:48   File "/opt/comfyui/custom_nodes/ComfyUI-SeedVR2_VideoUpscaler/src/common/diffusion/utils.py", line 76, in classifier_free_guidance_dispatcher
+2026-11-03T10:44:48     return pos()
+2026-11-03T10:44:48            ^^^^^
+2026-11-03T10:44:48   File "/opt/comfyui/custom_nodes/ComfyUI-SeedVR2_VideoUpscaler/src/core/infer.py", line 361, in <lambda>
+2026-11-03T10:44:48     pos=lambda: self.dit(
+2026-11-03T10:44:48                 ^^^^^^^^^
+2026-11-03T10:44:48   File "/opt/venv/lib/python3.12/site-packages/torch/_dynamo/eval_frame.py", line 472, in __call__
+2026-11-03T10:44:48     return super().__call__(*args, **kwargs)
+2026-11-03T10:44:48            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T10:44:48   File "/opt/venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1779, in _wrapped_call_impl
+2026-11-03T10:44:48     return self._call_impl(*args, **kwargs)
+2026-11-03T10:44:48            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T10:44:48   File "/opt/venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1790, in _call_impl
+2026-11-03T10:44:48     return forward_call(*args, **kwargs)
+2026-11-03T10:44:48            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T10:44:48   File "/opt/venv/lib/python3.12/site-packages/torch/_dynamo/eval_frame.py", line 1024, in compile_wrapper
+2026-11-03T10:44:48     return fn(*args, **kwargs)
+2026-11-03T10:44:48            ^^^^^^^^^^^^^^^^^^^
+2026-11-03T10:44:48   File "/opt/venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1779, in _wrapped_call_impl
+2026-11-03T10:44:48     return self._call_impl(*args, **kwargs)
+2026-11-03T10:44:48            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T10:44:48   File "/opt/venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1790, in _call_impl
+2026-11-03T10:44:48     return forward_call(*args, **kwargs)
+2026-11-03T10:44:48            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T10:44:48   File "/opt/comfyui/custom_nodes/ComfyUI-SeedVR2_VideoUpscaler/src/optimization/compatibility.py", line 931, in forward
+2026-11-03T10:44:48     return self.dit_model(*args, **kwargs)
+2026-11-03T10:44:48            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T10:44:48   File "/opt/venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1779, in _wrapped_call_impl
+2026-11-03T10:44:48     return self._call_impl(*args, **kwargs)
+2026-11-03T10:44:48            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T10:44:48   File "/opt/venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1790, in _call_impl
+2026-11-03T10:44:48     return forward_call(*args, **kwargs)
+2026-11-03T10:44:48            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T10:44:48   File "/opt/comfyui/custom_nodes/ComfyUI-SeedVR2_VideoUpscaler/src/models/dit_7b/nadit.py", line 170, in forward
+2026-11-03T10:44:48     vid, vid_shape = self.vid_in(vid, vid_shape)
+2026-11-03T10:44:48   File "/opt/comfyui/custom_nodes/ComfyUI-SeedVR2_VideoUpscaler/src/models/dit_7b/nadit.py", line 178, in torch_dynamo_resume_in_forward_at_170
+2026-11-03T10:44:48     vid, txt, vid_shape, txt_shape = gradient_checkpointing(
+2026-11-03T10:44:48                                      ^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T10:44:48   File "/opt/comfyui/custom_nodes/ComfyUI-SeedVR2_VideoUpscaler/src/models/dit_7b/nadit.py", line 32, in gradient_checkpointing
+2026-11-03T10:44:48     return module(*args, **kwargs)
+2026-11-03T10:44:48            ^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T10:44:48   File "/opt/venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1779, in _wrapped_call_impl
+2026-11-03T10:44:48     return self._call_impl(*args, **kwargs)
+2026-11-03T10:44:48            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T10:44:48   File "/opt/venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1790, in _call_impl
+2026-11-03T10:44:48     return forward_call(*args, **kwargs)
+2026-11-03T10:44:48            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T10:44:48   File "/opt/comfyui/custom_nodes/ComfyUI-SeedVR2_VideoUpscaler/src/models/dit_7b/nablocks/mmsr_block.py", line 239, in forward
+2026-11-03T10:44:48     vid_attn, txt_attn = self.ada(vid_attn, txt_attn, layer="attn", mode="in", **ada_kwargs)
+2026-11-03T10:44:48   File "/opt/comfyui/custom_nodes/ComfyUI-SeedVR2_VideoUpscaler/src/models/dit_7b/nablocks/mmsr_block.py", line 240, in torch_dynamo_resume_in_forward_at_239
+2026-11-03T10:44:48     vid_attn, txt_attn = self.attn(vid_attn, txt_attn, vid_shape, txt_shape, cache)
+2026-11-03T10:44:48                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T10:44:48   File "/opt/venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1779, in _wrapped_call_impl
+2026-11-03T10:44:48     return self._call_impl(*args, **kwargs)
+2026-11-03T10:44:48            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T10:44:48   File "/opt/venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1790, in _call_impl
+2026-11-03T10:44:48     return forward_call(*args, **kwargs)
+2026-11-03T10:44:48            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T10:44:48   File "/opt/comfyui/custom_nodes/ComfyUI-SeedVR2_VideoUpscaler/src/models/dit_7b/nablocks/mmsr_block.py", line 102, in forward
+2026-11-03T10:44:48     window_partition, window_reverse, window_shape, window_count = cache_win(
+2026-11-03T10:44:48   File "/opt/comfyui/custom_nodes/ComfyUI-SeedVR2_VideoUpscaler/src/models/dit_7b/nablocks/mmsr_block.py", line 120, in torch_dynamo_resume_in_forward_at_102
+2026-11-03T10:44:48     txt_len_win = cache_win("txt_len", lambda: txt_len.repeat_interleave(window_count))
+2026-11-03T10:44:48   File "/opt/comfyui/custom_nodes/ComfyUI-SeedVR2_VideoUpscaler/src/models/dit_7b/nablocks/mmsr_block.py", line 122, in torch_dynamo_resume_in_forward_at_120
+2026-11-03T10:44:48     concat_win, unconcat_win = cache_win(
+2026-11-03T10:44:48   File "/opt/comfyui/custom_nodes/ComfyUI-SeedVR2_VideoUpscaler/src/models/dit_7b/nablocks/mmsr_block.py", line 128, in torch_dynamo_resume_in_forward_at_122
+2026-11-03T10:44:48     vid_q, vid_k = self.rope(vid_q, vid_k, window_shape, cache_win)
+2026-11-03T10:44:48                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T10:44:48   File "/opt/venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1779, in _wrapped_call_impl
+2026-11-03T10:44:48     return self._call_impl(*args, **kwargs)
+2026-11-03T10:44:48            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T10:44:48   File "/opt/venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1790, in _call_impl
+2026-11-03T10:44:48     return forward_call(*args, **kwargs)
+2026-11-03T10:44:48            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T10:44:48   File "/opt/comfyui/custom_nodes/ComfyUI-SeedVR2_VideoUpscaler/src/models/dit_7b/rope.py", line 84, in forward
+2026-11-03T10:44:48     freqs = cache("rope_freqs_3d", lambda: self.get_freqs(shape))
+2026-11-03T10:44:48   File "/opt/comfyui/custom_nodes/ComfyUI-SeedVR2_VideoUpscaler/src/models/dit_7b/rope.py", line 84, in torch_dynamo_resume_in_forward_at_84
+2026-11-03T10:44:48     freqs = cache("rope_freqs_3d", lambda: self.get_freqs(shape))
+2026-11-03T10:44:48   File "/opt/venv/lib/python3.12/site-packages/torch/_dynamo/eval_frame.py", line 1263, in _fn
+2026-11-03T10:44:48     return fn(*args, **kwargs)
+2026-11-03T10:44:48            ^^^^^^^^^^^^^^^^^^^
+2026-11-03T10:44:48   File "/opt/venv/lib/python3.12/site-packages/torch/_functorch/aot_autograd.py", line 1200, in forward
+2026-11-03T10:44:48     return compiled_fn(full_args)
+2026-11-03T10:44:48            ^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T10:44:48   File "/opt/venv/lib/python3.12/site-packages/torch/_functorch/_aot_autograd/runtime_wrappers.py", line 580, in runtime_wrapper
+2026-11-03T10:44:48     all_outs = call_func_at_runtime_with_args(
+2026-11-03T10:44:48                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T10:44:48   File "/opt/venv/lib/python3.12/site-packages/torch/_functorch/_aot_autograd/utils.py", line 138, in call_func_at_runtime_with_args
+2026-11-03T10:44:48     out = normalize_as_list(f(args))
+2026-11-03T10:44:48                             ^^^^^^^
+2026-11-03T10:44:48   File "/opt/venv/lib/python3.12/site-packages/torch/_functorch/_aot_autograd/runtime_wrappers.py", line 2298, in __call__
+2026-11-03T10:44:48     return self.compiled_fn(*args, **kwargs)
+2026-11-03T10:44:48            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T10:44:48   File "/opt/venv/lib/python3.12/site-packages/torch/_functorch/_aot_autograd/runtime_wrappers.py", line 783, in wrapper
+2026-11-03T10:44:48     return compiled_fn(runtime_args)
+2026-11-03T10:44:48            ^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T10:44:48   File "/opt/venv/lib/python3.12/site-packages/torch/_functorch/_aot_autograd/runtime_wrappers.py", line 1011, in inner_fn
+2026-11-03T10:44:48     outs = compiled_fn(args)
+2026-11-03T10:44:48            ^^^^^^^^^^^^^^^^^
+2026-11-03T10:44:48   File "/opt/venv/lib/python3.12/site-packages/torch/_inductor/output_code.py", line 656, in __call__
+2026-11-03T10:44:48     return self.current_callable(inputs)
+2026-11-03T10:44:48            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T10:44:48   File "/opt/venv/lib/python3.12/site-packages/torch/_inductor/utils.py", line 3401, in run
+2026-11-03T10:44:48     out = model(new_inputs)
+2026-11-03T10:44:48           ^^^^^^^^^^^^^^^^^
+2026-11-03T10:44:48   File "/tmp/torchinductor_root/3c/c3cgzfz6s52p6bjzdhvpenv6bjnfbopyai2hqviuwvnfobeax4jz.py", line 234, in call
+2026-11-03T10:44:48     buf3 = empty_strided_cuda((80640, 24, 128), (128, 10321920, 1), torch.float32)
+2026-11-03T10:44:48            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-03T10:44:48 torch.OutOfMemoryError: Allocation on device 0 would exceed allowed memory. (out of memory)
+2026-11-03T10:44:48 Currently allocated     : 22.40 GiB
+2026-11-03T10:44:48 Requested               : 945.00 MiB
+2026-11-03T10:44:48 Device limit            : 23.60 GiB
+2026-11-03T10:44:48 Free (according to CUDA): 21.94 MiB
+2026-11-03T10:44:48 PyTorch limit (set by user-supplied memory fraction)
+2026-11-03T10:44:48                         : 17179869184.00 GiB
+2026-11-03T10:44:48 [32m[INFO][0m Memory summary:
+2026-11-03T10:44:48 |===========================================================================|
+2026-11-03T10:44:48 |                  PyTorch CUDA memory summary, device ID 0                 |
+2026-11-03T10:44:48 |---------------------------------------------------------------------------|
+2026-11-03T10:44:48 |            CUDA OOMs: 0            |        cudaMalloc retries: 0         |
+2026-11-03T10:44:48 |===========================================================================|
+2026-11-03T10:44:48 |        Metric         | Cur Usage  | Peak Usage | Tot Alloc  | Tot Freed  |
+2026-11-03T10:44:48 |---------------------------------------------------------------------------|
+2026-11-03T10:44:48 | Allocated memory      |   7186 MiB |  22934 MiB |      0 B   |      0 B   |
+2026-11-03T10:44:48 |       from large pool |      0 MiB |      0 MiB |      0 B   |      0 B   |
+2026-11-03T10:44:48 |       from small pool |      0 MiB |      0 MiB |      0 B   |      0 B   |
+2026-11-03T10:44:48 |---------------------------------------------------------------------------|
+2026-11-03T10:44:48 | Active memory         |   7186 MiB |  22934 MiB |      0 B   |      0 B   |
+2026-11-03T10:44:48 |       from large pool |      0 MiB |      0 MiB |      0 B   |      0 B   |
+2026-11-03T10:44:48 |       from small pool |      0 MiB |      0 MiB |      0 B   |      0 B   |
+2026-11-03T10:44:48 |---------------------------------------------------------------------------|
+2026-11-03T10:44:48 | Requested memory      |      0 B   |      0 B   |      0 B   |      0 B   |
+2026-11-03T10:44:48 |       from large pool |      0 B   |      0 B   |      0 B   |      0 B   |
+2026-11-03T10:44:48 |       from small pool |      0 B   |      0 B   |      0 B   |      0 B   |
+2026-11-03T10:44:48 |---------------------------------------------------------------------------|
+2026-11-03T10:44:48 | GPU reserved memory   |   7424 MiB |  23616 MiB |      0 B   |      0 B   |
+2026-11-03T10:44:48 |       from large pool |      0 MiB |      0 MiB |      0 B   |      0 B   |
+2026-11-03T10:44:48 |       from small pool |      0 MiB |      0 MiB |      0 B   |      0 B   |
+2026-11-03T10:44:48 |---------------------------------------------------------------------------|
+2026-11-03T10:44:48 | Non-releasable memory |      0 B   |      0 B   |      0 B   |      0 B   |
+2026-11-03T10:44:48 |       from large pool |      0 B   |      0 B   |      0 B   |      0 B   |
+2026-11-03T10:44:48 |       from small pool |      0 B   |      0 B   |      0 B   |      0 B   |
+2026-11-03T10:44:48 |---------------------------------------------------------------------------|
+2026-11-03T10:44:48 | Allocations           |       0    |       0    |       0    |       0    |
+2026-11-03T10:44:48 |       from large pool |       0    |       0    |       0    |       0    |
+2026-11-03T10:44:48 |       from small pool |       0    |       0    |       0    |       0    |
+2026-11-03T10:44:48 |---------------------------------------------------------------------------|
+2026-11-03T10:44:48 | Active allocs         |       0    |       0    |       0    |       0    |
+2026-11-03T10:44:48 |       from large pool |       0    |       0    |       0    |       0    |
+2026-11-03T10:44:48 |       from small pool |       0    |       0    |       0    |       0    |
+2026-11-03T10:44:48 |---------------------------------------------------------------------------|
+2026-11-03T10:44:48 | GPU reserved segments |       0    |       0    |       0    |       0    |
+2026-11-03T10:44:48 |       from large pool |       0    |       0    |       0    |       0    |
+2026-11-03T10:44:48 |       from small pool |       0    |       0    |       0    |       0    |
+2026-11-03T10:44:48 |---------------------------------------------------------------------------|
+2026-11-03T10:44:48 | Non-releasable allocs |       0    |       0    |       0    |       0    |
+2026-11-03T10:44:48 |       from large pool |       0    |       0    |       0    |       0    |
+2026-11-03T10:44:48 |       from small pool |       0    |       0    |       0    |       0    |
+2026-11-03T10:44:48 |---------------------------------------------------------------------------|
+2026-11-03T10:44:48 | Oversize allocations  |       0    |       0    |       0    |       0    |
+2026-11-03T10:44:48 |---------------------------------------------------------------------------|
+2026-11-03T10:44:48 | Oversize GPU segments |       0    |       0    |       0    |       0    |
+2026-11-03T10:44:48 |===========================================================================|
+2026-11-03T10:44:48 [1m[31m[ERROR][0m Got an OOM, unloading all loaded models.
+2026-11-03T10:44:48 [32m[INFO][0m [32mPrompt executed in 467.89 seconds[0m
+2026-11-03T10:44:50 EulerSampler:   0%|          | 0/1 [00:55<?, ?it/s] 
+2026-11-03T10:44:50    ███████╗███████╗███████╗██████╗ ██╗   ██╗██████╗     ██████╗       ███████╗
+2026-11-03T10:44:50    ██╔════╝██╔════╝██╔════╝██╔══██╗██║   ██║██╔══██╗    ╚════██╗      ██╔════╝
+2026-11-03T10:44:50    ███████╗█████╗  █████╗  ██║  ██║██║   ██║██████╔╝     █████╔╝      ███████╗
+2026-11-03T10:44:50    ╚════██║██╔══╝  ██╔══╝  ██║  ██║╚██╗ ██╔╝██╔══██╗    ██╔═══╝       ╚════██║
+2026-11-03T10:44:50    ███████║███████╗███████╗██████╔╝ ╚████╔╝ ██║  ██║    ███████╗  ██╗ ███████║
+2026-11-03T10:44:50    ╚══════╝╚══════╝╚══════╝╚═════╝   ╚═══╝  ╚═╝  ╚═╝    ╚══════╝  ╚═╝ ╚══════╝
+2026-11-03T10:44:50    v2.5.24                                    © ByteDance Seed · NumZ · AInVFX
+2026-11-03T10:44:50    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2026-11-03T10:44:50 [10:44:50.307] ℹ️ OS: Ubuntu 22.04 | GPU: NVIDIA GeForce RTX 4090 (24GB)
+2026-11-03T10:44:50 [10:44:50.307] ℹ️ Python: 3.12.16 | PyTorch: 2.11.0+cu130 | FlashAttn: ✗ | SageAttn: v2 ✓ | Triton: ✓
+2026-11-03T10:44:50 [10:44:50.307] ℹ️ CUDA: 13.0 | cuDNN: 91900 | ComfyUI: 0.37.2
+2026-11-03T10:44:50 [10:44:50.307]  
+2026-11-03T10:44:50 [10:44:50.307]  ━━━━━━━━━ Model Preparation ━━━━━━━━━
+2026-11-03T10:44:50 [10:44:50.309] 📊 Before model preparation:
+2026-11-03T10:44:50 [10:44:50.309] 📊   [VRAM] 0.00GB allocated / 0.03GB reserved / Peak: 22.40GB / 23.05GB free / 23.60GB total
+2026-11-03T10:44:50 [10:44:50.309] 📊   [RAM] 24.34GB process / 0.00GB others / 97.26GB free / 120.00GB total
+2026-11-03T10:44:50 [10:44:50.309] 📊 Resetting VRAM peak memory statistics
+2026-11-03T10:44:50 [10:44:50.309] 📥 Checking and downloading models if needed...
+2026-11-03T10:44:50 [10:44:50.309] 🔧 DiT model found: /opt/comfyui/models/SEEDVR2/seedvr2_ema_7b_fp8_e4m3fn_mixed_block35_fp16.safetensors
+2026-11-03T10:44:50 [10:44:50.309] 🔧 Validating seedvr2_ema_7b_fp8_e4m3fn_mixed_block35_fp16.safetensors...
+2026-11-03T10:44:56 [10:44:56.737] 🔧 DiT model validated successfully: /opt/comfyui/models/SEEDVR2/seedvr2_ema_7b_fp8_e4m3fn_mixed_block35_fp16.safetensors
+2026-11-03T10:44:56 [10:44:56.737] 🔧 VAE model found: /opt/comfyui/models/SEEDVR2/ema_vae_fp16.safetensors
+2026-11-03T10:44:56 [10:44:56.737] 🔧 VAE model already validated (cache): /opt/comfyui/models/SEEDVR2/ema_vae_fp16.safetensors
+2026-11-03T10:44:56 [10:44:56.737] 🔧 Generation context initialized: DiT=cuda:0, VAE=cuda:0, Offload=[DiT offload=cpu, VAE offload=cpu, Tensor offload=cpu], LOCAL_RANK=0
+2026-11-03T10:44:56 [10:44:56.737] 🎯 Unified compute dtype: torch.bfloat16 across entire pipeline for maximum performance
+2026-11-03T10:44:56 [10:44:56.737] 🏃 Configuring inference runner...
+2026-11-03T10:44:56 [10:44:56.737] 💾 DiT model changed in cache (seedvr2_ema_7b_fp16.safetensors → seedvr2_ema_7b_fp8_e4m3fn_mixed_block35_fp16.safetensors), removing stale cached model
+2026-11-03T10:44:56 [10:44:56.737] 💾 Removing cached DiT: 3
+2026-11-03T10:44:56 [10:44:56.747] 🏃 Creating new runner: DiT=seedvr2_ema_7b_fp8_e4m3fn_mixed_block35_fp16.safetensors, VAE=ema_vae_fp16.safetensors
+2026-11-03T10:44:56 [10:44:56.759] 🚀 Creating DiT model structure on meta device
+2026-11-03T10:44:56 [10:44:56.954] ♻️ Reusing cached VAE (4): ema_vae_fp16.safetensors
+2026-11-03T10:44:56 [10:44:56.954] 🎨 VAE configuration changed:
+2026-11-03T10:44:56 [10:44:56.954] 🎨   torch.compile: enabled (default mode) → disabled
+2026-11-03T10:44:56 [10:44:56.954] 🔧 Removing torch.compile from VAE encoder
+2026-11-03T10:44:56 [10:44:56.954] 🔧 Removing torch.compile from VAE decoder
+2026-11-03T10:44:56 [10:44:56.956] 🔄 Moving text_pos_embeds from CPU to CUDA:0 (DiT inference)
+2026-11-03T10:44:56 [10:44:56.957] 🔄 Moving text_neg_embeds from CPU to CUDA:0 (DiT inference)
+2026-11-03T10:44:56 [10:44:56.957] 🚀 Loaded text embeddings for DiT
+2026-11-03T10:44:56 [10:44:56.958] 📊 After model preparation:
+2026-11-03T10:44:56 [10:44:56.958] 📊   [VRAM] 0.00GB allocated / 0.06GB reserved / Peak: 0.00GB / 23.02GB free / 23.60GB total
+2026-11-03T10:44:56 [10:44:56.958] 📊   [RAM] 24.32GB process / 0.00GB others / 97.27GB free / 120.00GB total
+2026-11-03T10:44:56 [10:44:56.958] 📊   Memory changes: RAM -0.02GB
+2026-11-03T10:44:56 [10:44:56.958] 📊 Resetting VRAM peak memory statistics
+2026-11-03T10:44:56 [10:44:56.958] ⚡ Model preparation: 6.65s
+2026-11-03T10:44:56 [10:44:56.958] ⚡   └─ Model structures prepared: 0.20s
+2026-11-03T10:44:56 [10:44:56.959] ⚡     └─ DiT structure created: 0.20s
+2026-11-03T10:44:56 [10:44:56.959] ⚡   └─ Config loading: 0.01s
+2026-11-03T10:44:56 [10:44:56.959] ⚡   └─ (other operations): 6.44s
+2026-11-03T10:44:56 [10:44:56.959] 🔧   Initializing video transformation pipeline for 1536px (shortest edge)
+2026-11-03T10:44:56 [10:44:56.996] 🔧   Target dimensions: 2688x1536 (no padding needed)
+2026-11-03T10:44:56 [10:44:56.996]  
+2026-11-03T10:44:56 [10:44:56.996] 🎬 Starting upscaling generation...
+2026-11-03T10:44:56 [10:44:56.996] 🎬   Input: 41 frames, 1344x768px → Output: 2688x1536px (shortest edge: 1536px)
+2026-11-03T10:44:56 [10:44:56.996] 🎬   Batch size: 17, Temporal overlap: 4, Seed: 42, Channels: RGB
+2026-11-03T10:44:56 [10:44:56.996]  
+2026-11-03T10:44:56 [10:44:56.996]  ━━━━━━━━ Phase 1: VAE encoding ━━━━━━━━
+2026-11-03T10:44:56 [10:44:56.997] ♻️ Reusing pre-initialized video transformation pipeline
+2026-11-03T10:44:56 [10:44:56.997]  
+2026-11-03T10:44:56 [10:44:56.997] 💡 Tip: For 41 frames, batch_size=41 matches video length optimally
+2026-11-03T10:44:56 [10:44:56.997] 💡   Matching batch_size to shot length improves temporal coherence
+2026-11-03T10:44:56 [10:44:56.997]  
+2026-11-03T10:44:56 [10:44:56.997] 🎨 Applying updated VAE configuration
+2026-11-03T10:44:56 [10:44:56.997] 🎨 Configuring VAE causal slicing for temporal processing
+2026-11-03T10:44:56 [10:44:56.998] 🎨 Configuring VAE memory limits for causal convolutions
+2026-11-03T10:44:56 [10:44:56.999] 🎯 Model precision: VAE=torch.bfloat16, compute=torch.bfloat16
+2026-11-03T10:44:56 [10:44:57.000] 🎨 Using seed: 1000042 (VAE uses seed+1000000 for deterministic sampling)
+2026-11-03T10:44:56 [10:44:57.000] 🔄 Moving VAE from CPU to CUDA:0 (inference requirement)
+2026-11-03T10:44:57 [10:44:57.052] 📊 After VAE loading for encoding:
+2026-11-03T10:44:57 [10:44:57.052] 📊   [VRAM] 0.47GB allocated / 0.50GB reserved / Peak: 0.47GB / 22.58GB free / 23.60GB total
+2026-11-03T10:44:57 [10:44:57.052] 📊   [RAM] 24.32GB process / 0.00GB others / 97.27GB free / 120.00GB total
+2026-11-03T10:44:57 [10:44:57.052] 📊   Memory changes: VRAM +0.47GB
+2026-11-03T10:44:57 [10:44:57.052] 📊 Resetting VRAM peak memory statistics
+2026-11-03T10:44:57 [10:44:57.052] 🎨 Encoding batch 1/3
+2026-11-03T10:44:57 [10:44:57.052] 🔄   Moving video_batch_1 from CPU to CUDA:0, torch.float32 → torch.bfloat16 (VAE encoding)
+2026-11-03T10:44:57 [10:44:57.072] 📹   Sequence of 17 frames
+2026-11-03T10:44:57 [10:44:57.087] 🎨   Using VAE tiled encoding (Tile: (1024, 1024), Overlap: (128, 128))
+2026-11-03T10:44:57 [10:44:57.087] 🎨 Encoding 6 tiles (Tile: (1024, 1024), Overlap: (128, 128))
+2026-11-03T10:44:57 [10:44:57.087] 🎨   Encoding tiles 1-5 / 6
+2026-11-03T10:45:06 [10:45:06.620] 🎨   Encoding tile 6 / 6
+2026-11-03T10:45:07 [10:45:07.869] ℹ️   Latents shape: torch.Size([5, 192, 336, 16])
+2026-11-03T10:45:07 [10:45:07.869] 🔄   Moving latent_1 from CUDA:0 to CPU (storing encoded latents for upscaling)
+2026-11-03T10:45:07 [10:45:07.870] 🎨 Encoding batch 2/3
+2026-11-03T10:45:07 [10:45:07.871] 🔄   Moving video_batch_2 from CPU to CUDA:0, torch.float32 → torch.bfloat16 (VAE encoding)
+2026-11-03T10:45:07 [10:45:07.895] 📹   Sequence of 17 frames
+2026-11-03T10:45:07 [10:45:07.906] 🎨   Using VAE tiled encoding (Tile: (1024, 1024), Overlap: (128, 128))
+2026-11-03T10:45:07 [10:45:07.906] 🎨 Encoding 6 tiles (Tile: (1024, 1024), Overlap: (128, 128))
+2026-11-03T10:45:07 [10:45:07.906] 🎨   Encoding tiles 1-5 / 6
+2026-11-03T10:45:17 [10:45:17.430] 🎨   Encoding tile 6 / 6
+2026-11-03T10:45:18 [10:45:18.680] ℹ️   Latents shape: torch.Size([5, 192, 336, 16])
+2026-11-03T10:45:18 [10:45:18.681] 🔄   Moving latent_2 from CUDA:0 to CPU (storing encoded latents for upscaling)
+2026-11-03T10:45:18 [10:45:18.682] 🎨 Encoding batch 3/3
+2026-11-03T10:45:18 [10:45:18.682] 🔄   Moving video_batch_3 from CPU to CUDA:0, torch.float32 → torch.bfloat16 (VAE encoding)
+2026-11-03T10:45:18 [10:45:18.702] 📹   Sequence of 15 frames
+2026-11-03T10:45:18 [10:45:18.702] 📹   Padding batch: 2 frames added (15 → 17) to meet 4n+1 constraint
+2026-11-03T10:45:18 [10:45:18.711] 🎨   Using VAE tiled encoding (Tile: (1024, 1024), Overlap: (128, 128))
+2026-11-03T10:45:18 [10:45:18.711] 🎨 Encoding 6 tiles (Tile: (1024, 1024), Overlap: (128, 128))
+2026-11-03T10:45:18 [10:45:18.711] 🎨   Encoding tiles 1-5 / 6
+2026-11-03T10:45:28 [10:45:28.244] 🎨   Encoding tile 6 / 6
+2026-11-03T10:45:29 [10:45:29.502] ℹ️   Latents shape: torch.Size([5, 192, 336, 16])
+2026-11-03T10:45:29 [10:45:29.502] 🔄   Moving latent_3 from CUDA:0 to CPU (storing encoded latents for upscaling)
+2026-11-03T10:45:29 [10:45:29.503] 🔄 Moving VAE from CUDA:0 to CPU (VAE offload)
+2026-11-03T10:45:29 [10:45:29.551] ⚡ Phase 1: VAE encoding complete: 32.55s
+2026-11-03T10:45:29 [10:45:29.551] ⚡   └─ Encoded batch 3: 10.82s
+2026-11-03T10:45:29 [10:45:29.551] ⚡   └─ Encoded batch 1: 10.82s
+2026-11-03T10:45:29 [10:45:29.551] ⚡   └─ Encoded batch 2: 10.81s
+2026-11-03T10:45:29 [10:45:29.551] ⚡   └─ VAE moved to CUDA:0: 0.05s
+2026-11-03T10:45:29 [10:45:29.551] ⚡   └─ VAE moved to CPU: 0.05s
+2026-11-03T10:45:29 [10:45:29.552] 📊 After phase 1 (VAE encoding):
+2026-11-03T10:45:29 [10:45:29.552] 📊   [VRAM] 0.01GB allocated / 14.19GB reserved / Peak: 11.41GB / 8.90GB free / 23.60GB total
+2026-11-03T10:45:29 [10:45:29.552] 📊   [RAM] 24.32GB process / 0.00GB others / 97.26GB free / 120.00GB total
+2026-11-03T10:45:29 [10:45:29.552] 📊   Memory changes: VRAM -0.46GB
+2026-11-03T10:45:29 [10:45:29.552] 📊 Resetting VRAM peak memory statistics
+2026-11-03T10:45:29 [10:45:29.552]  
+2026-11-03T10:45:29 [10:45:29.552]  ━━━━━━━━ Phase 2: DiT upscaling ━━━━━━━━
+2026-11-03T10:45:29 [10:45:29.554] 🚀 Materializing DiT weights to CPU (offload device): /opt/comfyui/models/SEEDVR2/seedvr2_ema_7b_fp8_e4m3fn_mixed_block35_fp16.safetensors
+2026-11-03T10:45:29 [10:45:29.572] 🚀 Materializing DiT: 1128 parameters, 8073.97MB total
+2026-11-03T10:45:29 [10:45:29.597] 🚀 DiT materialized directly from meta with loaded weights
+2026-11-03T10:45:29 [10:45:29.683] ✅ Initialized 72 non-persistent buffers
+2026-11-03T10:45:29 [10:45:29.683] 🔧 Applying DiT compatibility wrapper
+2026-11-03T10:45:29 [10:45:29.683] 🎯 Detected NaDiT 7B FP8 - Converting RoPE freqs for FP8 compatibility
+2026-11-03T10:45:29 [10:45:29.685] ✅ Converted 35 RoPE frequency buffers from FP8 to torch.bfloat16 for compatibility
+2026-11-03T10:45:29 [10:45:29.685] 🔧 Stabilizing RoPE computations for numerical stability
+2026-11-03T10:45:29 [10:45:29.687] ✅ Stabilized 72 RoPE modules
+2026-11-03T10:45:29 [10:45:29.687] 🔧 Applying sdpa attention mode and torch.bfloat16 compute dtype to model
+2026-11-03T10:45:29 [10:45:29.688] ✅ Applied sdpa and compute_dtype=torch.bfloat16 to 36 modules
+2026-11-03T10:45:29 [10:45:29.688] 🎯 Model precision: DiT=torch.float8_e4m3fn, VAE=torch.bfloat16, compute=torch.bfloat16
+2026-11-03T10:45:29 [10:45:29.688] 💾 DiT model cached in memory (node 3): seedvr2_ema_7b_fp8_e4m3fn_mixed_block35_fp16.safetensors
+2026-11-03T10:45:29 [10:45:29.688] 💾 Runner template cached in memory: nodes 3+4
+2026-11-03T10:45:29 [10:45:29.688] 🔄 Moving DiT from CPU to CUDA:0 (inference requirement)
+2026-11-03T10:45:31 [10:45:31.184] 📊 After DiT loading for upscaling:
+2026-11-03T10:45:31 [10:45:31.184] 📊   [VRAM] 7.92GB allocated / 14.19GB reserved / Peak: 7.92GB / 8.90GB free / 23.60GB total
+2026-11-03T10:45:31 [10:45:31.184] 📊   [RAM] 24.33GB process / 0.00GB others / 97.24GB free / 120.00GB total
+2026-11-03T10:45:31 [10:45:31.184] 📊   Memory changes: VRAM +7.91GB
+2026-11-03T10:45:31 [10:45:31.184] 📊 Resetting VRAM peak memory statistics
+2026-11-03T10:45:31 [10:45:31.184] 🎬 Upscaling batch 1/3
+2026-11-03T10:45:31 [10:45:31.184] 🚀 Using seed: 42 for deterministic generation
+2026-11-03T10:45:31 [10:45:31.184] 🔄   Moving latent_1 from CPU to CUDA:0 (DiT upscaling)
+2026-11-03T10:45:42 EulerSampler:   0%|          | 0/1 [00:00<?, ?it/s]
+2026-11-03T10:45:42 EulerSampler: 100%|██████████| 1/1 [00:11<00:00, 11.68s/it]
+2026-11-03T10:45:42 EulerSampler: 100%|██████████| 1/1 [00:11<00:00, 11.68s/it][10:45:42.865] 🔄   Moving upscaled_latent_1 from CUDA:0 to CPU (storing upscaled latents for decoding)
+2026-11-03T10:45:42 [10:45:42.866] 🎬 Upscaling batch 2/3
+2026-11-03T10:45:42 [10:45:42.866] 🚀 Using seed: 42 for deterministic generation
+2026-11-03T10:45:42 [10:45:42.867] 🔄   Moving latent_2 from CPU to CUDA:0 (DiT upscaling)
+2026-11-03T10:45:54 EulerSampler:   0%|          | 0/1 [00:00<?, ?it/s]
+2026-11-03T10:45:54 EulerSampler: 100%|██████████| 1/1 [00:11<00:00, 11.56s/it]
+2026-11-03T10:45:54 EulerSampler: 100%|██████████| 1/1 [00:11<00:00, 11.56s/it][10:45:54.425] 🔄   Moving upscaled_latent_2 from CUDA:0 to CPU (storing upscaled latents for decoding)
+2026-11-03T10:45:54 [10:45:54.427] 🎬 Upscaling batch 3/3
+2026-11-03T10:45:54 [10:45:54.427] 🚀 Using seed: 42 for deterministic generation
+2026-11-03T10:45:54 [10:45:54.427] 🔄   Moving latent_3 from CPU to CUDA:0 (DiT upscaling)
+2026-11-03T10:46:06 EulerSampler:   0%|          | 0/1 [00:00<?, ?it/s]
+2026-11-03T10:46:06 EulerSampler: 100%|██████████| 1/1 [00:11<00:00, 11.85s/it]
+2026-11-03T10:46:06 EulerSampler: 100%|██████████| 1/1 [00:11<00:00, 11.85s/it][10:46:06.284] 🔄   Moving upscaled_latent_3 from CUDA:0 to CPU (storing upscaled latents for decoding)
+2026-11-03T10:46:06 [10:46:06.285] 🧹 Cleaning up DiT components
+2026-11-03T10:46:06 [10:46:06.288] 🔄 Moving DiT from CUDA:0 to CPU (model caching)
+2026-11-03T10:46:06 [10:46:06.929] 🧹 Cleaned up text embeddings: texts_pos, texts_neg
+2026-11-03T10:46:06 [10:46:06.929] ⚡ Phase 2: DiT upscaling complete: 37.38s
+2026-11-03T10:46:06 [10:46:06.929] ⚡   └─ Upscaled batch 3: 11.86s
+2026-11-03T10:46:06 [10:46:06.929] ⚡     └─ DiT inference 3: 11.86s
+2026-11-03T10:46:06 [10:46:06.929] ⚡   └─ Upscaled batch 1: 11.68s
+2026-11-03T10:46:06 [10:46:06.929] ⚡     └─ DiT inference 1: 11.68s
+2026-11-03T10:46:06 [10:46:06.929] ⚡   └─ Upscaled batch 2: 11.56s
+2026-11-03T10:46:06 [10:46:06.929] ⚡     └─ DiT inference 2: 11.56s
+2026-11-03T10:46:06 [10:46:06.929] ⚡   └─ DiT moved to CUDA:0: 1.49s
+2026-11-03T10:46:06 [10:46:06.929] ⚡   └─ DiT moved to CPU: 0.64s
+2026-11-03T10:46:06 [10:46:06.929] ⚡   └─ DiT materialized: 0.13s
+2026-11-03T10:46:06 [10:46:06.929] ⚡     └─ Buffer initialization: 0.09s
+2026-11-03T10:46:06 [10:46:06.929] ⚡     └─ DiT weights materialized: 0.03s
+2026-11-03T10:46:06 [10:46:06.929] ⚡     └─ DiT weights loaded from file: 0.02s
+2026-11-03T10:46:06 [10:46:06.929] ⚡   └─ (other operations): 0.01s
+2026-11-03T10:46:06 [10:46:06.931] 📊 After phase 2 (DiT upscaling):
+2026-11-03T10:46:06 [10:46:06.931] 📊   [VRAM] 0.01GB allocated / 20.75GB reserved / Peak: 18.59GB / 2.33GB free / 23.60GB total
+2026-11-03T10:46:06 [10:46:06.931] 📊   [RAM] 24.34GB process / 0.00GB others / 97.25GB free / 120.00GB total
+2026-11-03T10:46:06 [10:46:06.931] 📊   Memory changes: VRAM -7.91GB
+2026-11-03T10:46:06 [10:46:06.931] 📊 Resetting VRAM peak memory statistics
+2026-11-03T10:46:06 [10:46:06.931]  
+2026-11-03T10:46:06 [10:46:06.931]  ━━━━━━━━ Phase 3: VAE decoding ━━━━━━━━
+2026-11-03T10:46:06 [10:46:06.931] 🔧 Pre-allocating output tensor: 41 frames, 2688x1536px, RGB (0.95GB)
+2026-11-03T10:46:06 [10:46:06.931] 🎯 Model precision: DiT=torch.float8_e4m3fn, VAE=torch.bfloat16, compute=torch.bfloat16
+2026-11-03T10:46:06 [10:46:06.931] 🔄 Moving VAE from CPU to CUDA:0 (inference requirement)
+2026-11-03T10:46:06 [10:46:06.976] 📊 After VAE loading for decoding:
+2026-11-03T10:46:06 [10:46:06.976] 📊   [VRAM] 0.48GB allocated / 20.75GB reserved / Peak: 0.48GB / 2.33GB free / 23.60GB total
+2026-11-03T10:46:06 [10:46:06.977] 📊   [RAM] 24.34GB process / 0.00GB others / 97.25GB free / 120.00GB total
+2026-11-03T10:46:06 [10:46:06.977] 📊   Memory changes: VRAM +0.47GB
+2026-11-03T10:46:06 [10:46:06.977] 📊 Resetting VRAM peak memory statistics
+2026-11-03T10:46:06 [10:46:06.977] 🎨 Decoding batch 1/3
+2026-11-03T10:46:06 [10:46:06.977] 🔄   Moving upscaled_latent_1 from CPU to CUDA:0 (VAE decoding)
+2026-11-03T10:46:06 [10:46:06.978] ℹ️   Latents shape: torch.Size([1, 5, 192, 336, 16])
+2026-11-03T10:46:06 [10:46:06.978] 🎨   Using VAE tiled decoding (Tile: (1024, 1024), Overlap: (128, 128))
+2026-11-03T10:46:06 [10:46:06.978] 🎨 Decoding 6 tiles (Tile: (1024, 1024), Overlap: (128, 128))
+2026-11-03T10:46:06 [10:46:06.978] 🎨   Decoding tiles 1-5 / 6
+2026-11-03T10:46:28 [10:46:28.809] 🎨   Decoding tile 6 / 6
+2026-11-03T10:46:31 [10:46:31.701] 🔄   Moving sample_1 from CUDA:0 to CPU (writing to final_video)
+2026-11-03T10:46:31 [10:46:31.743] 📹   Wrote 17 frames to positions 0-17
+2026-11-03T10:46:31 [10:46:31.743] 🎨 Decoding batch 2/3
+2026-11-03T10:46:31 [10:46:31.744] 🔄   Moving upscaled_latent_2 from CPU to CUDA:0 (VAE decoding)
+2026-11-03T10:46:31 [10:46:31.745] ℹ️   Latents shape: torch.Size([1, 5, 192, 336, 16])
+2026-11-03T10:46:31 [10:46:31.745] 🎨   Using VAE tiled decoding (Tile: (1024, 1024), Overlap: (128, 128))
+2026-11-03T10:46:31 [10:46:31.745] 🎨 Decoding 6 tiles (Tile: (1024, 1024), Overlap: (128, 128))
+2026-11-03T10:46:31 [10:46:31.746] 🎨   Decoding tiles 1-5 / 6
+2026-11-03T10:46:53 [10:46:53.497] 🎨   Decoding tile 6 / 6
+2026-11-03T10:46:56 [10:46:56.405] 📹   Blended 4 overlapping frames at positions 13-17
+2026-11-03T10:46:56 [10:46:56.406] 🔄   Moving sample_2 from CUDA:0 to CPU (writing to final_video)
+2026-11-03T10:46:56 [10:46:56.449] 📹   Wrote 13 frames to positions 17-30
+2026-11-03T10:46:56 [10:46:56.449] 🎨 Decoding batch 3/3
+2026-11-03T10:46:56 [10:46:56.449] 🔄   Moving upscaled_latent_3 from CPU to CUDA:0 (VAE decoding)
+2026-11-03T10:46:56 [10:46:56.451] ℹ️   Latents shape: torch.Size([1, 5, 192, 336, 16])
+2026-11-03T10:46:56 [10:46:56.451] 🎨   Using VAE tiled decoding (Tile: (1024, 1024), Overlap: (128, 128))
+2026-11-03T10:46:56 [10:46:56.451] 🎨 Decoding 6 tiles (Tile: (1024, 1024), Overlap: (128, 128))
+2026-11-03T10:46:56 [10:46:56.451] 🎨   Decoding tiles 1-5 / 6
+2026-11-03T10:47:18 [10:47:18.186] 🎨   Decoding tile 6 / 6
+2026-11-03T10:47:21 [10:47:21.072] 📹   Trimming temporal padding: 2 frames removed (17 → 15)
+2026-11-03T10:47:21 [10:47:21.113] 📹   Blended 4 overlapping frames at positions 26-30
+2026-11-03T10:47:21 [10:47:21.113] 🔄   Moving sample_3 from CUDA:0 to CPU (writing to final_video)
+2026-11-03T10:47:21 [10:47:21.153] 📹   Wrote 11 frames to positions 30-41
+2026-11-03T10:47:21 [10:47:21.153] 🧹 Cleaning up VAE components
+2026-11-03T10:47:21 [10:47:21.154] 🔄 Moving VAE from CUDA:0 to CPU (model caching)
+2026-11-03T10:47:21 [10:47:21.200] ⚡ Phase 3: VAE decoding complete: 74.27s
+2026-11-03T10:47:21 [10:47:21.200] ⚡   └─ Decoded batch 1: 24.77s
+2026-11-03T10:47:21 [10:47:21.200] ⚡     └─ VAE decode: 24.62s
+2026-11-03T10:47:21 [10:47:21.200] ⚡   └─ Decoded batch 2: 24.71s
+2026-11-03T10:47:21 [10:47:21.200] ⚡     └─ VAE decode: 24.62s
+2026-11-03T10:47:21 [10:47:21.200] ⚡   └─ Decoded batch 3: 24.70s
+2026-11-03T10:47:21 [10:47:21.200] ⚡     └─ VAE decode: 24.62s
+2026-11-03T10:47:21 [10:47:21.200] ⚡   └─ VAE moved to CPU: 0.05s
+2026-11-03T10:47:21 [10:47:21.200] ⚡   └─ VAE moved to CUDA:0: 0.04s
+2026-11-03T10:47:21 [10:47:21.202] 📊 After phase 3 (VAE decoding):
+2026-11-03T10:47:21 [10:47:21.202] 📊   [VRAM] 0.01GB allocated / 21.84GB reserved / Peak: 17.99GB / 1.24GB free / 23.60GB total
+2026-11-03T10:47:21 [10:47:21.202] 📊   [RAM] 24.34GB process / 0.00GB others / 99.10GB free / 120.00GB total
+2026-11-03T10:47:21 [10:47:21.202] 📊   Memory changes: VRAM -0.47GB
+2026-11-03T10:47:21 [10:47:21.202] 📊 Resetting VRAM peak memory statistics
+2026-11-03T10:47:21 [10:47:21.202]  
+2026-11-03T10:47:21 [10:47:21.202]  ━━━━━━━━ Phase 4: Post-processing ━━━━━━━━
+2026-11-03T10:47:21 [10:47:21.202] 📹 Post-processing batch 1/3
+2026-11-03T10:47:21 [10:47:21.202] 🔄   Moving sample_1 from CPU to CUDA:0 (post-processing)
+2026-11-03T10:47:21 [10:47:21.414] 🔄   Moving input_video_1 from CPU to CUDA:0 (color correction)
+2026-11-03T10:47:21 [10:47:21.479] 📹   Applying LAB perceptual color transfer
+2026-11-03T10:47:21 [10:47:21.597] 📹   LAB color transfer completed (luminance_weight=0.8)
+2026-11-03T10:47:21 [10:47:21.597] 🔄   Moving sample_1_final from CUDA:0 to CPU (writing processed result to final_video)
+2026-11-03T10:47:21 [10:47:21.890] 📹 Post-processing batch 2/3
+2026-11-03T10:47:21 [10:47:21.890] 🔄   Moving sample_2 from CPU to CUDA:0 (post-processing)
+2026-11-03T10:47:22 [10:47:22.100] 🔄   Moving input_video_2 from CPU to CUDA:0 (color correction)
+2026-11-03T10:47:22 [10:47:22.150] 📹   Applying LAB perceptual color transfer
+2026-11-03T10:47:22 [10:47:22.219] 📹   LAB color transfer completed (luminance_weight=0.8)
+2026-11-03T10:47:22 [10:47:22.219] 🔄   Moving sample_2_final from CUDA:0 to CPU (writing processed result to final_video)
+2026-11-03T10:47:22 [10:47:22.460] 📹 Post-processing batch 3/3
+2026-11-03T10:47:22 [10:47:22.460] 🔄   Moving sample_3 from CPU to CUDA:0 (post-processing)
+2026-11-03T10:47:22 [10:47:22.615] 🔄   Moving input_video_3 from CPU to CUDA:0 (color correction)
+2026-11-03T10:47:22 [10:47:22.657] 📹   Applying LAB perceptual color transfer
+2026-11-03T10:47:22 [10:47:22.716] 📹   LAB color transfer completed (luminance_weight=0.8)
+2026-11-03T10:47:22 [10:47:22.716] 🔄   Moving sample_3_final from CUDA:0 to CPU (writing processed result to final_video)
+2026-11-03T10:47:22 [10:47:22.918] 🎬 Output assembled: 41 frames (51 computed with 2 padding + 8 overlap removed), Resolution: 2688x1536px, Channels: RGB
+2026-11-03T10:47:22 [10:47:22.919] ⚡ Phase 4: Post-processing complete: 1.72s
+2026-11-03T10:47:22 [10:47:22.919] ⚡   └─ Post-processed batch 1: 0.69s
+2026-11-03T10:47:22 [10:47:22.919] ⚡     └─ Color correction (lab): 0.06s
+2026-11-03T10:47:22 [10:47:22.919] ⚡   └─ Post-processed batch 2: 0.57s
+2026-11-03T10:47:22 [10:47:22.919] ⚡     └─ Color correction (lab): 0.06s
+2026-11-03T10:47:22 [10:47:22.919] ⚡   └─ Post-processed batch 3: 0.46s
+2026-11-03T10:47:22 [10:47:22.919] ⚡     └─ Color correction (lab): 0.06s
+2026-11-03T10:47:22 [10:47:22.921] 📊 After phase 4 (Post-processing):
+2026-11-03T10:47:22 [10:47:22.921] 📊   [VRAM] 0.01GB allocated / 21.84GB reserved / Peak: 7.22GB / 1.24GB free / 23.60GB total
+2026-11-03T10:47:22 [10:47:22.922] 📊   [RAM] 24.31GB process / 0.00GB others / 99.14GB free / 120.00GB total
+2026-11-03T10:47:22 [10:47:22.922] 📊   Memory changes: RAM -0.04GB
+2026-11-03T10:47:22 [10:47:22.922] 📊 Resetting VRAM peak memory statistics
+2026-11-03T10:47:22 [10:47:22.922]  
+2026-11-03T10:47:22 [10:47:22.959] 🎯 Converted output from torch.bfloat16 to float32
+2026-11-03T10:47:22 [10:47:22.959] ✅ Upscaling completed successfully!
+2026-11-03T10:47:22 [10:47:22.960] 🧹 Starting partial cleanup
+2026-11-03T10:47:22 [10:47:22.960] 🧹 Cleaning up DiT components
+2026-11-03T10:47:22 [10:47:22.963] 🧹 Cleaning up VAE components
+2026-11-03T10:47:22 [10:47:22.965] 🧹 Clearing memory caches (deep)...
+2026-11-03T10:47:24 [10:47:24.534] 💾 Models cached for next run: DiT (seedvr2_ema_7b_fp8_e4m3fn_mixed_block35_fp16.safetensors) and VAE (ema_vae_fp16.safetensors)
+2026-11-03T10:47:24 [10:47:24.534] ✅ Completed partial cleanup
+2026-11-03T10:47:24 [10:47:24.536] 📊 After all phases complete:
+2026-11-03T10:47:24 [10:47:24.536] 📊   [VRAM] 0.00GB allocated / 0.12GB reserved / Peak: 0.01GB / 22.96GB free / 23.60GB total
+2026-11-03T10:47:24 [10:47:24.536] 📊   [RAM] 24.31GB process / 0.00GB others / 99.14GB free / 120.00GB total
+2026-11-03T10:47:24 [10:47:24.536] 📊 Resetting VRAM peak memory statistics
+2026-11-03T10:47:24 [10:47:24.536]  
+2026-11-03T10:47:24 [10:47:24.536]  ────────────────────────
+2026-11-03T10:47:24 [10:47:24.536] 📊 Peak memory by phase:
+2026-11-03T10:47:24 [10:47:24.536] 📊   1. VAE encoding: VRAM 11.41GB allocated, 14.19GB reserved | RAM 24.32GB
+2026-11-03T10:47:24 [10:47:24.536] 📊   2. DiT upscaling: VRAM 18.59GB allocated, 20.75GB reserved | RAM 24.34GB
+2026-11-03T10:47:24 [10:47:24.536] 📊   3. VAE decoding: VRAM 17.99GB allocated, 21.84GB reserved | RAM 24.34GB
+2026-11-03T10:47:24 [10:47:24.536] 📊   4. Post-processing: VRAM 7.22GB allocated, 21.84GB reserved | RAM 24.31GB
+2026-11-03T10:47:24 [10:47:24.536] 📊 Overall peak: VRAM 18.59GB allocated, 21.84GB reserved | RAM 24.34GB
+2026-11-03T10:47:24 [10:47:24.536]  
+2026-11-03T10:47:24 [10:47:24.536]  ────────────────────────
+2026-11-03T10:47:24 [10:47:24.536] ⚡ Total execution: 154.23s
+2026-11-03T10:47:24 [10:47:24.536] ⚡   └─ Video generation: 145.96s
+2026-11-03T10:47:24 [10:47:24.536] ⚡   └─   Phase 3: VAE decoding: 74.27s
+2026-11-03T10:47:24 [10:47:24.536] ⚡   └─   Phase 2: DiT upscaling: 37.38s
+2026-11-03T10:47:24 [10:47:24.536] ⚡   └─   Phase 1: VAE encoding: 32.55s
+2026-11-03T10:47:24 [10:47:24.536] ⚡   └─ Model preparation: 6.65s
+2026-11-03T10:47:24 [10:47:24.536] ⚡   └─   Phase 4: Post-processing: 1.72s
+2026-11-03T10:47:24 [10:47:24.536] ⚡   └─ Final cleanup: 1.57s
+2026-11-03T10:47:24 [10:47:24.536] ⚡ Average FPS: 0.27 frames/sec
+2026-11-03T10:47:24 [10:47:24.536]  
+2026-11-03T10:47:24 [10:47:24.536]  ────────────────────────
+2026-11-03T10:47:24 [10:47:24.536] 💬 Questions? Updates? Watch, star & sponsor if you can!
+2026-11-03T10:47:24 [10:47:24.536] 🎬 https://www.youtube.com/@AInVFX
+2026-11-03T10:47:24 [10:47:24.536] ⭐💝 https://github.com/numz/ComfyUI-SeedVR2_VideoUpscaler
+2026-11-03T10:47:26 [32m[INFO][0m [32mPrompt executed in 156.81 seconds[0m
+2026-11-03T10:47:28 [32m[INFO][0m got prompt
+2026-11-03T10:47:28 [32m[INFO][0m [32mPrompt executed in 0.01 seconds[0m

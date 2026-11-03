@@ -1,0 +1,10 @@
+{
+  "label": "videoref_pdd",
+  "variant": "B video-ref mode=pdd use_video=True",
+  "frames": 124,
+  "resolution": "1344x768",
+  "started_utc": "2026-11-03T08:39:05Z",
+  "wall_seconds": 420.1,
+  "video_bytes": 9383873,
+  "helper_errors": []
+}

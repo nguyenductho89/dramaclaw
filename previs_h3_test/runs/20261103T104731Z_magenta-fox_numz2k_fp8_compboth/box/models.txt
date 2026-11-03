@@ -1,0 +1,3 @@
+501324814 /opt/comfyui/models/SEEDVR2/ema_vae_fp16.safetensors
+16479334424 /opt/comfyui/models/SEEDVR2/seedvr2_ema_7b_fp16.safetensors
+8466296338 /opt/comfyui/models/SEEDVR2/seedvr2_ema_7b_fp8_e4m3fn_mixed_block35_fp16.safetensors

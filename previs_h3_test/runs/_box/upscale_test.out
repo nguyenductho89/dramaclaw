@@ -1,0 +1,122 @@
+/opt/dramaclaw/previs_h3_test/scripts/snapshot_box.sh: line 29: /proc/sys/vm/drop_caches: Read-only file system
+snapshot -> /opt/dramaclaw/previs_h3_test/runs/20261103T092951Z_magenta-fox_up7b_2k/meta.json
+postrun done: box comfy.log mem.csv meta.json result.json segs steps.json sysmon.csv 
+{
+  "label": "up7b_2k",
+  "kind": "seedvr2_upscale",
+  "src": "/opt/bench/skit.mp4",
+  "src_res": "1344x768",
+  "out_res": "2688x1536",
+  "model": "7b",
+  "frames": 74,
+  "total_frames": 727,
+  "segment": 41,
+  "overlap": 8,
+  "color": "lab",
+  "error": "segment 0: {\"status_str\": \"error\", \"completed\": false, \"messages\": [[\"execution_start\", {\"prompt_id\": \"88ef99d0-cf7c-40c0-ab06-6e3cc4296ce5\", \"timestamp\": 1793698197473}], [\"execution_cached\", {\"nodes\": [], \"prompt_id\": \"88ef99d0-cf7c-40c0-ab06-6e3cc4296ce5\", \"timestamp\": 1793698197475}], [\"execution_error\", {\"prompt_id\": \"88ef99d0-cf7c-40c0-ab06-6e3cc4296ce5\", \"node_id\": \"8\", \"node_type\": \"KSampler\", \"executed\": [\"4\", \"5\", \"7\", \"2\", \"3\", \"1\", \"6\"], \"exception_message\": \"Allocation on device 0 would exceed allowed memory. (out of memory)\\nCurrently allocated     : 19.90 GiB\\nRequested               : 2.03 GiB\\nDevice limit            : 23.60 GiB\\nFree (according to CUDA): 3.94 MiB\\nPyTorch limit (set by user-supplied memory fraction)\\n                        : 17179869184.00 GiB\\nThis error means you ran out of memory on your GPU.\\n\\nTIPS: If the workflow worked before you might have accidentally set the batch_size to a large number.\", \"exception_type\": \"torch.OutOfMemoryError\", \"traceback\": [\"  File \\\"/opt/comfyui/execution.py\\\", line 547, in execute\\n    output_data, output_ui, has_subgraph, has_pending_tasks = await get_output_data(prompt_id, unique_id, obj, input_data_all, execution_block_cb=execution_block_cb, pre_execute_cb=pre_execute_cb, v3_data=v3_data)\\n                                                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\n\", \"  File \\",
+  "started_utc": "2026-11-03T09:29:56Z",
+  "wall_seconds": 40.3,
+  "avg_segment_seconds": null
+}
+run dir: /opt/dramaclaw/previs_h3_test/runs/20261103T092951Z_magenta-fox_up7b_2k
+/opt/dramaclaw/previs_h3_test/scripts/snapshot_box.sh: line 29: /proc/sys/vm/drop_caches: Read-only file system
+snapshot -> /opt/dramaclaw/previs_h3_test/runs/20261103T093042Z_magenta-fox_up7b_4k/meta.json
+/opt/dramaclaw/previs_h3_test/scripts/snapshot_box.sh: line 29: /proc/sys/vm/drop_caches: Read-only file system
+snapshot -> /opt/dramaclaw/previs_h3_test/runs/20261103T093201Z_magenta-fox_up7b_2k_seg17/meta.json
+{'i': 0, 'frames': '0-16', 'seconds': 55.0, 'gpu_seconds': 54.1}
+{'i': 1, 'frames': '13-29', 'seconds': 52.1, 'gpu_seconds': 51.2}
+{'i': 2, 'frames': '17-33', 'seconds': 52.1, 'gpu_seconds': 51.1}
+postrun done: box comfy.log mem.csv meta.json quality.json result.json segs steps.json sysmon.csv video.mp4 
+{
+  "label": "up7b_2k_seg17",
+  "kind": "seedvr2_upscale",
+  "src": "/opt/bench/skit.mp4",
+  "src_res": "1344x768",
+  "out_res": "2688x1536",
+  "model": "7b",
+  "frames": 34,
+  "total_frames": 727,
+  "segment": 17,
+  "overlap": 4,
+  "color": "lab",
+  "error": null,
+  "started_utc": "2026-11-03T09:32:06Z",
+  "wall_seconds": 167.4,
+  "avg_segment_seconds": 53.1
+}
+run dir: /opt/dramaclaw/previs_h3_test/runs/20261103T093201Z_magenta-fox_up7b_2k_seg17
+/opt/dramaclaw/previs_h3_test/scripts/snapshot_box.sh: line 29: /proc/sys/vm/drop_caches: Read-only file system
+snapshot -> /opt/dramaclaw/previs_h3_test/runs/20261103T093459Z_magenta-fox_up7b_2k_seg9/meta.json
+{'i': 0, 'frames': '0-8', 'seconds': 31.0, 'gpu_seconds': 30.0}
+{'i': 1, 'frames': '5-13', 'seconds': 31.0, 'gpu_seconds': 30.0}
+{'i': 2, 'frames': '10-18', 'seconds': 31.0, 'gpu_seconds': 30.0}
+{'i': 3, 'frames': '15-23', 'seconds': 31.0, 'gpu_seconds': 30.0}
+{'i': 4, 'frames': '20-28', 'seconds': 30.9, 'gpu_seconds': 30.0}
+{'i': 5, 'frames': '25-33', 'seconds': 30.9, 'gpu_seconds': 30.0}
+postrun done: box comfy.log mem.csv meta.json quality.json result.json segs steps.json sysmon.csv video.mp4 
+{
+  "label": "up7b_2k_seg9",
+  "kind": "seedvr2_upscale",
+  "src": "/opt/bench/skit.mp4",
+  "src_res": "1344x768",
+  "out_res": "2688x1536",
+  "model": "7b",
+  "frames": 34,
+  "total_frames": 727,
+  "segment": 9,
+  "overlap": 4,
+  "color": "lab",
+  "error": null,
+  "started_utc": "2026-11-03T09:35:04Z",
+  "wall_seconds": 195.8,
+  "avg_segment_seconds": 31.0
+}
+run dir: /opt/dramaclaw/previs_h3_test/runs/20261103T093459Z_magenta-fox_up7b_2k_seg9
+/opt/dramaclaw/previs_h3_test/scripts/snapshot_box.sh: line 29: /proc/sys/vm/drop_caches: Read-only file system
+snapshot -> /opt/dramaclaw/previs_h3_test/runs/20261103T093826Z_magenta-fox_up7b_4k_seg17/meta.json
+postrun done: box comfy.log mem.csv meta.json result.json segs steps.json sysmon.csv 
+{
+  "label": "up7b_4k_seg17",
+  "kind": "seedvr2_upscale",
+  "src": "/opt/bench/skit.mp4",
+  "src_res": "1344x768",
+  "out_res": "3840x2160",
+  "model": "7b",
+  "frames": 34,
+  "total_frames": 727,
+  "segment": 17,
+  "overlap": 4,
+  "color": "lab",
+  "error": "segment 0: {\"status_str\": \"error\", \"completed\": false, \"messages\": [[\"execution_start\", {\"prompt_id\": \"644eb850-098c-407c-beb0-3ad31fce845d\", \"timestamp\": 1793698712419}], [\"execution_cached\", {\"nodes\": [\"3\", \"4\"], \"prompt_id\": \"644eb850-098c-407c-beb0-3ad31fce845d\", \"timestamp\": 1793698712422}], [\"execution_error\", {\"prompt_id\": \"644eb850-098c-407c-beb0-3ad31fce845d\", \"node_id\": \"8\", \"node_type\": \"KSampler\", \"executed\": [\"7\", \"5\", \"2\", \"1\", \"6\"], \"exception_message\": \"Allocation on device 0 would exceed allowed memory. (out of memory)\\nCurrently allocated     : 19.10 GiB\\nRequested               : 1.85 GiB\\nDevice limit            : 23.60 GiB\\nFree (according to CUDA): 17.94 MiB\\nPyTorch limit (set by user-supplied memory fraction)\\n                        : 17179869184.00 GiB\\nThis error means you ran out of memory on your GPU.\\n\\nTIPS: If the workflow worked before you might have accidentally set the batch_size to a large number.\", \"exception_type\": \"torch.OutOfMemoryError\", \"traceback\": [\"  File \\\"/opt/comfyui/execution.py\\\", line 547, in execute\\n    output_data, output_ui, has_subgraph, has_pending_tasks = await get_output_data(prompt_id, unique_id, obj, input_data_all, execution_block_cb=execution_block_cb, pre_execute_cb=pre_execute_cb, v3_data=v3_data)\\n                                                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\n\", \"  File \\\"",
+  "started_utc": "2026-11-03T09:38:31Z",
+  "wall_seconds": 34.2,
+  "avg_segment_seconds": null
+}
+run dir: /opt/dramaclaw/previs_h3_test/runs/20261103T093826Z_magenta-fox_up7b_4k_seg17
+/opt/dramaclaw/previs_h3_test/scripts/snapshot_box.sh: line 29: /proc/sys/vm/drop_caches: Read-only file system
+snapshot -> /opt/dramaclaw/previs_h3_test/runs/20261103T093911Z_magenta-fox_up7b_4k_seg9/meta.json
+{'i': 0, 'frames': '0-8', 'seconds': 64.2, 'gpu_seconds': 63.1}
+{'i': 1, 'frames': '5-13', 'seconds': 61.2, 'gpu_seconds': 60.1}
+{'i': 2, 'frames': '10-18', 'seconds': 61.2, 'gpu_seconds': 60.0}
+{'i': 3, 'frames': '15-23', 'seconds': 61.2, 'gpu_seconds': 60.1}
+{'i': 4, 'frames': '20-28', 'seconds': 61.1, 'gpu_seconds': 60.1}
+{'i': 5, 'frames': '25-33', 'seconds': 61.1, 'gpu_seconds': 60.0}
+postrun done: box comfy.log mem.csv meta.json quality.json result.json segs steps.json sysmon.csv video.mp4 
+{
+  "label": "up7b_4k_seg9",
+  "kind": "seedvr2_upscale",
+  "src": "/opt/bench/skit.mp4",
+  "src_res": "1344x768",
+  "out_res": "3840x2160",
+  "model": "7b",
+  "frames": 34,
+  "total_frames": 727,
+  "segment": 9,
+  "overlap": 4,
+  "color": "lab",
+  "error": null,
+  "started_utc": "2026-11-03T09:39:16Z",
+  "wall_seconds": 388.4,
+  "avg_segment_seconds": 61.7
+}
+run dir: /opt/dramaclaw/previs_h3_test/runs/20261103T093911Z_magenta-fox_up7b_4k_seg9

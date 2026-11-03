@@ -117,3 +117,6 @@ docs/h3-templates/media/*/
 
 # H3 template picker media (third-party, fetched by scripts/sync_h3_picker_media.py)
 frontend/public/h3-templates/
+
+# Video outputs of rented-box benchmark runs (large; kept locally only)
+previs_h3_test/runs/**/*.mp4

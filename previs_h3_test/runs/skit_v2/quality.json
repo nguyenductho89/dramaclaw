@@ -1,0 +1,51 @@
+{
+  "file": "/opt/dramaclaw/previs_h3_test/runs/20261103T110808Z_magenta-fox_skit_who_has_it_worse_v2/video.mp4",
+  "ffprobe": {
+    "programs": [],
+    "streams": [
+      {
+        "codec_name": "h264",
+        "codec_type": "video",
+        "width": 1344,
+        "height": 768,
+        "r_frame_rate": "24/1",
+        "duration": "30.291667",
+        "bit_rate": "6320650",
+        "nb_frames": "727"
+      },
+      {
+        "codec_name": "aac",
+        "codec_type": "audio",
+        "sample_rate": "32000",
+        "channels": 2,
+        "r_frame_rate": "0/0",
+        "duration": "30.211688",
+        "bit_rate": "130007",
+        "nb_frames": "946"
+      }
+    ],
+    "format": {
+      "duration": "30.291667",
+      "size": "24442271",
+      "bit_rate": "6455180"
+    }
+  },
+  "luma": {
+    "samples": 122,
+    "mean": 84.17,
+    "first": 79.77,
+    "last": 86.73,
+    "min": 78.28,
+    "max": 89.89,
+    "max_jump": 2.03,
+    "first_tenth_mean": 79.86,
+    "last_tenth_mean": 86.42
+  },
+  "frame_bytes": {
+    "count": 727,
+    "mean": 32920,
+    "min": 1931,
+    "max": 270190
+  },
+  "laplacian_var": "skipped: ModuleNotFoundError"
+}

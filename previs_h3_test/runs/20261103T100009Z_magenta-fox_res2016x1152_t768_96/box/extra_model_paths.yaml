@@ -1,0 +1,8 @@
+local_models:
+  base_path: /opt/models
+  is_default: true
+  diffusion_models: diffusion_models/
+  text_encoders: text_encoders/
+  vae: vae/
+  pdd_acc: pdd_acc/
+  loras: loras/

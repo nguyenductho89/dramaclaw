@@ -1,0 +1,1 @@
+dd /opt/comfyui/models/SEEDVR2/seedvr2_ema_7b_fp16.safetensors bytes=16479334424 mode="warm(no drop_caches)" MBps=8212

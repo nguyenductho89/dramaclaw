@@ -1,0 +1,13 @@
+{
+  "host": "magenta-fox",
+  "snapshot_utc": "2026-11-03T09:30:47Z",
+  "gpu": "NVIDIA GeForce RTX 4090, 615.71.09, 24564 MiB",
+  "cpu": "AMD EPYC 7742 64-Core Processor", "cpu_count": 64,
+  "ram_gib": 120.0,
+  "cgroup_memory_max": "128849018880",
+  "models_dir": "/opt/models", "models_device": "overlay", "models_disk": null,
+  "disk_read_mbps": 7577, "disk_read_mode": "warm(no drop_caches)",
+  "torch": "2.11.0+cu130 13.0",
+  "note": null,
+  "raw_dir": "box/"
+}

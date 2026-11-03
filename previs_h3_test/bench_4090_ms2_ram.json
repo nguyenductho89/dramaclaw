@@ -1,0 +1,76 @@
+{
+  "label": "4090_ms2_ram",
+  "started_utc": "2026-11-03T04:23:45Z",
+  "resolution": "1344x768",
+  "shots": 2,
+  "frames_per_shot": 124,
+  "sampling": {
+    "pdd_nfe": "8",
+    "pdd_file": "MiniMax-H3-FL2VA-Acc-8Step.safetensors",
+    "turbo_lora": "",
+    "chain_normalize": "off",
+    "steps": 8,
+    "output_scale": 1.0
+  },
+  "logs": [
+    "    2.0s RunPod job 31d5e9dc-734a-459f-88d3-3e6111804b15-u1 submitted, polling (up to 7200s, counted from IN_PROGRESS)...",
+    "   18.1s job 31d5e9dc-734a-459f-88d3-3e6111804b15-u1 entered IN_PROGRESS, restarting the 7200s timer"
+  ],
+  "wall_seconds": 1802.8,
+  "runpod_status": {
+    "delayTime": 13980,
+    "executionTime": 1780787,
+    "id": "31d5e9dc-734a-459f-88d3-3e6111804b15-u1",
+    "output": {
+      "outputs": {
+        "31": {
+          "animated": [
+            true
+          ],
+          "images": [
+            {
+              "filename": "dramaclaw_h3_multishot_00001_.mp4",
+              "r2_key": "jobs/31d5e9dc-734a-459f-88d3-3e6111804b15-u1/dramaclaw_h3_multishot_00001_.mp4",
+              "sha256": "c8dbfb09c25072ef27cdc8d85cf27dac1adebfc4add3b74cc652018e7f879886",
+              "subfolder": "",
+              "type": "output"
+            }
+          ]
+        }
+      },
+      "prompt_id": "765dd4d0-86a0-44a0-870e-a0f289cb49b2",
+      "status": {
+        "completed": true,
+        "messages": [
+          [
+            "execution_start",
+            {
+              "prompt_id": "765dd4d0-86a0-44a0-870e-a0f289cb49b2",
+              "timestamp": 1793679847015
+            }
+          ],
+          [
+            "execution_cached",
+            {
+              "nodes": [],
+              "prompt_id": "765dd4d0-86a0-44a0-870e-a0f289cb49b2",
+              "timestamp": 1793679847026
+            }
+          ],
+          [
+            "execution_success",
+            {
+              "prompt_id": "765dd4d0-86a0-44a0-870e-a0f289cb49b2",
+              "timestamp": 1793681618542
+            }
+          ]
+        ],
+        "status_str": "success"
+      }
+    },
+    "status": "COMPLETED",
+    "workerId": "cvojuwf3756xze"
+  },
+  "error": null,
+  "video_bytes": 14237269
+}

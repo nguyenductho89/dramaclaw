@@ -1,0 +1,27 @@
+{
+  "label": "res2016x1152_t640_64",
+  "kind": "seedvr2_upscale",
+  "src": "/opt/bench/skit.mp4",
+  "src_res": "1344x768",
+  "out_res": "2016x1152",
+  "model": "7b",
+  "frames": 17,
+  "total_frames": 727,
+  "segment": 17,
+  "overlap": 4,
+  "color": "lab",
+  "tile": 640,
+  "tile_overlap": 64,
+  "segments": [
+    {
+      "i": 0,
+      "frames": "0-16",
+      "seconds": 24.9,
+      "gpu_seconds": 24.0
+    }
+  ],
+  "error": null,
+  "started_utc": "2026-11-03T10:01:54Z",
+  "wall_seconds": 26.9,
+  "avg_segment_seconds": 24.9
+}

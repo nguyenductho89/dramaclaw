@@ -1,0 +1,30 @@
+{
+  "label": "x4k_seg41_chunk9",
+  "kind": "seedvr2_upscale",
+  "src": "/opt/bench/skit.mp4",
+  "src_res": "1344x768",
+  "out_res": "3840x2160",
+  "model": "7b",
+  "frames": 41,
+  "total_frames": 727,
+  "segment": 41,
+  "overlap": 4,
+  "color": "lab",
+  "tile": 640,
+  "tile_overlap": 64,
+  "vae_tframes": 64,
+  "dit_chunk": 9,
+  "dit_chunk_overlap": 1,
+  "segments": [
+    {
+      "i": 0,
+      "frames": "0-40",
+      "seconds": 211.9,
+      "gpu_seconds": 210.3
+    }
+  ],
+  "error": null,
+  "started_utc": "2026-11-03T10:11:41Z",
+  "wall_seconds": 223.1,
+  "avg_segment_seconds": 211.9
+}

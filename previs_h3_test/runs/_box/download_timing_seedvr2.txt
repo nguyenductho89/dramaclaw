@@ -1,0 +1,4 @@
+seedvr2_7b_int8_convrot 20s
+seedvr2_3b_int8_convrot 28s
+vae 30s
+numz seedvr2 7b fp16 + vae 39s

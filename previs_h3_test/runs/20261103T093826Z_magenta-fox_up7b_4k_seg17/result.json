@@ -1,0 +1,18 @@
+{
+  "label": "up7b_4k_seg17",
+  "kind": "seedvr2_upscale",
+  "src": "/opt/bench/skit.mp4",
+  "src_res": "1344x768",
+  "out_res": "3840x2160",
+  "model": "7b",
+  "frames": 34,
+  "total_frames": 727,
+  "segment": 17,
+  "overlap": 4,
+  "color": "lab",
+  "segments": [],
+  "error": "segment 0: {\"status_str\": \"error\", \"completed\": false, \"messages\": [[\"execution_start\", {\"prompt_id\": \"644eb850-098c-407c-beb0-3ad31fce845d\", \"timestamp\": 1793698712419}], [\"execution_cached\", {\"nodes\": [\"3\", \"4\"], \"prompt_id\": \"644eb850-098c-407c-beb0-3ad31fce845d\", \"timestamp\": 1793698712422}], [\"execution_error\", {\"prompt_id\": \"644eb850-098c-407c-beb0-3ad31fce845d\", \"node_id\": \"8\", \"node_type\": \"KSampler\", \"executed\": [\"7\", \"5\", \"2\", \"1\", \"6\"], \"exception_message\": \"Allocation on device 0 would exceed allowed memory. (out of memory)\\nCurrently allocated     : 19.10 GiB\\nRequested               : 1.85 GiB\\nDevice limit            : 23.60 GiB\\nFree (according to CUDA): 17.94 MiB\\nPyTorch limit (set by user-supplied memory fraction)\\n                        : 17179869184.00 GiB\\nThis error means you ran out of memory on your GPU.\\n\\nTIPS: If the workflow worked before you might have accidentally set the batch_size to a large number.\", \"exception_type\": \"torch.OutOfMemoryError\", \"traceback\": [\"  File \\\"/opt/comfyui/execution.py\\\", line 547, in execute\\n    output_data, output_ui, has_subgraph, has_pending_tasks = await get_output_data(prompt_id, unique_id, obj, input_data_all, execution_block_cb=execution_block_cb, pre_execute_cb=pre_execute_cb, v3_data=v3_data)\\n                                                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\n\", \"  File \\\"",
+  "started_utc": "2026-11-03T09:38:31Z",
+  "wall_seconds": 34.2,
+  "avg_segment_seconds": null
+}

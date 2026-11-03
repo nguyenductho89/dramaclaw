@@ -1,0 +1,137 @@
+2026-11-03T02:51:06 [INFO] MiniMaxH3PDDAccApply: partition check ok: fl2va file on fl2va model (fl2va 0.0006, ref2va 0.0503)
+2026-11-03T02:51:35 [INFO] MiniMaxH3PDDAccApply: MiniMax-H3-FL2VA-Acc-8Step.safetensors (original) steps=8 blocks=4,4,4,4,4,4,4,4, 258 lora modules, heads fused
+2026-11-03T02:51:35 [INFO] MiniMaxH3PDDAccApply: pruned model: 50 adaln modules rebased onto the fl2va curve basis
+2026-11-03T02:51:36 [INFO] Found quantization metadata version 1
+2026-11-03T02:51:36 [INFO] Using MixedPrecisionOps for text encoder
+2026-11-03T02:51:36 [INFO] Model storage policy: fast_disk=False paths=['/runpod-volume/models/text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors']
+2026-11-03T02:54:39 [INFO] CLIP/text encoder model load device: cuda:0, offload device: cpu, current: cpu, dtype: torch.float16
+2026-11-03T02:54:40 [INFO] Model storage policy: fast_disk=False paths=['/runpod-volume/models/vae/minimax_h3_audio_vae_fp32.safetensors']
+2026-11-03T02:54:40 [INFO] VAE load device: cuda:0, offload device: cpu, dtype: torch.float32
+2026-11-03T02:54:40 [H3Multishot] custom sigmas supplied (8 steps): the steps and scheduler widgets are ignored for this run.
+2026-11-03T02:54:40 [H3Multishot] I2V: shot 1 starts from the supplied image.
+2026-11-03T02:54:40 [H3Multishot] shot 1/6 (124f @ 1344x768)...
+2026-11-03T02:54:40 [INFO] Requested to load MiniMaxH3TEModel_
+2026-11-03T02:54:47 [INFO] Model MiniMaxH3TEModel_ prepared for dynamic VRAM loading. 14956MB Staged. 0 patches attached. Force pre-loaded 410 weights: 4572 KB.
+2026-11-03T02:59:06 [INFO] Requested to load MiniMaxH3VideoVAE
+2026-11-03T02:59:18 [INFO] Model MiniMaxH3VideoVAE prepared for dynamic VRAM loading. 4965MB Staged. 0 patches attached. Force pre-loaded 128 weights: 352 KB.
+2026-11-03T02:59:30 [H3Multishot] TE evicted; 21.2 GB free for the DiT
+2026-11-03T02:59:30 [H3AutoReserve] keeping all 19.5 GB of weights resident would leave only -13.4 GB of slack over the pool's bare need - under the 2.1 GB driver headroom every clean run keeps (2026-08-21: that squeeze ran 22x slower than streaming). Reserving 17.0 GB and letting ~16.4 GB of weights stream.
+2026-11-03T02:59:30 [H3AutoReserve] driver headroom: raising the reserve 17.0 -> 19.2 GB so ~18.5 GB of weights stream instead of riding the last few percent of VRAM (that zone measured 2-12x slower).
+2026-11-03T02:59:30 [H3AutoReserve] shape cells=3593664: reserving 19.2 GB (first run at this shape: 88% of free | resident-clamp REFUSED (slack -13.4 GB < headroom 2.1 GB): streaming | +driver headroom 17.0 -> 19.2 GB)
+2026-11-03T02:59:30 [INFO] Requested to load MiniMaxH3
+2026-11-03T02:59:32 [INFO] Model MiniMaxH3 prepared for dynamic VRAM loading. 19995MB Staged. 308 patches attached. Force pre-loaded 210 weights: 1175 KB.
+2026-11-03T03:00:18  |   0%|          | 0/8 [00:00<?, ?it/s] |   0%|          | 0/8 [00:00<?, ?it/s,   Model Initializing ...  ]cat: /sys/fs/cgroup/memory.current: No such file or directory
+2026-11-03T03:06:59  |   0%|          | 0/8 [06:45<?, ?it/s,  Model Initialization complete!  ] |  12%|█▎        | 1/8 [06:45<47:15, 405.01s/it,  Model Initialization complete!  ]cat: /sys/fs/cgroup/memory.current: No such file or directory
+2026-11-03T03:07:09  |  12%|█▎        | 1/8 [00:19<47:15, 405.01s/it]                                    |  25%|██▌       | 2/8 [00:19<00:58,  9.82s/it] cat: /sys/fs/cgroup/memory.current: No such file or directory
+2026-11-03T03:07:24  |  38%|███▊      | 3/8 [00:31<00:58, 11.72s/it]cat: /sys/fs/cgroup/memory.current: No such file or directory
+2026-11-03T03:07:34  |  50%|█████     | 4/8 [00:43<00:46, 11.75s/it]cat: /sys/fs/cgroup/memory.current: No such file or directory
+2026-11-03T03:07:44  |  62%|██████▎   | 5/8 [00:54<00:35, 11.76s/it]cat: /sys/fs/cgroup/memory.current: No such file or directory
+2026-11-03T03:07:59  |  75%|███████▌  | 6/8 [01:06<00:23, 11.77s/it]cat: /sys/fs/cgroup/memory.current: No such file or directory
+2026-11-03T03:08:09  |  88%|████████▊ | 7/8 [01:18<00:11, 11.78s/it]cat: /sys/fs/cgroup/memory.current: No such file or directory
+2026-11-03T03:08:19  | 100%|██████████| 8/8 [01:30<00:00, 11.79s/it] | 100%|██████████| 8/8 [01:30<00:00, 11.28s/it]cat: /sys/fs/cgroup/memory.current: No such file or directory
+2026-11-03T03:08:20 [INFO] Requested to load MiniMaxH3VideoVAE
+2026-11-03T03:08:20 [INFO] 0 models unloaded.
+2026-11-03T03:08:21 [INFO] Model MiniMaxH3VideoVAE prepared for dynamic VRAM loading. 4965MB Staged. 0 patches attached. Force pre-loaded 128 weights: 352 KB.
+2026-11-03T03:11:07 [INFO] Requested to load MiniMaxH3AudioVAE
+2026-11-03T03:11:14 [INFO] Model MiniMaxH3AudioVAE prepared for dynamic VRAM loading. 576MB Staged. 0 patches attached. Force pre-loaded 401 weights: 539 KB.
+2026-11-03T03:11:27 [H3Multishot] shot 1/6 saved -> /comfyui/output/video/H3_SHOTS/shot_00001_.mp4
+2026-11-03T03:11:27 [H3Multishot] shot 2/6 (124f @ 1344x768)...
+2026-11-03T03:11:27 [INFO] Model MiniMaxH3TEModel_ prepared for dynamic VRAM loading. 14956MB Staged. 0 patches attached. Force pre-loaded 410 weights: 4572 KB.
+2026-11-03T03:11:30 [INFO] Model MiniMaxH3VideoVAE prepared for dynamic VRAM loading. 4965MB Staged. 0 patches attached. Force pre-loaded 128 weights: 352 KB.
+2026-11-03T03:11:45 [H3Multishot] TE evicted; 17.7 GB free for the DiT
+2026-11-03T03:11:45 [INFO] Requested to load MiniMaxH3
+2026-11-03T03:11:45 [INFO] 0 models unloaded.
+2026-11-03T03:11:45 [INFO] Model MiniMaxH3 prepared for dynamic VRAM loading. 19995MB Staged. 308 patches attached. Force pre-loaded 210 weights: 1175 KB.
+2026-11-03T03:12:15 
+2026-11-03T03:12:19  |   0%|          | 0/8 [00:00<?, ?it/s] |   0%|          | 0/8 [00:00<?, ?it/s,   Model Initializing ...  ]cat: /sys/fs/cgroup/memory.current: No such file or directory
+2026-11-03T03:18:20  |   0%|          | 0/8 [06:00<?, ?it/s,  Model Initialization complete!  ] |  12%|█▎        | 1/8 [06:00<42:02, 360.36s/it,  Model Initialization complete!  ]cat: /sys/fs/cgroup/memory.current: No such file or directory
+2026-11-03T03:18:30  |  12%|█▎        | 1/8 [00:19<42:02, 360.36s/it]                                    |  25%|██▌       | 2/8 [00:19<00:59,  9.84s/it] cat: /sys/fs/cgroup/memory.current: No such file or directory
+2026-11-03T03:18:40  |  38%|███▊      | 3/8 [00:31<00:58, 11.71s/it]cat: /sys/fs/cgroup/memory.current: No such file or directory
+2026-11-03T03:18:50  |  50%|█████     | 4/8 [00:43<00:46, 11.73s/it]cat: /sys/fs/cgroup/memory.current: No such file or directory
+2026-11-03T03:19:05  |  62%|██████▎   | 5/8 [00:54<00:35, 11.74s/it]cat: /sys/fs/cgroup/memory.current: No such file or directory
+2026-11-03T03:19:15  |  75%|███████▌  | 6/8 [01:06<00:23, 11.75s/it]cat: /sys/fs/cgroup/memory.current: No such file or directory
+2026-11-03T03:19:25  |  88%|████████▊ | 7/8 [01:18<00:11, 11.75s/it]cat: /sys/fs/cgroup/memory.current: No such file or directory
+2026-11-03T03:19:38 [INFO] Requested to load MiniMaxH3VideoVAE
+2026-11-03T03:19:38 [INFO] 0 models unloaded.
+2026-11-03T03:19:38 [INFO] Model MiniMaxH3VideoVAE prepared for dynamic VRAM loading. 4965MB Staged. 0 patches attached. Force pre-loaded 128 weights: 352 KB.
+2026-11-03T03:19:40  | 100%|██████████| 8/8 [01:30<00:00, 11.76s/it] | 100%|██████████| 8/8 [01:30<00:00, 11.27s/it]cat: /sys/fs/cgroup/memory.current: No such file or directory
+2026-11-03T03:21:40 [INFO] Requested to load MiniMaxH3AudioVAE
+2026-11-03T03:21:41 [INFO] Model MiniMaxH3AudioVAE prepared for dynamic VRAM loading. 576MB Staged. 0 patches attached. Force pre-loaded 401 weights: 539 KB.
+2026-11-03T03:21:51 [H3Multishot] shot 2/6 saved -> /comfyui/output/video/H3_SHOTS/shot_00002_.mp4
+2026-11-03T03:21:51 [H3Multishot] smart weld: seam cut moved 0ms into the head (quietest gap), word onsets preserved
+2026-11-03T03:21:51 [H3Multishot] shot 3/6 (124f @ 1344x768)...
+2026-11-03T03:21:51 [INFO] Requested to load MiniMaxH3TEModel_
+2026-11-03T03:21:52 [INFO] Model MiniMaxH3TEModel_ prepared for dynamic VRAM loading. 14956MB Staged. 0 patches attached. Force pre-loaded 410 weights: 4572 KB.
+2026-11-03T03:26:13 [INFO] Model MiniMaxH3VideoVAE prepared for dynamic VRAM loading. 4965MB Staged. 0 patches attached. Force pre-loaded 128 weights: 352 KB.
+2026-11-03T03:26:27 [H3Multishot] TE evicted; 17.7 GB free for the DiT
+2026-11-03T03:26:27 [INFO] Requested to load MiniMaxH3
+2026-11-03T03:26:27 [INFO] 0 models unloaded.
+2026-11-03T03:26:27 [INFO] Model MiniMaxH3 prepared for dynamic VRAM loading. 19995MB Staged. 308 patches attached. Force pre-loaded 210 weights: 1175 KB.
+2026-11-03T03:26:55 
+2026-11-03T03:26:56  |   0%|          | 0/8 [00:00<?, ?it/s] |   0%|          | 0/8 [00:00<?, ?it/s,   Model Initializing ...  ]cat: /sys/fs/cgroup/memory.current: No such file or directory
+2026-11-03T03:32:32  |   0%|          | 0/8 [05:33<?, ?it/s,  Model Initialization complete!  ] |  12%|█▎        | 1/8 [05:33<38:53, 333.32s/it,  Model Initialization complete!  ]cat: /sys/fs/cgroup/memory.current: No such file or directory
+2026-11-03T03:32:42  |  12%|█▎        | 1/8 [00:19<38:53, 333.32s/it]                                    |  25%|██▌       | 2/8 [00:19<00:58,  9.79s/it] cat: /sys/fs/cgroup/memory.current: No such file or directory
+2026-11-03T03:32:52  |  38%|███▊      | 3/8 [00:31<00:58, 11.70s/it]cat: /sys/fs/cgroup/memory.current: No such file or directory
+2026-11-03T03:33:02  |  50%|█████     | 4/8 [00:43<00:46, 11.73s/it]cat: /sys/fs/cgroup/memory.current: No such file or directory
+2026-11-03T03:33:17  |  62%|██████▎   | 5/8 [00:54<00:35, 11.74s/it]cat: /sys/fs/cgroup/memory.current: No such file or directory
+2026-11-03T03:33:27  |  75%|███████▌  | 6/8 [01:06<00:23, 11.75s/it]cat: /sys/fs/cgroup/memory.current: No such file or directory
+2026-11-03T03:33:42  |  88%|████████▊ | 7/8 [01:18<00:11, 11.76s/it]cat: /sys/fs/cgroup/memory.current: No such file or directory
+2026-11-03T03:33:51 [INFO] Requested to load MiniMaxH3VideoVAE
+2026-11-03T03:33:51 [INFO] 0 models unloaded.
+2026-11-03T03:33:51 [INFO] Model MiniMaxH3VideoVAE prepared for dynamic VRAM loading. 4965MB Staged. 0 patches attached. Force pre-loaded 128 weights: 352 KB.
+2026-11-03T03:33:52  | 100%|██████████| 8/8 [01:30<00:00, 11.76s/it] | 100%|██████████| 8/8 [01:30<00:00, 11.25s/it]cat: /sys/fs/cgroup/memory.current: No such file or directory
+2026-11-03T03:36:02 [INFO] Requested to load MiniMaxH3AudioVAE
+2026-11-03T03:36:03 [INFO] Model MiniMaxH3AudioVAE prepared for dynamic VRAM loading. 576MB Staged. 0 patches attached. Force pre-loaded 401 weights: 539 KB.
+2026-11-03T03:36:13 [H3Multishot] shot 3/6 saved -> /comfyui/output/video/H3_SHOTS/shot_00003_.mp4
+2026-11-03T03:36:13 [H3Multishot] shot 4/6 (124f @ 1344x768)...
+2026-11-03T03:36:13 [INFO] Requested to load MiniMaxH3TEModel_
+2026-11-03T03:36:13 [INFO] Model MiniMaxH3TEModel_ prepared for dynamic VRAM loading. 14956MB Staged. 0 patches attached. Force pre-loaded 410 weights: 4572 KB.
+2026-11-03T03:40:05 [INFO] Model MiniMaxH3VideoVAE prepared for dynamic VRAM loading. 4965MB Staged. 0 patches attached. Force pre-loaded 128 weights: 352 KB.
+2026-11-03T03:40:19 [H3Multishot] TE evicted; 17.7 GB free for the DiT
+2026-11-03T03:40:19 [INFO] Requested to load MiniMaxH3
+2026-11-03T03:40:19 [INFO] 0 models unloaded.
+2026-11-03T03:40:19 [INFO] Model MiniMaxH3 prepared for dynamic VRAM loading. 19995MB Staged. 308 patches attached. Force pre-loaded 210 weights: 1175 KB.
+2026-11-03T03:40:46 
+2026-11-03T03:40:48  |   0%|          | 0/8 [00:00<?, ?it/s] |   0%|          | 0/8 [00:00<?, ?it/s,   Model Initializing ...  ]cat: /sys/fs/cgroup/memory.current: No such file or directory
+2026-11-03T03:46:13  |   0%|          | 0/8 [05:24<?, ?it/s,  Model Initialization complete!  ] |  12%|█▎        | 1/8 [05:24<37:49, 324.19s/it,  Model Initialization complete!  ]cat: /sys/fs/cgroup/memory.current: No such file or directory
+2026-11-03T03:46:23  |  12%|█▎        | 1/8 [00:19<37:49, 324.19s/it]                                    |  25%|██▌       | 2/8 [00:19<00:58,  9.79s/it] cat: /sys/fs/cgroup/memory.current: No such file or directory
+2026-11-03T03:46:33  |  38%|███▊      | 3/8 [00:31<00:58, 11.70s/it]cat: /sys/fs/cgroup/memory.current: No such file or directory
+2026-11-03T03:46:48  |  50%|█████     | 4/8 [00:43<00:46, 11.72s/it]cat: /sys/fs/cgroup/memory.current: No such file or directory
+2026-11-03T03:46:58  |  62%|██████▎   | 5/8 [00:54<00:35, 11.74s/it]cat: /sys/fs/cgroup/memory.current: No such file or directory
+2026-11-03T03:47:08  |  75%|███████▌  | 6/8 [01:06<00:23, 11.74s/it]cat: /sys/fs/cgroup/memory.current: No such file or directory
+2026-11-03T03:47:23  |  88%|████████▊ | 7/8 [01:18<00:11, 11.75s/it]cat: /sys/fs/cgroup/memory.current: No such file or directory
+2026-11-03T03:47:33 [INFO] Requested to load MiniMaxH3VideoVAE
+2026-11-03T03:47:33 [INFO] 0 models unloaded.
+2026-11-03T03:47:33 [INFO] Model MiniMaxH3VideoVAE prepared for dynamic VRAM loading. 4965MB Staged. 0 patches attached. Force pre-loaded 128 weights: 352 KB.
+2026-11-03T03:47:33  | 100%|██████████| 8/8 [01:30<00:00, 11.76s/it] | 100%|██████████| 8/8 [01:30<00:00, 11.25s/it]cat: /sys/fs/cgroup/memory.current: No such file or directory
+2026-11-03T03:50:05 [INFO] Requested to load MiniMaxH3AudioVAE
+2026-11-03T03:50:05 [INFO] Model MiniMaxH3AudioVAE prepared for dynamic VRAM loading. 576MB Staged. 0 patches attached. Force pre-loaded 401 weights: 539 KB.
+2026-11-03T03:50:16 [H3Multishot] shot 4/6 saved -> /comfyui/output/video/H3_SHOTS/shot_00004_.mp4
+2026-11-03T03:50:16 [H3Multishot] shot 5/6 (124f @ 1344x768)...
+2026-11-03T03:50:16 [INFO] Requested to load MiniMaxH3TEModel_
+2026-11-03T03:50:16 [INFO] Model MiniMaxH3TEModel_ prepared for dynamic VRAM loading. 14956MB Staged. 0 patches attached. Force pre-loaded 410 weights: 4572 KB.
+2026-11-03T03:54:31 [INFO] Model MiniMaxH3VideoVAE prepared for dynamic VRAM loading. 4965MB Staged. 0 patches attached. Force pre-loaded 128 weights: 352 KB.
+2026-11-03T03:54:46 [H3Multishot] TE evicted; 17.7 GB free for the DiT
+2026-11-03T03:54:46 [INFO] Requested to load MiniMaxH3
+2026-11-03T03:54:46 [INFO] 0 models unloaded.
+2026-11-03T03:54:46 [INFO] Model MiniMaxH3 prepared for dynamic VRAM loading. 19995MB Staged. 308 patches attached. Force pre-loaded 210 weights: 1175 KB.
+2026-11-03T03:55:22 
+2026-11-03T03:55:24  |   0%|          | 0/8 [00:00<?, ?it/s] |   0%|          | 0/8 [00:00<?, ?it/s,   Model Initializing ...  ]cat: /sys/fs/cgroup/memory.current: No such file or directory
+2026-11-03T04:00:50  |   0%|          | 0/8 [05:25<?, ?it/s,  Model Initialization complete!  ] |  12%|█▎        | 1/8 [05:25<37:59, 325.61s/it,  Model Initialization complete!  ]cat: /sys/fs/cgroup/memory.current: No such file or directory
+2026-11-03T04:01:00  |  12%|█▎        | 1/8 [00:19<37:59, 325.61s/it]                                    |  25%|██▌       | 2/8 [00:19<00:58,  9.79s/it] cat: /sys/fs/cgroup/memory.current: No such file or directory
+2026-11-03T04:01:10  |  38%|███▊      | 3/8 [00:31<00:58, 11.69s/it]cat: /sys/fs/cgroup/memory.current: No such file or directory
+2026-11-03T04:01:25  |  50%|█████     | 4/8 [00:42<00:46, 11.72s/it]cat: /sys/fs/cgroup/memory.current: No such file or directory
+2026-11-03T04:01:35  |  62%|██████▎   | 5/8 [00:54<00:35, 11.73s/it]cat: /sys/fs/cgroup/memory.current: No such file or directory
+2026-11-03T04:01:45  |  75%|███████▌  | 6/8 [01:06<00:23, 11.75s/it]cat: /sys/fs/cgroup/memory.current: No such file or directory
+2026-11-03T04:02:00  |  88%|████████▊ | 7/8 [01:18<00:11, 11.81s/it]cat: /sys/fs/cgroup/memory.current: No such file or directory
+2026-11-03T04:02:10 [INFO] Requested to load MiniMaxH3VideoVAE
+2026-11-03T04:02:10 [INFO] 0 models unloaded.
+2026-11-03T04:02:10 [INFO] Model MiniMaxH3VideoVAE prepared for dynamic VRAM loading. 4965MB Staged. 0 patches attached. Force pre-loaded 128 weights: 352 KB.
+2026-11-03T04:02:10  | 100%|██████████| 8/8 [01:30<00:00, 11.76s/it] | 100%|██████████| 8/8 [01:30<00:00, 11.26s/it]cat: /sys/fs/cgroup/memory.current: No such file or directory
+2026-11-03T04:05:03 [INFO] Requested to load MiniMaxH3AudioVAE
+2026-11-03T04:05:03 [INFO] Model MiniMaxH3AudioVAE prepared for dynamic VRAM loading. 576MB Staged. 0 patches attached. Force pre-loaded 401 weights: 539 KB.
+2026-11-03T04:05:19 [H3Multishot] shot 5/6 saved -> /comfyui/output/video/H3_SHOTS/shot_00005_.mp4
+2026-11-03T04:05:19 [H3Multishot] smart weld: seam cut moved 306ms into the head (quietest gap), word onsets preserved
+2026-11-03T04:05:19 [H3Multishot] shot 6/6 (124f @ 1344x768)...
+2026-11-03T04:05:19 [INFO] Requested to load MiniMaxH3TEModel_
+2026-11-03T04:05:19 [INFO] Model MiniMaxH3TEModel_ prepared for dynamic VRAM loading. 14956MB Staged. 0 patches attached. Force pre-loaded 410 weights: 4572 KB.

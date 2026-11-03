@@ -1,0 +1,25 @@
+/opt/dramaclaw/previs_h3_test/scripts/snapshot_box.sh: line 29: /proc/sys/vm/drop_caches: Read-only file system
+snapshot -> /opt/dramaclaw/previs_h3_test/runs/20261103T090038Z_magenta-fox_skit_who_has_it_worse/meta.json
+postrun done: box comfy.log graph.json live.log mem.csv meta.json phases.json quality.json result.json steps.json sysmon.csv video.mp4 
+{
+  "label": "skit_who_has_it_worse",
+  "box": "rented-4090-local",
+  "started_utc": "2026-11-03T09:00:50Z",
+  "run_dir": "20261103T090038Z_magenta-fox_skit_who_has_it_worse",
+  "comfy_url": "http://127.0.0.1:8188",
+  "resolution": "1344x768",
+  "shots": 3,
+  "frames_per_shot": 243,
+  "sampling": {
+    "pdd_nfe": "8",
+    "pdd_file": "MiniMax-H3-FL2VA-Acc-8Step.safetensors",
+    "turbo_lora": "",
+    "chain_normalize": "off",
+    "steps": 8,
+    "output_scale": 1.0
+  },
+  "wall_seconds": 1060.5,
+  "error": null,
+  "video_bytes": 27324907
+}
+run dir: /opt/dramaclaw/previs_h3_test/runs/20261103T090038Z_magenta-fox_skit_who_has_it_worse

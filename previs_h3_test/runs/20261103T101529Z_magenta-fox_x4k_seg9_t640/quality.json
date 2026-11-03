@@ -1,0 +1,41 @@
+{
+  "file": "/opt/dramaclaw/previs_h3_test/runs/20261103T101529Z_magenta-fox_x4k_seg9_t640/video.mp4",
+  "ffprobe": {
+    "programs": [],
+    "streams": [
+      {
+        "codec_name": "h264",
+        "codec_type": "video",
+        "width": 3840,
+        "height": 2160,
+        "r_frame_rate": "24/1",
+        "duration": "0.375000",
+        "bit_rate": "32484693",
+        "nb_frames": "9"
+      }
+    ],
+    "format": {
+      "duration": "0.375000",
+      "size": "1523703",
+      "bit_rate": "32505664"
+    }
+  },
+  "luma": {
+    "samples": 2,
+    "mean": 78.97,
+    "first": 79.32,
+    "last": 78.62,
+    "min": 78.62,
+    "max": 79.32,
+    "max_jump": 0.7,
+    "first_tenth_mean": 79.32,
+    "last_tenth_mean": 78.62
+  },
+  "frame_bytes": {
+    "count": 9,
+    "mean": 169191,
+    "min": 50403,
+    "max": 468425
+  },
+  "laplacian_var": "skipped: ModuleNotFoundError"
+}

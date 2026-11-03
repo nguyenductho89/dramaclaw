@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+export PATH=/opt/venv/bin:$PATH LD_PRELOAD=$(ldconfig -p | grep -Po "libtcmalloc_minimal.so.\d" | head -1)
+echo "=== start $(date -u +%FT%TZ) paths=${COMFY_MODEL_PATHS:-/opt/extra_model_paths.yaml} extra=${COMFY_EXTRA_ARGS:-}" >> /opt/bench/comfy_server.log
+cd /opt/comfyui && python -u main.py --listen 127.0.0.1 --port 8188 --disable-auto-launch --disable-metadata   --use-sage-attention --extra-model-paths-config ${COMFY_MODEL_PATHS:-/opt/extra_model_paths.yaml} ${COMFY_EXTRA_ARGS:-} 2>&1   | python3 -u /opt/dramaclaw/previs_h3_test/scripts/tslog.py /opt/bench/comfy_server.log

@@ -1,0 +1,239 @@
+{
+  "1": {
+    "class_type": "UNETLoader",
+    "inputs": {
+      "unet_name": "minimax_h3_ref2va_pruned_int8_convrot.safetensors",
+      "weight_dtype": "default"
+    }
+  },
+  "2": {
+    "class_type": "CLIPLoader",
+    "inputs": {
+      "clip_name": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+      "type": "minimax",
+      "device": "default"
+    }
+  },
+  "3": {
+    "class_type": "VAELoader",
+    "inputs": {
+      "vae_name": "minimax_h3_video_vae_fp16.safetensors"
+    }
+  },
+  "4": {
+    "class_type": "VAELoader",
+    "inputs": {
+      "vae_name": "minimax_h3_audio_vae_fp32.safetensors"
+    }
+  },
+  "7": {
+    "class_type": "MiniMaxH3ReferenceToVideo",
+    "inputs": {
+      "clip": [
+        "2",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ],
+      "audio_vae": [
+        "4",
+        0
+      ],
+      "prompt": "subject_definitions:\n<Picture 1> is the first frame of [Shot 1], a stone-paved courtyard at dusk with an old brick wall behind, a tall man in a dark wool coat on the left, a shorter woman in a red scarf and beige trench coat on the right, and a wooden crate at the far right.\n<Video 1> is a rough low-polygon previsualization of the shot. It defines only the camera path (a slow dolly-in toward the two figures) and the blocking of the figures; its flat colors, geometry and low-poly look are not part of the target video and never appear on screen.\n\nsummary:\nA 5-second 16:9 medium-wide shot that begins from <Picture 1>. The camera slowly dollies in, following the camera movement of <Video 1>, while the woman turns toward the man and steps toward the crate. Ends with the woman resting one hand on the crate.\n\nretention_analysis:\n<Picture 1> ([Shot 1] first frame): fully_preserved - the video starts exactly from its framing, people, costumes, wall, pavement and lighting.\n<Video 1> ([Shot 1]): attribute_transfer - camera movement and figure blocking only; no flat color, geometry or low-poly look is carried over.\n\ndetailed_description:\nLive-action film footage, naturalistic dusk lighting, realistic detail, natural skin tones.\n[Shot 1] The shot begins from <Picture 1>: a medium-wide shot at eye level. The camera slowly dollies in toward the two figures, matching the camera movement of <Video 1>. At 0.00 seconds, the man and the woman stand still, the man on the left and the woman on the right. At 1.50 seconds, the woman turns her head toward the man. At 3.00 seconds, the man nods and lifts one hand slightly. At 5.00 seconds, the woman takes a small step toward the wooden crate. Do not replace character action with camera movement, lighting changes, particles, fog, or environmental effects. All motion happens at natural real-time speed, not slow motion. The camera holds this framing until the final frame. At 5.17 seconds, the woman rests one hand on the crate. There are no subtitles, captions, on-screen text, logos or watermarks anywhere in frame.\n\noverall_soundscape:\nSoft evening ambience, distant wind, quiet footsteps on stone.\n\nnon_diegetic_music:\nN/A",
+      "width": 1344,
+      "height": 768,
+      "length": 124,
+      "ref_image_size": "match",
+      "ref_images.ref_image_0": [
+        "100",
+        0
+      ],
+      "ref_videos.ref_video_0": [
+        "320",
+        0
+      ]
+    }
+  },
+  "8": {
+    "class_type": "BasicGuider",
+    "inputs": {
+      "model": [
+        "6",
+        0
+      ],
+      "conditioning": [
+        "40",
+        0
+      ]
+    }
+  },
+  "9": {
+    "class_type": "KSamplerSelect",
+    "inputs": {
+      "sampler_name": "euler"
+    }
+  },
+  "11": {
+    "class_type": "RandomNoise",
+    "inputs": {
+      "noise_seed": 1234
+    }
+  },
+  "12": {
+    "class_type": "SamplerCustomAdvanced",
+    "inputs": {
+      "noise": [
+        "11",
+        0
+      ],
+      "guider": [
+        "8",
+        0
+      ],
+      "sampler": [
+        "9",
+        0
+      ],
+      "sigmas": [
+        "6",
+        1
+      ],
+      "latent_image": [
+        "7",
+        1
+      ]
+    }
+  },
+  "13": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": [
+        "12",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ]
+    }
+  },
+  "14": {
+    "class_type": "VAEDecodeAudio",
+    "inputs": {
+      "samples": [
+        "12",
+        0
+      ],
+      "vae": [
+        "4",
+        0
+      ]
+    }
+  },
+  "15": {
+    "class_type": "CreateVideo",
+    "inputs": {
+      "images": [
+        "13",
+        0
+      ],
+      "audio": [
+        "14",
+        0
+      ],
+      "fps": 24.0,
+      "bit_depth": "auto",
+      "color_space": "sRGB",
+      "codec": "none"
+    }
+  },
+  "16": {
+    "class_type": "SaveVideo",
+    "inputs": {
+      "video": [
+        "15",
+        0
+      ],
+      "filename_prefix": "dramaclaw_h3",
+      "format": "mp4",
+      "format.codec": "h264",
+      "format.codec.encoding": "re-encode",
+      "format.codec.encoding.crf": 14.0,
+      "codec": "auto"
+    }
+  },
+  "5": {
+    "class_type": "MiniMaxH3SigmaShift",
+    "inputs": {
+      "model": [
+        "1",
+        0
+      ],
+      "shift_video": 12.0,
+      "shift_audio": 3.0
+    }
+  },
+  "6": {
+    "class_type": "MiniMaxH3PDDAccApply",
+    "inputs": {
+      "model": [
+        "5",
+        0
+      ],
+      "pdd_file": "MiniMax-H3-Ref2VA-Acc-8Step.safetensors",
+      "nfe": "8",
+      "lora_strength": 1.0,
+      "head_strength": 1.0,
+      "on_off_grid": "error"
+    }
+  },
+  "100": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "vr_first.png"
+    }
+  },
+  "300": {
+    "class_type": "LoadVideo",
+    "inputs": {
+      "file": "vr_previs.mp4"
+    }
+  },
+  "320": {
+    "class_type": "GetVideoComponents",
+    "inputs": {
+      "video": [
+        "300",
+        0
+      ]
+    }
+  },
+  "40": {
+    "class_type": "MiniMaxH3AddGuide",
+    "inputs": {
+      "positive": [
+        "7",
+        0
+      ],
+      "latent": [
+        "7",
+        1
+      ],
+      "frame_idx": 0,
+      "vae": [
+        "3",
+        0
+      ],
+      "audio_vae": [
+        "4",
+        0
+      ],
+      "image": [
+        "100",
+        0
+      ]
+    }
+  }
+}

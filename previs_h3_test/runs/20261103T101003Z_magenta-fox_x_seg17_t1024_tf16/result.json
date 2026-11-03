@@ -1,0 +1,23 @@
+{
+  "label": "x_seg17_t1024_tf16",
+  "kind": "seedvr2_upscale",
+  "src": "/opt/bench/skit.mp4",
+  "src_res": "1344x768",
+  "out_res": "2688x1536",
+  "model": "7b",
+  "frames": 17,
+  "total_frames": 727,
+  "segment": 17,
+  "overlap": 4,
+  "color": "lab",
+  "tile": 1024,
+  "tile_overlap": 64,
+  "vae_tframes": 16,
+  "dit_chunk": 0,
+  "dit_chunk_overlap": 1,
+  "segments": [],
+  "error": "segment 0: {\"status_str\": \"error\", \"completed\": false, \"messages\": [[\"execution_start\", {\"prompt_id\": \"5b9cd2c0-8d74-4e33-b408-e710e362a3d1\", \"timestamp\": 1793700610643}], [\"execution_cached\", {\"nodes\": [\"3\", \"4\"], \"prompt_id\": \"5b9cd2c0-8d74-4e33-b408-e710e362a3d1\", \"timestamp\": 1793700610646}], [\"execution_error\", {\"prompt_id\": \"5b9cd2c0-8d74-4e33-b408-e710e362a3d1\", \"node_id\": \"9\", \"node_type\": \"VAEDecodeTiled\", \"executed\": [\"7\", \"5\", \"2\", \"8\", \"1\", \"6\"], \"exception_message\": \"Allocation on device 0 would exceed allowed memory. (out of memory)\\nCurrently allocated     : 12.97 GiB\\nRequested               : 2.00 GiB\\nDevice limit            : 23.60 GiB\\nFree (according to CUDA): 17.94 MiB\\nPyTorch limit (set by user-supplied memory fraction)\\n                        : 17179869184.00 GiB\\nThis error means you ran out of memory on your GPU.\\n\\nTIPS: If the workflow worked before you might have accidentally set the batch_size to a large number.\", \"exception_type\": \"torch.OutOfMemoryError\", \"traceback\": [\"  File \\\"/opt/comfyui/execution.py\\\", line 547, in execute\\n    output_data, output_ui, has_subgraph, has_pending_tasks = await get_output_data(prompt_id, unique_id, obj, input_data_all, execution_block_cb=execution_block_cb, pre_execute_cb=pre_execute_cb, v3_data=v3_data)\\n                                                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\n\",",
+  "started_utc": "2026-11-03T10:10:09Z",
+  "wall_seconds": 22.0,
+  "avg_segment_seconds": null
+}

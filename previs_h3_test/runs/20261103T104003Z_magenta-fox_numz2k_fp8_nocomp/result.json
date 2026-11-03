@@ -1,0 +1,32 @@
+{
+  "label": "numz2k_fp8_nocomp",
+  "kind": "numz_seedvr2",
+  "res": 1536,
+  "max_frames": 41,
+  "batch": 17,
+  "overlap": 4,
+  "model": "seedvr2_ema_7b_fp8_e4m3fn_mixed_block35_fp16.safetensors",
+  "compile": "none",
+  "compile_mode": "default",
+  "attn": "sdpa",
+  "blocks_to_swap": 0,
+  "tile": 1024,
+  "tile_overlap": 128,
+  "no_tile": false,
+  "repeat": 2,
+  "timeout": 7200,
+  "src": "/opt/bench/skit.mp4",
+  "runs": [
+    {
+      "i": 0,
+      "seconds": 439.4,
+      "error": null
+    },
+    {
+      "i": 1,
+      "seconds": 2.0,
+      "error": null
+    }
+  ],
+  "error": null
+}

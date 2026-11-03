@@ -1,0 +1,14 @@
+NAME        MODEL                                    ROTA TRAN    SIZE TYPE FSTYPE MOUNTPOINT
+loop0                                                   0         1.9M loop        
+loop2                                                   0        66.8M loop        
+loop3                                                   0        66.8M loop        
+loop4                                                   0        48.1M loop        
+loop5                                                   0        44.7M loop        
+loop6                                                   0           4G loop        
+loop7                                                   0         1.9M loop        
+nvme0n1     WD_BLACK SN850X 8000GB                      0 nvme    7.3T disk        
+├─nvme0n1p1                                             0 nvme     36M part        
+├─nvme0n1p2                                             0 nvme      4M part        
+├─nvme0n1p3                                             0 nvme     36M part        
+├─nvme0n1p4                                             0 nvme   31.9G part        /usr/lib/simplepod/libspnvfilter.so
+└─nvme0n1p5                                             0 nvme    7.2T part        /etc/resolv.conf

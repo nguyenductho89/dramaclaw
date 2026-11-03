@@ -1,0 +1,27 @@
+{
+  "label": "tile512_128",
+  "kind": "seedvr2_upscale",
+  "src": "/opt/bench/skit.mp4",
+  "src_res": "1344x768",
+  "out_res": "2688x1536",
+  "model": "7b",
+  "frames": 17,
+  "total_frames": 727,
+  "segment": 17,
+  "overlap": 4,
+  "color": "lab",
+  "tile": 512,
+  "tile_overlap": 128,
+  "segments": [
+    {
+      "i": 0,
+      "frames": "0-16",
+      "seconds": 52.0,
+      "gpu_seconds": 51.1
+    }
+  ],
+  "error": null,
+  "started_utc": "2026-11-03T09:56:58Z",
+  "wall_seconds": 55.2,
+  "avg_segment_seconds": 52.0
+}

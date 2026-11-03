@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Dựng ComfyUI 0.37.2 + H3 multishot trên máy thuê (Ubuntu 22.04, 1x RTX 4090) giống runpod/multishot/Dockerfile,
-# tải model fl2va về NVMe cục bộ. Chạy bằng root: bash setup_h3_box.sh [--with-ref2va]
+# tải model fl2va về NVMe cục bộ. Chạy bằng root: bash setup_h3_box.sh [--with-ref2va] [--with-latent-refine]
+# --with-latent-refine: upscaler latent LBH + LoRA turbo/LMS cho latent_refine_local.py (ý tưởng Open-H3-Regenerate-2K).
 set -euo pipefail
 # Thời gian từng bước cài đặt -> $ROOT/bench/setup_timing.csv (step,start_utc,seconds) để cải tiến sau này.
 # Tải model chạy nền nên có dòng riêng: dl:<file> (giây, byte, MB/s) trong $ROOT/bench/download_timing.csv.
@@ -20,7 +21,9 @@ ROOT=/opt; MODELS=$ROOT/models; COMFY=$ROOT/comfyui
 H3_PDD_ACC_COMMIT=311a65dd53832d8a5f8177a9d5fb923c09e35a90
 GGUF_COMMIT=6ea2651e7df66d7585f6ffee804b20e92fb38b8a
 H3_MULTISHOT_COMMIT=d7d197709fc93c1afb125e3db1dfd4ac0ae28c60
-WITH_REF2VA=0; [ "${1:-}" = "--with-ref2va" ] && WITH_REF2VA=1
+LBH_UPSCALER_COMMIT=40316cf008b2fd8663263270669eb4da23f89d2c
+WITH_REF2VA=0; WITH_LATENT_REFINE=0
+for a in "$@"; do case $a in --with-ref2va) WITH_REF2VA=1;; --with-latent-refine) WITH_LATENT_REFINE=1;; *) echo "cờ lạ: $a"; exit 2;; esac; done
 
 mark check_box; echo "== 1. kiểm máy"; nvidia-smi --query-gpu=name,driver_version,memory.total --format=csv; free -g | head -2; df -h $ROOT | tail -1
 DRV=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader | head -1 | cut -d. -f1)
@@ -35,7 +38,7 @@ apt-get update && apt-get install -y curl wget git gcc aria2 tmux ffmpeg jq \
 mark start_bg_download; echo "== 2b. tải model nền (log: $ROOT/download.log)"
 download_models() {
 set -e
-mkdir -p $MODELS/{diffusion_models,text_encoders,vae,pdd_acc,loras}
+mkdir -p $MODELS/{diffusion_models,text_encoders,vae,pdd_acc,loras,latent_upscale_models}
 hf_find() { # repo, tên file (không đuôi) -> đường dẫn trong repo
   curl -s "https://huggingface.co/api/models/$1/tree/main?recursive=true" | jq -r '.[].path' | grep -E "(^|/)$2\.safetensors\$" | head -1; }
 hf_get() { # repo, tên, thư mục đích; ghi giây/byte/MB/s vào download_timing.csv
@@ -52,6 +55,12 @@ hf_get alibaba-pai/MiniMax-H3-Acc-LoRAs MiniMax-H3-FL2VA-Acc-8Step pdd_acc
 if [ $WITH_REF2VA = 1 ]; then
   hf_get Comfy-Org/MiniMax-H3 minimax_h3_ref2v_turbo_4step_v0.1_comfyui_bf16 loras || true
   echo "ref2va: thêm checkpoint ref2va + PDD ref2va bằng tay (tên file xem config.py)"
+fi
+if [ $WITH_LATENT_REFINE = 1 ]; then
+  hf_get LBH-123-AI/Minimax_h3_latent_Upscaler minimax_h3_latent_upscaler_3d_conv_v1_fp16 latent_upscale_models
+  hf_get Alissonerdx/Minimax-H3-ComfyUI h3_upscaler_lms_v0.1 latent_upscale_models
+  hf_get lightx2v/Minimax-h3-Turbo minimax_h3_fl2v_turbo_4step_v1.2_768p_comfyui_bf16 loras
+  hf_get Alissonerdx/Minimax-H3-ComfyUI minimax_h3_lms_v1.0_r64 loras
 fi
 }
 download_models > $ROOT/download.log 2>&1 &
@@ -71,6 +80,7 @@ clone() { [ -d "$COMFY/custom_nodes/$2" ] || git clone "$1" "$COMFY/custom_nodes
 clone https://github.com/Jalen-Brunson/ComfyUI-MiniMax-H3-PDD-Acc ComfyUI-MiniMax-H3-PDD-Acc $H3_PDD_ACC_COMMIT
 clone https://github.com/city96/ComfyUI-GGUF ComfyUI-GGUF $GGUF_COMMIT
 clone https://github.com/jlucasmcrell/ComfyUI-H3-Multishot ComfyUI-H3-Multishot $H3_MULTISHOT_COMMIT
+[ $WITH_LATENT_REFINE = 1 ] && clone https://github.com/LBH-123-AI/Comfyui_Minimax_h3_latent_Upscaler Comfyui_Minimax_h3_latent_Upscaler $LBH_UPSCALER_COMMIT
 
 mark torch_sage_pip; echo "== 5. torch $TIDX + sage"
 if [ "$TIDX" = cu130 ]; then TV="torch==2.11.0 torchvision==0.26.0 torchaudio==2.11.0"; else TV="torch torchvision torchaudio"; fi
@@ -92,6 +102,7 @@ local_models:
   vae: vae/
   pdd_acc: pdd_acc/
   loras: loras/
+  latent_upscale_models: latent_upscale_models/
 YAML
 
 # Log server có dấu giờ (parse_h3_log.py đọc) ở $ROOT/bench/comfy_server.log.

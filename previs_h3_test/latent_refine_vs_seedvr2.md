@@ -37,9 +37,10 @@ Cổng 1, so với nguồn (PSNR, chỉ là mức vẽ lại, không phải đ�
 Giới hạn: 1 clip chính, 1 seed, mới xem bằng mắt crop của clip 22 khung; chưa đo cosine mặt; chưa chấm mù.
 
 ## Việc còn dở
-- [ ] **Cổng 2 (H1a):** `latent_refine_local.py gen` với `--draft-mp 0,3` rồi upscale/refine, so thời gian và chất lượng với `direct` (sinh thẳng 768P, cùng prompt/seed) và `two_stage` hiện tại (bislerp + PDD). Đây là nơi plan kỳ vọng lợi ích thật (nhanh hơn ≥ 25%).
-- [ ] **Cổng 3 (H2):** upscale 2K 124 khung trên 3 clip và so với baseline SeedVR2 7B 2K (`upscale_video_local.py`, cấu hình nhanh nhất), SeedVR2 1,5x + Lanczos, Lanczos thuần. Gồm cả 2 shot liền nhau để kiểm mối nối. Đo VRAM thật ở 2K.
-- [ ] **Cổng 4 (H3):** 4K bằng `--split` (`MMH3 Split Upscale`), 25 khung rồi 124 khung; dừng nếu quá 30 phút cho 124 khung.
+Cập nhật 2026-11-04: cổng 2, 3, 4 và bản "draft thẳng lên 2K" đã chạy trên RTX 6000 Ada, kết quả và đánh giá ở `latent_refine_gate2to5_report.md` (LBH 2K thua SeedVR2: nhiễu cuối clip; draft + LBH ở 768P nhanh hơn 51%).
+- [x] **Cổng 2 (H1a):** `latent_refine_local.py gen` với `--draft-mp 0,3` rồi upscale/refine, so thời gian và chất lượng với `direct` (sinh thẳng 768P, cùng prompt/seed) và `two_stage` hiện tại (bislerp + PDD). Đây là nơi plan kỳ vọng lợi ích thật (nhanh hơn ≥ 25%).
+- [x] **Cổng 3 (H2):** (đã chạy LBH vs SeedVR2 7B 2K; không chạy 1,5x + Lanczos theo yêu cầu) upscale 2K 124 khung trên 3 clip và so với baseline SeedVR2 7B 2K (`upscale_video_local.py`, cấu hình nhanh nhất), SeedVR2 1,5x + Lanczos, Lanczos thuần. Gồm cả 2 shot liền nhau để kiểm mối nối. Đo VRAM thật ở 2K.
+- [x] **Cổng 4 (H3):** 4K bằng `--split` (`MMH3 Split Upscale`), 25 khung rồi 124 khung; dừng nếu quá 30 phút cho 124 khung.
 - [ ] Đo bổ sung: cosine mặt (`scripts/face_similarity.py`), Laplacian vùng mặt, PSNR/SSIM sau khi thu về 768P, A/B LoRA (turbo / turbo + LMS) và upscaler LMS (`h3_upscaler_lms_v0.1`).
 - [ ] Trang HTML so sánh song song để chấm mù; tiêu chí thắng 2K: chọn ≥ 2/3 clip, cosine mặt không thấp hơn SeedVR2 quá 0,05, thời gian ≤ 1,5 lần SeedVR2.
 - [ ] Skit bản **dọc 9:16**: `bench_multishot30_local.py` không đặt khổ dọc cho skit nên video ra 1344×768 (ngang). Cần sửa dims khi có `aspect` trong skit JSON rồi chạy lại (~18 phút).

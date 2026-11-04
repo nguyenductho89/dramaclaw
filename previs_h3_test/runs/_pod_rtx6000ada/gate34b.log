@@ -1,0 +1,185 @@
+[04:57:42] == clip 1
+/opt/dramaclaw/previs_h3_test/scripts/snapshot_box.sh: line 29: /proc/sys/vm/drop_caches: Read-only file system
+snapshot -> /opt/dramaclaw/previs_h3_test/runs/20261104T045743Z_8b0004364414_g3_lbh2k_c1/meta.json
+{'i': 0, 'frames': '0-123', 'seconds': 546.0, 'guided': False}
+postrun done: box comfy.log graph_0000.json mem.csv meta.json quality.json result.json segs steps.json sysmon.csv video.mp4 
+{
+  "label": "g3_lbh2k_c1",
+  "kind": "latent_refine_upscale",
+  "upscaler": "lbh",
+  "loras": [
+    "minimax_h3_fl2v_turbo_4step_v1.2_768p_comfyui_bf16.safetensors"
+  ],
+  "sigmas": "0.909375, 0.857143, 0.666667, 0.0",
+  "seam": "guide",
+  "split": false,
+  "seed": 42,
+  "error": null,
+  "started_utc": "2026-11-04T04:57:52Z",
+  "src": "previs_h3_test/runs/20261104T042723Z_8b0004364414_g3_src_s1/video.mp4",
+  "src_res": "1344x768",
+  "compute_res": "2528x1440",
+  "out_res": "2520x1440",
+  "frames": 124,
+  "total_frames": 124,
+  "segment": 124,
+  "overlap": 1,
+  "n_segments": 1,
+  "wall_seconds": 561.0,
+  "avg_segment_seconds": 546.0
+}
+run dir: /opt/dramaclaw/previs_h3_test/runs/20261104T045743Z_8b0004364414_g3_lbh2k_c1
+/opt/dramaclaw/previs_h3_test/scripts/snapshot_box.sh: line 29: /proc/sys/vm/drop_caches: Read-only file system
+snapshot -> /opt/dramaclaw/previs_h3_test/runs/20261104T050715Z_8b0004364414_g3_sv7b2k_c1/meta.json
+{'i': 0, 'frames': '0-40', 'seconds': 115.5, 'gpu_seconds': 114.6}
+{'i': 1, 'frames': '33-73', 'seconds': 112.2, 'gpu_seconds': 111.3}
+{'i': 2, 'frames': '66-106', 'seconds': 112.2, 'gpu_seconds': 111.3}
+{'i': 3, 'frames': '83-123', 'seconds': 112.1, 'gpu_seconds': 111.3}
+postrun done: box comfy.log mem.csv meta.json quality.json result.json segs steps.json sysmon.csv video.mp4 
+{
+  "label": "g3_sv7b2k_c1",
+  "kind": "seedvr2_upscale",
+  "src": "previs_h3_test/runs/20261104T042723Z_8b0004364414_g3_src_s1/video.mp4",
+  "src_res": "1344x768",
+  "out_res": "2688x1536",
+  "model": "7b",
+  "frames": 124,
+  "total_frames": 124,
+  "segment": 41,
+  "overlap": 8,
+  "color": "lab",
+  "tile": 640,
+  "tile_overlap": 64,
+  "vae_tframes": 64,
+  "dit_chunk": 17,
+  "dit_chunk_overlap": 1,
+  "error": null,
+  "started_utc": "2026-11-04T05:07:27Z",
+  "wall_seconds": 476.6,
+  "avg_segment_seconds": 113.0
+}
+run dir: /opt/dramaclaw/previs_h3_test/runs/20261104T050715Z_8b0004364414_g3_sv7b2k_c1
+[05:15:25] == clip 2
+/opt/dramaclaw/previs_h3_test/scripts/snapshot_box.sh: line 29: /proc/sys/vm/drop_caches: Read-only file system
+snapshot -> /opt/dramaclaw/previs_h3_test/runs/20261104T051525Z_8b0004364414_g3_lbh2k_c2/meta.json
+{'i': 0, 'frames': '0-123', 'seconds': 572.5, 'guided': False}
+postrun done: box comfy.log graph_0000.json mem.csv meta.json quality.json result.json segs steps.json sysmon.csv video.mp4 
+{
+  "label": "g3_lbh2k_c2",
+  "kind": "latent_refine_upscale",
+  "upscaler": "lbh",
+  "loras": [
+    "minimax_h3_fl2v_turbo_4step_v1.2_768p_comfyui_bf16.safetensors"
+  ],
+  "sigmas": "0.909375, 0.857143, 0.666667, 0.0",
+  "seam": "guide",
+  "split": false,
+  "seed": 42,
+  "error": null,
+  "started_utc": "2026-11-04T05:15:37Z",
+  "src": "previs_h3_test/runs/20261104T043017Z_8b0004364414_g3_src_s2/video.mp4",
+  "src_res": "1344x768",
+  "compute_res": "2528x1440",
+  "out_res": "2520x1440",
+  "frames": 124,
+  "total_frames": 124,
+  "segment": 124,
+  "overlap": 1,
+  "n_segments": 1,
+  "wall_seconds": 587.6,
+  "avg_segment_seconds": 572.5
+}
+run dir: /opt/dramaclaw/previs_h3_test/runs/20261104T051525Z_8b0004364414_g3_lbh2k_c2
+/opt/dramaclaw/previs_h3_test/scripts/snapshot_box.sh: line 29: /proc/sys/vm/drop_caches: Read-only file system
+snapshot -> /opt/dramaclaw/previs_h3_test/runs/20261104T052527Z_8b0004364414_g3_sv7b2k_c2/meta.json
+{'i': 0, 'frames': '0-40', 'seconds': 115.8, 'gpu_seconds': 114.8}
+{'i': 1, 'frames': '33-73', 'seconds': 112.1, 'gpu_seconds': 111.3}
+{'i': 2, 'frames': '66-106', 'seconds': 115.2, 'gpu_seconds': 114.3}
+{'i': 3, 'frames': '83-123', 'seconds': 112.8, 'gpu_seconds': 111.9}
+postrun done: box comfy.log mem.csv meta.json quality.json result.json segs steps.json sysmon.csv video.mp4 
+{
+  "label": "g3_sv7b2k_c2",
+  "kind": "seedvr2_upscale",
+  "src": "previs_h3_test/runs/20261104T043017Z_8b0004364414_g3_src_s2/video.mp4",
+  "src_res": "1344x768",
+  "out_res": "2688x1536",
+  "model": "7b",
+  "frames": 124,
+  "total_frames": 124,
+  "segment": 41,
+  "overlap": 8,
+  "color": "lab",
+  "tile": 640,
+  "tile_overlap": 64,
+  "vae_tframes": 64,
+  "dit_chunk": 17,
+  "dit_chunk_overlap": 1,
+  "error": null,
+  "started_utc": "2026-11-04T05:25:40Z",
+  "wall_seconds": 479.7,
+  "avg_segment_seconds": 114.0
+}
+run dir: /opt/dramaclaw/previs_h3_test/runs/20261104T052527Z_8b0004364414_g3_sv7b2k_c2
+[05:33:41] GATE3_DONE
+/opt/dramaclaw/previs_h3_test/scripts/snapshot_box.sh: line 29: /proc/sys/vm/drop_caches: Read-only file system
+snapshot -> /opt/dramaclaw/previs_h3_test/runs/20261104T053342Z_8b0004364414_g4_4k_22/meta.json
+{'i': 0, 'frames': '0-21', 'seconds': 132.5, 'guided': False}
+postrun done: box comfy.log graph_0000.json mem.csv meta.json quality.json result.json segs steps.json sysmon.csv video.mp4 
+{
+  "label": "g4_4k_22",
+  "kind": "latent_refine_upscale",
+  "upscaler": "lbh",
+  "loras": [
+    "minimax_h3_fl2v_turbo_4step_v1.2_768p_comfyui_bf16.safetensors"
+  ],
+  "sigmas": "0.909375, 0.857143, 0.666667, 0.0",
+  "seam": "none",
+  "split": true,
+  "seed": 42,
+  "error": null,
+  "started_utc": "2026-11-04T05:33:53Z",
+  "src": "previs_h3_test/runs/20261104T041524Z_8b0004364414_g2_direct768/video.mp4",
+  "src_res": "1344x768",
+  "compute_res": "3808x2176",
+  "out_res": "3780x2160",
+  "frames": 22,
+  "total_frames": 124,
+  "segment": 22,
+  "overlap": 1,
+  "n_segments": 1,
+  "wall_seconds": 139.6,
+  "avg_segment_seconds": 132.5
+}
+run dir: /opt/dramaclaw/previs_h3_test/runs/20261104T053342Z_8b0004364414_g4_4k_22
+[05:36:14] gate4 124
+/opt/dramaclaw/previs_h3_test/scripts/snapshot_box.sh: line 29: /proc/sys/vm/drop_caches: Read-only file system
+snapshot -> /opt/dramaclaw/previs_h3_test/runs/20261104T053614Z_8b0004364414_g4_4k_124/meta.json
+{'i': 0, 'frames': '0-123', 'seconds': 850.6, 'guided': False}
+postrun done: box comfy.log graph_0000.json mem.csv meta.json quality.json result.json segs steps.json sysmon.csv video.mp4 
+{
+  "label": "g4_4k_124",
+  "kind": "latent_refine_upscale",
+  "upscaler": "lbh",
+  "loras": [
+    "minimax_h3_fl2v_turbo_4step_v1.2_768p_comfyui_bf16.safetensors"
+  ],
+  "sigmas": "0.909375, 0.857143, 0.666667, 0.0",
+  "seam": "guide",
+  "split": true,
+  "seed": 42,
+  "error": null,
+  "started_utc": "2026-11-04T05:36:26Z",
+  "src": "previs_h3_test/runs/20261104T041524Z_8b0004364414_g2_direct768/video.mp4",
+  "src_res": "1344x768",
+  "compute_res": "3808x2176",
+  "out_res": "3780x2160",
+  "frames": 124,
+  "total_frames": 124,
+  "segment": 124,
+  "overlap": 1,
+  "n_segments": 1,
+  "wall_seconds": 876.0,
+  "avg_segment_seconds": 850.6
+}
+run dir: /opt/dramaclaw/previs_h3_test/runs/20261104T053614Z_8b0004364414_g4_4k_124
+[05:51:04] ALL_DONE

@@ -1,0 +1,13 @@
+{
+  "host": "8b0004364414",
+  "snapshot_utc": "2026-11-04T04:51:00Z",
+  "gpu": "NVIDIA RTX 6000 Ada Generation, 595.91.07, 49140 MiB",
+  "cpu": "AMD EPYC 75F3 32-Core Processor", "cpu_count": 128,
+  "ram_gib": 503.7,
+  "cgroup_memory_max": "61999996928",
+  "models_dir": "/opt/models", "models_device": "overlay", "models_disk": null,
+  "disk_read_mbps": 5510, "disk_read_mode": "warm(no drop_caches)",
+  "torch": "2.11.0+cu130 13.0",
+  "note": null,
+  "raw_dir": "box/"
+}

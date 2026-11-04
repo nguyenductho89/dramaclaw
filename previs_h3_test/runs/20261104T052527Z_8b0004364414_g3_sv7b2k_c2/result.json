@@ -1,0 +1,48 @@
+{
+  "label": "g3_sv7b2k_c2",
+  "kind": "seedvr2_upscale",
+  "src": "previs_h3_test/runs/20261104T043017Z_8b0004364414_g3_src_s2/video.mp4",
+  "src_res": "1344x768",
+  "out_res": "2688x1536",
+  "model": "7b",
+  "frames": 124,
+  "total_frames": 124,
+  "segment": 41,
+  "overlap": 8,
+  "color": "lab",
+  "tile": 640,
+  "tile_overlap": 64,
+  "vae_tframes": 64,
+  "dit_chunk": 17,
+  "dit_chunk_overlap": 1,
+  "segments": [
+    {
+      "i": 0,
+      "frames": "0-40",
+      "seconds": 115.8,
+      "gpu_seconds": 114.8
+    },
+    {
+      "i": 1,
+      "frames": "33-73",
+      "seconds": 112.1,
+      "gpu_seconds": 111.3
+    },
+    {
+      "i": 2,
+      "frames": "66-106",
+      "seconds": 115.2,
+      "gpu_seconds": 114.3
+    },
+    {
+      "i": 3,
+      "frames": "83-123",
+      "seconds": 112.8,
+      "gpu_seconds": 111.9
+    }
+  ],
+  "error": null,
+  "started_utc": "2026-11-04T05:25:40Z",
+  "wall_seconds": 479.7,
+  "avg_segment_seconds": 114.0
+}

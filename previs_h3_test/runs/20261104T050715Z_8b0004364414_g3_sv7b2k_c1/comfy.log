@@ -1,0 +1,94 @@
+2026-11-04T05:07:28 [32m[INFO][0m got prompt
+2026-11-04T05:07:33 [32m[INFO][0m Model storage policy: fast_disk=False paths=['/opt/models/vae/seedvr2_ema_vae_fp16.safetensors']
+2026-11-04T05:07:33 [32m[INFO][0m Using pytorch attention in VAE
+2026-11-04T05:07:33 [32m[INFO][0m Using pytorch attention in VAE
+2026-11-04T05:07:34 [32m[INFO][0m VAE load device: cuda:0, offload device: cpu, dtype: torch.float16
+2026-11-04T05:07:34 [32m[INFO][0m Requested to load VideoAutoencoderKLWrapper
+2026-11-04T05:07:34 [32m[INFO][0m loaded completely;  478.07 MB loaded, full load: True
+2026-11-04T05:07:59 [32m[INFO][0m Found quantization metadata version 1
+2026-11-04T05:07:59 [32m[INFO][0m Detected mixed precision quantization
+2026-11-04T05:07:59 [32m[INFO][0m Using mixed precision operations
+2026-11-04T05:07:59 [32m[INFO][0m Native ops: int8_tensorwise, convrot_w4a4, float8_e5m2, float8_e4m3fn, asym_w4a8_int8 , emulated ops: mxfp8, nvfp4
+2026-11-04T05:07:59 [32m[INFO][0m model weight dtype torch.bfloat16, manual cast: torch.bfloat16
+2026-11-04T05:07:59 [32m[INFO][0m model_type FLOW
+2026-11-04T05:07:59 [32m[INFO][0m Model storage policy: fast_disk=False paths=['/opt/models/diffusion_models/seedvr2_7b_int8_convrot.safetensors']
+2026-11-04T05:07:59 [32m[INFO][0m Requested to load SeedVR2
+2026-11-04T05:07:59 [32m[INFO][0m Model SeedVR2 prepared for dynamic VRAM loading. 7944MB Staged. 0 patches attached. Force pre-loaded 576 weights: 3853 KB.
+2026-11-04T05:08:00   0%|          | 0/1 [00:00<?, ?it/s]
+2026-11-04T05:08:06   0%|          | 0/1 [00:00<?, ?it/s,   Model Initializing ...  ]
+2026-11-04T05:08:06   0%|          | 0/1 [00:05<?, ?it/s,  Model Initialization complete!  ]
+2026-11-04T05:08:06 100%|██████████| 1/1 [00:05<00:00,  5.94s/it,  Model Initialization complete!  ]
+2026-11-04T05:08:06 100%|██████████| 1/1 [00:05<00:00,  5.94s/it,  Model Initialization complete!  ]
+2026-11-04T05:08:06 [32m[INFO][0m Model SeedVR2 prepared for dynamic VRAM loading. 7944MB Staged. 0 patches attached. Force pre-loaded 576 weights: 3853 KB.
+2026-11-04T05:08:06   0%|          | 0/1 [00:00<?, ?it/s]
+2026-11-04T05:08:11   0%|          | 0/1 [00:00<?, ?it/s,   Model Initializing ...  ]
+2026-11-04T05:08:11   0%|          | 0/1 [00:05<?, ?it/s,  Model Initialization complete!  ]
+2026-11-04T05:08:11 100%|██████████| 1/1 [00:05<00:00,  5.40s/it,  Model Initialization complete!  ]
+2026-11-04T05:08:12 100%|██████████| 1/1 [00:05<00:00,  5.40s/it,  Model Initialization complete!  ]
+2026-11-04T05:08:12 [32m[INFO][0m Model SeedVR2 prepared for dynamic VRAM loading. 7944MB Staged. 0 patches attached. Force pre-loaded 576 weights: 3853 KB.
+2026-11-04T05:08:12   0%|          | 0/1 [00:00<?, ?it/s]
+2026-11-04T05:08:15   0%|          | 0/1 [00:00<?, ?it/s,   Model Initializing ...  ]
+2026-11-04T05:08:15   0%|          | 0/1 [00:03<?, ?it/s,  Model Initialization complete!  ]
+2026-11-04T05:08:15 100%|██████████| 1/1 [00:03<00:00,  3.26s/it,  Model Initialization complete!  ]
+2026-11-04T05:09:22 100%|██████████| 1/1 [00:03<00:00,  3.26s/it,  Model Initialization complete!  ]
+2026-11-04T05:09:22 [32m[INFO][0m [32mPrompt executed in 114.03 seconds[0m
+2026-11-04T05:09:24 [32m[INFO][0m got prompt
+2026-11-04T05:09:50 [32m[INFO][0m Model SeedVR2 prepared for dynamic VRAM loading. 7944MB Staged. 0 patches attached. Force pre-loaded 576 weights: 3853 KB.
+2026-11-04T05:09:50   0%|          | 0/1 [00:00<?, ?it/s]
+2026-11-04T05:09:55   0%|          | 0/1 [00:00<?, ?it/s,   Model Initializing ...  ]
+2026-11-04T05:09:55   0%|          | 0/1 [00:05<?, ?it/s,  Model Initialization complete!  ]
+2026-11-04T05:09:55 100%|██████████| 1/1 [00:05<00:00,  5.45s/it,  Model Initialization complete!  ]
+2026-11-04T05:09:56 100%|██████████| 1/1 [00:05<00:00,  5.45s/it,  Model Initialization complete!  ]
+2026-11-04T05:09:56 [32m[INFO][0m Model SeedVR2 prepared for dynamic VRAM loading. 7944MB Staged. 0 patches attached. Force pre-loaded 576 weights: 3853 KB.
+2026-11-04T05:09:56   0%|          | 0/1 [00:00<?, ?it/s]
+2026-11-04T05:10:01   0%|          | 0/1 [00:00<?, ?it/s,   Model Initializing ...  ]
+2026-11-04T05:10:01   0%|          | 0/1 [00:05<?, ?it/s,  Model Initialization complete!  ]
+2026-11-04T05:10:01 100%|██████████| 1/1 [00:05<00:00,  5.46s/it,  Model Initialization complete!  ]
+2026-11-04T05:10:02 100%|██████████| 1/1 [00:05<00:00,  5.46s/it,  Model Initialization complete!  ]
+2026-11-04T05:10:02 [32m[INFO][0m Model SeedVR2 prepared for dynamic VRAM loading. 7944MB Staged. 0 patches attached. Force pre-loaded 576 weights: 3853 KB.
+2026-11-04T05:10:02   0%|          | 0/1 [00:00<?, ?it/s]
+2026-11-04T05:10:05   0%|          | 0/1 [00:00<?, ?it/s,   Model Initializing ...  ]
+2026-11-04T05:10:05   0%|          | 0/1 [00:03<?, ?it/s,  Model Initialization complete!  ]
+2026-11-04T05:10:05 100%|██████████| 1/1 [00:03<00:00,  3.26s/it,  Model Initialization complete!  ]
+2026-11-04T05:11:13 100%|██████████| 1/1 [00:03<00:00,  3.26s/it,  Model Initialization complete!  ]
+2026-11-04T05:11:13 [32m[INFO][0m [32mPrompt executed in 109.52 seconds[0m
+2026-11-04T05:11:16 [32m[INFO][0m got prompt
+2026-11-04T05:11:43 [32m[INFO][0m Model SeedVR2 prepared for dynamic VRAM loading. 7944MB Staged. 0 patches attached. Force pre-loaded 576 weights: 3853 KB.
+2026-11-04T05:11:43   0%|          | 0/1 [00:00<?, ?it/s]
+2026-11-04T05:11:48   0%|          | 0/1 [00:00<?, ?it/s,   Model Initializing ...  ]
+2026-11-04T05:11:48   0%|          | 0/1 [00:05<?, ?it/s,  Model Initialization complete!  ]
+2026-11-04T05:11:48 100%|██████████| 1/1 [00:05<00:00,  5.44s/it,  Model Initialization complete!  ]
+2026-11-04T05:11:49 100%|██████████| 1/1 [00:05<00:00,  5.44s/it,  Model Initialization complete!  ]
+2026-11-04T05:11:49 [32m[INFO][0m Model SeedVR2 prepared for dynamic VRAM loading. 7944MB Staged. 0 patches attached. Force pre-loaded 576 weights: 3853 KB.
+2026-11-04T05:11:49   0%|          | 0/1 [00:00<?, ?it/s]
+2026-11-04T05:11:54   0%|          | 0/1 [00:00<?, ?it/s,   Model Initializing ...  ]
+2026-11-04T05:11:54   0%|          | 0/1 [00:05<?, ?it/s,  Model Initialization complete!  ]
+2026-11-04T05:11:54 100%|██████████| 1/1 [00:05<00:00,  5.44s/it,  Model Initialization complete!  ]
+2026-11-04T05:11:55 100%|██████████| 1/1 [00:05<00:00,  5.44s/it,  Model Initialization complete!  ]
+2026-11-04T05:11:55 [32m[INFO][0m Model SeedVR2 prepared for dynamic VRAM loading. 7944MB Staged. 0 patches attached. Force pre-loaded 576 weights: 3853 KB.
+2026-11-04T05:11:55   0%|          | 0/1 [00:00<?, ?it/s]
+2026-11-04T05:11:58   0%|          | 0/1 [00:00<?, ?it/s,   Model Initializing ...  ]
+2026-11-04T05:11:58   0%|          | 0/1 [00:03<?, ?it/s,  Model Initialization complete!  ]
+2026-11-04T05:11:58 100%|██████████| 1/1 [00:03<00:00,  3.28s/it,  Model Initialization complete!  ]
+2026-11-04T05:13:06 100%|██████████| 1/1 [00:03<00:00,  3.28s/it,  Model Initialization complete!  ]
+2026-11-04T05:13:06 [32m[INFO][0m [32mPrompt executed in 110.26 seconds[0m
+2026-11-04T05:13:08 [32m[INFO][0m got prompt
+2026-11-04T05:13:35 [32m[INFO][0m Model SeedVR2 prepared for dynamic VRAM loading. 7944MB Staged. 0 patches attached. Force pre-loaded 576 weights: 3853 KB.
+2026-11-04T05:13:35   0%|          | 0/1 [00:00<?, ?it/s]
+2026-11-04T05:13:40   0%|          | 0/1 [00:00<?, ?it/s,   Model Initializing ...  ]
+2026-11-04T05:13:40   0%|          | 0/1 [00:05<?, ?it/s,  Model Initialization complete!  ]
+2026-11-04T05:13:40 100%|██████████| 1/1 [00:05<00:00,  5.43s/it,  Model Initialization complete!  ]
+2026-11-04T05:13:41 100%|██████████| 1/1 [00:05<00:00,  5.43s/it,  Model Initialization complete!  ]
+2026-11-04T05:13:41 [32m[INFO][0m Model SeedVR2 prepared for dynamic VRAM loading. 7944MB Staged. 0 patches attached. Force pre-loaded 576 weights: 3853 KB.
+2026-11-04T05:13:41   0%|          | 0/1 [00:00<?, ?it/s]
+2026-11-04T05:13:46   0%|          | 0/1 [00:00<?, ?it/s,   Model Initializing ...  ]
+2026-11-04T05:13:46   0%|          | 0/1 [00:05<?, ?it/s,  Model Initialization complete!  ]
+2026-11-04T05:13:46 100%|██████████| 1/1 [00:05<00:00,  5.56s/it,  Model Initialization complete!  ]
+2026-11-04T05:13:47 100%|██████████| 1/1 [00:05<00:00,  5.56s/it,  Model Initialization complete!  ]
+2026-11-04T05:13:47 [32m[INFO][0m Model SeedVR2 prepared for dynamic VRAM loading. 7944MB Staged. 0 patches attached. Force pre-loaded 576 weights: 3853 KB.
+2026-11-04T05:13:47   0%|          | 0/1 [00:00<?, ?it/s]
+2026-11-04T05:13:50   0%|          | 0/1 [00:00<?, ?it/s,   Model Initializing ...  ]
+2026-11-04T05:13:50   0%|          | 0/1 [00:03<?, ?it/s,  Model Initialization complete!  ]
+2026-11-04T05:13:50 100%|██████████| 1/1 [00:03<00:00,  3.27s/it,  Model Initialization complete!  ]
+2026-11-04T05:14:58 100%|██████████| 1/1 [00:03<00:00,  3.27s/it,  Model Initialization complete!  ]
+2026-11-04T05:14:58 [32m[INFO][0m [32mPrompt executed in 109.87 seconds[0m

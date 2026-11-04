@@ -1,0 +1,10 @@
+file,start_utc,seconds,bytes,mbps
+minimax_h3_fl2va_pruned_int8_convrot,2026-11-04T04:05:30Z,52,20970379616,385
+qwen3vl_32b_minimax_h3_nvfp4_awq,2026-11-04T04:06:23Z,39,15687142551,384
+minimax_h3_video_vae_fp16,2026-11-04T04:07:03Z,15,5207808496,331
+minimax_h3_audio_vae_fp32,2026-11-04T04:07:18Z,3,605254808,192
+MiniMax-H3-FL2VA-Acc-8Step,2026-11-04T04:07:21Z,6,1372450680,218
+minimax_h3_latent_upscaler_3d_conv_v1_fp16,2026-11-04T04:07:27Z,3,690592672,220
+h3_upscaler_lms_v0.1,2026-11-04T04:07:30Z,3,690593048,220
+minimax_h3_fl2v_turbo_4step_v1.2_768p_comfyui_bf16,2026-11-04T04:07:34Z,6,1956193000,311
+minimax_h3_lms_v1.0_r64,2026-11-04T04:07:40Z,5,1239664536,236

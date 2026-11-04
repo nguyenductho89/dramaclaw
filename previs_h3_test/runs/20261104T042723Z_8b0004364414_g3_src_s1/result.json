@@ -1,0 +1,27 @@
+{
+  "label": "g3_src_s1",
+  "kind": "latent_refine_direct",
+  "upscaler": "lbh",
+  "loras": [
+    "minimax_h3_fl2v_turbo_4step_v1.2_768p_comfyui_bf16.safetensors"
+  ],
+  "sigmas": "0.909375, 0.857143, 0.666667, 0.0",
+  "seam": "guide",
+  "split": false,
+  "seed": 42,
+  "segments": [
+    {
+      "i": 0,
+      "seconds": 162.2
+    }
+  ],
+  "error": null,
+  "started_utc": "2026-11-04T04:27:34Z",
+  "compute_res": "1344x768",
+  "out_res": "1344x768",
+  "draft_res": null,
+  "frames": 124,
+  "shot": 1,
+  "wall_seconds": 162.2,
+  "avg_segment_seconds": 162.2
+}

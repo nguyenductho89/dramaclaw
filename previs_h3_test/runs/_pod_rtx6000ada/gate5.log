@@ -1,0 +1,53 @@
+[05:51:06] gen 2k draft0.3 lbh shot0
+/opt/dramaclaw/previs_h3_test/scripts/snapshot_box.sh: line 29: /proc/sys/vm/drop_caches: Read-only file system
+snapshot -> /opt/dramaclaw/previs_h3_test/runs/20261104T055107Z_8b0004364414_g5_lbh_d03_2k/meta.json
+postrun done: box comfy.log graph.json mem.csv meta.json quality.json result.json segs steps.json sysmon.csv video.mp4 
+{
+  "label": "g5_lbh_d03_2k",
+  "kind": "latent_refine_gen",
+  "upscaler": "lbh",
+  "loras": [
+    "minimax_h3_fl2v_turbo_4step_v1.2_768p_comfyui_bf16.safetensors"
+  ],
+  "sigmas": "0.909375, 0.857143, 0.666667, 0.0",
+  "seam": "guide",
+  "split": false,
+  "seed": 42,
+  "error": null,
+  "started_utc": "2026-11-04T05:51:20Z",
+  "compute_res": "2560x1440",
+  "out_res": "2560x1440",
+  "draft_res": "736x416",
+  "frames": 124,
+  "shot": 0,
+  "wall_seconds": 558.4,
+  "avg_segment_seconds": 558.4
+}
+run dir: /opt/dramaclaw/previs_h3_test/runs/20261104T055107Z_8b0004364414_g5_lbh_d03_2k
+[06:00:39] gen 2k draft0.3 bislerp shot0
+/opt/dramaclaw/previs_h3_test/scripts/snapshot_box.sh: line 29: /proc/sys/vm/drop_caches: Read-only file system
+snapshot -> /opt/dramaclaw/previs_h3_test/runs/20261104T060040Z_8b0004364414_g5_bislerp_d03_2k/meta.json
+postrun done: box comfy.log graph.json mem.csv meta.json quality.json result.json segs steps.json sysmon.csv video.mp4 
+{
+  "label": "g5_bislerp_d03_2k",
+  "kind": "latent_refine_gen",
+  "upscaler": "bislerp",
+  "loras": [
+    "minimax_h3_fl2v_turbo_4step_v1.2_768p_comfyui_bf16.safetensors"
+  ],
+  "sigmas": "0.909375, 0.857143, 0.666667, 0.0",
+  "seam": "guide",
+  "split": false,
+  "seed": 42,
+  "error": null,
+  "started_utc": "2026-11-04T06:00:53Z",
+  "compute_res": "2560x1440",
+  "out_res": "2560x1440",
+  "draft_res": "736x416",
+  "frames": 124,
+  "shot": 0,
+  "wall_seconds": 528.5,
+  "avg_segment_seconds": 528.5
+}
+run dir: /opt/dramaclaw/previs_h3_test/runs/20261104T060040Z_8b0004364414_g5_bislerp_d03_2k
+[06:09:44] GATE5_DONE

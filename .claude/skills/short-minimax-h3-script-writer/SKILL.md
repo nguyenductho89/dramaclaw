@@ -1,13 +1,13 @@
 ---
-name: minimax-h3-script-writer
-description: Viết kịch bản short 9:16 (YouTube Shorts/TikTok) dạng multishot, CHỈ cho video model MiniMax H3 (fl2va/ref2va) trong previs_h3_test/scripts/skits/*.json. Dùng khi user nhờ viết skit/kịch bản short, thêm shot, hoặc đổi lời thoại. Sau khi viết xong luôn chạy skill minimax-h3-script-review.
+name: short-minimax-h3-script-writer
+description: Viết kịch bản short 9:16 (YouTube Shorts/TikTok) dạng multishot, CHỈ cho video model MiniMax H3 (fl2va/ref2va) trong previs_h3_test/scripts/skits/*.json. Dùng khi user nhờ viết skit/kịch bản short, thêm shot, hoặc đổi lời thoại. Sau khi viết xong luôn chạy skill short-minimax-h3-script-review.
 ---
 
 # Viết kịch bản short 9:16 cho MiniMax H3 (multishot)
 
 ## File đầu ra
 `previs_h3_test/scripts/skits/<ten>.json`, theo mẫu `who_has_it_worse.json`:
-`{"name", "frames", "start_image", "shots": [<chuỗi prompt mỗi shot>]}`.
+`{"name", "aspect_ratio": "9:16", "frames", "start_image", "shots": [<chuỗi prompt mỗi shot>]}`. `aspect_ratio` bắt buộc là `"9:16"`; script sinh video đọc trường này để chọn 768×1344, thiếu thì skit vẫn mặc định 9:16.
 Mỗi shot là một chuỗi gồm 3 mục: `integrated_multimodal_description:`, `overall_soundscape:`, `non_diegetic_music:`.
 
 > Kịch bản này chạy trên MiniMax H3 (RunPod, `generators/runpod_minimax_h3_video.py`), mỗi shot ≤12s, prompt theo chuẩn H3: `[Shot N]`, mốc giây, `<d>[Language] ...</d>`, nhãn giọng `(Sx)`. Không áp dụng cho Seedance/Grok/Veo. Quy tắc gốc: `src/novelvideo/agents/prompts/minimax_h3_rules.md`.
@@ -16,7 +16,7 @@ Mỗi shot là một chuỗi gồm 3 mục: `integrated_multimodal_description:`
 1. Chốt trước: số nhân vật (tối đa 3), mỗi nhân vật 1 nhãn giọng cố định **S1, S2, S3 dùng nhất quán cho mọi shot**, độ dài mỗi shot (5-12s, 243 khung ≈ 10s), khổ 9:16.
 2. Viết **bảng nhân vật** (không đưa vào JSON): tên, tuổi, tóc/râu, trang phục, nhãn giọng, kiểu giọng. Mỗi shot chép lại NGUYÊN VĂN mô tả này (shot sinh độc lập, không nhớ shot trước).
 3. Viết từng shot theo khuôn: phong cách → `[Shot N]` + cỡ cảnh + bối cảnh → nhân vật có mô tả → timeline theo giây → câu chốt → âm thanh.
-4. Chạy skill `minimax-h3-script-review` và sửa tới khi sạch lỗi CHẶN.
+4. Điền bảng tự kiểm ở cuối file, sửa tới khi đạt, rồi chạy skill `short-minimax-h3-script-review` và sửa tới khi sạch lỗi CHẶN và CẢNH BÁO.
 
 ## Quy tắc BẮT BUỘC (mỗi quy tắc từng gây lỗi thật)
 - **Gắn giọng vào TÊN nhân vật, không bao giờ vào "a man/a woman".** Viết `Mark (S1) says in a flat, deadpan voice: <d>[English] ...</d>`, KHÔNG viết `a man (S1) says it`. Khi có 2+ người cùng khung, "a man" khiến model gán lời nhầm người (lỗi shot 3 của who_has_it_worse: lời Mark bị đọc bởi Arthur).
@@ -26,14 +26,31 @@ Mỗi shot là một chuỗi gồm 3 mục: `integrated_multimodal_description:`
 - **Mô tả ngoại hình lặp lại đủ trong mọi shot** (tuổi, tóc, râu, áo). Không viết "the same man" hay "him".
 - **Một shot = một sự kiện liên tục**, không cắt cảnh. Đổi góc máy = shot mới.
 - **Camera `static` / giữ khung** khi có 2+ người; không đẩy, không lia. Kết bằng "The camera holds this framing until the final frame."
-- **Lời thoại vừa thời lượng**: khoảng 2-3 âm tiết/giây trong cửa sổ thoại. Câu dài hơn thì rút hoặc chia shot. Chừa 1-2s mở đầu và 1s cuối không thoại.
+- **Lời thoại vừa thời lượng, phải TÍNH rồi mới viết**: đếm âm tiết tiếng Anh của từng `<d>` (mỗi nguyên âm tách được là một âm tiết, ví dụ "haven't" = 2), chia cho số giây từ lúc bắt đầu nói tới lúc ghi "finishes". Phải ≤ 3 âm tiết/giây, kể cả khi khóc nấc hay nói chậm. Quá thì kéo cửa sổ thoại (bắt đầu từ 1.0s, kết thúc trước giây cuối ít nhất 1.5s), rồi mới rút lời, rồi mới chia shot. Không đổi lời thoại của user mà không hỏi. Ghi phép tính vào bảng tự kiểm (xem cuối file).
 - **Mốc giây tăng dần, không vượt thời lượng shot**, mỗi 1-2s có một thay đổi nhìn thấy được.
-- **Hành vi quan sát được, không tính từ cảm xúc trần** ("nhíu mày, siết hàm", không phải "anh ta buồn").
+- **Hành vi quan sát được, không tính từ cảm xúc trần** ("nhíu mày, siết hàm", không phải "anh ta buồn"). Cụm như "a deeply sympathetic, concerned expression" vẫn là tính từ trần; viết "brows drawn together, head tilted, lips pressed". Mỗi shot tối đa một lần đổi cảm xúc.
+- **Từ cấm trong prompt**: "slowly" (mâu thuẫn với real-time; dùng "with measured steps" hay bỏ), "the same voice/man/him as before" (shot sinh độc lập, không có "trước đó").
+- **Giọng viết đủ trong từng shot, không tham chiếu shot trước.** Nếu cùng nhân vật đổi giọng (khóc rồi deadpan) thì mô tả cả hai trong shot đó: "his weeping voice drops to a flat, deadpan, dry voice". Muốn giữ giọng thật sự giữa các shot thì cần `start_image` hoặc ref audio; không có thì phải nói rõ với user rằng giọng có thể lệch.
+- **Một shot chỉ một lần di chuyển vào khung**: không viết hai điểm dừng liên tiếp ("stops on the right" rồi "stops beside Mark"). Gộp thành một câu với điểm đến cuối cùng.
+- **Khung dọc 9:16**: ưu tiên cỡ cảnh vừa/cận (medium close-up, medium close two-shot). Hai người cùng khung thì xếp theo chiều dọc (một người đứng, một người cúi/ngồi) hoặc kề sát nhau, không đứng cách xa theo chiều ngang. Không dùng cỡ cảnh toàn.
+- **Mốc thời đại**: nếu kịch bản gắn với một thời kỳ (ví dụ Victoria 1880s), ghi thời kỳ ở dòng phong cách, trang phục/bối cảnh/âm thanh đúng thời kỳ, và thêm "no modern objects" vào dòng cấm cuối shot.
 - **Kết shot (end state)** là tư thế tĩnh rõ ràng, không viết "continues/keeps".
 - **Lời thoại nguyên văn trong `<d>[Language] ...</d>`**, đúng ngôn ngữ, không dịch, không dấu nháy kép bọc ngoài, không chữ hiện trên màn hình. Dòng cuối mỗi shot: "All motion happens at natural real-time speed, not slow motion. There are no subtitles, captions, on-screen text, logos or watermarks anywhere in frame."
 - **Hook trong 1-2s đầu** (short xem trong feed): có hành động hoặc câu nói gây chú ý ngay shot 1. Punchline hoặc cú twist nằm ở shot cuối, kết bằng khoảnh khắc im lặng hoặc phản ứng.
 - **Âm thanh**: soundscape 1-4 câu, đúng với hành động nhìn thấy. `non_diegetic_music` là mô tả cụ thể hoặc đúng `N/A`, không tự mâu thuẫn.
 - Không nêu tên người thật, thương hiệu, nội dung bạo lực/nhạy cảm vi phạm chính sách nền tảng.
+
+## Bảng tự kiểm (BẮT BUỘC trước khi báo xong, trả lời từng dòng)
+1. Mỗi `<d>`: người nói nêu tên + (Sx); người còn lại ghi im lặng? 
+2. Mỗi `<d>`: ___ âm tiết / ___ s = ___ (≤ 3)? Thoại bắt đầu ≥ 1.0s và kết thúc cách cuối shot ≥ 1.5s?
+3. Có chữ "slowly", "same ... as before" nào không? (tìm bằng grep)
+4. Ngoại hình, bối cảnh, ánh sáng chép nguyên văn giống nhau ở mọi shot?
+5. Mỗi nhân vật có đúng một nhãn Sx, vị trí trái/phải nhất quán?
+6. Mốc giây tăng dần, ≤ thời lượng shot, không hai điểm dừng liên tiếp?
+7. Cảm xúc nào chỉ là tính từ? Giọng có tham chiếu shot trước?
+8. Cỡ cảnh hợp 9:16? Có `aspect_ratio: "9:16"` trong JSON?
+9. Có câu giữ khung cuối, dòng real-time, dòng cấm chữ/logo (cộng "no modern objects" nếu có mốc thời đại)?
+Sau đó chạy `short-minimax-h3-script-review`.
 
 ## Mẫu một shot có 2 người
 ```

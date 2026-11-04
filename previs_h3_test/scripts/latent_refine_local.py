@@ -276,7 +276,8 @@ def do_upscale(a, D: Path, res: dict) -> None:
 
 def do_gen(a, D: Path, res: dict, direct: bool) -> None:
     frames = a.max_frames or a.frames
-    aspect = 16 / 9 if a.aspect == "16:9" else 9 / 16
+    ar = a.aspect or (json.loads(Path(a.prompt_file).read_text()).get("aspect_ratio") if a.prompt_file and isinstance(json.loads(Path(a.prompt_file).read_text()), dict) else None) or "16:9"
+    aspect = 16 / 9 if ar == "16:9" else 9 / 16
     cw, ch, ow, oh = target_dims(a.target, aspect)
     dw, dh = draft_dims(a.draft_mp, aspect)
     prompt = shot_prompts(a)[a.shot]
@@ -324,7 +325,7 @@ def main():
     ap.add_argument("--tile", type=int, default=1024)
     ap.add_argument("--tiled-decode", action="store_true")
     ap.add_argument("--prompt"); ap.add_argument("--prompt-file"); ap.add_argument("--shot", type=int, default=0)
-    ap.add_argument("--first-frame"); ap.add_argument("--aspect", default="16:9", choices=["16:9", "9:16"])
+    ap.add_argument("--first-frame"); ap.add_argument("--aspect", default=None, choices=["16:9", "9:16"], help="default: aspect_ratio in --prompt-file, else 16:9")
     ap.add_argument("--frames", type=int, default=124); ap.add_argument("--max-frames", type=int, default=0)
     ap.add_argument("--draft-mp", type=float, default=0.3); ap.add_argument("--draft-steps", type=int, default=8)
     ap.add_argument("--draft-split", type=int, default=4, help="gen: stop pass 1 after this many steps (0 = full schedule)")

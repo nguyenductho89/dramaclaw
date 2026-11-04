@@ -7,7 +7,7 @@ POST /prompt, polls /history/{id}, downloads the video through /view.
   BENCH_SHOTS=2 python previs_h3_test/scripts/bench_multishot30_local.py ms2_local
   python previs_h3_test/scripts/bench_multishot30_local.py run1   # all 6 shots
 Env: BENCH_SHOTS, BENCH_FRAMES (124), BENCH_PDD (file name, "" = off), COMFY_URL (default http://127.0.0.1:8188), BENCH_TIMEOUT_S (default 10800).
-BENCH_NOTE (free text, e.g. "nvme, 120G RAM"), BENCH_SERVER_LOG (default /opt/bench/comfy_server.log), BENCH_MODELS (/opt/models).
+BENCH_SCRIPT_FILE (skit JSON; aspect_ratio defaults to 9:16), BENCH_NOTE (free text, e.g. "nvme, 120G RAM"), BENCH_SERVER_LOG (default /opt/bench/comfy_server.log), BENCH_MODELS (/opt/models).
 Each run gets previs_h3_test/runs/<UTC ts>_<host>_<label>/ with meta.json + box/ (snapshot_box.sh), graph.json,
 mem.csv (memmon.sh), comfy.log (slice of the server log), phases.json (parse_h3_log.py), result.json, live.log,
 video.mp4; one row is appended to previs_h3_test/runs/index.csv. Helper failures are recorded, never fatal.
@@ -36,10 +36,12 @@ sys.argv_backup, sys.argv = sys.argv, [sys.argv[0], LABEL]
 exec(compile(_src, "bench_multishot30.py", "exec"), _ns)
 sys.argv = sys.argv_backup
 SHOTS = _ns["SHOTS"]
-# BENCH_SCRIPT_FILE: JSON {"shots": [...], "frames": N, "start_image": path|null} -> a real script instead of the fixed benchmark beats.
+# BENCH_SCRIPT_FILE: JSON {"shots": [...], "frames": N, "start_image": path|null, "aspect_ratio": "9:16"} -> a real script instead of the fixed benchmark beats.
 SKIT = json.loads(Path(os.environ["BENCH_SCRIPT_FILE"]).read_text()) if os.environ.get("BENCH_SCRIPT_FILE") else None
 if SKIT:
     SHOTS = SKIT["shots"]; FRAMES = int(SKIT.get("frames") or FRAMES)
+# Skits default to vertical 9:16; the fixed benchmark stays 16:9 so it remains comparable with earlier runs.
+ASPECT = (SKIT.get("aspect_ratio") or "9:16") if SKIT else "16:9"
 
 from novelvideo.generators.runpod_minimax_h3_multishot_video import (  # noqa: E402
     build_h3_multishot_graph, dims_for_multishot, join_shots_script, multishot_sampling_plan)
@@ -141,7 +143,7 @@ def main():
 
 
 def _run(D: Path, helper_errors: list):
-    w, h = dims_for_multishot("16:9")
+    w, h = dims_for_multishot(ASPECT)
     sampling = multishot_sampling_plan("fl2va")
     if SKIT:
         sp = SKIT.get("start_image")
@@ -156,7 +158,7 @@ def _run(D: Path, helper_errors: list):
         chain_normalize=str(sampling.get("chain_normalize") or "off"), realism_lora=str(sampling.get("realism_lora") or ""),
         realism_strength=float(sampling.get("realism_strength") or 1.0), realism_trigger=str(sampling.get("realism_trigger") or ""))
     rec = {"label": LABEL, "box": "rented-4090-local", "started_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-           "run_dir": D.name, "comfy_url": URL, "resolution": f"{w}x{h}", "shots": len(SHOTS), "frames_per_shot": FRAMES, "sampling": sampling, "logs": []}
+           "run_dir": D.name, "comfy_url": URL, "resolution": f"{w}x{h}", "aspect_ratio": ASPECT, "shots": len(SHOTS), "frames_per_shot": FRAMES, "sampling": sampling, "logs": []}
     (D / "graph.json").write_text(json.dumps(graph, indent=2, ensure_ascii=False))
     live = open(D / "live.log", "a")
     t0 = time.time()

@@ -1,6 +1,6 @@
 ---
-name: minimax-h3-script-review
-description: Review kịch bản short 9:16 viết cho video model MiniMax H3 (skit JSON multishot trong previs_h3_test/scripts/skits/). Dùng khi user nhờ review/kiểm tra kịch bản, hoặc ngay sau khi viết xong bằng minimax-h3-script-writer. Chỉ báo lỗi, không tự sửa trừ khi được yêu cầu.
+name: short-minimax-h3-script-review
+description: Review kịch bản short 9:16 viết cho video model MiniMax H3 (skit JSON multishot trong previs_h3_test/scripts/skits/). Dùng khi user nhờ review/kiểm tra kịch bản, hoặc ngay sau khi viết xong bằng short-minimax-h3-script-writer. Chỉ báo lỗi, không tự sửa trừ khi được yêu cầu.
 ---
 
 # Review kịch bản short 9:16 cho MiniMax H3
@@ -25,11 +25,13 @@ description: Review kịch bản short 9:16 viết cho video model MiniMax H3 (s
 8. **CHẶN**: nhân vật chỉ được gọi bằng "he/the man/the same" ở shot sau mà không mô tả lại.
 9. **CẢNH BÁO**: vị trí trái/phải đổi mà không có hành động di chuyển; shot 2+ người không nêu vị trí.
 10. **CẢNH BÁO**: bối cảnh, ánh sáng, tông màu không giống nhau giữa các shot.
-11. **CẢNH BÁO**: cảnh nối tiếp (shot sau tiếp diễn shot trước) nhưng đầu shot sau không khớp tư thế cuối shot trước.
+11. **CẢNH BÁO**: kịch bản có mốc thời đại (ví dụ Victoria 1880s) nhưng trang phục, đồ vật, bối cảnh hay âm thanh lệch thời đại, hoặc thiếu câu cấm đồ hiện đại.
+11b. **CẢNH BÁO**: cảnh nối tiếp (shot sau tiếp diễn shot trước) nhưng đầu shot sau không khớp tư thế cuối shot trước.
 
 ## C. Kỹ thuật H3
 12. **CHẶN**: mốc giây không tăng dần, hoặc vượt thời lượng shot (243 khung ≈ 10s; tối đa 12s/shot).
 13. **CHẶN**: một shot có cắt cảnh/đổi góc/đổi địa điểm.
+13b. **CHẶN**: file thiếu `"aspect_ratio": "9:16"` hoặc có giá trị khác; prompt ghi khổ ngang/16:9.
 14. **CHẶN**: camera chuyển động (push/pan/track) khi có 2+ người; thiếu câu giữ khung cuối.
 15. **CHẶN**: thiếu `<d>[Language]` đúng định dạng, ngôn ngữ tag lệch ngôn ngữ nội dung, có dấu nháy kép bọc `<d>`, hoặc dịch/diễn giải lời thoại.
 16. **CHẶN**: thiếu một trong 3 mục `integrated_multimodal_description`, `overall_soundscape`, `non_diegetic_music`; thiếu dòng cấm subtitle/chữ/logo.

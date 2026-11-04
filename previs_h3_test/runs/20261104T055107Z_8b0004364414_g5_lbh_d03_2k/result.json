@@ -1,0 +1,27 @@
+{
+  "label": "g5_lbh_d03_2k",
+  "kind": "latent_refine_gen",
+  "upscaler": "lbh",
+  "loras": [
+    "minimax_h3_fl2v_turbo_4step_v1.2_768p_comfyui_bf16.safetensors"
+  ],
+  "sigmas": "0.909375, 0.857143, 0.666667, 0.0",
+  "seam": "guide",
+  "split": false,
+  "seed": 42,
+  "segments": [
+    {
+      "i": 0,
+      "seconds": 558.4
+    }
+  ],
+  "error": null,
+  "started_utc": "2026-11-04T05:51:20Z",
+  "compute_res": "2560x1440",
+  "out_res": "2560x1440",
+  "draft_res": "736x416",
+  "frames": 124,
+  "shot": 0,
+  "wall_seconds": 558.4,
+  "avg_segment_seconds": 558.4
+}

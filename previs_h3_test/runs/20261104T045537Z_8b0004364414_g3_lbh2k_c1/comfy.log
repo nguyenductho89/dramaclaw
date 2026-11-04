@@ -1,0 +1,30 @@
+2026-11-04T04:55:46 [32m[INFO][0m got prompt
+2026-11-04T04:55:46 [32m[INFO][0m Model storage policy: fast_disk=False paths=['/opt/models/vae/minimax_h3_audio_vae_fp32.safetensors']
+2026-11-04T04:55:46 [32m[INFO][0m VAE load device: cuda:0, offload device: cpu, dtype: torch.float32
+2026-11-04T04:55:47 [32m[INFO][0m Model storage policy: fast_disk=False paths=['/opt/models/vae/minimax_h3_video_vae_fp16.safetensors']
+2026-11-04T04:55:47 [32m[INFO][0m VAE load device: cuda:0, offload device: cpu, dtype: torch.float16
+2026-11-04T04:55:47 [32m[INFO][0m Found quantization metadata version 1
+2026-11-04T04:55:47 [32m[INFO][0m Using MixedPrecisionOps for text encoder
+2026-11-04T04:55:47 [32m[INFO][0m Model storage policy: fast_disk=False paths=['/opt/models/text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors']
+2026-11-04T04:55:49 [32m[INFO][0m CLIP/text encoder model load device: cuda:0, offload device: cpu, current: cpu, dtype: torch.float16
+2026-11-04T04:55:49 [32m[INFO][0m Requested to load MiniMaxH3TEModel_
+2026-11-04T04:55:49 [32m[INFO][0m Model MiniMaxH3TEModel_ prepared for dynamic VRAM loading. 14956MB Staged. 0 patches attached. Force pre-loaded 410 weights: 4572 KB.
+2026-11-04T04:56:06 [32m[INFO][0m Requested to load MiniMaxH3VideoVAE
+2026-11-04T04:56:06 [32m[INFO][0m Model MiniMaxH3VideoVAE prepared for dynamic VRAM loading. 4965MB Staged. 0 patches attached. Force pre-loaded 128 weights: 352 KB.
+2026-11-04T04:56:27 [32m[INFO][0m Found quantization metadata version 1
+2026-11-04T04:56:27 [32m[INFO][0m Detected mixed precision quantization
+2026-11-04T04:56:27 [32m[INFO][0m Using mixed precision operations
+2026-11-04T04:56:27 [32m[INFO][0m Native ops: int8_tensorwise, convrot_w4a4, float8_e5m2, float8_e4m3fn, asym_w4a8_int8 , emulated ops: mxfp8, nvfp4
+2026-11-04T04:56:27 [32m[INFO][0m model weight dtype torch.bfloat16, manual cast: torch.bfloat16
+2026-11-04T04:56:27 [32m[INFO][0m model_type FLOW_AV
+2026-11-04T04:56:27 [32m[INFO][0m Model storage policy: fast_disk=False paths=['/opt/models/diffusion_models/minimax_h3_fl2va_pruned_int8_convrot.safetensors']
+2026-11-04T04:56:27 [32m[INFO][0m Requested to load MiniMaxH3
+2026-11-04T04:56:27 [32m[INFO][0m Model MiniMaxH3 prepared for dynamic VRAM loading. 19995MB Staged. 208 patches attached. Force pre-loaded 210 weights: 1175 KB.
+2026-11-04T04:56:28 [MinimaxH3-3D] Latent 84x48 -> 158x90 | Pixels 2528x1440 | scale=1.878
+2026-11-04T04:56:28 [MinimaxH3-3D] ✅ Model offloaded to CPU. VRAM released.
+2026-11-04T04:56:28   0%|          | 0/3 [00:00<?, ?it/s]
+2026-11-04T04:57:38   0%|          | 0/3 [00:00<?, ?it/s,   Model Initializing ...  ][32m[INFO][0m Global interrupt (no prompt_id specified)
+2026-11-04T04:57:40   0%|          | 0/3 [01:11<?, ?it/s,   Model Initializing ...  ]
+2026-11-04T04:57:40 [32m[INFO][0m Comfy model compiler graph breaks: 0, rogues: 14
+2026-11-04T04:57:40 [32m[INFO][0m Processing interrupted
+2026-11-04T04:57:40 [32m[INFO][0m [32mPrompt executed in 114.57 seconds[0m

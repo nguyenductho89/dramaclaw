@@ -1,0 +1,51 @@
+{
+  "file": "/opt/dramaclaw/previs_h3_test/runs/20261104T055107Z_8b0004364414_g5_lbh_d03_2k/video.mp4",
+  "ffprobe": {
+    "programs": [],
+    "streams": [
+      {
+        "codec_name": "h264",
+        "codec_type": "video",
+        "width": 2560,
+        "height": 1440,
+        "r_frame_rate": "24/1",
+        "duration": "5.166667",
+        "bit_rate": "57469032",
+        "nb_frames": "124"
+      },
+      {
+        "codec_name": "aac",
+        "codec_type": "audio",
+        "sample_rate": "32000",
+        "channels": 2,
+        "r_frame_rate": "0/0",
+        "duration": "5.166688",
+        "bit_rate": "128640",
+        "nb_frames": "163"
+      }
+    ],
+    "format": {
+      "duration": "5.166688",
+      "size": "37204465",
+      "bit_rate": "57606675"
+    }
+  },
+  "luma": {
+    "samples": 21,
+    "mean": 85.61,
+    "first": 86.11,
+    "last": 85.45,
+    "min": 80.13,
+    "max": 88.14,
+    "max_jump": 6.21,
+    "first_tenth_mean": 86.16,
+    "last_tenth_mean": 82.79
+  },
+  "frame_bytes": {
+    "count": 124,
+    "mean": 299318,
+    "min": 16978,
+    "max": 1378775
+  },
+  "laplacian_var": "skipped: ModuleNotFoundError"
+}

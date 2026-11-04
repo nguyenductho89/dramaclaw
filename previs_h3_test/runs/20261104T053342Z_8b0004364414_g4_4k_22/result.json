@@ -1,0 +1,33 @@
+{
+  "label": "g4_4k_22",
+  "kind": "latent_refine_upscale",
+  "upscaler": "lbh",
+  "loras": [
+    "minimax_h3_fl2v_turbo_4step_v1.2_768p_comfyui_bf16.safetensors"
+  ],
+  "sigmas": "0.909375, 0.857143, 0.666667, 0.0",
+  "seam": "none",
+  "split": true,
+  "seed": 42,
+  "segments": [
+    {
+      "i": 0,
+      "frames": "0-21",
+      "seconds": 132.5,
+      "guided": false
+    }
+  ],
+  "error": null,
+  "started_utc": "2026-11-04T05:33:53Z",
+  "src": "previs_h3_test/runs/20261104T041524Z_8b0004364414_g2_direct768/video.mp4",
+  "src_res": "1344x768",
+  "compute_res": "3808x2176",
+  "out_res": "3780x2160",
+  "frames": 22,
+  "total_frames": 124,
+  "segment": 22,
+  "overlap": 1,
+  "n_segments": 1,
+  "wall_seconds": 139.6,
+  "avg_segment_seconds": 132.5
+}

@@ -1,0 +1,130 @@
+{
+  "1": {
+    "class_type": "H3ModelLoaderAny",
+    "inputs": {
+      "model_name": "minimax_h3_ref2va_pruned_int8_convrot.safetensors",
+      "activation_reserve_gb": 0.0
+    }
+  },
+  "2": {
+    "class_type": "H3ClipLoaderAny",
+    "inputs": {
+      "clip_name": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+      "type": "minimax"
+    }
+  },
+  "3": {
+    "class_type": "VAELoader",
+    "inputs": {
+      "vae_name": "minimax_h3_video_vae_fp16.safetensors"
+    }
+  },
+  "4": {
+    "class_type": "VAELoader",
+    "inputs": {
+      "vae_name": "minimax_h3_audio_vae_fp32.safetensors"
+    }
+  },
+  "10": {
+    "class_type": "H3MultishotSampler",
+    "inputs": {
+      "model": [
+        "7",
+        0
+      ],
+      "clip": [
+        "2",
+        0
+      ],
+      "video_vae": [
+        "3",
+        0
+      ],
+      "audio_vae": [
+        "4",
+        0
+      ],
+      "script": "{\"prompts\": [\"Live-action film footage, vertical 9:16 framing, period drama set in England in the 1660s, a darkened room lit by one narrow sunbeam from the upper left, realistic detail, natural skin tones, cinematic biographical drama.\\n[Shot 1] First-person point of view: the camera is the narrator's own eyes, so the only visible parts of the narrator are the hands and sleeves reaching up from the bottom of the frame. A vertical view in a darkened English room in the 1660s, a shuttered window with one small round hole in the upper left of frame sending a single narrow sunbeam diagonally across the dark room, a bare pale plaster wall filling the upper right of frame. The narrator's hands are lean and ink-stained, in plain dark grey wool coat sleeves with worn linen cuffs. The object is a triangular glass prism. At 0.00 seconds the right hand holds the glass prism just below the sunbeam at the bottom center of frame, dust drifting through the beam. At 1.00 seconds the hand lifts the prism into the beam, and a bright band of rainbow colours spreads across the plaster wall in the upper right of frame. At 1.50 seconds Newton (S1), the unseen narrator, an elderly English man in his eighties whose voice is the voice in <Audio 1>, says in a calm, unhurried British English accent: <d>[English] I split sunlight with a prism. White was never white.</d> At 4.00 seconds the hand rotates the prism a few degrees and the rainbow band widens on the wall. At 6.50 seconds he finishes; the prism sits in the beam and the rainbow band lies on the wall. The ambient sound: Near silence in a closed room, the faint creak of a wooden shutter, a soft breath. The camera holds this framing until the final frame. All motion happens at natural real-time speed, not slow motion. There are no subtitles, captions, on-screen text, logos or watermarks, and no modern objects, anywhere in frame.\", \"Live-action film footage, vertical 9:16 framing, period drama set in England in the 1660s, a darkened room lit by one narrow sunbeam from the upper left, realistic detail, natural skin tones, cinematic biographical drama.\\n[Shot 2] First-person point of view: the camera is the narrator's own eyes, so the only visible parts of the narrator are the hands and sleeves reaching up from the bottom of the frame. A vertical view in a darkened English room in the 1660s, a shuttered window with one small round hole in the upper left of frame sending a single narrow sunbeam diagonally across the dark room, a bare pale plaster wall filling the upper right of frame. The narrator's hands are lean and ink-stained, in plain dark grey wool coat sleeves with worn linen cuffs. The object is a triangular glass prism. For the first 2.00 seconds the right hand holds the glass prism in the sunbeam, the rainbow band lying on the plaster wall in the upper right of frame, dust drifting through the beam, the fingers making small adjustments. At 2.00 seconds the left hand comes up from the bottom left of frame at arm's length holding a long blunt iron bodkin needle up in the light, and Newton (S1), the unseen narrator, an elderly English man in his eighties whose voice is the voice in <Audio 1>, says in a calm, unhurried British English accent: <d>[English] I even pushed a needle behind my eye.</d> At 4.50 seconds the left hand turns the bodkin so its iron shaft catches the rainbow light. At 6.50 seconds he finishes; the left hand holds the bodkin upright at arm's length and the right hand holds the prism in the beam. The ambient sound: Near silence in a closed room, a faint metallic tick, a soft breath. The camera holds this framing until the final frame. All motion happens at natural real-time speed, not slow motion. There are no subtitles, captions, on-screen text, logos or watermarks, and no modern objects, anywhere in frame.\"]}",
+      "shot_count": 2,
+      "width": 768,
+      "height": 1344,
+      "frames_per_shot": 192,
+      "seed": 1234,
+      "steps": 12,
+      "seed_per_shot": true,
+      "sampler_name": "euler",
+      "scheduler": "beta",
+      "self_anchor_voice": false,
+      "save_every_shot": true,
+      "start_image": [
+        "100",
+        0
+      ],
+      "voice_ref": [
+        "200",
+        0
+      ]
+    }
+  },
+  "30": {
+    "class_type": "CreateVideo",
+    "inputs": {
+      "images": [
+        "10",
+        0
+      ],
+      "audio": [
+        "10",
+        1
+      ],
+      "fps": 24.0,
+      "bit_depth": "auto",
+      "color_space": "sRGB",
+      "codec": "none"
+    }
+  },
+  "31": {
+    "class_type": "SaveVideo",
+    "inputs": {
+      "video": [
+        "30",
+        0
+      ],
+      "filename_prefix": "dramaclaw_h3_multishot",
+      "format": "mp4",
+      "format.codec": "h264",
+      "format.codec.encoding": "re-encode",
+      "format.codec.encoding.crf": 14.0,
+      "codec": "auto"
+    }
+  },
+  "7": {
+    "class_type": "H3LoraStack",
+    "inputs": {
+      "model": [
+        "1",
+        0
+      ],
+      "lora_1": "minimax_h3_ref2v_turbo_4step_v0.1_comfyui_bf16.safetensors",
+      "strength_1": 1.0,
+      "lora_2": "None",
+      "strength_2": 1.0,
+      "lora_3": "None",
+      "strength_3": 1.0,
+      "lora_4": "None",
+      "strength_4": 1.0
+    }
+  },
+  "100": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "ms_start.png"
+    }
+  },
+  "200": {
+    "class_type": "LoadAudio",
+    "inputs": {
+      "audio": "ms_voice.wav"
+    }
+  }
+}

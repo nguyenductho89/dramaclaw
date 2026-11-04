@@ -1,0 +1,58 @@
+{
+  "shots": [
+    {
+      "shot": 1,
+      "of": 2,
+      "start": "2026-11-04T15:27:24",
+      "encode_text_s": 23.0,
+      "dit_s": null,
+      "init_s": 14.56,
+      "sampling_s": 193,
+      "s_per_step": 16.19,
+      "decode_video_s": null,
+      "decode_audio_s": null,
+      "shot_total_s": 239.0,
+      "dit_free_gb": 71.3,
+      "missing": [
+        "dit_s",
+        "decode_video_s",
+        "decode_audio_s"
+      ]
+    },
+    {
+      "shot": 2,
+      "of": 2,
+      "start": "2026-11-04T15:31:23",
+      "encode_text_s": 6.0,
+      "dit_s": 198.0,
+      "init_s": 16.14,
+      "sampling_s": 190,
+      "s_per_step": 16.26,
+      "decode_video_s": null,
+      "decode_audio_s": null,
+      "shot_total_s": 226.0,
+      "dit_free_gb": 71.3,
+      "missing": [
+        "decode_video_s",
+        "decode_audio_s"
+      ]
+    }
+  ],
+  "storage_policy": [],
+  "staged_mb": {
+    "MiniMaxH3AudioVAE": 576,
+    "MiniMaxH3TEModel_": 14956,
+    "MiniMaxH3VideoVAE": 4965,
+    "MiniMaxH3": 19995
+  },
+  "avg": {
+    "encode_text_s": 14.5,
+    "dit_s": 198.0,
+    "init_s": 15.4,
+    "sampling_s": 191.5,
+    "s_per_step": 16.2,
+    "decode_video_s": null,
+    "decode_audio_s": null,
+    "shot_total_s": 232.5
+  }
+}

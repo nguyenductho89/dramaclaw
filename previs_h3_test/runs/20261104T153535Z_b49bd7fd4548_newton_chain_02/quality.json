@@ -1,0 +1,51 @@
+{
+  "file": "/opt/dramaclaw/previs_h3_test/runs/20261104T153535Z_b49bd7fd4548_newton_chain_02/video.mp4",
+  "ffprobe": {
+    "programs": [],
+    "streams": [
+      {
+        "codec_name": "h264",
+        "codec_type": "video",
+        "width": 768,
+        "height": 1344,
+        "r_frame_rate": "24/1",
+        "duration": "15.958333",
+        "bit_rate": "8873837",
+        "nb_frames": "383"
+      },
+      {
+        "codec_name": "aac",
+        "codec_type": "audio",
+        "sample_rate": "32000",
+        "channels": 2,
+        "r_frame_rate": "0/0",
+        "duration": "15.918344",
+        "bit_rate": "135439",
+        "nb_frames": "499"
+      }
+    ],
+    "format": {
+      "duration": "15.958333",
+      "size": "17983382",
+      "bit_rate": "9015168"
+    }
+  },
+  "luma": {
+    "samples": 64,
+    "mean": 72.14,
+    "first": 70.93,
+    "last": 71.41,
+    "min": 70.23,
+    "max": 73.9,
+    "max_jump": 2.06,
+    "first_tenth_mean": 70.44,
+    "last_tenth_mean": 71.51
+  },
+  "frame_bytes": {
+    "count": 383,
+    "mean": 46218,
+    "min": 3674,
+    "max": 282667
+  },
+  "laplacian_var": "skipped: ModuleNotFoundError"
+}

@@ -1,0 +1,12 @@
+file,start_utc,seconds,bytes,mbps
+minimax_h3_fl2va_pruned_int8_convrot,2026-11-04T15:12:04Z,42,20970379616,476
+qwen3vl_32b_minimax_h3_nvfp4_awq,2026-11-04T15:12:46Z,38,15687142551,394
+minimax_h3_video_vae_fp16,2026-11-04T15:13:25Z,13,5207808496,382
+minimax_h3_audio_vae_fp32,2026-11-04T15:13:38Z,4,605254808,144
+MiniMax-H3-FL2VA-Acc-8Step,2026-11-04T15:13:42Z,7,1372450680,187
+minimax_h3_ref2va_pruned_int8_convrot,2026-11-04T15:13:49Z,48,20970379616,417
+minimax_h3_ref2v_turbo_4step_v0.1_comfyui_bf16,2026-11-04T15:14:37Z,7,1956193000,267
+MiniMax-H3-Ref2VA-Acc-8Step,2026-11-04T15:14:44Z,7,1372450680,187
+qwen_image_2.1_int8_convrot,2026-11-04T15:14:51Z,18,7256783064,384
+qwen3vl_8b_int8_convrot,2026-11-04T15:15:09Z,24,9350798360,372
+qwen_image_2.1_vae_bf16,2026-11-04T15:15:34Z,3,675509688,215

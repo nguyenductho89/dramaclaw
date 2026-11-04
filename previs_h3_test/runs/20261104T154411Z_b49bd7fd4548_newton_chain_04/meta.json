@@ -1,0 +1,13 @@
+{
+  "host": "b49bd7fd4548",
+  "snapshot_utc": "2026-11-04T15:44:22Z",
+  "gpu": "NVIDIA H100 80GB HBM3, 595.91.07, 81559 MiB",
+  "cpu": "Intel(R) Xeon(R) Platinum 8480+", "cpu_count": 224,
+  "ram_gib": 2015.3,
+  "cgroup_memory_max": "250999996416",
+  "models_dir": "/opt/models", "models_device": "overlay", "models_disk": null,
+  "disk_read_mbps": 2545, "disk_read_mode": "warm(no drop_caches)",
+  "torch": "2.11.0+cu130 13.0",
+  "note": "newton pov chain 04, ref2va turbo12, deepworn voice_ref, H100",
+  "raw_dir": "box/"
+}

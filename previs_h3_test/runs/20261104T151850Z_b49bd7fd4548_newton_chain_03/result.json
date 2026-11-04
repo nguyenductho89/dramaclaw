@@ -1,0 +1,30 @@
+{
+  "label": "newton_chain_03",
+  "box": "rented-4090-local",
+  "started_utc": "2026-11-04T15:18:58Z",
+  "run_dir": "20261104T151850Z_b49bd7fd4548_newton_chain_03",
+  "comfy_url": "http://127.0.0.1:8188",
+  "resolution": "768x1344",
+  "aspect_ratio": "9:16",
+  "shots": 2,
+  "frames_per_shot": 192,
+  "sampling": {
+    "pdd_nfe": "",
+    "pdd_file": "",
+    "turbo_lora": "minimax_h3_ref2v_turbo_4step_v0.1_comfyui_bf16.safetensors",
+    "chain_normalize": "off",
+    "steps": 12,
+    "output_scale": 1.0
+  },
+  "logs": [
+    "    0.0s submitted prompt 9d565bc0-b9ff-4342-88e3-7f32bbbaa638",
+    "    5.0s running=1 pending=0",
+    "  490.6s event execution_start {\"prompt_id\": \"9d565bc0-b9ff-4342-88e3-7f32bbbaa638\", \"timestamp\": 1793805538903}",
+    "  490.6s event execution_cached {\"nodes\": [], \"prompt_id\": \"9d565bc0-b9ff-4342-88e3-7f32bbbaa638\", \"timestamp\": 1793805538909}",
+    "  490.6s event execution_success {\"prompt_id\": \"9d565bc0-b9ff-4342-88e3-7f32bbbaa638\", \"timestamp\": 1793806028637}"
+  ],
+  "wall_seconds": 490.6,
+  "error": null,
+  "video_bytes": 8839072,
+  "helper_errors": []
+}

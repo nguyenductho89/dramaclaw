@@ -1,0 +1,5 @@
+    0.0s submitted prompt c90f90e0-defe-4f97-8e54-4691ba0279aa
+    5.0s running=1 pending=0
+  490.5s event execution_start {"prompt_id": "c90f90e0-defe-4f97-8e54-4691ba0279aa", "timestamp": 1793806043677}
+  490.5s event execution_cached {"nodes": ["1", "2", "3", "4", "7", "200"], "prompt_id": "c90f90e0-defe-4f97-8e54-4691ba0279aa", "timestamp": 1793806043681}
+  490.5s event execution_success {"prompt_id": "c90f90e0-defe-4f97-8e54-4691ba0279aa", "timestamp": 1793806533551}

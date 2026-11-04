@@ -18,7 +18,7 @@ from pathlib import Path
 R = Path(__file__).resolve().parents[2]; T = R / "previs_h3_test"; HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(R / "src"))
 from novelvideo.generators.runpod_seedvr2_upscale import (  # noqa: E402
-    Segment, cut_resized_segment, iter_stitched, plan_segments, probe_video, read_frames, write_video_stream)
+    Segment, cut_resized_segment, iter_stitched, probe_video, read_frames, write_video_stream)
 
 URL = os.environ.get("COMFY_URL", "http://127.0.0.1:8188").rstrip("/")
 SERVER_LOG = Path(os.environ.get("BENCH_SERVER_LOG", "/opt/bench/comfy_server.log"))
@@ -65,7 +65,8 @@ def run_graph(graph, timeout):
             for node in h[pid].get("outputs", {}).values():
                 for v in node.values():
                     for it in v if isinstance(v, list) else []:
-                        if isinstance(it, dict) and str(it.get("filename", "")).endswith(".mp4"):
+                        # LoadVideo also reports its input mp4 as a preview; only the SaveVideo file has type "output".
+                        if isinstance(it, dict) and it.get("type") == "output" and str(it.get("filename", "")).endswith(".mp4"):
                             q = urllib.parse.urlencode({k: it.get(k, "") for k in ("filename", "subfolder", "type")})
                             return http("GET", f"/view?{q}", raw=True), ""
             return None, "no mp4 output"
@@ -232,12 +233,23 @@ def crop_center(chunk, ow: int, oh: int):
     return chunk[:, t:t + oh, l:l + ow]
 
 
+def plan_h3_segments(total: int, seg_len: int, overlap: int) -> list[Segment]:
+    """Like plan_segments but for H3 segment lengths (17n+5, e.g. 124); plan_segments insists on SeedVR2's 4n+1."""
+    if total <= seg_len:
+        return [Segment(0, total)]
+    segs, start = [], 0
+    while start + seg_len < total:
+        segs.append(Segment(start, start + seg_len)); start += seg_len - overlap
+    segs.append(Segment(total - seg_len, total))  # last one shifted back to keep full length
+    return segs
+
+
 def do_upscale(a, D: Path, res: dict) -> None:
     sw, sh, fps, total = probe_video(a.src)
     cw, ch, ow, oh = target_dims(a.target, sw / sh)
     n = min(total, a.max_frames) if a.max_frames else total
     seg_len = min(a.segment, n)
-    segs = plan_segments(n, seg_len, a.overlap) if n > seg_len else [Segment(0, n)]
+    segs = plan_h3_segments(n, seg_len, a.overlap)
     prompts = shot_prompts(a)
     res.update(src=a.src, src_res=f"{sw}x{sh}", compute_res=f"{cw}x{ch}", out_res=f"{ow}x{oh}", frames=n, total_frames=total,
                segment=seg_len, overlap=a.overlap, n_segments=len(segs))

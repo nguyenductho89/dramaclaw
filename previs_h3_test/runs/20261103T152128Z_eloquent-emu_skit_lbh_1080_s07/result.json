@@ -1,0 +1,63 @@
+{
+  "label": "skit_lbh_1080_s07",
+  "kind": "latent_refine_upscale",
+  "upscaler": "lbh",
+  "loras": [
+    "minimax_h3_fl2v_turbo_4step_v1.2_768p_comfyui_bf16.safetensors"
+  ],
+  "sigmas": "0.7, 0.494118, 0.0",
+  "seam": "guide",
+  "split": false,
+  "seed": 42,
+  "segments": [
+    {
+      "i": 0,
+      "frames": "0-123",
+      "seconds": 148.8,
+      "guided": false
+    },
+    {
+      "i": 1,
+      "frames": "123-246",
+      "seconds": 149.2,
+      "guided": true
+    },
+    {
+      "i": 2,
+      "frames": "246-369",
+      "seconds": 153.0,
+      "guided": true
+    },
+    {
+      "i": 3,
+      "frames": "369-492",
+      "seconds": 149.5,
+      "guided": true
+    },
+    {
+      "i": 4,
+      "frames": "492-615",
+      "seconds": 146.2,
+      "guided": true
+    },
+    {
+      "i": 5,
+      "frames": "603-726",
+      "seconds": 146.2,
+      "guided": true
+    }
+  ],
+  "error": null,
+  "started_utc": "2026-11-03T15:21:40Z",
+  "src": "previs_h3_test/runs/20261103T150346Z_eloquent-emu_skit_who_has_it_worse/video.mp4",
+  "src_res": "1344x768",
+  "compute_res": "1920x1088",
+  "out_res": "1890x1080",
+  "frames": 727,
+  "total_frames": 727,
+  "segment": 124,
+  "overlap": 1,
+  "n_segments": 6,
+  "wall_seconds": 930.7,
+  "avg_segment_seconds": 148.8
+}

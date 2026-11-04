@@ -1,0 +1,6 @@
+830232b856045ca2892833212d7771078a13edd5 0dirty /opt/comfyui
+6ea2651e7df66d7585f6ffee804b20e92fb38b8a 0dirty /opt/comfyui/custom_nodes/ComfyUI-GGUF/
+d7d197709fc93c1afb125e3db1dfd4ac0ae28c60 0dirty /opt/comfyui/custom_nodes/ComfyUI-H3-Multishot/
+311a65dd53832d8a5f8177a9d5fb923c09e35a90 0dirty /opt/comfyui/custom_nodes/ComfyUI-MiniMax-H3-PDD-Acc/
+40316cf008b2fd8663263270669eb4da23f89d2c 2dirty /opt/comfyui/custom_nodes/Comfyui_Minimax_h3_latent_Upscaler/
+1490ae11ca2ab73abba6f59110a99a7476bfac29 7dirty /opt/dramaclaw

@@ -1,0 +1,4 @@
+ts_utc,vram_used_mib,vram_total_mib,gpu_util_pct,gpu_power_w,gpu_temp_c,host_memavailable_mib,host_cached_mib,host_dirty_mib,swap_used_mib,cgroup_cur_mib,cgroup_peak_mib,cgroup_max_mib,comfy_vmrss_mib,comfy_rssanon_mib,comfy_rssfile_mib,comfy_vmhwm_mib,comfy_swap_mib,disk_read_mbps
+2026-11-03T14:37:03,22318,24564,0,22.70,38,77154,46676,0,0,92403,92873,122880,47828,44832,2111,48211,0,
+2026-11-03T14:37:05,22318,24564,0,22.73,38,77146,46676,0,0,92411,92873,122880,47828,44832,2111,48211,0,
+2026-11-03T14:37:07,22318,24564,0,22.84,38,77145,46676,0,0,92411,92873,122880,47828,44832,2111,48211,0,

@@ -1,0 +1,41 @@
+{
+  "file": "/opt/dramaclaw/previs_h3_test/runs/20261103T141028Z_eloquent-emu_g1_bislerp/video.mp4",
+  "ffprobe": {
+    "programs": [],
+    "streams": [
+      {
+        "codec_name": "h264",
+        "codec_type": "video",
+        "width": 1890,
+        "height": 1080,
+        "r_frame_rate": "24/1",
+        "duration": "0.916667",
+        "bit_rate": "31978420",
+        "nb_frames": "22"
+      }
+    ],
+    "format": {
+      "duration": "0.917000",
+      "size": "3665383",
+      "bit_rate": "31977169"
+    }
+  },
+  "luma": {
+    "samples": 4,
+    "mean": 61.22,
+    "first": 60.37,
+    "last": 61.57,
+    "min": 60.37,
+    "max": 61.57,
+    "max_jump": 1.05,
+    "first_tenth_mean": 60.37,
+    "last_tenth_mean": 61.57
+  },
+  "frame_bytes": {
+    "count": 22,
+    "mean": 166554,
+    "min": 4478,
+    "max": 653069
+  },
+  "laplacian_var": "skipped: ModuleNotFoundError"
+}

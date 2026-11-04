@@ -1,0 +1,33 @@
+{
+  "label": "g1_lbh_s050300",
+  "kind": "latent_refine_upscale",
+  "upscaler": "lbh",
+  "loras": [
+    "minimax_h3_fl2v_turbo_4step_v1.2_768p_comfyui_bf16.safetensors"
+  ],
+  "sigmas": "0.5, 0.3, 0.0",
+  "seam": "none",
+  "split": false,
+  "seed": 42,
+  "segments": [
+    {
+      "i": 0,
+      "frames": "0-21",
+      "seconds": 19.1,
+      "guided": false
+    }
+  ],
+  "error": null,
+  "started_utc": "2026-11-03T14:20:03Z",
+  "src": "/opt/bench_ms30.mp4",
+  "src_res": "1344x768",
+  "compute_res": "1920x1088",
+  "out_res": "1890x1080",
+  "frames": 22,
+  "total_frames": 739,
+  "segment": 22,
+  "overlap": 1,
+  "n_segments": 1,
+  "wall_seconds": 27.9,
+  "avg_segment_seconds": 19.1
+}

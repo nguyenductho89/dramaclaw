@@ -1,0 +1,30 @@
+/opt/dramaclaw/previs_h3_test/scripts/snapshot_box.sh: line 29: /proc/sys/vm/drop_caches: Read-only file system
+snapshot -> /opt/dramaclaw/previs_h3_test/runs/20261103T140951Z_eloquent-emu_g1_lbh/meta.json
+{'i': 0, 'frames': '0-21', 'seconds': 22.1, 'guided': False}
+postrun done: box comfy.log graph_0000.json mem.csv meta.json quality.json result.json segs steps.json sysmon.csv video.mp4 
+{
+  "label": "g1_lbh",
+  "kind": "latent_refine_upscale",
+  "upscaler": "lbh",
+  "loras": [
+    "minimax_h3_fl2v_turbo_4step_v1.2_768p_comfyui_bf16.safetensors"
+  ],
+  "sigmas": "0.909375, 0.857143, 0.666667, 0.0",
+  "seam": "none",
+  "split": false,
+  "seed": 42,
+  "error": null,
+  "started_utc": "2026-11-03T14:09:56Z",
+  "src": "/opt/bench_ms30.mp4",
+  "src_res": "1344x768",
+  "compute_res": "1920x1088",
+  "out_res": "1890x1080",
+  "frames": 22,
+  "total_frames": 739,
+  "segment": 22,
+  "overlap": 1,
+  "n_segments": 1,
+  "wall_seconds": 31.2,
+  "avg_segment_seconds": 22.1
+}
+run dir: /opt/dramaclaw/previs_h3_test/runs/20261103T140951Z_eloquent-emu_g1_lbh

@@ -1,0 +1,51 @@
+{
+  "file": "/opt/dramaclaw/previs_h3_test/runs/20261103T143957Z_eloquent-emu_full_lbh_1080_s07/video.mp4",
+  "ffprobe": {
+    "programs": [],
+    "streams": [
+      {
+        "codec_name": "h264",
+        "codec_type": "video",
+        "width": 1890,
+        "height": 1080,
+        "r_frame_rate": "24/1",
+        "duration": "30.791667",
+        "bit_rate": "18560709",
+        "nb_frames": "739"
+      },
+      {
+        "codec_name": "aac",
+        "codec_type": "audio",
+        "sample_rate": "32000",
+        "channels": 2,
+        "r_frame_rate": "0/0",
+        "duration": "30.641719",
+        "bit_rate": "129998",
+        "nb_frames": "959"
+      }
+    ],
+    "format": {
+      "duration": "30.792000",
+      "size": "71962689",
+      "bit_rate": "18696463"
+    }
+  },
+  "luma": {
+    "samples": 124,
+    "mean": 61.95,
+    "first": 61.3,
+    "last": 82.38,
+    "min": 47.45,
+    "max": 84.55,
+    "max_jump": 4.47,
+    "first_tenth_mean": 61.99,
+    "last_tenth_mean": 82.55
+  },
+  "frame_bytes": {
+    "count": 739,
+    "mean": 96670,
+    "min": 2143,
+    "max": 641724
+  },
+  "laplacian_var": "skipped: ModuleNotFoundError"
+}

@@ -28,6 +28,10 @@ Mỗi shot là một chuỗi gồm 3 mục: `integrated_multimodal_description:`
   - Người vào khung từ một cạnh thì cạnh đó phải còn **trống ngay từ khung đầu của shot** (ghi "open gravel path and grass fill the right side of frame"). Nếu vật hay người khác đang chiếm cạnh đó, model sẽ co vật/người ấy lại để nhường chỗ.
   - Điểm đến của người vào khung nằm trong khoảng trống, không đè lên vật cố định. Không viết "beside X on his right" khi bên phải của X là vật cố định; đặt vật ở phía đối diện với người sẽ vào.
   - Người phụ phải nằm **trọn trong khung**, không "at the edge"; ghi cỡ và khoảng cách ("stays at medium distance, same size in frame"), không để họ tiến gần camera làm đổi cỡ cảnh.
+  - **Người vào khung đi NGANG qua khung, song song camera**, không đi "về phía" camera: viết "walks sideways across the frame along the path, staying at the same distance from the camera, same size in frame". Nếu không, model cho họ tiến gần camera, to dần và đẩy người khác ra ngoài khung (who_has_it_worse v2: Arthur to dần, Mark bị đẩy ra khỏi khung trái).
+  - **Ngân sách chiều ngang khung dọc**: khung 768 điểm ảnh ngang chứa được 2 người ở cỡ medium close, hoặc 1 người + 1 vật; **3 phần tử ngang (vật cố định + 2 người) thì dùng "medium shot"** (thấy từ eo/đùi), không dùng "medium close two-shot". Ghi vị trí cụ thể theo phần của chiều ngang ("headstone in the left quarter, Mark in the center, Arthur in the right third with clear space between him and the right edge, whole body visible"). Medium close ở 3 phần tử làm người ngoài cùng bị cắt mép (v2 shot 3: Arthur bị cắt ở mép phải).
+  - **Phương án dự phòng nếu vẫn chật: xếp theo chiều dọc**, hợp 9:16 hơn (một người quỳ/cúi, người kia đứng nghiêng xuống, cả hai gần trục giữa, vật ở một bên). Phải viết lại tư thế ở mọi shot cho khớp.
+  - **Mô tả vật cố định không được tự mâu thuẫn**: chọn MỘT kiểu và chép giống hệt ở mọi shot. "carved Celtic cross" cùng "full rounded top" khiến model vẽ cột thánh giá ở shot 1–2 và bia đỉnh tròn ở shot 3. Viết ví dụ: "a tall narrow weathered stone headstone topped with a carved Celtic cross, moss at its base".
 - **Mô tả ngoại hình lặp lại đủ trong mọi shot** (tuổi, tóc, râu, áo). Không viết "the same man" hay "him".
 - **Một shot = một sự kiện liên tục**, không cắt cảnh. Đổi góc máy = shot mới.
 - **Camera `static` / giữ khung** khi có 2+ người; không đẩy, không lia. Kết bằng "The camera holds this framing until the final frame."
@@ -50,7 +54,7 @@ Mỗi shot là một chuỗi gồm 3 mục: `integrated_multimodal_description:`
 2. Mỗi `<d>`: ___ âm tiết / ___ s = ___ (≤ 3)? Thoại bắt đầu ≥ 1.0s và kết thúc cách cuối shot ≥ 1.5s?
 3. Có chữ "slowly", "same ... as before" nào không? (tìm bằng grep)
 4. Ngoại hình, bối cảnh, ánh sáng chép nguyên văn giống nhau ở mọi shot?
-5. Mỗi nhân vật có đúng một nhãn Sx, vị trí trái/phải nhất quán? Vật cố định tả giống hệt ở mọi shot? Cạnh người vào khung còn trống từ khung đầu? Người phụ nằm trọn trong khung?
+5. Mỗi nhân vật có đúng một nhãn Sx, vị trí trái/phải nhất quán? Vật cố định tả giống hệt và KHÔNG tự mâu thuẫn ở mọi shot? Cạnh người vào khung còn trống từ khung đầu? Người vào khung đi ngang, không tiến về camera? Người phụ nằm trọn trong khung, cỡ cảnh đủ rộng cho số phần tử ngang?
 6. Mốc giây tăng dần, ≤ thời lượng shot, không hai điểm dừng liên tiếp?
 7. Cảm xúc nào chỉ là tính từ? Giọng có tham chiếu shot trước?
 8. Cỡ cảnh hợp 9:16? Có `aspect_ratio: "9:16"` trong JSON?

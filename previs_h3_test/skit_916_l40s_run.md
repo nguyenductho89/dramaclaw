@@ -36,6 +36,6 @@ L40S chậm hơn 4090 khoảng 1,7 lần (sampling 1,5 lần, decode video 4,3 l
 - 4090 thuê (na-01) ~22.500đ/giờ cho lần 3/11, chạy ~17,6 phút ≈ 6.600đ chỉ cho phần sinh.
 
 ## Lần sau
-- Log lặp lại `cuda_utils.c: fatal error: Python.h` mỗi bước sampling; hai log 4090 có 0 dòng này. Nghi `python3.12-dev` thiếu nên Triton không biên dịch được, Sage attention có thể rơi về attention thường. **Chưa kiểm**, nên chưa kết luận phần chậm do GPU hay do Sage. Thử: `apt install python3.12-dev` trước khi chạy, so lại sampling.
+- Log lặp lại `cuda_utils.c: fatal error: Python.h` mỗi bước sampling; hai log 4090 có 0 dòng này. Nghi `python3.12-dev` thiếu nên Triton không biên dịch được, Sage attention có thể rơi về attention thường. **Chưa kiểm**, nên chưa kết luận phần chậm do GPU hay do Sage. Đã sửa `scripts/setup_h3_box.sh`: cài `python3.12-dev` ở bước apt, thêm bước 5b kiểm `Python.h` trong venv (thiếu thì cài, vẫn thiếu thì đặt `CPATH`) rồi biên dịch thử một kernel Triton và báo rõ nếu Sage sẽ không chạy. Chưa chạy trên máy thật, nên chưa biết sửa xong thì sampling nhanh bao nhiêu.
 - Đăng ký khoá SSH (`~/.ssh/id_ed25519.pub`) trong RunPod trước, tạo pod với `startSsh` để khỏi khởi động lại.
 - Vòng chờ: kiểm file cờ (`/opt/setup_timing.csv` có dòng `TONG`), đừng dùng `pgrep -f` qua ssh.

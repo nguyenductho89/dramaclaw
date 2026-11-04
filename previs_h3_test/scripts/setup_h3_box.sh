@@ -33,6 +33,7 @@ mark apt_packages; echo "== 2. gói hệ thống"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update && apt-get install -y curl wget git gcc aria2 tmux ffmpeg jq \
   libgl1 libglib2.0-0 libsm6 libxext6 libxrender1 libtcmalloc-minimal4
+apt-get install -y python3.12-dev || apt-get install -y python3-dev || echo "(chưa cài được python3.12-dev ở bước apt; bước 5b sẽ kiểm lại)"
 # Python 3.12 do uv tải (có sẵn header cho Triton); add-apt-repository hỏng trên image này (thiếu apt_pkg).
 
 mark start_bg_download; echo "== 2b. tải model nền (log: $ROOT/download.log)"
@@ -90,6 +91,32 @@ uv pip install -r $COMFY/requirements.txt
 for r in $COMFY/custom_nodes/*/requirements.txt; do [ -f "$r" ] && uv pip install -r "$r" || true; done
 python -c "import torch, triton, sageattention; print(torch.__version__, torch.version.cuda, torch.cuda.is_available())"
 
+# Triton/Sage biên dịch một stub C lúc chạy: cần gcc VÀ Python.h. Thiếu Python.h thì log lặp "cuda_utils.c: fatal error: Python.h"
+# và Sage rơi về attention thường (lần RunPod L40S 2026-11-04: nghi chậm do vậy, chưa kiểm). Kiểm bằng cách biên dịch thật.
+py_include() { python -c "import os,sysconfig; p=os.path.join(sysconfig.get_paths()['include'],'Python.h'); print(os.path.dirname(p) if os.path.exists(p) else '')"; }
+triton_compile_ok() { python - <<'PY' 2>/tmp/triton_check.log
+import torch, triton, triton.language as tl
+@triton.jit
+def k(x, n, B: tl.constexpr):
+    o = tl.arange(0, B); tl.store(x + o, o, mask=o < n)
+x = torch.zeros(8, device="cuda"); k[(1,)](x, 8, B=8); torch.cuda.synchronize()
+assert x[7].item() == 7
+PY
+}
+mark python_headers; echo "== 5b. Python.h cho Triton/Sage"
+PYINC=$(py_include)
+if [ -z "$PYINC" ]; then
+  echo "!! thiếu Python.h trong $(python -c 'import sysconfig;print(sysconfig.get_paths()["include"])'): cài python3.12-dev"
+  (apt-get install -y python3.12-dev || apt-get install -y python3-dev) || echo "!! apt không cài được python3.12-dev"
+  PYINC=$(py_include)
+  if [ -z "$PYINC" ]; then # header cài vào hệ thống nhưng venv trỏ chỗ khác: cho trình biên dịch tìm thêm qua CPATH
+    SYSINC=$(dirname "$(ls /usr/include/python3.1*/Python.h 2>/dev/null | head -1)" 2>/dev/null)
+    [ -n "$SYSINC" ] && [ "$SYSINC" != "." ] && PY_CPATH=$SYSINC && echo "dùng CPATH=$PY_CPATH"
+  fi
+fi
+export CPATH="${PY_CPATH:-}${PY_CPATH:+:}${CPATH:-}"
+if triton_compile_ok; then echo "triton compile OK (Sage sẽ chạy)"; else echo "!! triton KHÔNG biên dịch được, xem /tmp/triton_check.log: Sage sẽ rơi về attention thường, sampling chậm hơn"; tail -3 /tmp/triton_check.log; fi
+
 mark wait_model_download; echo "== 6. chờ tải model xong"; wait $DL_PID || { echo "!! tải model lỗi, xem $ROOT/download.log"; exit 1; }
 
 mark write_config_and_verify
@@ -111,6 +138,7 @@ YAML
 mkdir -p $ROOT/bench
 cat > $ROOT/run_comfy.sh <<SH
 #!/usr/bin/env bash
+export CPATH=${PY_CPATH:-}\${CPATH:+:\$CPATH}
 export PATH=$ROOT/venv/bin:\$PATH LD_PRELOAD=\$(ldconfig -p | grep -Po "libtcmalloc_minimal.so.\d" | head -1)
 echo "=== start \$(date -u +%FT%TZ) paths=\${COMFY_MODEL_PATHS:-$ROOT/extra_model_paths.yaml} extra=\${COMFY_EXTRA_ARGS:-}" >> $ROOT/bench/comfy_server.log
 cd $COMFY && python -u main.py --listen 127.0.0.1 --port 8188 --disable-auto-launch --disable-metadata \

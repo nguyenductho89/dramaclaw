@@ -24,6 +24,9 @@ description: Review kịch bản short 9:16 viết cho video model MiniMax H3 (s
 7. **CHẶN**: mô tả ngoại hình của một nhân vật khác nhau giữa các shot (tuổi, tóc, râu, áo).
 8. **CHẶN**: nhân vật chỉ được gọi bằng "he/the man/the same" ở shot sau mà không mô tả lại.
 9. **CẢNH BÁO**: vị trí trái/phải đổi mà không có hành động di chuyển; shot 2+ người không nêu vị trí.
+9b. **CHẶN**: người vào khung từ một cạnh nhưng khung đầu của shot không còn chỗ trống ở cạnh đó (vật cố định hoặc nhân vật chiếm), hoặc điểm dừng nằm đè lên vật cố định, hoặc "beside X on his right" khi bên phải X là vật cố định. Hậu quả đã thấy: tấm bia co lại/biến mất khi người mới bước vào. Sửa: nêu "open path fills the right side of frame", đặt vật ở phía đối diện, điểm dừng nằm trong khoảng trống.
+9c. **CẢNH BÁO**: vật cố định không được tả vị trí trong khung, hoặc hình dạng tả khác nhau giữa các shot (shot sinh độc lập nên sẽ trôi).
+9d. **CẢNH BÁO**: người phụ đứng "at the edge" hoặc có thể bị cắt mất một phần ở mép khung; người tiến gần camera làm đổi cỡ cảnh.
 10. **CẢNH BÁO**: bối cảnh, ánh sáng, tông màu không giống nhau giữa các shot.
 11. **CẢNH BÁO**: kịch bản có mốc thời đại (ví dụ Victoria 1880s) nhưng trang phục, đồ vật, bối cảnh hay âm thanh lệch thời đại, hoặc thiếu câu cấm đồ hiện đại.
 11b. **CẢNH BÁO**: cảnh nối tiếp (shot sau tiếp diễn shot trước) nhưng đầu shot sau không khớp tư thế cuối shot trước.

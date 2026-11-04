@@ -1,0 +1,13 @@
+{
+  "host": "4b991ed32470",
+  "snapshot_utc": "2026-11-04T10:35:36Z",
+  "gpu": "NVIDIA GeForce RTX 5090, 580.65.06, 32607 MiB",
+  "cpu": "AMD EPYC 7663 56-Core Processor", "cpu_count": 112,
+  "ram_gib": 251.5,
+  "cgroup_memory_max": "82999996416",
+  "models_dir": "/opt/models", "models_device": "overlay", "models_disk": null,
+  "disk_read_mbps": 11807, "disk_read_mode": "warm(no drop_caches)",
+  "torch": "2.11.0+cu130 13.0",
+  "note": "skit who_has_it_worse v2 layout fix 3x243 PDD8 9:16 Victorian, RunPod RTX 5090 community",
+  "raw_dir": "box/"
+}

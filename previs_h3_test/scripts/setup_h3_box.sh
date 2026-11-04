@@ -94,7 +94,8 @@ python -c "import torch, triton, sageattention; print(torch.__version__, torch.v
 # Triton/Sage biên dịch một stub C lúc chạy: cần gcc VÀ Python.h. Thiếu Python.h thì log lặp "cuda_utils.c: fatal error: Python.h"
 # và Sage rơi về attention thường (lần RunPod L40S 2026-11-04: nghi chậm do vậy, chưa kiểm). Kiểm bằng cách biên dịch thật.
 py_include() { python -c "import os,sysconfig; p=os.path.join(sysconfig.get_paths()['include'],'Python.h'); print(os.path.dirname(p) if os.path.exists(p) else '')"; }
-triton_compile_ok() { python - <<'PY' 2>/tmp/triton_check.log
+triton_compile_ok() { # @jit cần kernel nằm trong file .py thật (stdin không được)
+  cat > /tmp/triton_check.py <<'PY'
 import torch, triton, triton.language as tl
 @triton.jit
 def k(x, n, B: tl.constexpr):
@@ -102,6 +103,7 @@ def k(x, n, B: tl.constexpr):
 x = torch.zeros(8, device="cuda"); k[(1,)](x, 8, B=8); torch.cuda.synchronize()
 assert x[7].item() == 7
 PY
+  python /tmp/triton_check.py 2>/tmp/triton_check.log
 }
 mark python_headers; echo "== 5b. Python.h cho Triton/Sage"
 PYINC=$(py_include)

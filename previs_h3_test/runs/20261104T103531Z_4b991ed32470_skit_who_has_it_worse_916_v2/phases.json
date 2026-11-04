@@ -1,0 +1,68 @@
+{
+  "shots": [
+    {
+      "shot": 1,
+      "of": 3,
+      "start": "2026-11-04T10:35:41",
+      "encode_text_s": 7.0,
+      "dit_s": 220.0,
+      "init_s": 28.01,
+      "sampling_s": 200,
+      "s_per_step": 27.27,
+      "decode_video_s": 24.0,
+      "decode_audio_s": 6.0,
+      "shot_total_s": 257.0,
+      "dit_free_gb": 28.2,
+      "missing": []
+    },
+    {
+      "shot": 2,
+      "of": 3,
+      "start": "2026-11-04T10:39:59",
+      "encode_text_s": 7.0,
+      "dit_s": 232.0,
+      "init_s": 25.12,
+      "sampling_s": 227,
+      "s_per_step": 28.76,
+      "decode_video_s": 23.0,
+      "decode_audio_s": 7.0,
+      "shot_total_s": 269.0,
+      "dit_free_gb": 22.3,
+      "missing": []
+    },
+    {
+      "shot": 3,
+      "of": 3,
+      "start": "2026-11-04T10:44:28",
+      "encode_text_s": 13.0,
+      "dit_s": 231.0,
+      "init_s": 25.08,
+      "sampling_s": 227,
+      "s_per_step": 28.75,
+      "decode_video_s": 24.0,
+      "decode_audio_s": 5.0,
+      "shot_total_s": 273.0,
+      "dit_free_gb": 22.0,
+      "missing": []
+    }
+  ],
+  "storage_policy": [
+    "fast_disk=False"
+  ],
+  "staged_mb": {
+    "MiniMaxH3TEModel_": 14956,
+    "MiniMaxH3": 19995,
+    "MiniMaxH3VideoVAE": 4965,
+    "MiniMaxH3AudioVAE": 576
+  },
+  "avg": {
+    "encode_text_s": 9.0,
+    "dit_s": 227.7,
+    "init_s": 26.1,
+    "sampling_s": 218.0,
+    "s_per_step": 28.3,
+    "decode_video_s": 23.7,
+    "decode_audio_s": 6.0,
+    "shot_total_s": 266.3
+  }
+}

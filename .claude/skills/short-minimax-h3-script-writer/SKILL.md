@@ -23,6 +23,11 @@ Mỗi shot là một chuỗi gồm 3 mục: `integrated_multimodal_description:`
 - **Mỗi lời thoại chỉ có đúng một người nói.** Ngay trước/sau câu thoại ghi rõ người còn lại im lặng và làm gì ("Arthur stays silent, frozen").
 - **Người nói được nhắc tên ngay trong mệnh đề của câu thoại**, không dựa vào câu trước. Chủ thể nhắc đầu tiên trong shot dễ bị coi là người nói.
 - **Vị trí trái/phải của mỗi người nêu rõ ở mọi shot có 2+ người**, giữ nhất quán giữa các shot (Mark bên trái, Arthur bên phải).
+- **Bố cục không gian (đã gây lỗi thật: tấm bia biến mất khi Arthur bước vào, who_has_it_worse 2026-11-04):**
+  - Vật cố định (bia, bàn, cửa, xe) mô tả hình dạng và vị trí trong khung MỘT lần, chép nguyên văn ở mọi shot ("the old stone tombstone with a carved Celtic cross, fixed on the left side of frame, full rounded top visible"). Shot sinh độc lập nên hình dạng sẽ trôi nếu mỗi shot tả một kiểu.
+  - Người vào khung từ một cạnh thì cạnh đó phải còn **trống ngay từ khung đầu của shot** (ghi "open gravel path and grass fill the right side of frame"). Nếu vật hay người khác đang chiếm cạnh đó, model sẽ co vật/người ấy lại để nhường chỗ.
+  - Điểm đến của người vào khung nằm trong khoảng trống, không đè lên vật cố định. Không viết "beside X on his right" khi bên phải của X là vật cố định; đặt vật ở phía đối diện với người sẽ vào.
+  - Người phụ phải nằm **trọn trong khung**, không "at the edge"; ghi cỡ và khoảng cách ("stays at medium distance, same size in frame"), không để họ tiến gần camera làm đổi cỡ cảnh.
 - **Mô tả ngoại hình lặp lại đủ trong mọi shot** (tuổi, tóc, râu, áo). Không viết "the same man" hay "him".
 - **Một shot = một sự kiện liên tục**, không cắt cảnh. Đổi góc máy = shot mới.
 - **Camera `static` / giữ khung** khi có 2+ người; không đẩy, không lia. Kết bằng "The camera holds this framing until the final frame."
@@ -45,7 +50,7 @@ Mỗi shot là một chuỗi gồm 3 mục: `integrated_multimodal_description:`
 2. Mỗi `<d>`: ___ âm tiết / ___ s = ___ (≤ 3)? Thoại bắt đầu ≥ 1.0s và kết thúc cách cuối shot ≥ 1.5s?
 3. Có chữ "slowly", "same ... as before" nào không? (tìm bằng grep)
 4. Ngoại hình, bối cảnh, ánh sáng chép nguyên văn giống nhau ở mọi shot?
-5. Mỗi nhân vật có đúng một nhãn Sx, vị trí trái/phải nhất quán?
+5. Mỗi nhân vật có đúng một nhãn Sx, vị trí trái/phải nhất quán? Vật cố định tả giống hệt ở mọi shot? Cạnh người vào khung còn trống từ khung đầu? Người phụ nằm trọn trong khung?
 6. Mốc giây tăng dần, ≤ thời lượng shot, không hai điểm dừng liên tiếp?
 7. Cảm xúc nào chỉ là tính từ? Giọng có tham chiếu shot trước?
 8. Cỡ cảnh hợp 9:16? Có `aspect_ratio: "9:16"` trong JSON?

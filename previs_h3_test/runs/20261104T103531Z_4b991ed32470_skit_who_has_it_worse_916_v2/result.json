@@ -1,0 +1,30 @@
+{
+  "label": "skit_who_has_it_worse_916_v2",
+  "box": "rented-4090-local",
+  "started_utc": "2026-11-04T10:35:36Z",
+  "run_dir": "20261104T103531Z_4b991ed32470_skit_who_has_it_worse_916_v2",
+  "comfy_url": "http://127.0.0.1:8188",
+  "resolution": "768x1344",
+  "aspect_ratio": "9:16",
+  "shots": 3,
+  "frames_per_shot": 243,
+  "sampling": {
+    "pdd_nfe": "8",
+    "pdd_file": "MiniMax-H3-FL2VA-Acc-8Step.safetensors",
+    "turbo_lora": "",
+    "chain_normalize": "off",
+    "steps": 8,
+    "output_scale": 1.0
+  },
+  "logs": [
+    "    0.0s submitted prompt 953b6039-690e-46ff-b063-94871409227d",
+    "    5.0s running=1 pending=0",
+    "  825.8s event execution_start {\"prompt_id\": \"953b6039-690e-46ff-b063-94871409227d\", \"timestamp\": 1793788536726}",
+    "  825.8s event execution_cached {\"nodes\": [], \"prompt_id\": \"953b6039-690e-46ff-b063-94871409227d\", \"timestamp\": 1793788536728}",
+    "  825.8s event execution_success {\"prompt_id\": \"953b6039-690e-46ff-b063-94871409227d\", \"timestamp\": 1793789357920}"
+  ],
+  "wall_seconds": 825.8,
+  "error": null,
+  "video_bytes": 23400107,
+  "helper_errors": []
+}

@@ -1,0 +1,6 @@
+file,start_utc,seconds,bytes,mbps
+minimax_h3_fl2va_pruned_int8_convrot,2026-11-04T10:32:35Z,47,20970379616,426
+qwen3vl_32b_minimax_h3_nvfp4_awq,2026-11-04T10:33:22Z,39,15687142551,384
+minimax_h3_video_vae_fp16,2026-11-04T10:34:02Z,15,5207808496,331
+minimax_h3_audio_vae_fp32,2026-11-04T10:34:17Z,2,605254808,289
+MiniMax-H3-FL2VA-Acc-8Step,2026-11-04T10:34:19Z,5,1372450680,262

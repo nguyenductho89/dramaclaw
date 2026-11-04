@@ -43,7 +43,7 @@ Cập nhật 2026-11-04: cổng 2, 3, 4 và bản "draft thẳng lên 2K" đã c
 - [x] **Cổng 4 (H3):** 4K bằng `--split` (`MMH3 Split Upscale`), 25 khung rồi 124 khung; dừng nếu quá 30 phút cho 124 khung.
 - [ ] Đo bổ sung: cosine mặt (`scripts/face_similarity.py`), Laplacian vùng mặt, PSNR/SSIM sau khi thu về 768P, A/B LoRA (turbo / turbo + LMS) và upscaler LMS (`h3_upscaler_lms_v0.1`).
 - [ ] Trang HTML so sánh song song để chấm mù; tiêu chí thắng 2K: chọn ≥ 2/3 clip, cosine mặt không thấp hơn SeedVR2 quá 0,05, thời gian ≤ 1,5 lần SeedVR2.
-- [ ] Skit bản **dọc 9:16**: `bench_multishot30_local.py` không đặt khổ dọc cho skit nên video ra 1344×768 (ngang). Cần sửa dims khi có `aspect` trong skit JSON rồi chạy lại (~18 phút).
+- [x] Skit bản **dọc 9:16**: `bench_multishot30_local.py` đọc `aspect_ratio` từ skit JSON (mặc định 9:16). Đã sinh lại 768×1344, 30,29 s trên RunPod L40S, xem `skit_916_l40s_run.md` (1827 s, ~$1,09).
 - [ ] Skit refine chưa xem kỹ bằng mắt nội dung 30 s (mặt, chữ, chi tiết nhỏ có bị vẽ lại không).
 - [ ] Bước 5 (tích hợp code sản phẩm: `build_h3_ref2va_graph` đổi node `"60"`/`"61"–"62"`, biến `.env` `RUNPOD_H3_STAGE2_*`, route upscale `method`): chỉ làm khi thắng ở cổng 3 và được duyệt; cần build lại image worker có pack LBH.
 

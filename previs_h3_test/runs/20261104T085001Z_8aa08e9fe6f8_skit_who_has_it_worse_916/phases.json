@@ -1,0 +1,68 @@
+{
+  "shots": [
+    {
+      "shot": 1,
+      "of": 3,
+      "start": "2026-11-04T08:50:19",
+      "encode_text_s": 18.0,
+      "dit_s": 407.0,
+      "init_s": 49.94,
+      "sampling_s": 373,
+      "s_per_step": 51.08,
+      "decode_video_s": 133.0,
+      "decode_audio_s": 16.0,
+      "shot_total_s": 574.0,
+      "dit_free_gb": 40.0,
+      "missing": []
+    },
+    {
+      "shot": 2,
+      "of": 3,
+      "start": "2026-11-04T08:59:53",
+      "encode_text_s": 13.0,
+      "dit_s": 430.0,
+      "init_s": 45.7,
+      "sampling_s": 423,
+      "s_per_step": 53.8,
+      "decode_video_s": 136.0,
+      "decode_audio_s": 15.0,
+      "shot_total_s": 594.0,
+      "dit_free_gb": 35.6,
+      "missing": []
+    },
+    {
+      "shot": 3,
+      "of": 3,
+      "start": "2026-11-04T09:09:47",
+      "encode_text_s": 24.0,
+      "dit_s": 430.0,
+      "init_s": 45.73,
+      "sampling_s": 423,
+      "s_per_step": 53.81,
+      "decode_video_s": 132.0,
+      "decode_audio_s": 15.0,
+      "shot_total_s": 601.0,
+      "dit_free_gb": 35.4,
+      "missing": []
+    }
+  ],
+  "storage_policy": [
+    "fast_disk=False"
+  ],
+  "staged_mb": {
+    "MiniMaxH3TEModel_": 14956,
+    "MiniMaxH3": 19995,
+    "MiniMaxH3VideoVAE": 4965,
+    "MiniMaxH3AudioVAE": 576
+  },
+  "avg": {
+    "encode_text_s": 18.3,
+    "dit_s": 422.3,
+    "init_s": 47.1,
+    "sampling_s": 406.3,
+    "s_per_step": 52.9,
+    "decode_video_s": 133.7,
+    "decode_audio_s": 15.3,
+    "shot_total_s": 589.7
+  }
+}

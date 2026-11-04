@@ -1,0 +1,51 @@
+{
+  "file": "/opt/dramaclaw/previs_h3_test/runs/20261104T085001Z_8aa08e9fe6f8_skit_who_has_it_worse_916/video.mp4",
+  "ffprobe": {
+    "programs": [],
+    "streams": [
+      {
+        "codec_name": "h264",
+        "codec_type": "video",
+        "width": 768,
+        "height": 1344,
+        "r_frame_rate": "24/1",
+        "duration": "30.291667",
+        "bit_rate": "6876039",
+        "nb_frames": "727"
+      },
+      {
+        "codec_name": "aac",
+        "codec_type": "audio",
+        "sample_rate": "32000",
+        "channels": 2,
+        "r_frame_rate": "0/0",
+        "duration": "30.211688",
+        "bit_rate": "129054",
+        "nb_frames": "946"
+      }
+    ],
+    "format": {
+      "duration": "30.291667",
+      "size": "26541588",
+      "bit_rate": "7009607"
+    }
+  },
+  "luma": {
+    "samples": 122,
+    "mean": 77.59,
+    "first": 79.6,
+    "last": 74.66,
+    "min": 72.12,
+    "max": 84.2,
+    "max_jump": 4.07,
+    "first_tenth_mean": 80.26,
+    "last_tenth_mean": 74.68
+  },
+  "frame_bytes": {
+    "count": 727,
+    "mean": 35813,
+    "min": 1715,
+    "max": 258099
+  },
+  "laplacian_var": "skipped: ModuleNotFoundError"
+}

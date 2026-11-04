@@ -1,0 +1,13 @@
+{
+  "host": "8aa08e9fe6f8",
+  "snapshot_utc": "2026-11-04T08:50:06Z",
+  "gpu": "NVIDIA L40S, 595.91.07, 46068 MiB",
+  "cpu": "AMD EPYC 9554 64-Core Processor", "cpu_count": 256,
+  "ram_gib": 1007.5,
+  "cgroup_memory_max": "124999999488",
+  "models_dir": "/opt/models", "models_device": "overlay", "models_disk": null,
+  "disk_read_mbps": 8356, "disk_read_mode": "warm(no drop_caches)",
+  "torch": "2.11.0+cu130 13.0",
+  "note": "skit who_has_it_worse 3x243 PDD8 9:16 Victorian, RunPod L40S 48GB",
+  "raw_dir": "box/"
+}

@@ -1,0 +1,4 @@
+ts_utc,cpu_util_pct,load1,comfy_pid,comfy_cpu_pct,comfy_read_mbps,comfy_rchar_mbps,comfy_write_mbps,comfy_threads,gpu_sm_mhz,gpu_mem_mhz,gpu_sm_max_mhz,gpu_throttle_hex,pcie_gen,pcie_width,gpu_temp_c,net_rx_mbps,net_tx_mbps
+2026-11-03T14:37:05,5.5,0.08,5128,,,,,,210,405,3105,0x0000000000000001,1,16,38,0.0,0.0
+2026-11-03T14:37:07,7.2,0.08,5128,0.5,0,0,0,293,210,405,3105,0x0000000000000001,1,16,38,0.0,0.0
+2026-11-03T14:37:09,5.3,0.15,5128,0.0,0,0,0,293,210,405,3105,0x0000000000000001,1,16,38,0.0,0.0

@@ -1,0 +1,17 @@
+{
+  "label": "full_lbh_1080_s07",
+  "kind": "latent_refine_upscale",
+  "upscaler": "lbh",
+  "loras": [
+    "minimax_h3_fl2v_turbo_4step_v1.2_768p_comfyui_bf16.safetensors"
+  ],
+  "sigmas": "0.7, 0.494118, 0.0",
+  "seam": "guide",
+  "split": false,
+  "seed": 42,
+  "segments": [],
+  "error": "ValueError: segment_frames must be 4n+1 and >= 5; got 124",
+  "started_utc": "2026-11-03T14:37:03Z",
+  "wall_seconds": 6.4,
+  "avg_segment_seconds": null
+}

@@ -1,0 +1,72 @@
+{
+  "shots": [
+    {
+      "shot": 1,
+      "of": 3,
+      "start": "2026-11-03T15:03:58",
+      "encode_text_s": 12.0,
+      "dit_s": null,
+      "init_s": 36.41,
+      "sampling_s": 268,
+      "s_per_step": 34.54,
+      "decode_video_s": null,
+      "decode_audio_s": null,
+      "shot_total_s": 327.0,
+      "dit_free_gb": 21.2,
+      "missing": [
+        "dit_s",
+        "decode_video_s",
+        "decode_audio_s"
+      ]
+    },
+    {
+      "shot": 2,
+      "of": 3,
+      "start": "2026-11-03T15:09:25",
+      "encode_text_s": 16.0,
+      "dit_s": 295.0,
+      "init_s": 38.21,
+      "sampling_s": 280,
+      "s_per_step": 36.45,
+      "decode_video_s": 31.0,
+      "decode_audio_s": 7.0,
+      "shot_total_s": 349.0,
+      "dit_free_gb": 14.3,
+      "missing": []
+    },
+    {
+      "shot": 3,
+      "of": 3,
+      "start": "2026-11-03T15:15:14",
+      "encode_text_s": 17.0,
+      "dit_s": 294.0,
+      "init_s": 38.06,
+      "sampling_s": 280,
+      "s_per_step": 36.5,
+      "decode_video_s": 31.0,
+      "decode_audio_s": 8.0,
+      "shot_total_s": 350.0,
+      "dit_free_gb": 14.0,
+      "missing": []
+    }
+  ],
+  "storage_policy": [
+    "fast_disk=False"
+  ],
+  "staged_mb": {
+    "MiniMaxH3TEModel_": 14956,
+    "MiniMaxH3": 19995,
+    "MiniMaxH3VideoVAE": 4965,
+    "MiniMaxH3AudioVAE": 576
+  },
+  "avg": {
+    "encode_text_s": 15.0,
+    "dit_s": 294.5,
+    "init_s": 37.6,
+    "sampling_s": 276.0,
+    "s_per_step": 35.8,
+    "decode_video_s": 31.0,
+    "decode_audio_s": 7.5,
+    "shot_total_s": 342.0
+  }
+}

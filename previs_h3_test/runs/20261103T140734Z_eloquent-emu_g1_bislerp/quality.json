@@ -1,0 +1,13 @@
+{
+  "file": "/opt/dramaclaw/previs_h3_test/runs/20261103T140734Z_eloquent-emu_g1_bislerp/video.mp4",
+  "ffprobe": {
+    "programs": [],
+    "streams": [],
+    "format": {
+      "duration": "0.000000",
+      "size": "262"
+    }
+  },
+  "luma_error": "Output file #0 does not contain any stream\n",
+  "laplacian_var": "skipped: ModuleNotFoundError"
+}

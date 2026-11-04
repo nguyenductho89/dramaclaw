@@ -42,6 +42,13 @@ if SKIT:
     SHOTS = SKIT["shots"]; FRAMES = int(SKIT.get("frames") or FRAMES)
 # Skits default to vertical 9:16; the fixed benchmark stays 16:9 so it remains comparable with earlier runs.
 ASPECT = (SKIT.get("aspect_ratio") or "9:16") if SKIT else "16:9"
+# Skit fields for ref2va chains: "checkpoint", "voice_ref" (audio path, needs ref2va), "turbo_lora", "turbo_steps".
+CHECKPOINT = (SKIT.get("checkpoint") or "fl2va") if SKIT else "fl2va"
+VOICE_REF = (SKIT.get("voice_ref") or "") if SKIT else ""
+if SKIT and SKIT.get("turbo_lora"):
+    os.environ["RUNPOD_H3_MULTISHOT_TURBO_LORA"] = SKIT["turbo_lora"]
+    os.environ["RUNPOD_H3_MULTISHOT_TURBO_STEPS"] = str(SKIT.get("turbo_steps") or 8)
+SEED = int(os.environ.get("BENCH_SEED", "1234"))
 
 from novelvideo.generators.runpod_minimax_h3_multishot_video import (  # noqa: E402
     build_h3_multishot_graph, dims_for_multishot, join_shots_script, multishot_sampling_plan)
@@ -144,15 +151,16 @@ def main():
 
 def _run(D: Path, helper_errors: list):
     w, h = dims_for_multishot(ASPECT)
-    sampling = multishot_sampling_plan("fl2va")
+    sampling = multishot_sampling_plan(CHECKPOINT)
     if SKIT:
         sp = SKIT.get("start_image")
         name = upload_image(Path(sp), "ms_start.png") if sp else None
     else:
         name = upload_image(T / "photo_f0.png", "ms_start.png")
+    voice_names = [upload_image(Path(VOICE_REF), "ms_voice" + Path(VOICE_REF).suffix)] if VOICE_REF else []
     graph = build_h3_multishot_graph(
-        script=join_shots_script(SHOTS), shot_count=len(SHOTS), width=w, height=h, frames_per_shot=FRAMES, seed=1234,
-        steps=int(sampling.get("steps") or 20), checkpoint="fl2va", start_image_name=name,
+        script=join_shots_script(SHOTS), shot_count=len(SHOTS), width=w, height=h, frames_per_shot=FRAMES, seed=SEED,
+        steps=int(sampling.get("steps") or 20), checkpoint=CHECKPOINT, start_image_name=name, voice_ref_names=voice_names,
         pdd_nfe=str(sampling.get("pdd_nfe") or ""), pdd_file=str(sampling.get("pdd_file") or ""),
         output_scale=float(sampling.get("output_scale") or 1.0), turbo_lora=str(sampling.get("turbo_lora") or ""),
         chain_normalize=str(sampling.get("chain_normalize") or "off"), realism_lora=str(sampling.get("realism_lora") or ""),

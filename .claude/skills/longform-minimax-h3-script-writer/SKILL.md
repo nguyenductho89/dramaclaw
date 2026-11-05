@@ -118,6 +118,7 @@ Chép nguyên văn khối mô tả trong series bible vào mọi shot có mặt 
 - **Đồ vật:** tả hình dạng và vị trí một lần, chép giống hệt, không tự mâu thuẫn. Đạo cụ càng đơn giản càng tốt, vì đồ vật dễ trôi giữa các shot.
 - **Một shot một sự kiện liên tục,** không cắt cảnh. Đổi góc máy là shot mới.
 - **Tính thoại trước khi viết:** đếm âm tiết của từng `<d>`, chia cho số giây nói, phải ≤ 3 âm tiết/giây. Thoại bắt đầu từ 1.0 s và kết thúc cách cuối shot ít nhất 1.5 s.
+- **Chặn lời thừa sau câu thoại:** H3 đã tự nói thêm trong đoạn trống cuối shot (ep01, 2026-11-05). Sau mốc "finishes" ghi rõ người nói im lặng, ngậm miệng tới khung cuối. Cách này chưa kiểm chứng; nghe lại audio sau khi sinh.
 - **Mốc giây tăng dần,** không vượt thời lượng, mỗi 1-2 s có một thay đổi nhìn thấy được.
 - **Hành vi quan sát được:** "lifts one eyebrow, lips pressed", không phải "looks amused". Mỗi shot tối đa một lần đổi cảm xúc.
 - **Từ cấm:** "slowly", "the same ... as before".

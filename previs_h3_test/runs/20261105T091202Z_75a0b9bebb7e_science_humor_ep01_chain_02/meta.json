@@ -1,0 +1,13 @@
+{
+  "host": "75a0b9bebb7e",
+  "snapshot_utc": "2026-11-05T09:12:07Z",
+  "gpu": "NVIDIA GeForce RTX 5090, 595.91.07, 32607 MiB",
+  "cpu": "AMD Ryzen 9 9950X 16-Core Processor", "cpu_count": 32,
+  "ram_gib": 123.4,
+  "cgroup_memory_max": "59999997952",
+  "models_dir": "/opt/models", "models_device": "overlay", "models_disk": null,
+  "disk_read_mbps": 5782, "disk_read_mode": "warm(no drop_caches)",
+  "torch": "2.11.0+cu130 13.0",
+  "note": "science humor ep01 chain 02, 16:9 ref2va turbo12 voice_ref",
+  "raw_dir": "box/"
+}

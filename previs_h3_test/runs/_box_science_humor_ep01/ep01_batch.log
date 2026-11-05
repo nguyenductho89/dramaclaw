@@ -1,0 +1,269 @@
+=== voice_design 09:00:39
+Downloading nvidia-cudnn-cu13 (495.1MiB)
+Downloading torch (514.2MiB)
+Downloading nvidia-cufft (208.1MiB)
+Downloading nvidia-nvjitlink (44.5MiB)
+Downloading nvidia-cusolver (217.4MiB)
+Downloading nvidia-cuda-runtime (2.2MiB)
+Downloading sympy (6.0MiB)
+Downloading nvidia-cuda-nvrtc (44.8MiB)
+Downloading nvidia-cusparse (144.0MiB)
+Downloading pillow (6.6MiB)
+Downloading cuda-bindings (6.8MiB)
+Downloading nvidia-nvshmem-cu13 (129.1MiB)
+Downloading nvidia-cuda-cupti (11.4MiB)
+Downloading scikit-learn (8.7MiB)
+Downloading numpy (16.0MiB)
+Downloading nvidia-cusparselt-cu13 (162.3MiB)
+Downloading onnxruntime (22.7MiB)
+Downloading tokenizers (3.1MiB)
+Downloading nvidia-nccl-cu13 (206.0MiB)
+Downloading nvidia-cufile (1.3MiB)
+Downloading nvidia-cuda-cccl (3.9MiB)
+Downloading nvidia-cublas (386.1MiB)
+Downloading pandas (11.5MiB)
+Downloading networkx (2.0MiB)
+Downloading triton (272.4MiB)
+Downloading soundfile (1.3MiB)
+Downloading torchaudio (1.7MiB)
+Downloading llvmlite (56.9MiB)
+Downloading gradio (30.8MiB)
+Downloading numba (3.7MiB)
+Downloading transformers (11.4MiB)
+   Building sox==1.5.0
+      Built sox==1.5.0
+ Downloading nvidia-cufile
+ Downloading soundfile
+ Downloading torchaudio
+ Downloading networkx
+ Downloading nvidia-cuda-runtime
+ Downloading tokenizers
+ Downloading numba
+ Downloading nvidia-cuda-cccl
+ Downloading sympy
+ Downloading pillow
+ Downloading cuda-bindings
+ Downloading scikit-learn
+ Downloading transformers
+ Downloading pandas
+ Downloading nvidia-cuda-cupti
+ Downloading numpy
+ Downloading onnxruntime
+ Downloading gradio
+ Downloading nvidia-nvjitlink
+ Downloading nvidia-cuda-nvrtc
+ Downloading llvmlite
+ Downloading nvidia-nvshmem-cu13
+ Downloading nvidia-cusparse
+ Downloading nvidia-cusparselt-cu13
+ Downloading nvidia-nccl-cu13
+ Downloading nvidia-cufft
+ Downloading nvidia-cusolver
+ Downloading triton
+ Downloading nvidia-cublas
+ Downloading nvidia-cudnn-cu13
+ Downloading torch
+Installed 107 packages in 182ms
+/bin/sh: 1: sox: not found
+SoX could not be found!
+
+    If you do not have SoX, proceed here:
+     - - - http://sox.sourceforge.net/ - - -
+
+    If you do (or think that you should) have SoX, double-check your
+    path variables.
+    
+
+********
+Warning: flash-attn is not installed. Will only run the manual PyTorch version. Please install flash-attn for faster inference.
+********
+ 
+Fetching 4 files:   0%|          | 0/4 [00:00<?, ?it/s]Fetching 4 files:  25%|██▌       | 1/4 [00:00<00:00,  3.90it/s]Fetching 4 files: 100%|██████████| 4/4 [00:02<00:00,  1.74it/s]Fetching 4 files: 100%|██████████| 4/4 [00:02<00:00,  1.74it/s]
+loaded on cuda:0 in 16s
+Setting `pad_token_id` to `eos_token_id`:2150 for open-end generation.
+/root/.cache/uv/environments-v2/qwen-voice-design-27d93fc6020fc951/lib/python3.12/site-packages/triton/knobs.py:504: UserWarning: TRITON_DEFAULT_FP_FUSION is unset: defaulting to FP fusion ENABLED for backward compatibility in Triton 3.9. The default will change to DISABLED in Triton 3.10; set TRITON_DEFAULT_FP_FUSION=1 to keep fusion enabled or =0 to adopt the new default early and silence this warning.
+  warn_once(FP_FUSION_DEFAULT_WARNING)
+barnaby: 13.4s audio in 8s
+=== voiceover 09:01:32
+Installed 107 packages in 185ms
+/bin/sh: 1: sox: not found
+SoX could not be found!
+
+    If you do not have SoX, proceed here:
+     - - - http://sox.sourceforge.net/ - - -
+
+    If you do (or think that you should) have SoX, double-check your
+    path variables.
+    
+
+********
+Warning: flash-attn is not installed. Will only run the manual PyTorch version. Please install flash-attn for faster inference.
+********
+ 
+Fetching 4 files:   0%|          | 0/4 [00:00<?, ?it/s]Fetching 4 files:  25%|██▌       | 1/4 [00:00<00:00,  4.66it/s]Fetching 4 files: 100%|██████████| 4/4 [00:01<00:00,  3.20it/s]Fetching 4 files: 100%|██████████| 4/4 [00:01<00:00,  3.20it/s]
+/root/.cache/uv/environments-v2/qwen-voice-clone-f77a356c77917d1e/lib/python3.12/site-packages/triton/knobs.py:504: UserWarning: TRITON_DEFAULT_FP_FUSION is unset: defaulting to FP fusion ENABLED for backward compatibility in Triton 3.9. The default will change to DISABLED in Triton 3.10; set TRITON_DEFAULT_FP_FUSION=1 to keep fusion enabled or =0 to adopt the new default early and silence this warning.
+  warn_once(FP_FUSION_DEFAULT_WARNING)
+Setting `pad_token_id` to `eos_token_id`:2150 for open-end generation.
+manim_overhang: 14.1s audio in 8s
+Setting `pad_token_id` to `eos_token_id`:2150 for open-end generation.
+threejs_toast: 14.7s audio in 7s
+=== comfy_wait 09:02:05
+=== portraits 09:02:05
+portrait_s0.png 12.0s
+portrait_s1.png 4.0s
+portrait_s2.png 4.0s
+=== keyframes 09:02:25
+chain_01.png 10.0s
+chain_02.png 8.0s
+chain_03.png 8.1s
+chain_04.png 8.0s
+=== free_vram 09:02:59
+=== chain_01 09:02:59
+/opt/dramaclaw/previs_h3_test/scripts/snapshot_box.sh: line 29: /proc/sys/vm/drop_caches: Read-only file system
+snapshot -> /opt/dramaclaw/previs_h3_test/runs/20261105T090300Z_75a0b9bebb7e_science_humor_ep01_chain_01/meta.json
+postrun done: box comfy.log graph.json live.log mem.csv meta.json phases.json quality.json result.json steps.json sysmon.csv video.mp4 
+{
+  "label": "science_humor_ep01_chain_01",
+  "box": "rented-4090-local",
+  "started_utc": "2026-11-05T09:03:05Z",
+  "run_dir": "20261105T090300Z_75a0b9bebb7e_science_humor_ep01_chain_01",
+  "comfy_url": "http://127.0.0.1:8188",
+  "resolution": "1344x768",
+  "aspect_ratio": "16:9",
+  "shots": 2,
+  "frames_per_shot": 192,
+  "sampling": {
+    "pdd_nfe": "",
+    "pdd_file": "",
+    "turbo_lora": "minimax_h3_ref2v_turbo_4step_v0.1_comfyui_bf16.safetensors",
+    "chain_normalize": "off",
+    "steps": 12,
+    "output_scale": 1.0
+  },
+  "wall_seconds": 536.7,
+  "error": null,
+  "video_bytes": 16457356
+}
+run dir: /opt/dramaclaw/previs_h3_test/runs/20261105T090300Z_75a0b9bebb7e_science_humor_ep01_chain_01
+=== chain_02 09:12:02
+/opt/dramaclaw/previs_h3_test/scripts/snapshot_box.sh: line 29: /proc/sys/vm/drop_caches: Read-only file system
+snapshot -> /opt/dramaclaw/previs_h3_test/runs/20261105T091202Z_75a0b9bebb7e_science_humor_ep01_chain_02/meta.json
+postrun done: box comfy.log graph.json live.log mem.csv meta.json phases.json quality.json result.json steps.json sysmon.csv video.mp4 
+{
+  "label": "science_humor_ep01_chain_02",
+  "box": "rented-4090-local",
+  "started_utc": "2026-11-05T09:12:07Z",
+  "run_dir": "20261105T091202Z_75a0b9bebb7e_science_humor_ep01_chain_02",
+  "comfy_url": "http://127.0.0.1:8188",
+  "resolution": "1344x768",
+  "aspect_ratio": "16:9",
+  "shots": 2,
+  "frames_per_shot": 192,
+  "sampling": {
+    "pdd_nfe": "",
+    "pdd_file": "",
+    "turbo_lora": "minimax_h3_ref2v_turbo_4step_v0.1_comfyui_bf16.safetensors",
+    "chain_normalize": "off",
+    "steps": 12,
+    "output_scale": 1.0
+  },
+  "wall_seconds": 537.8,
+  "error": null,
+  "video_bytes": 19438250
+}
+run dir: /opt/dramaclaw/previs_h3_test/runs/20261105T091202Z_75a0b9bebb7e_science_humor_ep01_chain_02
+=== chain_03 09:21:05
+/opt/dramaclaw/previs_h3_test/scripts/snapshot_box.sh: line 29: /proc/sys/vm/drop_caches: Read-only file system
+snapshot -> /opt/dramaclaw/previs_h3_test/runs/20261105T092106Z_75a0b9bebb7e_science_humor_ep01_chain_03/meta.json
+postrun done: box comfy.log graph.json live.log mem.csv meta.json phases.json quality.json result.json steps.json sysmon.csv video.mp4 
+{
+  "label": "science_humor_ep01_chain_03",
+  "box": "rented-4090-local",
+  "started_utc": "2026-11-05T09:21:10Z",
+  "run_dir": "20261105T092106Z_75a0b9bebb7e_science_humor_ep01_chain_03",
+  "comfy_url": "http://127.0.0.1:8188",
+  "resolution": "1344x768",
+  "aspect_ratio": "16:9",
+  "shots": 2,
+  "frames_per_shot": 192,
+  "sampling": {
+    "pdd_nfe": "",
+    "pdd_file": "",
+    "turbo_lora": "minimax_h3_ref2v_turbo_4step_v0.1_comfyui_bf16.safetensors",
+    "chain_normalize": "off",
+    "steps": 12,
+    "output_scale": 1.0
+  },
+  "wall_seconds": 537.5,
+  "error": null,
+  "video_bytes": 17415758
+}
+run dir: /opt/dramaclaw/previs_h3_test/runs/20261105T092106Z_75a0b9bebb7e_science_humor_ep01_chain_03
+=== chain_04 09:30:08
+/opt/dramaclaw/previs_h3_test/scripts/snapshot_box.sh: line 29: /proc/sys/vm/drop_caches: Read-only file system
+snapshot -> /opt/dramaclaw/previs_h3_test/runs/20261105T093008Z_75a0b9bebb7e_science_humor_ep01_chain_04/meta.json
+postrun done: box comfy.log graph.json live.log mem.csv meta.json phases.json quality.json result.json steps.json sysmon.csv video.mp4 
+{
+  "label": "science_humor_ep01_chain_04",
+  "box": "rented-4090-local",
+  "started_utc": "2026-11-05T09:30:14Z",
+  "run_dir": "20261105T093008Z_75a0b9bebb7e_science_humor_ep01_chain_04",
+  "comfy_url": "http://127.0.0.1:8188",
+  "resolution": "1344x768",
+  "aspect_ratio": "16:9",
+  "shots": 2,
+  "frames_per_shot": 192,
+  "sampling": {
+    "pdd_nfe": "",
+    "pdd_file": "",
+    "turbo_lora": "minimax_h3_ref2v_turbo_4step_v0.1_comfyui_bf16.safetensors",
+    "chain_normalize": "off",
+    "steps": 12,
+    "output_scale": 1.0
+  },
+  "wall_seconds": 540.7,
+  "error": null,
+  "video_bytes": 17175052
+}
+run dir: /opt/dramaclaw/previs_h3_test/runs/20261105T093008Z_75a0b9bebb7e_science_humor_ep01_chain_04
+=== free_vram_2 09:39:15
+=== upscale_chain_01 09:39:15
+/opt/dramaclaw/previs_h3_test/scripts/snapshot_box.sh: line 29: /proc/sys/vm/drop_caches: Read-only file system
+snapshot -> /opt/dramaclaw/previs_h3_test/runs/20261105T093917Z_75a0b9bebb7e_science_humor_ep01_upscale_1p5x/meta.json
+{'i': 0, 'frames': '0-40', 'seconds': 45.6, 'gpu_seconds': 45.1}
+{'i': 1, 'frames': '33-73', 'seconds': 39.6, 'gpu_seconds': 39.1}
+{'i': 2, 'frames': '66-106', 'seconds': 40.2, 'gpu_seconds': 39.1}
+{'i': 3, 'frames': '99-139', 'seconds': 40.6, 'gpu_seconds': 39.4}
+{'i': 4, 'frames': '132-172', 'seconds': 40.5, 'gpu_seconds': 39.1}
+{'i': 5, 'frames': '165-205', 'seconds': 40.6, 'gpu_seconds': 39.2}
+{'i': 6, 'frames': '198-238', 'seconds': 40.2, 'gpu_seconds': 39.1}
+{'i': 7, 'frames': '231-271', 'seconds': 40.8, 'gpu_seconds': 39.2}
+{'i': 8, 'frames': '264-304', 'seconds': 40.4, 'gpu_seconds': 39.1}
+{'i': 9, 'frames': '297-337', 'seconds': 40.2, 'gpu_seconds': 39.1}
+{'i': 10, 'frames': '330-370', 'seconds': 40.5, 'gpu_seconds': 39.1}
+{'i': 11, 'frames': '342-382', 'seconds': 40.7, 'gpu_seconds': 39.1}
+postrun done: box comfy.log mem.csv meta.json quality.json result.json segs steps.json sysmon.csv video.mp4 
+{
+  "label": "science_humor_ep01_upscale_1p5x",
+  "kind": "seedvr2_upscale",
+  "src": "previs_h3_test/runs/20261105T090300Z_75a0b9bebb7e_science_humor_ep01_chain_01/video.mp4",
+  "src_res": "1344x768",
+  "out_res": "2016x1152",
+  "model": "7b",
+  "frames": 383,
+  "total_frames": 383,
+  "segment": 41,
+  "overlap": 8,
+  "color": "lab",
+  "tile": 640,
+  "tile_overlap": 64,
+  "vae_tframes": 64,
+  "dit_chunk": 17,
+  "dit_chunk_overlap": 1,
+  "error": null,
+  "started_utc": "2026-11-05T09:39:21Z",
+  "wall_seconds": 553.6,
+  "avg_segment_seconds": 40.8
+}
+run dir: /opt/dramaclaw/previs_h3_test/runs/20261105T093917Z_75a0b9bebb7e_science_humor_ep01_upscale_1p5x
+=== done 09:48:35

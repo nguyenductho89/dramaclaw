@@ -1,0 +1,88 @@
+2026-11-05T09:03:05 [32m[INFO][0m got prompt
+2026-11-05T09:03:05 [32m[INFO][0m Model storage policy: fast_disk=False paths=['/opt/models/vae/minimax_h3_audio_vae_fp32.safetensors']
+2026-11-05T09:03:05 [32m[INFO][0m VAE load device: cuda:0, offload device: cpu, dtype: torch.float32
+2026-11-05T09:03:05 [32m[INFO][0m Model storage policy: fast_disk=False paths=['/opt/models/vae/minimax_h3_video_vae_fp16.safetensors']
+2026-11-05T09:03:05 [32m[INFO][0m VAE load device: cuda:0, offload device: cpu, dtype: torch.float16
+2026-11-05T09:03:05 [32m[INFO][0m Found quantization metadata version 1
+2026-11-05T09:03:05 [32m[INFO][0m Using MixedPrecisionOps for text encoder
+2026-11-05T09:03:05 [32m[INFO][0m Model storage policy: fast_disk=False paths=['/opt/models/text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors']
+2026-11-05T09:03:06 [32m[INFO][0m CLIP/text encoder model load device: cuda:0, offload device: cpu, current: cpu, dtype: torch.float16
+2026-11-05T09:03:06 [32m[INFO][0m Found quantization metadata version 1
+2026-11-05T09:03:06 [32m[INFO][0m Detected mixed precision quantization
+2026-11-05T09:03:06 [32m[INFO][0m Using mixed precision operations
+2026-11-05T09:03:06 [32m[INFO][0m Native ops: mxfp8, int8_tensorwise, asym_w4a8_int8, nvfp4, float8_e5m2, convrot_w4a4, float8_e4m3fn 
+2026-11-05T09:03:06 [32m[INFO][0m model weight dtype torch.bfloat16, manual cast: torch.bfloat16
+2026-11-05T09:03:06 [32m[INFO][0m model_type FLOW_AV
+2026-11-05T09:03:06 [32m[INFO][0m Model storage policy: fast_disk=False paths=['/opt/models/diffusion_models/minimax_h3_ref2va_pruned_int8_convrot.safetensors']
+2026-11-05T09:03:06 [H3LoraStack] minimax_h3_ref2v_turbo_4step_v0.1_comfyui_bf16.safetensors @1
+2026-11-05T09:03:06 [32m[INFO][0m Requested to load MiniMaxH3AudioVAE
+2026-11-05T09:03:06 [32m[INFO][0m Model MiniMaxH3AudioVAE prepared for dynamic VRAM loading. 576MB Staged. 0 patches attached. Force pre-loaded 401 weights: 539 KB.
+2026-11-05T09:03:06 [H3Multishot] voice anchor: 13.4s ref audio rides in every shot as <Audio 1> (<Subject 1>'s voice).
+2026-11-05T09:03:06 [H3Multishot] I2V: shot 1 starts from the supplied image.
+2026-11-05T09:03:06 [H3Multishot] shot 1/2 (192f @ 1344x768)...
+2026-11-05T09:03:06 [32m[INFO][0m Requested to load MiniMaxH3TEModel_
+2026-11-05T09:03:06 [32m[INFO][0m Model MiniMaxH3TEModel_ prepared for dynamic VRAM loading. 14956MB Staged. 0 patches attached. Force pre-loaded 410 weights: 4572 KB.
+2026-11-05T09:03:10 [32m[INFO][0m Requested to load MiniMaxH3VideoVAE
+2026-11-05T09:03:10 [32m[INFO][0m Model MiniMaxH3VideoVAE prepared for dynamic VRAM loading. 4965MB Staged. 0 patches attached. Force pre-loaded 128 weights: 352 KB.
+2026-11-05T09:03:11 [H3Multishot] TE evicted; 28.2 GB free for the DiT
+2026-11-05T09:03:11 [H3AutoReserve] keeping all 19.5 GB of weights resident would leave only -12.2 GB of slack over the pool's bare need - under the 2.8 GB driver headroom every clean run keeps (2026-08-21: that squeeze ran 22x slower than streaming). Reserving 22.7 GB and letting ~15.0 GB of weights stream.
+2026-11-05T09:03:11 [H3AutoReserve] driver headroom: raising the reserve 22.7 -> 25.5 GB so ~17.8 GB of weights stream instead of riding the last few percent of VRAM (that zone measured 2-12x slower).
+2026-11-05T09:03:11 [H3AutoReserve] shape cells=5536256: reserving 25.5 GB (first run at this shape: 88% of free | resident-clamp REFUSED (slack -12.2 GB < headroom 2.8 GB): streaming | +driver headroom 22.7 -> 25.5 GB)
+2026-11-05T09:03:11 [32m[INFO][0m Requested to load MiniMaxH3
+2026-11-05T09:03:11 [32m[INFO][0m Model MiniMaxH3 prepared for dynamic VRAM loading. 19995MB Staged. 208 patches attached. Force pre-loaded 210 weights: 1175 KB.
+2026-11-05T09:03:11   0%|          | 0/12 [00:00<?, ?it/s]
+2026-11-05T09:03:29   0%|          | 0/12 [00:00<?, ?it/s,   Model Initializing ...  ]
+2026-11-05T09:03:29   0%|          | 0/12 [00:17<?, ?it/s,  Model Initialization complete!  ]
+2026-11-05T09:03:49   8%|▊         | 1/12 [00:17<03:16, 17.83s/it,  Model Initialization complete!  ]
+2026-11-05T09:03:49   8%|▊         | 1/12 [00:39<03:16, 17.83s/it]                                   
+2026-11-05T09:04:09  17%|█▋        | 2/12 [00:39<03:15, 19.54s/it]
+2026-11-05T09:04:29  25%|██▌       | 3/12 [00:59<03:00, 20.05s/it]
+2026-11-05T09:04:49  33%|███▎      | 4/12 [01:19<02:42, 20.28s/it]
+2026-11-05T09:05:10  42%|████▏     | 5/12 [01:39<02:21, 20.27s/it]
+2026-11-05T09:05:30  50%|█████     | 6/12 [01:59<02:01, 20.21s/it]
+2026-11-05T09:05:50  58%|█████▊    | 7/12 [02:19<01:40, 20.03s/it]
+2026-11-05T09:06:10  67%|██████▋   | 8/12 [02:40<01:20, 20.11s/it]
+2026-11-05T09:06:30  75%|███████▌  | 9/12 [03:00<00:59, 19.98s/it]
+2026-11-05T09:06:50  83%|████████▎ | 10/12 [03:20<00:40, 20.12s/it]
+2026-11-05T09:07:10  92%|█████████▏| 11/12 [03:40<00:20, 20.01s/it]
+2026-11-05T09:07:10 100%|██████████| 12/12 [04:00<00:00, 20.16s/it]
+2026-11-05T09:07:13 100%|██████████| 12/12 [04:00<00:00, 20.02s/it]
+2026-11-05T09:07:13 [32m[INFO][0m Requested to load MiniMaxH3VideoVAE
+2026-11-05T09:07:14 [32m[INFO][0m Model MiniMaxH3VideoVAE prepared for dynamic VRAM loading. 4965MB Staged. 0 patches attached. Force pre-loaded 128 weights: 352 KB.
+2026-11-05T09:07:30 [32m[INFO][0m Requested to load MiniMaxH3AudioVAE
+2026-11-05T09:07:30 [32m[INFO][0m Model MiniMaxH3AudioVAE prepared for dynamic VRAM loading. 576MB Staged. 0 patches attached. Force pre-loaded 401 weights: 539 KB.
+2026-11-05T09:07:32 [H3Multishot] shot 1/2 saved -> /opt/comfyui/output/video/H3_SHOTS/shot_00001_.mp4
+2026-11-05T09:07:32 [H3Multishot] shot 2/2 (192f @ 1344x768)...
+2026-11-05T09:07:32 [H3Multishot] Ref2VA sections added for 2 reference item(s) (0 portrait, 1 continuation frame(s))
+2026-11-05T09:07:33 [32m[INFO][0m Model MiniMaxH3TEModel_ prepared for dynamic VRAM loading. 14956MB Staged. 0 patches attached. Force pre-loaded 410 weights: 4572 KB.
+2026-11-05T09:07:35 [32m[INFO][0m Model MiniMaxH3VideoVAE prepared for dynamic VRAM loading. 4965MB Staged. 0 patches attached. Force pre-loaded 128 weights: 352 KB.
+2026-11-05T09:07:36 [H3Multishot] TE evicted; 23.6 GB free for the DiT
+2026-11-05T09:07:36 [32m[INFO][0m Requested to load MiniMaxH3
+2026-11-05T09:07:36 [32m[INFO][0m 0 models unloaded.
+2026-11-05T09:07:36 [32m[INFO][0m Model MiniMaxH3 prepared for dynamic VRAM loading. 19995MB Staged. 208 patches attached. Force pre-loaded 210 weights: 1175 KB.
+2026-11-05T09:07:37   0%|          | 0/12 [00:00<?, ?it/s]
+2026-11-05T09:07:54   0%|          | 0/12 [00:00<?, ?it/s,   Model Initializing ...  ]
+2026-11-05T09:07:54   0%|          | 0/12 [00:17<?, ?it/s,  Model Initialization complete!  ]
+2026-11-05T09:08:14   8%|▊         | 1/12 [00:17<03:13, 17.63s/it,  Model Initialization complete!  ]
+2026-11-05T09:08:14   8%|▊         | 1/12 [00:38<03:13, 17.63s/it]                                   
+2026-11-05T09:08:33  17%|█▋        | 2/12 [00:38<03:14, 19.41s/it]
+2026-11-05T09:08:54  25%|██▌       | 3/12 [00:58<02:58, 19.81s/it]
+2026-11-05T09:09:14  33%|███▎      | 4/12 [01:18<02:41, 20.17s/it]
+2026-11-05T09:09:34  42%|████▏     | 5/12 [01:39<02:21, 20.22s/it]
+2026-11-05T09:09:54  50%|█████     | 6/12 [01:59<02:01, 20.24s/it]
+2026-11-05T09:10:14  58%|█████▊    | 7/12 [02:19<01:39, 19.82s/it]
+2026-11-05T09:10:34  67%|██████▋   | 8/12 [02:39<01:21, 20.37s/it]
+2026-11-05T09:10:54  75%|███████▌  | 9/12 [02:59<01:00, 20.08s/it]
+2026-11-05T09:11:15  83%|████████▎ | 10/12 [03:19<00:40, 20.12s/it]
+2026-11-05T09:11:35  92%|█████████▏| 11/12 [03:39<00:20, 20.16s/it]
+2026-11-05T09:11:35 100%|██████████| 12/12 [04:00<00:00, 20.20s/it]
+2026-11-05T09:11:38 100%|██████████| 12/12 [04:00<00:00, 20.00s/it]
+2026-11-05T09:11:38 [32m[INFO][0m Requested to load MiniMaxH3VideoVAE
+2026-11-05T09:11:38 [32m[INFO][0m Model MiniMaxH3VideoVAE prepared for dynamic VRAM loading. 4965MB Staged. 0 patches attached. Force pre-loaded 128 weights: 352 KB.
+2026-11-05T09:11:54 [32m[INFO][0m Requested to load MiniMaxH3AudioVAE
+2026-11-05T09:11:54 [32m[INFO][0m Model MiniMaxH3AudioVAE prepared for dynamic VRAM loading. 576MB Staged. 0 patches attached. Force pre-loaded 401 weights: 539 KB.
+2026-11-05T09:11:56 [H3Multishot] shot 2/2 saved -> /opt/comfyui/output/video/H3_SHOTS/shot_00002_.mp4
+2026-11-05T09:11:56 [H3Multishot] smart weld: seam cut moved 0ms into the head (quietest gap), word onsets preserved
+2026-11-05T09:11:57 [H3Multishot] done: 2 shots, 383 frames (~16.0s).
+2026-11-05T09:11:57 [32m[INFO][0m Comfy model compiler graph breaks: 3, rogues: 0
+2026-11-05T09:12:00 [32m[INFO][0m [32mPrompt executed in 534.72 seconds[0m

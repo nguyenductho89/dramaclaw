@@ -1,0 +1,51 @@
+{
+  "file": "/opt/dramaclaw/previs_h3_test/runs/20261105T093917Z_75a0b9bebb7e_science_humor_ep01_upscale_1p5x/video.mp4",
+  "ffprobe": {
+    "programs": [],
+    "streams": [
+      {
+        "codec_name": "h264",
+        "codec_type": "video",
+        "width": 2016,
+        "height": 1152,
+        "r_frame_rate": "24/1",
+        "duration": "15.958333",
+        "bit_rate": "13999951",
+        "nb_frames": "383"
+      },
+      {
+        "codec_name": "aac",
+        "codec_type": "audio",
+        "sample_rate": "32000",
+        "channels": 2,
+        "r_frame_rate": "0/0",
+        "duration": "15.919000",
+        "bit_rate": "133831",
+        "nb_frames": "499"
+      }
+    ],
+    "format": {
+      "duration": "15.958333",
+      "size": "28207660",
+      "bit_rate": "14140654"
+    }
+  },
+  "luma": {
+    "samples": 64,
+    "mean": 108.98,
+    "first": 134.94,
+    "last": 106.37,
+    "min": 105.93,
+    "max": 134.94,
+    "max_jump": 17.51,
+    "first_tenth_mean": 116.28,
+    "last_tenth_mean": 106.63
+  },
+  "frame_bytes": {
+    "count": 383,
+    "mean": 72916,
+    "min": 2227,
+    "max": 555649
+  },
+  "laplacian_var": "skipped: ModuleNotFoundError"
+}

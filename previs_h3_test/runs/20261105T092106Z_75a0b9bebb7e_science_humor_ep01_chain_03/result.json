@@ -1,0 +1,30 @@
+{
+  "label": "science_humor_ep01_chain_03",
+  "box": "rented-4090-local",
+  "started_utc": "2026-11-05T09:21:10Z",
+  "run_dir": "20261105T092106Z_75a0b9bebb7e_science_humor_ep01_chain_03",
+  "comfy_url": "http://127.0.0.1:8188",
+  "resolution": "1344x768",
+  "aspect_ratio": "16:9",
+  "shots": 2,
+  "frames_per_shot": 192,
+  "sampling": {
+    "pdd_nfe": "",
+    "pdd_file": "",
+    "turbo_lora": "minimax_h3_ref2v_turbo_4step_v0.1_comfyui_bf16.safetensors",
+    "chain_normalize": "off",
+    "steps": 12,
+    "output_scale": 1.0
+  },
+  "logs": [
+    "    0.0s submitted prompt eba0693a-524d-4ab3-9134-e283aaca724b",
+    "    5.0s running=1 pending=0",
+    "  537.5s event execution_start {\"prompt_id\": \"eba0693a-524d-4ab3-9134-e283aaca724b\", \"timestamp\": 1793870470666}",
+    "  537.5s event execution_cached {\"nodes\": [\"1\", \"2\", \"3\", \"4\", \"7\", \"200\"], \"prompt_id\": \"eba0693a-524d-4ab3-9134-e283aaca724b\", \"timestamp\": 1793870470667}",
+    "  537.5s event execution_success {\"prompt_id\": \"eba0693a-524d-4ab3-9134-e283aaca724b\", \"timestamp\": 1793871006593}"
+  ],
+  "wall_seconds": 537.5,
+  "error": null,
+  "video_bytes": 17415758,
+  "helper_errors": []
+}

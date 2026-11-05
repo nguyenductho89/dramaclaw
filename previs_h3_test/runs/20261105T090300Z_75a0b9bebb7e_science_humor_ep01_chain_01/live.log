@@ -1,0 +1,5 @@
+    0.0s submitted prompt b36ea255-929d-440d-8c38-39b9c5f25753
+    5.0s running=1 pending=0
+  536.7s event execution_start {"prompt_id": "b36ea255-929d-440d-8c38-39b9c5f25753", "timestamp": 1793869385428}
+  536.7s event execution_cached {"nodes": [], "prompt_id": "b36ea255-929d-440d-8c38-39b9c5f25753", "timestamp": 1793869385431}
+  536.7s event execution_success {"prompt_id": "b36ea255-929d-440d-8c38-39b9c5f25753", "timestamp": 1793869920150}

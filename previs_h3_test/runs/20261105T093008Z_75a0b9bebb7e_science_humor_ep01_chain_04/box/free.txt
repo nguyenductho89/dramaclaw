@@ -1,0 +1,3 @@
+               total        used        free      shared  buff/cache   available
+Mem:     132536172544 101801717760  3326644224    54353920 28620230656 30734454784
+Swap:              0           0           0

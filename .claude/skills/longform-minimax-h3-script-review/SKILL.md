@@ -23,7 +23,7 @@ Tự đếm và tính lại, không tin số ghi trong file: số từ, tỉ l�
 4. **CHẶN**: thiếu `<d>[Language]` đúng định dạng, tag lệch ngôn ngữ nội dung, có dấu nháy kép bọc `<d>`.
 5. **CHẶN**: thoại trong chain khác lời trong file kịch bản.
 6. **CẢNH BÁO**: `<d>` trong chain hơn 3 âm tiết/giây, thoại bắt đầu trước 1.0 s, hoặc kết thúc cách cuối shot dưới 1.5 s. Ghi phép tính. Voiceover Qwen3-TTS không theo giới hạn này; xem #28.
-7. **CẢNH BÁO**: không ghi người còn lại im lặng hoặc đang làm gì.
+7. **CẢNH BÁO**: không ghi người còn lại im lặng hoặc đang làm gì; sau mốc "finishes" không ghi người nói im lặng, ngậm miệng tới khung cuối (H3 từng tự nói thêm ở đoạn trống).
 8. **CẢNH BÁO**: chain có thoại mà thiếu `voice_ref`; giọng mô tả lệch giữa các shot mà không có lý do.
 
 ## B. Nhất quán giữa các shot và chain

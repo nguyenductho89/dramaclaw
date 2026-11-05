@@ -1,0 +1,12 @@
+step,start_utc,seconds
+total_start,2026-11-05T08:57:55Z,0
+check_box,2026-11-05T08:57:55Z,0
+apt_packages,2026-11-05T08:57:55Z,15
+start_bg_download,2026-11-05T08:58:10Z,0
+uv_venv_comfyui_install,2026-11-05T08:58:10Z,112
+custom_nodes_clone,2026-11-05T09:00:02Z,4
+torch_sage_pip,2026-11-05T09:00:06Z,24
+python_headers,2026-11-05T09:00:30Z,1
+wait_model_download,2026-11-05T09:00:31Z,0
+write_config_and_verify,2026-11-05T09:00:31Z,1
+TONG,2026-11-05T08:57:55Z,157

@@ -1,0 +1,51 @@
+{
+  "file": "/opt/dramaclaw/previs_h3_test/runs/20261105T091202Z_75a0b9bebb7e_science_humor_ep01_chain_02/video.mp4",
+  "ffprobe": {
+    "programs": [],
+    "streams": [
+      {
+        "codec_name": "h264",
+        "codec_type": "video",
+        "width": 1344,
+        "height": 768,
+        "r_frame_rate": "24/1",
+        "duration": "15.958333",
+        "bit_rate": "9602463",
+        "nb_frames": "383"
+      },
+      {
+        "codec_name": "aac",
+        "codec_type": "audio",
+        "sample_rate": "32000",
+        "channels": 2,
+        "r_frame_rate": "0/0",
+        "duration": "15.918344",
+        "bit_rate": "136159",
+        "nb_frames": "499"
+      }
+    ],
+    "format": {
+      "duration": "15.958333",
+      "size": "19438250",
+      "bit_rate": "9744501"
+    }
+  },
+  "luma": {
+    "samples": 64,
+    "mean": 111.17,
+    "first": 136.59,
+    "last": 108.67,
+    "min": 108.52,
+    "max": 136.59,
+    "max_jump": 22.75,
+    "first_tenth_mean": 116.33,
+    "last_tenth_mean": 108.99
+  },
+  "frame_bytes": {
+    "count": 383,
+    "mean": 50013,
+    "min": 2264,
+    "max": 258209
+  },
+  "laplacian_var": "skipped: ModuleNotFoundError"
+}

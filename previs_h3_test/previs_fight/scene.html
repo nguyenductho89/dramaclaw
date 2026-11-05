@@ -1,0 +1,109 @@
+<!doctype html><html><body style="margin:0;background:#000"><canvas id="c" width="768" height="1344"></canvas>
+<script type="importmap">{"imports":{"three":"./node_modules/three/build/three.module.js"}}</script>
+<script type="module">
+import * as THREE from 'three';
+const W=768,H=1344,D=Math.PI/180;
+const r=new THREE.WebGLRenderer({canvas:document.getElementById('c'),antialias:true,preserveDrawingBuffer:true});
+r.setSize(W,H,false);
+const s=new THREE.Scene();
+// sky gradient
+{const cv=document.createElement('canvas');cv.width=2;cv.height=256;const g=cv.getContext('2d'),gr=g.createLinearGradient(0,0,0,256);
+ gr.addColorStop(0,'#5b8fd0');gr.addColorStop(1,'#e9eef5');g.fillStyle=gr;g.fillRect(0,0,2,256);s.background=new THREE.CanvasTexture(cv);}
+s.fog=new THREE.Fog(0xdfe6ee,9,28);
+s.add(new THREE.HemisphereLight(0xffffff,0x8a8f98,1.1));
+const sun=new THREE.DirectionalLight(0xfff2dd,1.3);sun.position.set(-3,6,4);s.add(sun);
+const mat=(c)=>new THREE.MeshLambertMaterial({color:c,flatShading:true});
+// summit: flat polygonal rock slab + rim + far peaks
+const top=new THREE.Mesh(new THREE.CylinderGeometry(3.6,4.2,0.6,8),mat(0x8d8a84));top.position.y=-0.3;s.add(top);
+const mid=new THREE.Mesh(new THREE.CylinderGeometry(4.2,7,3,8),mat(0x6f6c68));mid.position.y=-2.1;s.add(mid);
+for(const[x,z,h,rd] of [[-9,-12,7,4],[7,-14,9,5],[0,-18,11,6],[-14,-6,5,3.5],[13,-8,6,4]]){
+ const p=new THREE.Mesh(new THREE.ConeGeometry(rd,h,6),mat(0x7a8696));p.position.set(x,h/2-5,z);s.add(p);}
+for(const[x,z,sc] of [[-2.6,-1.5,.35],[2.9,-1,.3],[-1.2,2.4,.25],[2.2,2.3,.3]]){
+ const b=new THREE.Mesh(new THREE.DodecahedronGeometry(sc),mat(0x77746f));b.position.set(x,sc*.6,z);s.add(b);}
+// ---- articulated mannequin ----
+// local forward = -z; positive x-rotation of a hanging limb swings it forward
+const SKIN=0xd9a982;
+function limb(len,rad,color,parent,y=0){const j=new THREE.Group();j.position.y=y;parent.add(j);
+ const m=new THREE.Mesh(new THREE.CylinderGeometry(rad,rad*.82,len,10),mat(color));m.position.y=-len/2;j.add(m);
+ const end=new THREE.Group();end.position.y=-len;j.add(end);return{j,end};}
+function fighter(bikini,hair,face){
+ const root=new THREE.Group(),pelvis=new THREE.Group();pelvis.position.y=.95;root.add(pelvis);
+ const hip=new THREE.Mesh(new THREE.BoxGeometry(.34,.2,.2),mat(SKIN));pelvis.add(hip);
+ const bot=new THREE.Mesh(new THREE.BoxGeometry(.36,.13,.22),mat(bikini));bot.position.y=-.01;pelvis.add(bot);
+ const spine=new THREE.Group();spine.position.y=.08;pelvis.add(spine);
+ const chest=new THREE.Mesh(new THREE.CylinderGeometry(.17,.14,.5,10),mat(SKIN));chest.position.y=.27;spine.add(chest);
+ for(const sx of[-.075,.075]){const t=new THREE.Mesh(new THREE.BoxGeometry(.13,.1,.2),mat(bikini));t.position.set(sx,.4,-.07);spine.add(t);}
+ const neck=new THREE.Group();neck.position.y=.55;spine.add(neck);
+ const nk=new THREE.Mesh(new THREE.CylinderGeometry(.045,.05,.1,8),mat(SKIN));nk.position.y=.04;neck.add(nk);
+ const head=new THREE.Group();head.position.y=.1;neck.add(head);
+ const hd=new THREE.Mesh(new THREE.SphereGeometry(.115,14,12),mat(SKIN));hd.position.y=.1;head.add(hd);
+ const hr=new THREE.Mesh(new THREE.SphereGeometry(.125,14,12,0,Math.PI*2,0,Math.PI*.62),mat(hair));hr.position.y=.11;hr.rotation.x=-.25;head.add(hr);
+ const tail=new THREE.Mesh(new THREE.CylinderGeometry(.035,.02,.3,6),mat(hair));tail.position.set(0,.05,.14);tail.rotation.x=-.4;head.add(tail);
+ const arms={},legs={};
+ for(const side of['L','R']){const sg=side==='L'?-1:1;
+  const sh=new THREE.Group();sh.position.set(sg*.21,.47,0);spine.add(sh);
+  const up=limb(.3,.045,SKIN,sh);const lo=limb(.28,.04,SKIN,up.end);
+  const hand=new THREE.Mesh(new THREE.SphereGeometry(.05,8,8),mat(SKIN));hand.position.y=-.3;lo.j.add(hand);
+  arms[side]={sh,el:lo.j,sg};
+  const th=new THREE.Group();th.position.set(sg*.1,-.08,0);pelvis.add(th);
+  const ul=limb(.45,.07,SKIN,th);const ll=limb(.45,.055,SKIN,ul.end);
+  const ft=new THREE.Mesh(new THREE.BoxGeometry(.09,.06,.22),mat(SKIN));ft.position.set(0,-.46,-.05);ll.j.add(ft);
+  legs[side]={th,kn:ll.j,sg};}
+ s.add(root);return{root,pelvis,spine,neck,arms,legs};}
+const A=fighter(0xd62828,0x3a2416),B=fighter(0x1d6fe0,0xe2c15a);
+// ---- choreography (A red, left, faces +x; B blue, right, faces -x) ----
+// params in degrees/metres; "f" = forward swing, "ab" = side raise, lean>0 = forward
+const BASE={x:0,z:0,yaw:0,ry:0,pitch:0,hy:0,tilt:0,lean:0,twist:0,hd:0,
+ lf:0,lab:0,le:0,rf:0,rab:0,re:0,   // left/right arm: shoulder fwd, abduct, elbow
+ ltf:0,ltab:0,lk:0,rtf:0,rtab:0,rk:0}; // left/right thigh fwd, abduct, knee
+const SLOT=(o)=>Object.assign({},BASE,o);
+const GUARD={hy:-.12,lean:8,lf:55,lab:12,le:105,rf:50,rab:12,re:110,ltf:22,ltab:6,lk:28,rtf:-18,rtab:6,rk:20,hd:-5};
+function track(list){ // list of [t, overrides]; each key inherits previous
+ const out=[];let prev=SLOT({});for(const[t,o]of list){prev=Object.assign({},prev,o);out.push({t,p:prev});}return out;}
+const FA=track([
+ [0.0,{...GUARD,x:-1.0,yaw:-90}],
+ [0.8,{x:-0.85,twist:-8}],
+ [1.15,{x:-0.45,lean:22,rf:92,re:8,rab:6,lf:40,le:120,twist:-25,hy:-.2,ltf:40,lk:35,rtf:-25}],  // straight punch
+ [1.8,{x:-0.7,rf:50,re:110,lean:10,twist:0,hy:-.12,ltf:22,lk:28,rtf:-18}],
+ [2.4,{x:-0.6,hy:-.5,lean:42,lf:70,le:80,rf:70,re:80,ltf:70,lk:95,rtf:-5,rk:100,hd:-15}],        // duck the kick
+ [3.0,{x:-0.28,hy:-.28,lean:48,lf:85,lab:30,le:25,rf:85,rab:30,re:25,ltf:50,lk:70,rtf:-20,rk:50}], // lunge / clinch
+ [3.55,{x:-0.3,lean:30,lf:70,le:40,rf:70,re:40,twist:12}],
+ [4.0,{x:0.45,ry:.16,pitch:88,hy:0,lean:0,lf:30,lab:30,le:10,rf:30,rab:30,re:10,ltf:5,lk:5,rtf:5,rk:5,hd:10,twist:0}], // thrown onto back
+ [4.55,{x:0.3,ry:.12,pitch:48,lean:25,lf:-30,lab:15,le:10,rf:-20,re:10,ltf:55,lk:90,rtf:20,rk:30}],    // pushing up
+ [5.0,{x:-0.8,ry:0,pitch:0,...GUARD,lf:55,rf:50,twist:0}]
+]);
+const FB=track([
+ [0.0,{...GUARD,x:1.0,yaw:90,ltf:-18,rtf:22,lk:20,rk:28}],
+ [0.8,{x:0.85,twist:8}],
+ [1.15,{x:0.8,lean:-6,hd:-14,lf:75,lab:18,le:60,twist:10}],              // parry
+ [1.8,{x:1.0,lf:60,le:100,lean:6,hd:-5,twist:0}],
+ [2.4,{x:0.95,lean:-18,hy:-.08,lf:20,lab:50,le:20,rf:35,rab:50,re:20,ltf:-10,lk:25,rtf:100,rk:12,tilt:0}], // roundhouse kick
+ [3.0,{x:0.28,lean:30,hy:-.3,lf:85,lab:25,le:25,rf:85,rab:25,re:25,rtf:20,rk:45,ltf:20,lk:60}],             // clinch
+ [3.55,{x:0.3,lean:42,hy:-.35,twist:-12,lf:70,le:50,rf:70,re:50}],
+ [4.0,{x:0.45,lean:30,hy:-.2,lf:50,le:60,rf:50,re:60,ltf:30,lk:45,rtf:-10,rk:30,twist:0}],                  // follow-through
+ [4.55,{x:0.65,lean:14,hy:-.14,lf:45,le:100,rf:40,re:105}],
+ [5.0,{x:0.9,...GUARD,ltf:-18,rtf:22,lk:20,rk:28,yaw:90}]
+]);
+const ease=u=>u*u*(3-2*u);
+function sample(tr,t){let i=0;while(i<tr.length-2&&t>tr[i+1].t)i++;
+ const a=tr[i],b=tr[i+1],u=ease(Math.min(1,Math.max(0,(t-a.t)/(b.t-a.t))));const o={};
+ for(const k in a.p)o[k]=a.p[k]+(b.p[k]-a.p[k])*u;return o;}
+function pose(F,p){
+ F.root.position.set(p.x,p.ry,p.z);F.root.rotation.set(p.pitch*D,p.yaw*D,0,'YXZ');
+ // pitch about the feet: positive pitch = falls onto its back
+ F.pelvis.position.y=.95+p.hy;F.pelvis.rotation.set(0,0,p.tilt*D);
+ F.spine.rotation.set(-p.lean*D,p.twist*D,0);F.neck.rotation.set(-p.hd*D,0,0);
+ const ar=(a,f,ab,e)=>{a.sh.rotation.set(f*D,0,-a.sg*ab*D);a.el.rotation.set(e*D,0,0);};
+ ar(F.arms.L,p.lf,p.lab,p.le);ar(F.arms.R,p.rf,p.rab,p.re);
+ const lg=(l,f,ab,k)=>{l.th.rotation.set(f*D,0,-l.sg*ab*D);l.kn.rotation.set(-k*D,0,0);};
+ lg(F.legs.L,p.ltf,p.ltab,p.lk);lg(F.legs.R,p.rtf,p.rtab,p.rk);
+ // keep feet on the rock: lower pelvis offset already encodes crouch
+}
+const cam=new THREE.PerspectiveCamera(48,W/H,.1,100);
+window.frame=(t)=>{ // t in [0,1] -> 5 s
+ const sec=t*5;pose(A,sample(FA,sec));pose(B,sample(FB,sec));
+ const ang=(-12+24*t)*D,dist=5.9-0.5*t,tgt=new THREE.Vector3(0,1.0,0);
+ cam.position.set(Math.sin(ang)*dist,1.55,Math.cos(ang)*dist);cam.lookAt(tgt);
+ r.render(s,cam);};
+window.frame(0);window.ready=true;
+</script></body></html>

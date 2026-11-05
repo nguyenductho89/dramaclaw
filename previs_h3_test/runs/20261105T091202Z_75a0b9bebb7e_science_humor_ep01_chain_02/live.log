@@ -1,0 +1,5 @@
+    0.0s submitted prompt e906ef43-9ca2-4401-aafa-93367c4fe9a4
+    5.0s running=1 pending=0
+  537.8s event execution_start {"prompt_id": "e906ef43-9ca2-4401-aafa-93367c4fe9a4", "timestamp": 1793869927498}
+  537.8s event execution_cached {"nodes": ["1", "2", "3", "4", "7", "200"], "prompt_id": "e906ef43-9ca2-4401-aafa-93367c4fe9a4", "timestamp": 1793869927500}
+  537.8s event execution_success {"prompt_id": "e906ef43-9ca2-4401-aafa-93367c4fe9a4", "timestamp": 1793870463769}

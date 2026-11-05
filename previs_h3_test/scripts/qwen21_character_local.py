@@ -6,7 +6,8 @@
 portrait: text-to-image at 1344x768, writes portrait_sK.png.
 keyframes: edits the portrait using each chain's `keyframe_edit_prompt` and writes <skit_dir>/keyframes/chain_NN.png, the chain's
 `start_image`. The sampled latent comes from TextEncodeQwenImage21, so the output keeps the portrait's size, as the node's own
-tooltip requires for edits. Same recipe as `_runpod_qwen21_render_image_graph` (nanobanana_grid.py), rebuilt here so the box does
+tooltip requires for edits. Edits run at resolution 1536, then shrink to 1344x768: at about 1 megapixel this edit path leaves a
+painterly texture and a halo, whatever the steps, quantisation or Sage setting (keyframes/artifact_test*, 2026-11-05). Same recipe as `_runpod_qwen21_render_image_graph` (nanobanana_grid.py), rebuilt here so the box does
 not need that module's dependencies.
 
 Qwen-Image 2.1 is licensed for research and evaluation only: test output only, not for a monetised release.
@@ -30,6 +31,7 @@ TIMEOUT = 1800
 WIDTH, HEIGHT = 1344, 768
 T2I_STEPS = 25
 EDIT_STEPS = 40
+EDIT_RESOLUTION = 1536
 
 
 def loaders() -> dict:
@@ -62,7 +64,7 @@ def edit_graph(prompt: str, image_name: str, seed: int) -> dict:
             "9": {"class_type": "QwenImage21Cache", "inputs": {"model": ["1", 0], "device": "auto", "dtype": "default"}},
             "10": {"class_type": "LoadImage", "inputs": {"image": image_name}},
             "4": {"class_type": "TextEncodeQwenImage21", "inputs": {"clip": ["2", 0], "vae": ["3", 0], "prompt": prompt, "negative_prompt": "",
-                                                                    "resolution": 0, "images.image_1": ["10", 0]}},
+                                                                    "resolution": EDIT_RESOLUTION, "images.image_1": ["10", 0]}},
             **sampler(["9", 0], ["4", 2], seed, EDIT_STEPS)}
 
 
@@ -130,7 +132,12 @@ def main() -> None:
             continue
         dest.parent.mkdir(parents=True, exist_ok=True)
         t0 = time.time()
-        dest.write_bytes(render(graph))
+        data = render(graph)
+        dest.write_bytes(data)
+        if o.mode == "keyframes":
+            import io
+            from PIL import Image
+            Image.open(io.BytesIO(data)).convert("RGB").resize((WIDTH, HEIGHT), Image.LANCZOS).save(dest)
         timing.append({"file": dest.name, "seed": seed, "seconds": round(time.time() - t0, 1)})
         print(dest.name, f"{timing[-1]['seconds']}s", flush=True)
         log.write_text(json.dumps(timing, indent=1) + "\n")

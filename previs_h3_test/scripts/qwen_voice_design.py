@@ -4,7 +4,7 @@
 # ///
 """Design narrator voices with the open Qwen3-TTS VoiceDesign model; each clip is a candidate H3 voice_ref.
 
-  uv run previs_h3_test/scripts/qwen_voice_design.py previs_h3_test/scripts/skits/newton_pov/voice
+  uv run previs_h3_test/scripts/qwen_voice_design.py previs_h3_test/scripts/skits/newton_pov/voice [voices_config.json]
 
 The hosted Voice Design API answered "Model not exist" on this account (2026-11-04), so this runs the Apache-2.0 model
 `Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign` locally. Device: cuda if present, otherwise cpu (override with TTS_DEVICE).
@@ -36,17 +36,22 @@ VOICES = {
 
 def main() -> None:
     out = Path(sys.argv[1])
+    # Optional second argument: JSON file {"text": ..., "voices": {name: instruct}} to design other characters' voices.
+    text, voices = TEXT, VOICES
+    if len(sys.argv) > 2:
+        cfg = json.loads(Path(sys.argv[2]).read_text())
+        text, voices = cfg["text"], cfg["voices"]
     out.mkdir(parents=True, exist_ok=True)
     device = os.environ.get("TTS_DEVICE") or ("cuda:0" if torch.cuda.is_available() else "cpu")
     dtype = torch.bfloat16 if device.startswith("cuda") else torch.float32
     t0 = time.time()
     model = Qwen3TTSModel.from_pretrained(MODEL, device_map=device, dtype=dtype)
     print(f"loaded on {device} in {time.time() - t0:.0f}s", flush=True)
-    meta = {"model": MODEL, "device": device, "seed": SEED, "text": TEXT, "voices": {}}
-    for name, instruct in VOICES.items():
+    meta = {"model": MODEL, "device": device, "seed": SEED, "text": text, "voices": {}}
+    for name, instruct in voices.items():
         t0 = time.time()
         torch.manual_seed(SEED)
-        wavs, sr = model.generate_voice_design(text=TEXT, language="English", instruct=instruct)
+        wavs, sr = model.generate_voice_design(text=text, language="English", instruct=instruct)
         sf.write(out / f"{name}.wav", wavs[0], sr)
         secs = len(wavs[0]) / sr
         meta["voices"][name] = {"instruct": instruct, "seconds": round(secs, 2), "generate_s": round(time.time() - t0, 1)}

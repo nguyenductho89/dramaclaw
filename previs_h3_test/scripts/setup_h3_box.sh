@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Dựng ComfyUI 0.37.2 + H3 multishot trên máy thuê (Ubuntu 22.04, 1x RTX 4090) giống runpod/multishot/Dockerfile,
-# tải model fl2va về NVMe cục bộ. Chạy bằng root: bash setup_h3_box.sh [--with-ref2va] [--with-qwen] [--with-latent-refine]
+# tải model fl2va về NVMe cục bộ. Chạy bằng root: bash setup_h3_box.sh [--with-ref2va] [--with-qwen] [--with-seedvr2] [--with-latent-refine]
 # --with-latent-refine: upscaler latent LBH + LoRA turbo/LMS cho latent_refine_local.py (ý tưởng Open-H3-Regenerate-2K).
 set -euo pipefail
 # Thời gian từng bước cài đặt -> $ROOT/bench/setup_timing.csv (step,start_utc,seconds) để cải tiến sau này.
@@ -22,8 +22,8 @@ H3_PDD_ACC_COMMIT=311a65dd53832d8a5f8177a9d5fb923c09e35a90
 GGUF_COMMIT=6ea2651e7df66d7585f6ffee804b20e92fb38b8a
 H3_MULTISHOT_COMMIT=d7d197709fc93c1afb125e3db1dfd4ac0ae28c60
 LBH_UPSCALER_COMMIT=40316cf008b2fd8663263270669eb4da23f89d2c
-WITH_REF2VA=0; WITH_LATENT_REFINE=0; WITH_QWEN=0
-for a in "$@"; do case $a in --with-ref2va) WITH_REF2VA=1;; --with-latent-refine) WITH_LATENT_REFINE=1;; --with-qwen) WITH_QWEN=1;; *) echo "cờ lạ: $a"; exit 2;; esac; done
+WITH_REF2VA=0; WITH_LATENT_REFINE=0; WITH_QWEN=0; WITH_SEEDVR2=0
+for a in "$@"; do case $a in --with-ref2va) WITH_REF2VA=1;; --with-latent-refine) WITH_LATENT_REFINE=1;; --with-qwen) WITH_QWEN=1;; --with-seedvr2) WITH_SEEDVR2=1;; *) echo "cờ lạ: $a"; exit 2;; esac; done
 
 mark check_box; echo "== 1. kiểm máy"; nvidia-smi --query-gpu=name,driver_version,memory.total --format=csv; free -g | head -2; df -h $ROOT | tail -1
 DRV=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader | head -1 | cut -d. -f1)
@@ -62,6 +62,10 @@ if [ $WITH_QWEN = 1 ]; then
   hf_get Comfy-Org/Qwen-Image-2.1 qwen_image_2.1_int8_convrot diffusion_models
   hf_get Comfy-Org/Qwen-Image-2.1 qwen3vl_8b_int8_convrot text_encoders
   hf_get Comfy-Org/Qwen-Image-2.1 qwen_image_2.1_vae_bf16 vae
+fi
+if [ $WITH_SEEDVR2 = 1 ]; then
+  hf_get Comfy-Org/SeedVR2 seedvr2_7b_int8_convrot diffusion_models
+  hf_get Comfy-Org/SeedVR2 seedvr2_ema_vae_fp16 vae
 fi
 if [ $WITH_LATENT_REFINE = 1 ]; then
   hf_get LBH-123-AI/Minimax_h3_latent_Upscaler minimax_h3_latent_upscaler_3d_conv_v1_fp16 latent_upscale_models

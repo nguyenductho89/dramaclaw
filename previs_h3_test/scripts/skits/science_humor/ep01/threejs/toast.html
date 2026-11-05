@@ -1,0 +1,52 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+ html,body{margin:0;width:1920px;height:1080px;overflow:hidden;background:#1F2A30;font-family:'IBM Plex Sans',Helvetica,Arial,sans-serif;color:#F4EFE3}
+ canvas{position:absolute;inset:0}
+ #hud{position:absolute;right:90px;top:90px;width:760px;font-size:44px;line-height:1.5}
+ #note{position:absolute;right:90px;top:400px;width:760px;font-size:28px;opacity:.85}
+ b{color:#D9A441;font-weight:600}
+</style>
+<script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.170.0/build/three.module.js"}}</script>
+</head><body>
+<canvas id="c" width="1920" height="1080"></canvas>
+<div id="hud"></div>
+<div id="note">Simplified: Matthews's model at its limit case, in slow motion, ignoring bounce.</div>
+<script type="module">
+// Side view, metres. Numbers from toast_calc.py: 90 deg tipping (limit case), 241 deg/s for 0.364 s in the air, 65 cm fall.
+import * as THREE from 'three';
+const SPIN=241, AIR=0.364, H=0.75, A=0.05, G=9.81;
+const r=new THREE.WebGLRenderer({canvas:document.getElementById('c'),antialias:true,preserveDrawingBuffer:true});
+r.setSize(1920,1080,false);
+const s=new THREE.Scene(); s.background=new THREE.Color(0x1F2A30);
+s.add(new THREE.AmbientLight(0xffffff,1.6));
+const d=new THREE.DirectionalLight(0xffffff,1.6); d.position.set(.5,2,2); s.add(d);
+const box=(w,h,dp,c)=>new THREE.Mesh(new THREE.BoxGeometry(w,h,dp),new THREE.MeshLambertMaterial({color:c}));
+const top=box(.5,.03,.3,0x8a6a45); top.position.set(-.25,H-.015,0); s.add(top);
+const leg=box(.04,H-.03,.04,0x6f5436); leg.position.set(-.06,(H-.03)/2,0); s.add(leg);
+const floor=box(2.4,.02,.5,0x5B8DB8); floor.position.set(.32,-.01,0); s.add(floor);
+const toast=new THREE.Group();
+const bread=box(2*A,.012,.1,0xC98F4E); toast.add(bread);
+const butter=box(2*A*.9,.004,.09,0xF2D34F); butter.position.y=.008; toast.add(butter);
+s.add(toast);
+const cam=new THREE.PerspectiveCamera(30,16/9,.01,20); cam.position.set(.32,.42,1.7); cam.lookAt(.32,.4,0);
+const hud=document.getElementById('hud');
+const clamp=(x)=>Math.min(1,Math.max(0,x)), ease=(x)=>x*x*(3-2*x);
+// Seconds of screen time: hold 0-1, tipping 1-5, flight 5-11, settle 11-12, hold to 18.
+window.frame=(t)=>{
+  const tip=ease(clamp((t-1)/4))*90, f=clamp((t-5)/6), air=f*AIR, turn=SPIN*air, settle=clamp((t-11)/1);
+  const fall=.5*G*air*air;
+  const y=(H+.006)-fall-settle*(H+.006-.65-.012);
+  const angle=(tip+turn)+settle*(180-(90+SPIN*AIR));
+  toast.position.set(.001+(f*.05),y,0);
+  toast.rotation.z=-THREE.MathUtils.degToRad(angle);
+  const total=Math.round(tip+turn);
+  let h=`Tipping: <b>${Math.round(tip)}&deg;</b>`;
+  if(t>=5) h+=`<br>In the air: <b>${Math.round(turn)}&deg;</b>`;
+  if(t>=11) h+=`<br>Total: <b>${Math.round(90+SPIN*AIR)}&deg;</b>, about half a turn<br><b>Butter side down</b>`;
+  else if(t>=5) h+=`<br>Total: <b>${total}&deg;</b>`;
+  hud.innerHTML=h;
+  r.render(s,cam);
+};
+window.frame(0); window.ready=true;
+</script></body></html>

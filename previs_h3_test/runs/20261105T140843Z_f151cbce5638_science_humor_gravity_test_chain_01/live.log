@@ -1,0 +1,5 @@
+    0.0s submitted prompt 0ec8ed9a-269c-497f-935d-e79f185761f9
+    5.0s running=1 pending=0
+ 1600.5s event execution_start {"prompt_id": "0ec8ed9a-269c-497f-935d-e79f185761f9", "timestamp": 1793887730687}
+ 1600.5s event execution_cached {"nodes": [], "prompt_id": "0ec8ed9a-269c-497f-935d-e79f185761f9", "timestamp": 1793887730693}
+ 1600.5s event execution_success {"prompt_id": "0ec8ed9a-269c-497f-935d-e79f185761f9", "timestamp": 1793889329813}

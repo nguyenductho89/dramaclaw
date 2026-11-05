@@ -24,7 +24,7 @@ Tự đếm và tính lại, không tin số ghi trong file: số từ, âm ti�
 5. **CHẶN**: thoại trong chain khác lời trong file kịch bản.
 6. **CẢNH BÁO**: `<d>` trong chain hơn 3 âm tiết/giây, thoại bắt đầu trước 1.0 s, hoặc kết thúc cách cuối shot ngoài khoảng 1,2-2,0 s; thiếu câu lip-close chính thức sau `<d>`. Ghi phép tính.
 7. **CHẶN**: một shot có hai người nói. **CẢNH BÁO**: không ghi người còn lại im lặng và đang làm gì; sau mốc "finishes" không ghi cả hai im lặng, ngậm miệng tới khung cuối (H3 từng tự nói thêm ở đoạn trống).
-8. **CHẶN**: `<Audio N>` gán sai người (`<Audio 1>` là Barnaby, `<Audio 2>` là Ambrose). **CẢNH BÁO**: chain thiếu `voice_refs` hoặc sai thứ tự; giọng mô tả lệch giữa các shot mà không có lý do.
+8. **CHẶN**: `<Audio N>` gán sai người (`<Audio 1>` là Barnaby, `<Audio 2>` là Ambrose). **CẢNH BÁO**: chain thiếu `voice_refs` hoặc sai thứ tự; giọng mô tả lệch giữa các shot mà không có lý do; hai giọng cùng giọng vùng (Barnaby phải Mỹ, Ambrose phải Anh) hoặc chưa đo cosine giữa hai giọng mẫu.
 
 ## B. Nhất quán giữa các shot và chain
 
@@ -43,7 +43,7 @@ Tự đếm và tính lại, không tin số ghi trong file: số từ, âm ti�
 18. **CHẶN**: một shot có cắt cảnh, đổi góc, đổi địa điểm.
 19. **CHẶN**: thiếu một trong 6 mục `subject_definitions`, `summary`, `retention_analysis`, `detailed_description`, `overall_soundscape`, `non_diegetic_music`; thiếu câu giữ khung, dòng real-time hoặc dòng cấm chữ/logo.
 20. **CHẶN**: yêu cầu H3 vẽ chữ, phương trình, đồ thị, sơ đồ hoặc số; yêu cầu H3 diễn thí nghiệm hay chuyển động cần đúng vật lý.
-21. **CHẶN**: chain thiếu `reference_images` hoặc ảnh nền; số `<Picture N>`, `<Subject N>` lệch thứ tự ảnh gửi đi; nền làm khung đầu mà shot 1 không cho hai người đi vào khung. **CẢNH BÁO**: prompt Qwen dùng từ đẩy độ nét ("ultra detailed", "sharp", "realistic detail") hoặc từ phủ định ("no moustache", "no labels"), ảnh nền có người, hoặc sheet có chữ, ô viền, hay 3 người; `subject_definitions` không nói sheet là một người ở nhiều góc. **CẢNH BÁO**: số `<Picture N>` khi có `start_image` chưa kiểm chứng; xem khung hình shot 1 để chắc hai người không bị tráo.
+21. **CHẶN**: chain thiếu `reference_images` hoặc ảnh nền; số `<Picture N>`, `<Subject N>` lệch thứ tự ảnh gửi đi; nền làm khung đầu mà shot 1 không cho hai người đi vào khung. **CẢNH BÁO**: prompt Qwen dùng từ đẩy độ nét ("ultra detailed", "sharp", "realistic detail") hoặc từ phủ định ("no moustache", "no labels"), ảnh nền có người, hoặc sheet có chữ, ô viền, hay 3 người; `subject_definitions` không nói sheet là một người ở nhiều góc. **CHẶN**: nền vừa là `start_image` vừa nằm cùng ảnh sheet hai góc trên nền xám (đã gặp: H3 vẽ lại sheet trong khung). Mặc định là nền làm ảnh tham chiếu, `start_image` null.
 22. **CHẶN**: camera chuyển động.
 23. **CẢNH BÁO**: `non_diegetic_music` không phải `N/A`.
 24. **CẢNH BÁO**: không ghi vị trí theo phần ngang của khung; hai người chỉ "face each other" mà không ghi quay ba phần tư về máy, nên mặt dễ nghiêng; người đang nói quay đi chỗ khác; đồ cần thấy nằm ở phía xa máy; mặt người ngược nắng; thiếu cỡ và độ sâu của hai người; đỉnh đầu hay vật quan trọng sát mép trên/dưới (bản 1344×768 bị cắt khoảng 1% mỗi phía).

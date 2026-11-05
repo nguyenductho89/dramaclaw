@@ -143,7 +143,7 @@ def main() -> int:
                     cells = []
                     for x, h, e in found:
                         cells.append({"x": round(x), "px": h,
-                                      **{n: round(max((float(rec.match(e, r, cv2.FaceRecognizerSF_FR_COSINE)) for r in refs[n]), default=-1), 2) for n in refs}})
+                                      **{n: round(max((float(rec.match(e, r, cv2.FaceRecognizerSF_FR_COSINE)) for r in sheets[n]), default=-1), 2) for n in sheets}})
                     face_rows.append({"t": sec, "faces": cells})
                 row = {"shot": shot["index"], "expected_speaker": shot["speaker"], "voice_cosines": cos, "voice_best": best,
                        "voice_ok": best == shot["speaker"], "words_match": round(match, 2), "said": " ".join(said),

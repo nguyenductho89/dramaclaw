@@ -1,0 +1,793 @@
+=== start 2026-11-05T13:41:25Z paths=/opt/extra_model_paths.yaml extra=
+2026-11-05T13:41:26 [32m[INFO][0m setup plugin alembic.autogenerate.schemas
+2026-11-05T13:41:26 [32m[INFO][0m setup plugin alembic.autogenerate.tables
+2026-11-05T13:41:26 [32m[INFO][0m setup plugin alembic.autogenerate.types
+2026-11-05T13:41:26 [32m[INFO][0m setup plugin alembic.autogenerate.constraints
+2026-11-05T13:41:26 [32m[INFO][0m setup plugin alembic.autogenerate.defaults
+2026-11-05T13:41:26 [32m[INFO][0m setup plugin alembic.autogenerate.comments
+2026-11-05T13:41:26 [32m[INFO][0m setup plugin alembic.ext.checkconstraint_byname
+2026-11-05T13:41:26 [32m[INFO][0m Adding extra search path diffusion_models /opt/models/diffusion_models
+2026-11-05T13:41:26 [32m[INFO][0m Adding extra search path text_encoders /opt/models/text_encoders
+2026-11-05T13:41:26 [32m[INFO][0m Adding extra search path vae /opt/models/vae
+2026-11-05T13:41:26 [32m[INFO][0m Adding extra search path pdd_acc /opt/models/pdd_acc
+2026-11-05T13:41:26 [32m[INFO][0m Adding extra search path loras /opt/models/loras
+2026-11-05T13:41:26 [32m[INFO][0m Adding extra search path latent_upscale_models /opt/models/latent_upscale_models
+2026-11-05T13:41:29 [32m[INFO][0m Found comfy_kitchen backend cuda: {'available': True, 'disabled': False, 'unavailable_reason': None, 'capabilities': ['adaln', 'apply_rope', 'apply_rope1', 'apply_rope1_', 'apply_rope_', 'apply_rope_split_half', 'apply_rope_split_half1', 'apply_rope_split_half1_', 'apply_rope_split_half_', 'convrot_w4a4_linear', 'dequantize_convrot_w4a4_weight', 'dequantize_int8_convrot_weight', 'dequantize_int8_convrot_weight_dtype', 'dequantize_int8_simple', 'dequantize_int8_simple_dtype', 'dequantize_nvfp4', 'dequantize_per_tensor_fp8', 'dequantize_w4a8_int8_weight', 'fp16_conv3d', 'fp16_linear', 'gemv_awq_w4a16', 'group_norm_silu_pad3d', 'int8_linear', 'na3d', 'prepare_int4_weight_for_int8_linear', 'quantize_and_rotate_rowwise', 'quantize_convrot_w4a4_weight', 'quantize_int8_convrot_weight', 'quantize_int8_rowwise', 'quantize_int8_tensorwise', 'quantize_mxfp8', 'quantize_nvfp4', 'quantize_per_tensor_fp8', 'quantize_svdquant_w4a4', 'quantize_w4a8_int8_weight', 'rms_adaln', 'rms_rope', 'rms_rope1', 'rms_rope1_', 'rms_rope_', 'rms_rope_split_half', 'rms_rope_split_half1', 'rms_rope_split_half1_', 'rms_rope_split_half_', 'rotate_int8_convrot_weight', 'scaled_mm_nvfp4', 'scaled_mm_svdquant_w4a4', 'sol_attn', 'stochastic_rounding_fp8', 'w4a8_int8_linear']}
+2026-11-05T13:41:29 [32m[INFO][0m Found comfy_kitchen backend eager: {'available': True, 'disabled': False, 'unavailable_reason': None, 'capabilities': ['adaln', 'apply_rope', 'apply_rope1', 'apply_rope1_', 'apply_rope_', 'apply_rope_split_half', 'apply_rope_split_half1', 'apply_rope_split_half1_', 'apply_rope_split_half_', 'convrot_w4a4_linear', 'dequantize_convrot_w4a4_weight', 'dequantize_int8_convrot_weight', 'dequantize_int8_convrot_weight_dtype', 'dequantize_int8_embedding', 'dequantize_int8_simple', 'dequantize_int8_simple_dtype', 'dequantize_mxfp8', 'dequantize_nvfp4', 'dequantize_per_tensor_fp8', 'dequantize_w4a8_int8_weight', 'fp16_conv3d', 'fp16_linear', 'gemv_awq_w4a16', 'group_norm_silu_pad3d', 'int8_linear', 'na3d', 'prepare_int4_weight_for_int8_linear', 'quantize_and_rotate_rowwise', 'quantize_convrot_w4a4_weight', 'quantize_int8_convrot_weight', 'quantize_int8_rowwise', 'quantize_int8_tensorwise', 'quantize_mxfp8', 'quantize_nvfp4', 'quantize_per_tensor_fp8', 'quantize_svdquant_w4a4', 'quantize_w4a8_int8_weight', 'rms_adaln', 'rms_rope', 'rms_rope1', 'rms_rope1_', 'rms_rope_', 'rms_rope_split_half', 'rms_rope_split_half1', 'rms_rope_split_half1_', 'rms_rope_split_half_', 'rotate_int8_convrot_weight', 'scaled_mm_mxfp8', 'scaled_mm_nvfp4', 'scaled_mm_svdquant_w4a4', 'sol_attn', 'stochastic_rounding_fp8', 'w4a8_int8_linear']}
+2026-11-05T13:41:29 [32m[INFO][0m Found comfy_kitchen backend triton: {'available': True, 'disabled': True, 'unavailable_reason': None, 'capabilities': ['adaln', 'apply_rope', 'apply_rope1', 'apply_rope1_', 'apply_rope_', 'apply_rope_split_half', 'apply_rope_split_half1', 'apply_rope_split_half1_', 'apply_rope_split_half_', 'dequantize_nvfp4', 'dequantize_per_tensor_fp8', 'int8_linear', 'na3d', 'quantize_and_rotate_rowwise', 'quantize_int8_rowwise', 'quantize_mxfp8', 'quantize_nvfp4', 'quantize_per_tensor_fp8', 'rms_adaln', 'rms_rope', 'rms_rope1', 'rms_rope1_', 'rms_rope_', 'rms_rope_split_half', 'rms_rope_split_half1', 'rms_rope_split_half1_', 'rms_rope_split_half_', 'w4a8_int8_linear']}
+2026-11-05T13:41:29 [32m[INFO][0m Found comfy_kitchen backend hip: {'available': False, 'disabled': False, 'unavailable_reason': 'PyTorch ROCm/HIP runtime not available', 'capabilities': []}
+2026-11-05T13:41:29 [32m[INFO][0m Checkpoint files will always be loaded safely.
+2026-11-05T13:41:29 [32m[INFO][0m Total VRAM 24083 MB, total RAM 58174 MB
+2026-11-05T13:41:29 [32m[INFO][0m RAM limited by cgroup to 58174 MB (host has 127910 MB)
+2026-11-05T13:41:29 [32m[INFO][0m pytorch version: 2.11.0+cu130
+2026-11-05T13:41:29 [32m[INFO][0m Set vram state to: NORMAL_VRAM
+2026-11-05T13:41:29 [32m[INFO][0m Device: cuda:0 NVIDIA GeForce RTX 4090 : cudaMallocAsync
+2026-11-05T13:41:29 [32m[INFO][0m Using async weight offloading with 2 streams
+2026-11-05T13:41:29 [32m[INFO][0m Enabled pinned memory 41790
+2026-11-05T13:41:29 [32m[INFO][0m Using sage attention
+2026-11-05T13:41:32 [32m[INFO][0m aimdo: /project/src/control.c:283:INFO:comfy-aimdo inited for GPU: NVIDIA GeForce RTX 4090 (VRAM: 24082 MB)
+2026-11-05T13:41:32 [32m[INFO][0m DynamicVRAM support detected and enabled
+2026-11-05T13:41:32 [32m[INFO][0m Python version: 3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]
+2026-11-05T13:41:32 [32m[INFO][0m ComfyUI version: 0.37.2
+2026-11-05T13:41:32 [32m[INFO][0m comfy-aimdo version: 0.5.5
+2026-11-05T13:41:32 [32m[INFO][0m comfy-kitchen version: 0.2.35
+2026-11-05T13:41:32 [32m[INFO][0m comfyui-frontend-package version: 1.52.7
+2026-11-05T13:41:32 [32m[INFO][0m comfyui-workflow-templates version: 0.11.69
+2026-11-05T13:41:32 [32m[INFO][0m comfyui-embedded-docs version: 0.5.12
+2026-11-05T13:41:32 [32m[INFO][0m comfy-kitchen version: 0.2.35
+2026-11-05T13:41:32 [32m[INFO][0m comfy-aimdo version: 0.5.5
+2026-11-05T13:41:32 [32m[INFO][0m [Prompt Server] web root: /opt/venv/lib/python3.12/site-packages/comfyui_frontend_package/static
+2026-11-05T13:41:32 [32m[INFO][0m Asset seeder disabled
+2026-11-05T13:41:33 [32m[INFO][0m No OpenGL_accelerate module loaded: No module named 'OpenGL_accelerate'
+2026-11-05T13:41:34 [32m[INFO][0m ComfyUI-GGUF: Allowing full torch compile
+2026-11-05T13:41:34 [H3AVBank] extra_conds merge patch active (refs + keyframes compose; Motion-Context-compatible)
+2026-11-05T13:41:34 [H3RemoteEncode] serving POST /h3multishot/encode (clips load on first request)
+2026-11-05T13:41:34 [32m[INFO][0m [H3-Multishot] LTX rational upsampler: blur kernel follows the input device (partial-load safe)
+2026-11-05T13:41:34 [32m[INFO][0m [H3] taught ComfyUI-GGUF the 'minimax_h3' architecture (in memory; no files modified)
+2026-11-05T13:41:34 [32m[INFO][0m 
+2026-11-05T13:41:34 Import times for custom nodes:
+2026-11-05T13:41:34 [32m[INFO][0m    0.0 seconds: /opt/comfyui/custom_nodes/websocket_image_save.py
+2026-11-05T13:41:34 [32m[INFO][0m    0.0 seconds: /opt/comfyui/custom_nodes/ComfyUI-MiniMax-H3-PDD-Acc
+2026-11-05T13:41:34 [32m[INFO][0m    0.1 seconds: /opt/comfyui/custom_nodes/ComfyUI-GGUF
+2026-11-05T13:41:34 [32m[INFO][0m    0.1 seconds: /opt/comfyui/custom_nodes/ComfyUI-H3-Multishot
+2026-11-05T13:41:34 [32m[INFO][0m 
+2026-11-05T13:41:34 [32m[INFO][0m Context impl SQLiteImpl.
+2026-11-05T13:41:34 [32m[INFO][0m Will assume non-transactional DDL.
+2026-11-05T13:41:34 [32m[INFO][0m Context impl SQLiteImpl.
+2026-11-05T13:41:34 [32m[INFO][0m Will assume non-transactional DDL.
+2026-11-05T13:41:34 [32m[INFO][0m Running upgrade  -> 0001_assets, Initial assets schema
+2026-11-05T13:41:34 Revision ID: 0001_assets
+2026-11-05T13:41:34 Revises: None
+2026-11-05T13:41:34 Create Date: 2025-12-10 00:00:00
+2026-11-05T13:41:34 [32m[INFO][0m Running upgrade 0001_assets -> 0002_merge_to_asset_references, Merge AssetInfo and AssetCacheState into unified asset_references table.
+2026-11-05T13:41:34 [32m[INFO][0m Running upgrade 0002_merge_to_asset_references -> 0003_add_metadata_job_id, Add system_metadata and job_id columns to asset_references.
+2026-11-05T13:41:34 Change preview_id FK from assets.id to asset_references.id.
+2026-11-05T13:41:34 [32m[INFO][0m Running upgrade 0003_add_metadata_job_id -> 0004_drop_tag_type, Drop the vestigial tags.tag_type column.
+2026-11-05T13:41:34 [32m[INFO][0m Running upgrade 0004_drop_tag_type -> 0005_allow_case_sensitive_tags, Allow case-sensitive tag names.
+2026-11-05T13:41:34 [32m[INFO][0m Running upgrade 0005_allow_case_sensitive_tags -> 0006_add_loader_path, Add loader_path column to asset_references.
+2026-11-05T13:41:34 [32m[INFO][0m Running upgrade 0006_add_loader_path -> 0007_record_content_split, Record/content split.
+2026-11-05T13:41:34 [32m[INFO][0m Database upgraded from None to 0007_record_content_split
+2026-11-05T13:41:35 [32m[INFO][0m Using RAM pressure cache.
+2026-11-05T13:41:35 [32m[INFO][0m Starting server
+2026-11-05T13:41:35 [32m[INFO][0m To see the GUI go to: http://127.0.0.1:8188
+2026-11-05T13:42:30 [32m[INFO][0m got prompt
+2026-11-05T13:42:30 [32m[INFO][0m Model storage policy: fast_disk=False paths=['/opt/models/vae/qwen_image_2.1_vae_bf16.safetensors']
+2026-11-05T13:42:30 [32m[INFO][0m Using pytorch attention in VAE
+2026-11-05T13:42:30 [32m[INFO][0m Using pytorch attention in VAE
+2026-11-05T13:42:31 [32m[INFO][0m VAE load device: cuda:0, offload device: cpu, dtype: torch.bfloat16
+2026-11-05T13:42:31 [32m[INFO][0m Found quantization metadata version 1
+2026-11-05T13:42:31 [32m[INFO][0m Using MixedPrecisionOps for text encoder
+2026-11-05T13:42:31 [32m[INFO][0m Model storage policy: fast_disk=False paths=['/opt/models/text_encoders/qwen3vl_8b_int8_convrot.safetensors']
+2026-11-05T13:42:31 [32m[INFO][0m CLIP/text encoder model load device: cuda:0, offload device: cpu, current: cpu, dtype: torch.float16
+2026-11-05T13:42:31 [32m[INFO][0m Requested to load QwenImage21TEModel_
+2026-11-05T13:42:31 [32m[INFO][0m Model QwenImage21TEModel_ prepared for dynamic VRAM loading. 8916MB Staged. 0 patches attached. Force pre-loaded 255 weights: 849 KB.
+2026-11-05T13:42:33 [32m[INFO][0m Model QwenImage21TEModel_ prepared for dynamic VRAM loading. 8916MB Staged. 0 patches attached. Force pre-loaded 255 weights: 849 KB.
+2026-11-05T13:42:34 [32m[INFO][0m Found quantization metadata version 1
+2026-11-05T13:42:34 [32m[INFO][0m Detected mixed precision quantization
+2026-11-05T13:42:34 [32m[INFO][0m Using mixed precision operations
+2026-11-05T13:42:34 [32m[INFO][0m Native ops: float8_e5m2, int8_tensorwise, convrot_w4a4, asym_w4a8_int8, float8_e4m3fn , emulated ops: nvfp4, mxfp8
+2026-11-05T13:42:34 [32m[INFO][0m model weight dtype torch.bfloat16, manual cast: torch.bfloat16
+2026-11-05T13:42:34 [32m[INFO][0m model_type FLUX
+2026-11-05T13:42:34 [32m[INFO][0m Model storage policy: fast_disk=False paths=['/opt/models/diffusion_models/qwen_image_2.1_int8_convrot.safetensors']
+2026-11-05T13:42:34 [32m[INFO][0m Requested to load QwenImage21
+2026-11-05T13:42:34 [32m[INFO][0m Model QwenImage21 prepared for dynamic VRAM loading. 6920MB Staged. 0 patches attached. Force pre-loaded 65 weights: 63 KB.
+2026-11-05T13:42:34   0%|          | 0/25 [00:00<?, ?it/s]
+2026-11-05T13:42:37   0%|          | 0/25 [00:00<?, ?it/s,   Model Initializing ...  ]
+2026-11-05T13:42:37   0%|          | 0/25 [00:03<?, ?it/s,  Model Initialization complete!  ]
+2026-11-05T13:42:37   4%|▍         | 1/25 [00:03<01:26,  3.59s/it,  Model Initialization complete!  ]
+2026-11-05T13:42:37   4%|▍         | 1/25 [00:00<01:26,  3.59s/it]                                   
+2026-11-05T13:42:38  12%|█▏        | 3/25 [00:00<00:02,  9.97it/s]
+2026-11-05T13:42:38  16%|█▌        | 4/25 [00:00<00:03,  6.04it/s]
+2026-11-05T13:42:38  20%|██        | 5/25 [00:00<00:03,  6.06it/s]
+2026-11-05T13:42:38  24%|██▍       | 6/25 [00:00<00:03,  6.04it/s]
+2026-11-05T13:42:38  28%|██▊       | 7/25 [00:01<00:02,  6.04it/s]
+2026-11-05T13:42:38  32%|███▏      | 8/25 [00:01<00:02,  5.85it/s]
+2026-11-05T13:42:39  36%|███▌      | 9/25 [00:01<00:02,  5.98it/s]
+2026-11-05T13:42:39  40%|████      | 10/25 [00:01<00:02,  5.91it/s]
+2026-11-05T13:42:39  44%|████▍     | 11/25 [00:01<00:02,  5.98it/s]
+2026-11-05T13:42:39  48%|████▊     | 12/25 [00:01<00:02,  6.03it/s]
+2026-11-05T13:42:39  52%|█████▏    | 13/25 [00:02<00:01,  6.01it/s]
+2026-11-05T13:42:39  56%|█████▌    | 14/25 [00:02<00:01,  5.92it/s]
+2026-11-05T13:42:40  60%|██████    | 15/25 [00:02<00:01,  5.92it/s]
+2026-11-05T13:42:40  64%|██████▍   | 16/25 [00:02<00:01,  5.91it/s]
+2026-11-05T13:42:40  68%|██████▊   | 17/25 [00:02<00:01,  5.97it/s]
+2026-11-05T13:42:40  72%|███████▏  | 18/25 [00:02<00:01,  5.99it/s]
+2026-11-05T13:42:40  76%|███████▌  | 19/25 [00:03<00:00,  6.03it/s]
+2026-11-05T13:42:40  80%|████████  | 20/25 [00:03<00:00,  5.92it/s]
+2026-11-05T13:42:41  84%|████████▍ | 21/25 [00:03<00:00,  5.95it/s]
+2026-11-05T13:42:41  88%|████████▊ | 22/25 [00:03<00:00,  5.92it/s]
+2026-11-05T13:42:41  92%|█████████▏| 23/25 [00:03<00:00,  5.97it/s]
+2026-11-05T13:42:41  96%|█████████▌| 24/25 [00:03<00:00,  6.01it/s]
+2026-11-05T13:42:41 100%|██████████| 25/25 [00:04<00:00,  6.01it/s]
+2026-11-05T13:42:41 100%|██████████| 25/25 [00:04<00:00,  6.12it/s]
+2026-11-05T13:42:41 [32m[INFO][0m Requested to load WanVAE
+2026-11-05T13:42:41 [32m[INFO][0m Model WanVAE prepared for dynamic VRAM loading. 644MB Staged. 0 patches attached. Force pre-loaded 68 weights: 102 KB.
+2026-11-05T13:42:42 [32m[INFO][0m [32mPrompt executed in 11.62 seconds[0m
+2026-11-05T13:42:42 [32m[INFO][0m got prompt
+2026-11-05T13:42:42 [32m[INFO][0m Model QwenImage21 prepared for dynamic VRAM loading. 6920MB Staged. 0 patches attached. Force pre-loaded 65 weights: 63 KB.
+2026-11-05T13:42:42   0%|          | 0/25 [00:00<?, ?it/s]
+2026-11-05T13:42:43   0%|          | 0/25 [00:00<?, ?it/s,   Model Initializing ...  ]
+2026-11-05T13:42:43   0%|          | 0/25 [00:00<?, ?it/s,  Model Initialization complete!  ]
+2026-11-05T13:42:43   8%|▊         | 2/25 [00:00<00:02,  9.62it/s,  Model Initialization complete!  ]
+2026-11-05T13:42:43   8%|▊         | 2/25 [00:00<00:02,  9.62it/s]                                   
+2026-11-05T13:42:43  12%|█▏        | 3/25 [00:00<00:03,  6.04it/s]
+2026-11-05T13:42:43  16%|█▌        | 4/25 [00:00<00:03,  6.07it/s]
+2026-11-05T13:42:43  20%|██        | 5/25 [00:00<00:03,  6.01it/s]
+2026-11-05T13:42:43  24%|██▍       | 6/25 [00:00<00:03,  6.07it/s]
+2026-11-05T13:42:44  28%|██▊       | 7/25 [00:00<00:03,  5.93it/s]
+2026-11-05T13:42:44  32%|███▏      | 8/25 [00:01<00:02,  5.87it/s]
+2026-11-05T13:42:44  36%|███▌      | 9/25 [00:01<00:02,  5.88it/s]
+2026-11-05T13:42:44  40%|████      | 10/25 [00:01<00:02,  5.94it/s]
+2026-11-05T13:42:44  44%|████▍     | 11/25 [00:01<00:02,  6.04it/s]
+2026-11-05T13:42:44  48%|████▊     | 12/25 [00:01<00:02,  6.05it/s]
+2026-11-05T13:42:45  52%|█████▏    | 13/25 [00:02<00:02,  5.95it/s]
+2026-11-05T13:42:45  56%|█████▌    | 14/25 [00:02<00:01,  5.90it/s]
+2026-11-05T13:42:45  60%|██████    | 15/25 [00:02<00:01,  5.91it/s]
+2026-11-05T13:42:45  64%|██████▍   | 16/25 [00:02<00:01,  5.95it/s]
+2026-11-05T13:42:45  68%|██████▊   | 17/25 [00:02<00:01,  6.02it/s]
+2026-11-05T13:42:45  72%|███████▏  | 18/25 [00:02<00:01,  6.02it/s]
+2026-11-05T13:42:46  76%|███████▌  | 19/25 [00:03<00:01,  5.93it/s]
+2026-11-05T13:42:46  80%|████████  | 20/25 [00:03<00:00,  5.91it/s]
+2026-11-05T13:42:46  84%|████████▍ | 21/25 [00:03<00:00,  5.92it/s]
+2026-11-05T13:42:46  88%|████████▊ | 22/25 [00:03<00:00,  5.96it/s]
+2026-11-05T13:42:46  92%|█████████▏| 23/25 [00:03<00:00,  6.00it/s]
+2026-11-05T13:42:46  96%|█████████▌| 24/25 [00:03<00:00,  6.00it/s]
+2026-11-05T13:42:46 100%|██████████| 25/25 [00:04<00:00,  5.95it/s]
+2026-11-05T13:42:47 100%|██████████| 25/25 [00:04<00:00,  6.22it/s]
+2026-11-05T13:42:47 [32m[INFO][0m Model WanVAE prepared for dynamic VRAM loading. 644MB Staged. 0 patches attached. Force pre-loaded 68 weights: 102 KB.
+2026-11-05T13:42:47 [32m[INFO][0m [32mPrompt executed in 4.61 seconds[0m
+2026-11-05T13:42:48 [32m[INFO][0m got prompt
+2026-11-05T13:42:48 [32m[INFO][0m Model QwenImage21 prepared for dynamic VRAM loading. 6920MB Staged. 0 patches attached. Force pre-loaded 65 weights: 63 KB.
+2026-11-05T13:42:48   0%|          | 0/25 [00:00<?, ?it/s]
+2026-11-05T13:42:49   0%|          | 0/25 [00:00<?, ?it/s,   Model Initializing ...  ]
+2026-11-05T13:42:49   0%|          | 0/25 [00:00<?, ?it/s,  Model Initialization complete!  ]
+2026-11-05T13:42:49   8%|▊         | 2/25 [00:00<00:02,  9.61it/s,  Model Initialization complete!  ]
+2026-11-05T13:42:49   8%|▊         | 2/25 [00:00<00:02,  9.61it/s]                                   
+2026-11-05T13:42:49  12%|█▏        | 3/25 [00:00<00:03,  6.03it/s]
+2026-11-05T13:42:49  16%|█▌        | 4/25 [00:00<00:03,  5.82it/s]
+2026-11-05T13:42:49  20%|██        | 5/25 [00:00<00:03,  6.02it/s]
+2026-11-05T13:42:49  24%|██▍       | 6/25 [00:00<00:03,  6.22it/s]
+2026-11-05T13:42:50  28%|██▊       | 7/25 [00:00<00:03,  5.91it/s]
+2026-11-05T13:42:50  32%|███▏      | 8/25 [00:01<00:02,  5.89it/s]
+2026-11-05T13:42:50  36%|███▌      | 9/25 [00:01<00:02,  5.89it/s]
+2026-11-05T13:42:50  40%|████      | 10/25 [00:01<00:02,  5.96it/s]
+2026-11-05T13:42:50  44%|████▍     | 11/25 [00:01<00:02,  6.00it/s]
+2026-11-05T13:42:50  48%|████▊     | 12/25 [00:01<00:02,  6.04it/s]
+2026-11-05T13:42:51  52%|█████▏    | 13/25 [00:02<00:02,  5.89it/s]
+2026-11-05T13:42:51  56%|█████▌    | 14/25 [00:02<00:01,  5.86it/s]
+2026-11-05T13:42:51  60%|██████    | 15/25 [00:02<00:01,  5.92it/s]
+2026-11-05T13:42:51  64%|██████▍   | 16/25 [00:02<00:01,  5.96it/s]
+2026-11-05T13:42:51  68%|██████▊   | 17/25 [00:02<00:01,  6.03it/s]
+2026-11-05T13:42:51  72%|███████▏  | 18/25 [00:02<00:01,  5.96it/s]
+2026-11-05T13:42:52  76%|███████▌  | 19/25 [00:03<00:01,  5.91it/s]
+2026-11-05T13:42:52  80%|████████  | 20/25 [00:03<00:00,  5.91it/s]
+2026-11-05T13:42:52  84%|████████▍ | 21/25 [00:03<00:00,  5.92it/s]
+2026-11-05T13:42:52  88%|████████▊ | 22/25 [00:03<00:00,  5.94it/s]
+2026-11-05T13:42:52  92%|█████████▏| 23/25 [00:03<00:00,  6.03it/s]
+2026-11-05T13:42:52  96%|█████████▌| 24/25 [00:03<00:00,  5.98it/s]
+2026-11-05T13:42:52 100%|██████████| 25/25 [00:04<00:00,  5.94it/s]
+2026-11-05T13:42:53 100%|██████████| 25/25 [00:04<00:00,  6.21it/s]
+2026-11-05T13:42:53 [32m[INFO][0m Model WanVAE prepared for dynamic VRAM loading. 644MB Staged. 0 patches attached. Force pre-loaded 68 weights: 102 KB.
+2026-11-05T13:42:53 [32m[INFO][0m [32mPrompt executed in 4.61 seconds[0m
+2026-11-05T13:42:54 [32m[INFO][0m got prompt
+2026-11-05T13:42:54 [32m[INFO][0m Model QwenImage21TEModel_ prepared for dynamic VRAM loading. 8916MB Staged. 0 patches attached. Force pre-loaded 255 weights: 849 KB.
+2026-11-05T13:42:55 [32m[INFO][0m Model QwenImage21TEModel_ prepared for dynamic VRAM loading. 8916MB Staged. 0 patches attached. Force pre-loaded 255 weights: 849 KB.
+2026-11-05T13:42:55 [32m[INFO][0m Model QwenImage21 prepared for dynamic VRAM loading. 6920MB Staged. 0 patches attached. Force pre-loaded 65 weights: 63 KB.
+2026-11-05T13:42:55   0%|          | 0/25 [00:00<?, ?it/s]
+2026-11-05T13:42:55   0%|          | 0/25 [00:00<?, ?it/s,   Model Initializing ...  ]
+2026-11-05T13:42:55   0%|          | 0/25 [00:00<?, ?it/s,  Model Initialization complete!  ]
+2026-11-05T13:42:55   4%|▍         | 1/25 [00:00<00:06,  3.66it/s,  Model Initialization complete!  ]
+2026-11-05T13:42:55   4%|▍         | 1/25 [00:00<00:06,  3.66it/s]                                   
+2026-11-05T13:42:55   8%|▊         | 2/25 [00:00<00:03,  6.16it/s]
+2026-11-05T13:42:55  12%|█▏        | 3/25 [00:00<00:03,  6.04it/s]
+2026-11-05T13:42:56  16%|█▌        | 4/25 [00:00<00:03,  6.05it/s]
+2026-11-05T13:42:56  20%|██        | 5/25 [00:00<00:03,  6.03it/s]
+2026-11-05T13:42:56  24%|██▍       | 6/25 [00:00<00:03,  6.04it/s]
+2026-11-05T13:42:56  28%|██▊       | 7/25 [00:01<00:03,  5.90it/s]
+2026-11-05T13:42:56  32%|███▏      | 8/25 [00:01<00:02,  5.90it/s]
+2026-11-05T13:42:56  36%|███▌      | 9/25 [00:01<00:02,  5.88it/s]
+2026-11-05T13:42:57  40%|████      | 10/25 [00:01<00:02,  5.93it/s]
+2026-11-05T13:42:57  44%|████▍     | 11/25 [00:01<00:02,  6.03it/s]
+2026-11-05T13:42:57  48%|████▊     | 12/25 [00:01<00:02,  6.00it/s]
+2026-11-05T13:42:57  52%|█████▏    | 13/25 [00:02<00:02,  5.94it/s]
+2026-11-05T13:42:57  56%|█████▌    | 14/25 [00:02<00:01,  5.88it/s]
+2026-11-05T13:42:57  60%|██████    | 15/25 [00:02<00:01,  5.90it/s]
+2026-11-05T13:42:58  64%|██████▍   | 16/25 [00:02<00:01,  5.95it/s]
+2026-11-05T13:42:58  68%|██████▊   | 17/25 [00:02<00:01,  6.02it/s]
+2026-11-05T13:42:58  72%|███████▏  | 18/25 [00:03<00:01,  5.98it/s]
+2026-11-05T13:42:58  76%|███████▌  | 19/25 [00:03<00:01,  5.94it/s]
+2026-11-05T13:42:58  80%|████████  | 20/25 [00:03<00:00,  5.89it/s]
+2026-11-05T13:42:58  84%|████████▍ | 21/25 [00:03<00:00,  5.92it/s]
+2026-11-05T13:42:59  88%|████████▊ | 22/25 [00:03<00:00,  5.93it/s]
+2026-11-05T13:42:59  92%|█████████▏| 23/25 [00:03<00:00,  5.99it/s]
+2026-11-05T13:42:59  96%|█████████▌| 24/25 [00:04<00:00,  5.97it/s]
+2026-11-05T13:42:59 100%|██████████| 25/25 [00:04<00:00,  5.90it/s]
+2026-11-05T13:42:59 100%|██████████| 25/25 [00:04<00:00,  5.97it/s]
+2026-11-05T13:42:59 [32m[INFO][0m Model WanVAE prepared for dynamic VRAM loading. 644MB Staged. 0 patches attached. Force pre-loaded 68 weights: 102 KB.
+2026-11-05T13:42:59 [32m[INFO][0m [32mPrompt executed in 5.13 seconds[0m
+2026-11-05T13:43:00 [32m[INFO][0m got prompt
+2026-11-05T13:43:00 [32m[INFO][0m Model QwenImage21 prepared for dynamic VRAM loading. 6920MB Staged. 0 patches attached. Force pre-loaded 65 weights: 63 KB.
+2026-11-05T13:43:00   0%|          | 0/25 [00:00<?, ?it/s]
+2026-11-05T13:43:01   0%|          | 0/25 [00:00<?, ?it/s,   Model Initializing ...  ]
+2026-11-05T13:43:01   0%|          | 0/25 [00:00<?, ?it/s,  Model Initialization complete!  ]
+2026-11-05T13:43:01   8%|▊         | 2/25 [00:00<00:02,  9.64it/s,  Model Initialization complete!  ]
+2026-11-05T13:43:01   8%|▊         | 2/25 [00:00<00:02,  9.64it/s]                                   
+2026-11-05T13:43:01  12%|█▏        | 3/25 [00:00<00:03,  6.01it/s]
+2026-11-05T13:43:01  16%|█▌        | 4/25 [00:00<00:03,  6.05it/s]
+2026-11-05T13:43:01  20%|██        | 5/25 [00:00<00:03,  5.95it/s]
+2026-11-05T13:43:01  24%|██▍       | 6/25 [00:00<00:03,  6.08it/s]
+2026-11-05T13:43:02  28%|██▊       | 7/25 [00:01<00:03,  5.87it/s]
+2026-11-05T13:43:02  32%|███▏      | 8/25 [00:01<00:02,  5.86it/s]
+2026-11-05T13:43:02  36%|███▌      | 9/25 [00:01<00:02,  5.88it/s]
+2026-11-05T13:43:02  40%|████      | 10/25 [00:01<00:02,  5.96it/s]
+2026-11-05T13:43:02  44%|████▍     | 11/25 [00:01<00:02,  5.93it/s]
+2026-11-05T13:43:02  48%|████▊     | 12/25 [00:01<00:02,  6.07it/s]
+2026-11-05T13:43:03  52%|█████▏    | 13/25 [00:02<00:02,  5.93it/s]
+2026-11-05T13:43:03  56%|█████▌    | 14/25 [00:02<00:01,  5.89it/s]
+2026-11-05T13:43:03  60%|██████    | 15/25 [00:02<00:01,  5.84it/s]
+2026-11-05T13:43:03  64%|██████▍   | 16/25 [00:02<00:01,  5.91it/s]
+2026-11-05T13:43:03  68%|██████▊   | 17/25 [00:02<00:01,  5.99it/s]
+2026-11-05T13:43:03  72%|███████▏  | 18/25 [00:02<00:01,  5.99it/s]
+2026-11-05T13:43:04  76%|███████▌  | 19/25 [00:03<00:01,  5.93it/s]
+2026-11-05T13:43:04  80%|████████  | 20/25 [00:03<00:00,  5.88it/s]
+2026-11-05T13:43:04  84%|████████▍ | 21/25 [00:03<00:00,  5.91it/s]
+2026-11-05T13:43:04  88%|████████▊ | 22/25 [00:03<00:00,  5.95it/s]
+2026-11-05T13:43:04  92%|█████████▏| 23/25 [00:03<00:00,  5.98it/s]
+2026-11-05T13:43:04  96%|█████████▌| 24/25 [00:03<00:00,  5.98it/s]
+2026-11-05T13:43:04 100%|██████████| 25/25 [00:04<00:00,  5.95it/s]
+2026-11-05T13:43:05 100%|██████████| 25/25 [00:04<00:00,  6.20it/s]
+2026-11-05T13:43:05 [32m[INFO][0m Model WanVAE prepared for dynamic VRAM loading. 644MB Staged. 0 patches attached. Force pre-loaded 68 weights: 102 KB.
+2026-11-05T13:43:05 [32m[INFO][0m [32mPrompt executed in 4.61 seconds[0m
+2026-11-05T13:43:06 [32m[INFO][0m got prompt
+2026-11-05T13:43:06 [32m[INFO][0m Model QwenImage21 prepared for dynamic VRAM loading. 6920MB Staged. 0 patches attached. Force pre-loaded 65 weights: 63 KB.
+2026-11-05T13:43:06   0%|          | 0/25 [00:00<?, ?it/s]
+2026-11-05T13:43:07   0%|          | 0/25 [00:00<?, ?it/s,   Model Initializing ...  ]
+2026-11-05T13:43:07   0%|          | 0/25 [00:00<?, ?it/s,  Model Initialization complete!  ]
+2026-11-05T13:43:07   8%|▊         | 2/25 [00:00<00:02,  9.59it/s,  Model Initialization complete!  ]
+2026-11-05T13:43:07   8%|▊         | 2/25 [00:00<00:02,  9.59it/s]                                   
+2026-11-05T13:43:07  12%|█▏        | 3/25 [00:00<00:03,  6.01it/s]
+2026-11-05T13:43:07  16%|█▌        | 4/25 [00:00<00:03,  6.02it/s]
+2026-11-05T13:43:07  20%|██        | 5/25 [00:00<00:03,  6.02it/s]
+2026-11-05T13:43:07  24%|██▍       | 6/25 [00:00<00:03,  6.03it/s]
+2026-11-05T13:43:08  28%|██▊       | 7/25 [00:01<00:03,  5.88it/s]
+2026-11-05T13:43:08  32%|███▏      | 8/25 [00:01<00:02,  5.86it/s]
+2026-11-05T13:43:08  36%|███▌      | 9/25 [00:01<00:02,  5.86it/s]
+2026-11-05T13:43:08  40%|████      | 10/25 [00:01<00:02,  5.95it/s]
+2026-11-05T13:43:08  44%|████▍     | 11/25 [00:01<00:02,  6.00it/s]
+2026-11-05T13:43:08  48%|████▊     | 12/25 [00:01<00:02,  6.01it/s]
+2026-11-05T13:43:09  52%|█████▏    | 13/25 [00:02<00:02,  5.85it/s]
+2026-11-05T13:43:09  56%|█████▌    | 14/25 [00:02<00:01,  5.91it/s]
+2026-11-05T13:43:09  60%|██████    | 15/25 [00:02<00:01,  5.89it/s]
+2026-11-05T13:43:09  64%|██████▍   | 16/25 [00:02<00:01,  5.93it/s]
+2026-11-05T13:43:09  68%|██████▊   | 17/25 [00:02<00:01,  5.99it/s]
+2026-11-05T13:43:09  72%|███████▏  | 18/25 [00:02<00:01,  5.97it/s]
+2026-11-05T13:43:10  76%|███████▌  | 19/25 [00:03<00:01,  5.89it/s]
+2026-11-05T13:43:10  80%|████████  | 20/25 [00:03<00:00,  5.86it/s]
+2026-11-05T13:43:10  84%|████████▍ | 21/25 [00:03<00:00,  5.92it/s]
+2026-11-05T13:43:10  88%|████████▊ | 22/25 [00:03<00:00,  5.95it/s]
+2026-11-05T13:43:10  92%|█████████▏| 23/25 [00:03<00:00,  5.98it/s]
+2026-11-05T13:43:10  96%|█████████▌| 24/25 [00:03<00:00,  5.96it/s]
+2026-11-05T13:43:10 100%|██████████| 25/25 [00:04<00:00,  5.88it/s]
+2026-11-05T13:43:11 100%|██████████| 25/25 [00:04<00:00,  6.19it/s]
+2026-11-05T13:43:11 [32m[INFO][0m Model WanVAE prepared for dynamic VRAM loading. 644MB Staged. 0 patches attached. Force pre-loaded 68 weights: 102 KB.
+2026-11-05T13:43:11 [32m[INFO][0m [32mPrompt executed in 4.62 seconds[0m
+2026-11-05T13:43:12 [32m[INFO][0m got prompt
+2026-11-05T13:43:12 [32m[INFO][0m Model QwenImage21TEModel_ prepared for dynamic VRAM loading. 8916MB Staged. 0 patches attached. Force pre-loaded 255 weights: 849 KB.
+2026-11-05T13:43:13 [32m[INFO][0m Model QwenImage21TEModel_ prepared for dynamic VRAM loading. 8916MB Staged. 0 patches attached. Force pre-loaded 255 weights: 849 KB.
+2026-11-05T13:43:13 [32m[INFO][0m Model QwenImage21 prepared for dynamic VRAM loading. 6920MB Staged. 0 patches attached. Force pre-loaded 65 weights: 63 KB.
+2026-11-05T13:43:13   0%|          | 0/25 [00:00<?, ?it/s]
+2026-11-05T13:43:13   0%|          | 0/25 [00:00<?, ?it/s,   Model Initializing ...  ]
+2026-11-05T13:43:13   0%|          | 0/25 [00:00<?, ?it/s,  Model Initialization complete!  ]
+2026-11-05T13:43:13   4%|▍         | 1/25 [00:00<00:06,  3.66it/s,  Model Initialization complete!  ]
+2026-11-05T13:43:13   4%|▍         | 1/25 [00:00<00:06,  3.66it/s]                                   
+2026-11-05T13:43:13   8%|▊         | 2/25 [00:00<00:03,  6.23it/s]
+2026-11-05T13:43:13  12%|█▏        | 3/25 [00:00<00:03,  6.07it/s]
+2026-11-05T13:43:14  16%|█▌        | 4/25 [00:00<00:03,  6.07it/s]
+2026-11-05T13:43:14  20%|██        | 5/25 [00:00<00:03,  6.03it/s]
+2026-11-05T13:43:14  24%|██▍       | 6/25 [00:00<00:03,  6.03it/s]
+2026-11-05T13:43:14  28%|██▊       | 7/25 [00:01<00:03,  5.95it/s]
+2026-11-05T13:43:14  32%|███▏      | 8/25 [00:01<00:02,  5.88it/s]
+2026-11-05T13:43:14  36%|███▌      | 9/25 [00:01<00:02,  5.90it/s]
+2026-11-05T13:43:15  40%|████      | 10/25 [00:01<00:02,  5.97it/s]
+2026-11-05T13:43:15  44%|████▍     | 11/25 [00:01<00:02,  6.04it/s]
+2026-11-05T13:43:15  48%|████▊     | 12/25 [00:01<00:02,  6.05it/s]
+2026-11-05T13:43:15  52%|█████▏    | 13/25 [00:02<00:02,  5.94it/s]
+2026-11-05T13:43:15  56%|█████▌    | 14/25 [00:02<00:01,  5.90it/s]
+2026-11-05T13:43:15  60%|██████    | 15/25 [00:02<00:01,  5.91it/s]
+2026-11-05T13:43:16  64%|██████▍   | 16/25 [00:02<00:01,  5.97it/s]
+2026-11-05T13:43:16  68%|██████▊   | 17/25 [00:02<00:01,  6.01it/s]
+2026-11-05T13:43:16  72%|███████▏  | 18/25 [00:02<00:01,  6.03it/s]
+2026-11-05T13:43:16  76%|███████▌  | 19/25 [00:03<00:01,  5.94it/s]
+2026-11-05T13:43:16  80%|████████  | 20/25 [00:03<00:00,  5.90it/s]
+2026-11-05T13:43:16  84%|████████▍ | 21/25 [00:03<00:00,  5.94it/s]
+2026-11-05T13:43:17  88%|████████▊ | 22/25 [00:03<00:00,  5.97it/s]
+2026-11-05T13:43:17  92%|█████████▏| 23/25 [00:03<00:00,  6.01it/s]
+2026-11-05T13:43:17  96%|█████████▌| 24/25 [00:04<00:00,  6.00it/s]
+2026-11-05T13:43:17 100%|██████████| 25/25 [00:04<00:00,  5.93it/s]
+2026-11-05T13:43:17 100%|██████████| 25/25 [00:04<00:00,  5.99it/s]
+2026-11-05T13:43:17 [32m[INFO][0m Model WanVAE prepared for dynamic VRAM loading. 644MB Staged. 0 patches attached. Force pre-loaded 68 weights: 102 KB.
+2026-11-05T13:43:17 [32m[INFO][0m [32mPrompt executed in 5.10 seconds[0m
+2026-11-05T13:43:18 [32m[INFO][0m got prompt
+2026-11-05T13:43:18 [32m[INFO][0m Model QwenImage21 prepared for dynamic VRAM loading. 6920MB Staged. 0 patches attached. Force pre-loaded 65 weights: 63 KB.
+2026-11-05T13:43:18   0%|          | 0/25 [00:00<?, ?it/s]
+2026-11-05T13:43:19   0%|          | 0/25 [00:00<?, ?it/s,   Model Initializing ...  ]
+2026-11-05T13:43:19   0%|          | 0/25 [00:00<?, ?it/s,  Model Initialization complete!  ]
+2026-11-05T13:43:19   8%|▊         | 2/25 [00:00<00:02,  9.70it/s,  Model Initialization complete!  ]
+2026-11-05T13:43:19   8%|▊         | 2/25 [00:00<00:02,  9.70it/s]                                   
+2026-11-05T13:43:19  12%|█▏        | 3/25 [00:00<00:03,  6.03it/s]
+2026-11-05T13:43:19  16%|█▌        | 4/25 [00:00<00:03,  6.06it/s]
+2026-11-05T13:43:19  20%|██        | 5/25 [00:00<00:03,  6.06it/s]
+2026-11-05T13:43:19  24%|██▍       | 6/25 [00:00<00:03,  6.03it/s]
+2026-11-05T13:43:20  28%|██▊       | 7/25 [00:00<00:03,  5.91it/s]
+2026-11-05T13:43:20  32%|███▏      | 8/25 [00:01<00:02,  5.90it/s]
+2026-11-05T13:43:20  36%|███▌      | 9/25 [00:01<00:02,  5.89it/s]
+2026-11-05T13:43:20  40%|████      | 10/25 [00:01<00:02,  5.96it/s]
+2026-11-05T13:43:20  44%|████▍     | 11/25 [00:01<00:02,  6.02it/s]
+2026-11-05T13:43:20  48%|████▊     | 12/25 [00:01<00:02,  6.00it/s]
+2026-11-05T13:43:21  52%|█████▏    | 13/25 [00:02<00:02,  5.91it/s]
+2026-11-05T13:43:21  56%|█████▌    | 14/25 [00:02<00:01,  5.90it/s]
+2026-11-05T13:43:21  60%|██████    | 15/25 [00:02<00:01,  5.89it/s]
+2026-11-05T13:43:21  64%|██████▍   | 16/25 [00:02<00:01,  5.99it/s]
+2026-11-05T13:43:21  68%|██████▊   | 17/25 [00:02<00:01,  6.02it/s]
+2026-11-05T13:43:21  72%|███████▏  | 18/25 [00:02<00:01,  5.99it/s]
+2026-11-05T13:43:22  76%|███████▌  | 19/25 [00:03<00:01,  5.93it/s]
+2026-11-05T13:43:22  80%|████████  | 20/25 [00:03<00:00,  5.66it/s]
+2026-11-05T13:43:22  84%|████████▍ | 21/25 [00:03<00:00,  6.11it/s]
+2026-11-05T13:43:22  88%|████████▊ | 22/25 [00:03<00:00,  6.00it/s]
+2026-11-05T13:43:22  92%|█████████▏| 23/25 [00:03<00:00,  6.01it/s]
+2026-11-05T13:43:22  96%|█████████▌| 24/25 [00:03<00:00,  5.99it/s]
+2026-11-05T13:43:22 100%|██████████| 25/25 [00:04<00:00,  5.93it/s]
+2026-11-05T13:43:23 100%|██████████| 25/25 [00:04<00:00,  6.21it/s]
+2026-11-05T13:43:23 [32m[INFO][0m Model WanVAE prepared for dynamic VRAM loading. 644MB Staged. 0 patches attached. Force pre-loaded 68 weights: 102 KB.
+2026-11-05T13:43:23 [32m[INFO][0m [32mPrompt executed in 4.62 seconds[0m
+2026-11-05T13:43:24 [32m[INFO][0m got prompt
+2026-11-05T13:43:24 [32m[INFO][0m Model QwenImage21 prepared for dynamic VRAM loading. 6920MB Staged. 0 patches attached. Force pre-loaded 65 weights: 63 KB.
+2026-11-05T13:43:24   0%|          | 0/25 [00:00<?, ?it/s]
+2026-11-05T13:43:25   0%|          | 0/25 [00:00<?, ?it/s,   Model Initializing ...  ]
+2026-11-05T13:43:25   0%|          | 0/25 [00:00<?, ?it/s,  Model Initialization complete!  ]
+2026-11-05T13:43:25   8%|▊         | 2/25 [00:00<00:02,  9.70it/s,  Model Initialization complete!  ]
+2026-11-05T13:43:25   8%|▊         | 2/25 [00:00<00:02,  9.70it/s]                                   
+2026-11-05T13:43:25  12%|█▏        | 3/25 [00:00<00:03,  6.04it/s]
+2026-11-05T13:43:25  16%|█▌        | 4/25 [00:00<00:03,  6.02it/s]
+2026-11-05T13:43:25  20%|██        | 5/25 [00:00<00:03,  6.06it/s]
+2026-11-05T13:43:25  24%|██▍       | 6/25 [00:00<00:03,  6.03it/s]
+2026-11-05T13:43:26  28%|██▊       | 7/25 [00:00<00:03,  5.93it/s]
+2026-11-05T13:43:26  32%|███▏      | 8/25 [00:01<00:02,  5.87it/s]
+2026-11-05T13:43:26  36%|███▌      | 9/25 [00:01<00:02,  5.89it/s]
+2026-11-05T13:43:26  40%|████      | 10/25 [00:01<00:02,  5.96it/s]
+2026-11-05T13:43:26  44%|████▍     | 11/25 [00:01<00:02,  6.03it/s]
+2026-11-05T13:43:26  48%|████▊     | 12/25 [00:01<00:02,  6.03it/s]
+2026-11-05T13:43:27  52%|█████▏    | 13/25 [00:02<00:02,  5.94it/s]
+2026-11-05T13:43:27  56%|█████▌    | 14/25 [00:02<00:01,  5.93it/s]
+2026-11-05T13:43:27  60%|██████    | 15/25 [00:02<00:01,  5.90it/s]
+2026-11-05T13:43:27  64%|██████▍   | 16/25 [00:02<00:01,  5.95it/s]
+2026-11-05T13:43:27  68%|██████▊   | 17/25 [00:02<00:01,  6.01it/s]
+2026-11-05T13:43:27  72%|███████▏  | 18/25 [00:02<00:01,  5.98it/s]
+2026-11-05T13:43:28  76%|███████▌  | 19/25 [00:03<00:01,  5.92it/s]
+2026-11-05T13:43:28  80%|████████  | 20/25 [00:03<00:00,  5.92it/s]
+2026-11-05T13:43:28  84%|████████▍ | 21/25 [00:03<00:00,  5.91it/s]
+2026-11-05T13:43:28  88%|████████▊ | 22/25 [00:03<00:00,  5.95it/s]
+2026-11-05T13:43:28  92%|█████████▏| 23/25 [00:03<00:00,  5.99it/s]
+2026-11-05T13:43:28  96%|█████████▌| 24/25 [00:03<00:00,  5.99it/s]
+2026-11-05T13:43:28 100%|██████████| 25/25 [00:04<00:00,  5.93it/s]
+2026-11-05T13:43:29 100%|██████████| 25/25 [00:04<00:00,  6.22it/s]
+2026-11-05T13:43:29 [32m[INFO][0m Model WanVAE prepared for dynamic VRAM loading. 644MB Staged. 0 patches attached. Force pre-loaded 68 weights: 102 KB.
+2026-11-05T13:43:29 [32m[INFO][0m [32mPrompt executed in 4.62 seconds[0m
+2026-11-05T13:43:30 [32m[INFO][0m got prompt
+2026-11-05T13:43:30 [32m[INFO][0m Model QwenImage21TEModel_ prepared for dynamic VRAM loading. 8916MB Staged. 0 patches attached. Force pre-loaded 255 weights: 849 KB.
+2026-11-05T13:43:31 [32m[INFO][0m Model QwenImage21TEModel_ prepared for dynamic VRAM loading. 8916MB Staged. 0 patches attached. Force pre-loaded 255 weights: 849 KB.
+2026-11-05T13:43:31 [32m[INFO][0m Model QwenImage21 prepared for dynamic VRAM loading. 6920MB Staged. 0 patches attached. Force pre-loaded 65 weights: 63 KB.
+2026-11-05T13:43:31   0%|          | 0/25 [00:00<?, ?it/s]
+2026-11-05T13:43:31   0%|          | 0/25 [00:00<?, ?it/s,   Model Initializing ...  ]
+2026-11-05T13:43:31   0%|          | 0/25 [00:00<?, ?it/s,  Model Initialization complete!  ]
+2026-11-05T13:43:31   8%|▊         | 2/25 [00:00<00:02,  8.81it/s,  Model Initialization complete!  ]
+2026-11-05T13:43:31   8%|▊         | 2/25 [00:00<00:02,  8.81it/s]                                   
+2026-11-05T13:43:31  12%|█▏        | 3/25 [00:00<00:03,  6.05it/s]
+2026-11-05T13:43:31  16%|█▌        | 4/25 [00:00<00:03,  6.04it/s]
+2026-11-05T13:43:32  20%|██        | 5/25 [00:00<00:03,  6.03it/s]
+2026-11-05T13:43:32  24%|██▍       | 6/25 [00:00<00:03,  6.05it/s]
+2026-11-05T13:43:32  28%|██▊       | 7/25 [00:00<00:03,  5.90it/s]
+2026-11-05T13:43:32  32%|███▏      | 8/25 [00:01<00:02,  5.88it/s]
+2026-11-05T13:43:32  36%|███▌      | 9/25 [00:01<00:02,  5.88it/s]
+2026-11-05T13:43:32  40%|████      | 10/25 [00:01<00:02,  5.95it/s]
+2026-11-05T13:43:33  44%|████▍     | 11/25 [00:01<00:02,  5.96it/s]
+2026-11-05T13:43:33  48%|████▊     | 12/25 [00:01<00:02,  6.03it/s]
+2026-11-05T13:43:33  52%|█████▏    | 13/25 [00:02<00:02,  5.89it/s]
+2026-11-05T13:43:33  56%|█████▌    | 14/25 [00:02<00:01,  5.84it/s]
+2026-11-05T13:43:33  60%|██████    | 15/25 [00:02<00:01,  5.92it/s]
+2026-11-05T13:43:33  64%|██████▍   | 16/25 [00:02<00:01,  5.96it/s]
+2026-11-05T13:43:34  68%|██████▊   | 17/25 [00:02<00:01,  6.01it/s]
+2026-11-05T13:43:34  72%|███████▏  | 18/25 [00:02<00:01,  6.01it/s]
+2026-11-05T13:43:34  76%|███████▌  | 19/25 [00:03<00:01,  5.95it/s]
+2026-11-05T13:43:34  80%|████████  | 20/25 [00:03<00:00,  5.88it/s]
+2026-11-05T13:43:34  84%|████████▍ | 21/25 [00:03<00:00,  5.92it/s]
+2026-11-05T13:43:34  88%|████████▊ | 22/25 [00:03<00:00,  5.98it/s]
+2026-11-05T13:43:35  92%|█████████▏| 23/25 [00:03<00:00,  5.99it/s]
+2026-11-05T13:43:35  96%|█████████▌| 24/25 [00:03<00:00,  6.00it/s]
+2026-11-05T13:43:35 100%|██████████| 25/25 [00:04<00:00,  5.91it/s]
+2026-11-05T13:43:35 100%|██████████| 25/25 [00:04<00:00,  6.21it/s]
+2026-11-05T13:43:35 [32m[INFO][0m Model WanVAE prepared for dynamic VRAM loading. 644MB Staged. 0 patches attached. Force pre-loaded 68 weights: 102 KB.
+2026-11-05T13:43:35 [32m[INFO][0m [32mPrompt executed in 4.88 seconds[0m
+2026-11-05T13:43:36 [32m[INFO][0m got prompt
+2026-11-05T13:43:36 [32m[INFO][0m Model QwenImage21 prepared for dynamic VRAM loading. 6920MB Staged. 0 patches attached. Force pre-loaded 65 weights: 63 KB.
+2026-11-05T13:43:36   0%|          | 0/25 [00:00<?, ?it/s]
+2026-11-05T13:43:37   0%|          | 0/25 [00:00<?, ?it/s,   Model Initializing ...  ]
+2026-11-05T13:43:37   0%|          | 0/25 [00:00<?, ?it/s,  Model Initialization complete!  ]
+2026-11-05T13:43:37   8%|▊         | 2/25 [00:00<00:02,  9.65it/s,  Model Initialization complete!  ]
+2026-11-05T13:43:37   8%|▊         | 2/25 [00:00<00:02,  9.65it/s]                                   
+2026-11-05T13:43:37  12%|█▏        | 3/25 [00:00<00:03,  5.98it/s]
+2026-11-05T13:43:37  16%|█▌        | 4/25 [00:00<00:03,  6.05it/s]
+2026-11-05T13:43:37  20%|██        | 5/25 [00:00<00:03,  6.02it/s]
+2026-11-05T13:43:37  24%|██▍       | 6/25 [00:00<00:03,  6.01it/s]
+2026-11-05T13:43:38  28%|██▊       | 7/25 [00:01<00:03,  5.87it/s]
+2026-11-05T13:43:38  32%|███▏      | 8/25 [00:01<00:02,  5.88it/s]
+2026-11-05T13:43:38  36%|███▌      | 9/25 [00:01<00:02,  5.87it/s]
+2026-11-05T13:43:38  40%|████      | 10/25 [00:01<00:02,  5.93it/s]
+2026-11-05T13:43:38  44%|████▍     | 11/25 [00:01<00:02,  6.03it/s]
+2026-11-05T13:43:38  48%|████▊     | 12/25 [00:01<00:02,  6.00it/s]
+2026-11-05T13:43:39  52%|█████▏    | 13/25 [00:02<00:02,  5.92it/s]
+2026-11-05T13:43:39  56%|█████▌    | 14/25 [00:02<00:01,  5.93it/s]
+2026-11-05T13:43:39  60%|██████    | 15/25 [00:02<00:01,  5.90it/s]
+2026-11-05T13:43:39  64%|██████▍   | 16/25 [00:02<00:01,  5.96it/s]
+2026-11-05T13:43:39  68%|██████▊   | 17/25 [00:02<00:01,  6.01it/s]
+2026-11-05T13:43:39  72%|███████▏  | 18/25 [00:02<00:01,  6.00it/s]
+2026-11-05T13:43:40  76%|███████▌  | 19/25 [00:03<00:01,  5.94it/s]
+2026-11-05T13:43:40  80%|████████  | 20/25 [00:03<00:00,  5.90it/s]
+2026-11-05T13:43:40  84%|████████▍ | 21/25 [00:03<00:00,  5.88it/s]
+2026-11-05T13:43:40  88%|████████▊ | 22/25 [00:03<00:00,  5.96it/s]
+2026-11-05T13:43:40  92%|█████████▏| 23/25 [00:03<00:00,  6.01it/s]
+2026-11-05T13:43:40  96%|█████████▌| 24/25 [00:03<00:00,  5.99it/s]
+2026-11-05T13:43:40 100%|██████████| 25/25 [00:04<00:00,  5.91it/s]
+2026-11-05T13:43:41 100%|██████████| 25/25 [00:04<00:00,  6.20it/s]
+2026-11-05T13:43:41 [32m[INFO][0m Model WanVAE prepared for dynamic VRAM loading. 644MB Staged. 0 patches attached. Force pre-loaded 68 weights: 102 KB.
+2026-11-05T13:43:41 [32m[INFO][0m [32mPrompt executed in 4.59 seconds[0m
+2026-11-05T13:43:42 [32m[INFO][0m got prompt
+2026-11-05T13:43:42 [32m[INFO][0m Model QwenImage21 prepared for dynamic VRAM loading. 6920MB Staged. 0 patches attached. Force pre-loaded 65 weights: 63 KB.
+2026-11-05T13:43:42   0%|          | 0/25 [00:00<?, ?it/s]
+2026-11-05T13:43:43   0%|          | 0/25 [00:00<?, ?it/s,   Model Initializing ...  ]
+2026-11-05T13:43:43   0%|          | 0/25 [00:00<?, ?it/s,  Model Initialization complete!  ]
+2026-11-05T13:43:43   8%|▊         | 2/25 [00:00<00:02,  9.67it/s,  Model Initialization complete!  ]
+2026-11-05T13:43:43   8%|▊         | 2/25 [00:00<00:02,  9.67it/s]                                   
+2026-11-05T13:43:43  12%|█▏        | 3/25 [00:00<00:03,  6.02it/s]
+2026-11-05T13:43:43  16%|█▌        | 4/25 [00:00<00:03,  6.03it/s]
+2026-11-05T13:43:43  20%|██        | 5/25 [00:00<00:03,  6.05it/s]
+2026-11-05T13:43:43  24%|██▍       | 6/25 [00:00<00:03,  6.03it/s]
+2026-11-05T13:43:44  28%|██▊       | 7/25 [00:00<00:03,  5.92it/s]
+2026-11-05T13:43:44  32%|███▏      | 8/25 [00:01<00:02,  5.89it/s]
+2026-11-05T13:43:44  36%|███▌      | 9/25 [00:01<00:02,  5.87it/s]
+2026-11-05T13:43:44  40%|████      | 10/25 [00:01<00:02,  5.90it/s]
+2026-11-05T13:43:44  44%|████▍     | 11/25 [00:01<00:02,  6.05it/s]
+2026-11-05T13:43:44  48%|████▊     | 12/25 [00:01<00:02,  6.01it/s]
+2026-11-05T13:43:45  52%|█████▏    | 13/25 [00:02<00:02,  5.94it/s]
+2026-11-05T13:43:45  56%|█████▌    | 14/25 [00:02<00:01,  5.89it/s]
+2026-11-05T13:43:45  60%|██████    | 15/25 [00:02<00:01,  5.88it/s]
+2026-11-05T13:43:45  64%|██████▍   | 16/25 [00:02<00:01,  5.95it/s]
+2026-11-05T13:43:45  68%|██████▊   | 17/25 [00:02<00:01,  6.00it/s]
+2026-11-05T13:43:45  72%|███████▏  | 18/25 [00:02<00:01,  6.00it/s]
+2026-11-05T13:43:46  76%|███████▌  | 19/25 [00:03<00:01,  5.92it/s]
+2026-11-05T13:43:46  80%|████████  | 20/25 [00:03<00:00,  5.93it/s]
+2026-11-05T13:43:46  84%|████████▍ | 21/25 [00:03<00:00,  5.89it/s]
+2026-11-05T13:43:46  88%|████████▊ | 22/25 [00:03<00:00,  5.96it/s]
+2026-11-05T13:43:46  92%|█████████▏| 23/25 [00:03<00:00,  5.99it/s]
+2026-11-05T13:43:46  96%|█████████▌| 24/25 [00:03<00:00,  6.00it/s]
+2026-11-05T13:43:46 100%|██████████| 25/25 [00:04<00:00,  5.94it/s]
+2026-11-05T13:43:47 100%|██████████| 25/25 [00:04<00:00,  6.21it/s]
+2026-11-05T13:43:47 [32m[INFO][0m Model WanVAE prepared for dynamic VRAM loading. 644MB Staged. 0 patches attached. Force pre-loaded 68 weights: 102 KB.
+2026-11-05T13:43:47 [32m[INFO][0m [32mPrompt executed in 4.58 seconds[0m
+2026-11-05T14:08:44 [32m[INFO][0m Using RAM pressure cache.
+2026-11-05T14:08:50 [32m[INFO][0m got prompt
+2026-11-05T14:08:50 [32m[INFO][0m Model storage policy: fast_disk=False paths=['/opt/models/vae/minimax_h3_audio_vae_fp32.safetensors']
+2026-11-05T14:08:50 [32m[INFO][0m VAE load device: cuda:0, offload device: cpu, dtype: torch.float32
+2026-11-05T14:08:50 [32m[INFO][0m Model storage policy: fast_disk=False paths=['/opt/models/vae/minimax_h3_video_vae_fp16.safetensors']
+2026-11-05T14:08:50 [32m[INFO][0m VAE load device: cuda:0, offload device: cpu, dtype: torch.float16
+2026-11-05T14:08:50 [32m[INFO][0m Found quantization metadata version 1
+2026-11-05T14:08:50 [32m[INFO][0m Using MixedPrecisionOps for text encoder
+2026-11-05T14:08:51 [32m[INFO][0m Model storage policy: fast_disk=False paths=['/opt/models/text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors']
+2026-11-05T14:08:51 [32m[INFO][0m CLIP/text encoder model load device: cuda:0, offload device: cpu, current: cpu, dtype: torch.float16
+2026-11-05T14:08:51 [32m[INFO][0m Found quantization metadata version 1
+2026-11-05T14:08:51 [32m[INFO][0m Detected mixed precision quantization
+2026-11-05T14:08:51 [32m[INFO][0m Using mixed precision operations
+2026-11-05T14:08:51 [32m[INFO][0m Native ops: float8_e5m2, int8_tensorwise, convrot_w4a4, asym_w4a8_int8, float8_e4m3fn , emulated ops: nvfp4, mxfp8
+2026-11-05T14:08:51 [32m[INFO][0m model weight dtype torch.bfloat16, manual cast: torch.bfloat16
+2026-11-05T14:08:51 [32m[INFO][0m model_type FLOW_AV
+2026-11-05T14:08:51 [32m[INFO][0m Model storage policy: fast_disk=False paths=['/opt/models/diffusion_models/minimax_h3_ref2va_pruned_int8_convrot.safetensors']
+2026-11-05T14:08:51 [H3LoraStack] minimax_h3_ref2v_turbo_4step_v0.1_comfyui_bf16.safetensors @1
+2026-11-05T14:08:51 [32m[INFO][0m Requested to load MiniMaxH3AudioVAE
+2026-11-05T14:08:51 [32m[INFO][0m Model MiniMaxH3AudioVAE prepared for dynamic VRAM loading. 576MB Staged. 0 patches attached. Force pre-loaded 401 weights: 539 KB.
+2026-11-05T14:08:52 [H3Multishot] voice anchor: 13.4s ref audio rides in every shot as <Audio 1> (<Subject 1>'s voice).
+2026-11-05T14:08:52 [32m[INFO][0m Model MiniMaxH3AudioVAE prepared for dynamic VRAM loading. 576MB Staged. 0 patches attached. Force pre-loaded 401 weights: 539 KB.
+2026-11-05T14:08:52 [H3Multishot] voice anchor: 15.0s ref audio rides in every shot as <Audio 2> (<Subject 2>'s voice).
+2026-11-05T14:08:52 [32m[INFO][0m Requested to load MiniMaxH3VideoVAE
+2026-11-05T14:08:52 [32m[INFO][0m Model MiniMaxH3VideoVAE prepared for dynamic VRAM loading. 4965MB Staged. 0 patches attached. Force pre-loaded 128 weights: 352 KB.
+2026-11-05T14:08:52 [32m[INFO][0m Model MiniMaxH3VideoVAE prepared for dynamic VRAM loading. 4965MB Staged. 0 patches attached. Force pre-loaded 128 weights: 352 KB.
+2026-11-05T14:08:52 [H3Multishot] 2 reference image(s) ride in every shot as <Picture 1..2>.
+2026-11-05T14:08:52 [H3Multishot] I2V: shot 1 starts from the supplied image.
+2026-11-05T14:08:52 [H3Multishot] shot 1/4 (192f @ 1344x768)...
+2026-11-05T14:08:52 [32m[INFO][0m Requested to load MiniMaxH3TEModel_
+2026-11-05T14:08:52 [32m[INFO][0m Model MiniMaxH3TEModel_ prepared for dynamic VRAM loading. 14956MB Staged. 0 patches attached. Force pre-loaded 410 weights: 4572 KB.
+2026-11-05T14:09:01 [32m[INFO][0m Model MiniMaxH3VideoVAE prepared for dynamic VRAM loading. 4965MB Staged. 0 patches attached. Force pre-loaded 128 weights: 352 KB.
+2026-11-05T14:09:01 [H3Multishot] TE evicted; 21.2 GB free for the DiT
+2026-11-05T14:09:01 [H3AutoReserve] keeping all 19.5 GB of weights resident would leave only -13.4 GB of slack over the pool's bare need - under the 2.1 GB driver headroom every clean run keeps (2026-08-21: that squeeze ran 22x slower than streaming). Reserving 17.0 GB and letting ~16.4 GB of weights stream.
+2026-11-05T14:09:01 [H3AutoReserve] driver headroom: raising the reserve 17.0 -> 19.1 GB so ~18.5 GB of weights stream instead of riding the last few percent of VRAM (that zone measured 2-12x slower).
+2026-11-05T14:09:01 [H3AutoReserve] shape cells=5536256: reserving 19.1 GB (first run at this shape: 88% of free | resident-clamp REFUSED (slack -13.4 GB < headroom 2.1 GB): streaming | +driver headroom 17.0 -> 19.1 GB)
+2026-11-05T14:09:01 [32m[INFO][0m Requested to load MiniMaxH3
+2026-11-05T14:09:02 [32m[INFO][0m Model MiniMaxH3 prepared for dynamic VRAM loading. 19995MB Staged. 208 patches attached. Force pre-loaded 210 weights: 1175 KB.
+2026-11-05T14:09:02   0%|          | 0/12 [00:00<?, ?it/s]
+2026-11-05T14:09:34   0%|          | 0/12 [00:00<?, ?it/s,   Model Initializing ...  ]
+2026-11-05T14:09:34   0%|          | 0/12 [00:31<?, ?it/s,  Model Initialization complete!  ]
+2026-11-05T14:10:01   8%|▊         | 1/12 [00:31<05:43, 31.23s/it,  Model Initialization complete!  ]
+2026-11-05T14:10:01   8%|▊         | 1/12 [00:54<05:43, 31.23s/it]                                   
+2026-11-05T14:10:31  17%|█▋        | 2/12 [00:54<04:34, 27.42s/it]
+2026-11-05T14:11:01  25%|██▌       | 3/12 [01:24<04:29, 30.00s/it]
+2026-11-05T14:11:31  33%|███▎      | 4/12 [01:54<04:00, 30.01s/it]
+2026-11-05T14:12:01  42%|████▏     | 5/12 [02:24<03:30, 30.01s/it]
+2026-11-05T14:12:31  50%|█████     | 6/12 [02:54<03:00, 30.01s/it]
+2026-11-05T14:13:01  58%|█████▊    | 7/12 [03:24<02:30, 30.01s/it]
+2026-11-05T14:13:31  67%|██████▋   | 8/12 [03:54<02:00, 30.01s/it]
+2026-11-05T14:14:01  75%|███████▌  | 9/12 [04:24<01:29, 29.99s/it]
+2026-11-05T14:14:31  83%|████████▎ | 10/12 [04:54<00:59, 29.99s/it]
+2026-11-05T14:15:01  92%|█████████▏| 11/12 [05:24<00:29, 29.99s/it]
+2026-11-05T14:15:01 100%|██████████| 12/12 [05:54<00:00, 30.01s/it]
+2026-11-05T14:15:04 100%|██████████| 12/12 [05:54<00:00, 29.57s/it]
+2026-11-05T14:15:04 [32m[INFO][0m Requested to load MiniMaxH3VideoVAE
+2026-11-05T14:15:04 [32m[INFO][0m 0 models unloaded.
+2026-11-05T14:15:04 [32m[INFO][0m Model MiniMaxH3VideoVAE prepared for dynamic VRAM loading. 4965MB Staged. 0 patches attached. Force pre-loaded 128 weights: 352 KB.
+2026-11-05T14:15:27 [32m[INFO][0m Requested to load MiniMaxH3AudioVAE
+2026-11-05T14:15:27 [32m[INFO][0m Model MiniMaxH3AudioVAE prepared for dynamic VRAM loading. 576MB Staged. 0 patches attached. Force pre-loaded 401 weights: 539 KB.
+2026-11-05T14:15:29 [H3Multishot] shot 1/4 saved -> /opt/comfyui/output/video/H3_SHOTS/shot_00001_.mp4
+2026-11-05T14:15:30 [H3Multishot] shot 2/4 (192f @ 1344x768)...
+2026-11-05T14:15:30 [H3Multishot] Ref2VA sections added for 5 reference item(s) (2 portrait, 1 continuation frame(s))
+2026-11-05T14:15:30 [32m[INFO][0m Model MiniMaxH3TEModel_ prepared for dynamic VRAM loading. 14956MB Staged. 0 patches attached. Force pre-loaded 410 weights: 4572 KB.
+2026-11-05T14:15:38 [32m[INFO][0m Model MiniMaxH3VideoVAE prepared for dynamic VRAM loading. 4965MB Staged. 0 patches attached. Force pre-loaded 128 weights: 352 KB.
+2026-11-05T14:15:41 [H3Multishot] TE evicted; 15.1 GB free for the DiT
+2026-11-05T14:15:41 [32m[INFO][0m Requested to load MiniMaxH3
+2026-11-05T14:15:41 [32m[INFO][0m 0 models unloaded.
+2026-11-05T14:15:41 [32m[INFO][0m Model MiniMaxH3 prepared for dynamic VRAM loading. 19995MB Staged. 208 patches attached. Force pre-loaded 210 weights: 1175 KB.
+2026-11-05T14:15:41   0%|          | 0/12 [00:00<?, ?it/s]
+2026-11-05T14:16:12   0%|          | 0/12 [00:00<?, ?it/s,   Model Initializing ...  ]
+2026-11-05T14:16:12   0%|          | 0/12 [00:30<?, ?it/s,  Model Initialization complete!  ]
+2026-11-05T14:16:40   8%|▊         | 1/12 [00:30<05:40, 30.97s/it,  Model Initialization complete!  ]
+2026-11-05T14:16:40   8%|▊         | 1/12 [00:54<05:40, 30.97s/it]                                   
+2026-11-05T14:17:10  17%|█▋        | 2/12 [00:54<04:34, 27.46s/it]
+2026-11-05T14:17:40  25%|██▌       | 3/12 [01:24<04:29, 29.97s/it]
+2026-11-05T14:18:10  33%|███▎      | 4/12 [01:54<03:59, 29.99s/it]
+2026-11-05T14:18:40  42%|████▏     | 5/12 [02:24<03:29, 29.99s/it]
+2026-11-05T14:19:10  50%|█████     | 6/12 [02:54<02:59, 30.00s/it]
+2026-11-05T14:19:40  58%|█████▊    | 7/12 [03:24<02:29, 29.99s/it]
+2026-11-05T14:20:09  67%|██████▋   | 8/12 [03:54<01:59, 29.95s/it]
+2026-11-05T14:20:39  75%|███████▌  | 9/12 [04:24<01:29, 29.87s/it]
+2026-11-05T14:21:09  83%|████████▎ | 10/12 [04:54<00:59, 29.93s/it]
+2026-11-05T14:21:39  92%|█████████▏| 11/12 [05:24<00:29, 29.85s/it]
+2026-11-05T14:21:39 100%|██████████| 12/12 [05:54<00:00, 29.86s/it]
+2026-11-05T14:21:42 100%|██████████| 12/12 [05:54<00:00, 29.53s/it]
+2026-11-05T14:21:42 [32m[INFO][0m Requested to load MiniMaxH3VideoVAE
+2026-11-05T14:21:42 [32m[INFO][0m 0 models unloaded.
+2026-11-05T14:21:42 [32m[INFO][0m Model MiniMaxH3VideoVAE prepared for dynamic VRAM loading. 4965MB Staged. 0 patches attached. Force pre-loaded 128 weights: 352 KB.
+2026-11-05T14:22:05 [32m[INFO][0m Requested to load MiniMaxH3AudioVAE
+2026-11-05T14:22:05 [32m[INFO][0m Model MiniMaxH3AudioVAE prepared for dynamic VRAM loading. 576MB Staged. 0 patches attached. Force pre-loaded 401 weights: 539 KB.
+2026-11-05T14:22:07 [H3Multishot] shot 2/4 saved -> /opt/comfyui/output/video/H3_SHOTS/shot_00002_.mp4
+2026-11-05T14:22:07 [H3Multishot] smart weld: seam cut moved 0ms into the head (quietest gap), word onsets preserved
+2026-11-05T14:22:07 [H3Multishot] shot 3/4 (192f @ 1344x768)...
+2026-11-05T14:22:07 [32m[INFO][0m Requested to load MiniMaxH3TEModel_
+2026-11-05T14:22:07 [32m[INFO][0m Model MiniMaxH3TEModel_ prepared for dynamic VRAM loading. 14956MB Staged. 0 patches attached. Force pre-loaded 410 weights: 4572 KB.
+2026-11-05T14:22:16 [32m[INFO][0m Model MiniMaxH3VideoVAE prepared for dynamic VRAM loading. 4965MB Staged. 0 patches attached. Force pre-loaded 128 weights: 352 KB.
+2026-11-05T14:22:18 [H3Multishot] TE evicted; 15.1 GB free for the DiT
+2026-11-05T14:22:18 [32m[INFO][0m Requested to load MiniMaxH3
+2026-11-05T14:22:18 [32m[INFO][0m 0 models unloaded.
+2026-11-05T14:22:18 [32m[INFO][0m Model MiniMaxH3 prepared for dynamic VRAM loading. 19995MB Staged. 208 patches attached. Force pre-loaded 210 weights: 1175 KB.
+2026-11-05T14:22:19   0%|          | 0/12 [00:00<?, ?it/s]
+2026-11-05T14:22:50   0%|          | 0/12 [00:00<?, ?it/s,   Model Initializing ...  ]
+2026-11-05T14:22:50   0%|          | 0/12 [00:30<?, ?it/s,  Model Initialization complete!  ]
+2026-11-05T14:23:17   8%|▊         | 1/12 [00:30<05:40, 30.94s/it,  Model Initialization complete!  ]
+2026-11-05T14:23:17   8%|▊         | 1/12 [00:54<05:40, 30.94s/it]                                   
+2026-11-05T14:23:47  17%|█▋        | 2/12 [00:54<04:34, 27.44s/it]
+2026-11-05T14:24:17  25%|██▌       | 3/12 [01:24<04:29, 29.96s/it]
+2026-11-05T14:24:47  33%|███▎      | 4/12 [01:54<03:59, 29.99s/it]
+2026-11-05T14:25:17  42%|████▏     | 5/12 [02:24<03:29, 29.98s/it]
+2026-11-05T14:25:47  50%|█████     | 6/12 [02:54<03:00, 30.00s/it]
+2026-11-05T14:26:17  58%|█████▊    | 7/12 [03:24<02:29, 29.99s/it]
+2026-11-05T14:26:47  67%|██████▋   | 8/12 [03:54<01:59, 29.94s/it]
+2026-11-05T14:27:17  75%|███████▌  | 9/12 [04:24<01:29, 29.86s/it]
+2026-11-05T14:27:47  83%|████████▎ | 10/12 [04:54<00:59, 29.93s/it]
+2026-11-05T14:28:17  92%|█████████▏| 11/12 [05:24<00:29, 29.85s/it]
+2026-11-05T14:28:17 100%|██████████| 12/12 [05:54<00:00, 29.88s/it]
+2026-11-05T14:28:19 100%|██████████| 12/12 [05:54<00:00, 29.52s/it]
+2026-11-05T14:28:19 [32m[INFO][0m Requested to load MiniMaxH3VideoVAE
+2026-11-05T14:28:19 [32m[INFO][0m 0 models unloaded.
+2026-11-05T14:28:19 [32m[INFO][0m Model MiniMaxH3VideoVAE prepared for dynamic VRAM loading. 4965MB Staged. 0 patches attached. Force pre-loaded 128 weights: 352 KB.
+2026-11-05T14:28:42 [32m[INFO][0m Requested to load MiniMaxH3AudioVAE
+2026-11-05T14:28:42 [32m[INFO][0m Model MiniMaxH3AudioVAE prepared for dynamic VRAM loading. 576MB Staged. 0 patches attached. Force pre-loaded 401 weights: 539 KB.
+2026-11-05T14:28:44 [H3Multishot] shot 3/4 saved -> /opt/comfyui/output/video/H3_SHOTS/shot_00003_.mp4
+2026-11-05T14:28:44 [H3Multishot] smart weld: seam cut moved 50ms into the head (quietest gap), word onsets preserved
+2026-11-05T14:28:44 [H3Multishot] shot 4/4 (192f @ 1344x768)...
+2026-11-05T14:28:44 [32m[INFO][0m Requested to load MiniMaxH3TEModel_
+2026-11-05T14:28:44 [32m[INFO][0m Model MiniMaxH3TEModel_ prepared for dynamic VRAM loading. 14956MB Staged. 0 patches attached. Force pre-loaded 410 weights: 4572 KB.
+2026-11-05T14:28:54 [32m[INFO][0m Model MiniMaxH3VideoVAE prepared for dynamic VRAM loading. 4965MB Staged. 0 patches attached. Force pre-loaded 128 weights: 352 KB.
+2026-11-05T14:28:56 [H3Multishot] TE evicted; 15.1 GB free for the DiT
+2026-11-05T14:28:56 [32m[INFO][0m Requested to load MiniMaxH3
+2026-11-05T14:28:56 [32m[INFO][0m 0 models unloaded.
+2026-11-05T14:28:56 [32m[INFO][0m Model MiniMaxH3 prepared for dynamic VRAM loading. 19995MB Staged. 208 patches attached. Force pre-loaded 210 weights: 1175 KB.
+2026-11-05T14:28:57   0%|          | 0/12 [00:00<?, ?it/s]
+2026-11-05T14:29:28   0%|          | 0/12 [00:00<?, ?it/s,   Model Initializing ...  ]
+2026-11-05T14:29:28   0%|          | 0/12 [00:30<?, ?it/s,  Model Initialization complete!  ]
+2026-11-05T14:29:55   8%|▊         | 1/12 [00:30<05:40, 30.98s/it,  Model Initialization complete!  ]
+2026-11-05T14:29:55   8%|▊         | 1/12 [00:54<05:40, 30.98s/it]                                   
+2026-11-05T14:30:25  17%|█▋        | 2/12 [00:54<04:34, 27.43s/it]
+2026-11-05T14:30:55  25%|██▌       | 3/12 [01:24<04:29, 29.97s/it]
+2026-11-05T14:31:25  33%|███▎      | 4/12 [01:54<03:59, 29.92s/it]
+2026-11-05T14:31:55  42%|████▏     | 5/12 [02:24<03:29, 29.89s/it]
+2026-11-05T14:32:25  50%|█████     | 6/12 [02:54<02:59, 29.96s/it]
+2026-11-05T14:32:55  58%|█████▊    | 7/12 [03:24<02:29, 29.95s/it]
+2026-11-05T14:33:25  67%|██████▋   | 8/12 [03:54<01:59, 29.86s/it]
+2026-11-05T14:33:55  75%|███████▌  | 9/12 [04:24<01:29, 29.88s/it]
+2026-11-05T14:34:24  83%|████████▎ | 10/12 [04:54<00:59, 29.89s/it]
+2026-11-05T14:34:54  92%|█████████▏| 11/12 [05:24<00:29, 29.89s/it]
+2026-11-05T14:34:54 100%|██████████| 12/12 [05:53<00:00, 29.90s/it]
+2026-11-05T14:34:57 100%|██████████| 12/12 [05:53<00:00, 29.50s/it]
+2026-11-05T14:34:57 [32m[INFO][0m Requested to load MiniMaxH3VideoVAE
+2026-11-05T14:34:57 [32m[INFO][0m 0 models unloaded.
+2026-11-05T14:34:57 [32m[INFO][0m Model MiniMaxH3VideoVAE prepared for dynamic VRAM loading. 4965MB Staged. 0 patches attached. Force pre-loaded 128 weights: 352 KB.
+2026-11-05T14:35:20 [32m[INFO][0m Requested to load MiniMaxH3AudioVAE
+2026-11-05T14:35:20 [32m[INFO][0m Model MiniMaxH3AudioVAE prepared for dynamic VRAM loading. 576MB Staged. 0 patches attached. Force pre-loaded 401 weights: 539 KB.
+2026-11-05T14:35:22 [H3Multishot] shot 4/4 saved -> /opt/comfyui/output/video/H3_SHOTS/shot_00004_.mp4
+2026-11-05T14:35:22 [H3Multishot] smart weld: seam cut moved 721ms into the head (quietest gap), word onsets preserved
+2026-11-05T14:35:23 [H3Multishot] done: 4 shots, 765 frames (~31.9s).
+2026-11-05T14:35:23 [32m[INFO][0m Comfy model compiler graph breaks: 8, rogues: 0
+2026-11-05T14:35:29 [32m[INFO][0m [32mPrompt executed in 00:26:39[0m
+2026-11-05T14:35:38 [32m[INFO][0m got prompt
+2026-11-05T14:35:38 [32m[INFO][0m Model MiniMaxH3AudioVAE prepared for dynamic VRAM loading. 576MB Staged. 0 patches attached. Force pre-loaded 401 weights: 539 KB.
+2026-11-05T14:35:39 [H3Multishot] voice anchor: 13.4s ref audio rides in every shot as <Audio 1> (<Subject 1>'s voice).
+2026-11-05T14:35:39 [32m[INFO][0m Model MiniMaxH3AudioVAE prepared for dynamic VRAM loading. 576MB Staged. 0 patches attached. Force pre-loaded 401 weights: 539 KB.
+2026-11-05T14:35:39 [H3Multishot] voice anchor: 15.0s ref audio rides in every shot as <Audio 2> (<Subject 2>'s voice).
+2026-11-05T14:35:39 [32m[INFO][0m Model MiniMaxH3VideoVAE prepared for dynamic VRAM loading. 4965MB Staged. 0 patches attached. Force pre-loaded 128 weights: 352 KB.
+2026-11-05T14:35:39 [32m[INFO][0m Model MiniMaxH3VideoVAE prepared for dynamic VRAM loading. 4965MB Staged. 0 patches attached. Force pre-loaded 128 weights: 352 KB.
+2026-11-05T14:35:39 [32m[INFO][0m Model MiniMaxH3VideoVAE prepared for dynamic VRAM loading. 4965MB Staged. 0 patches attached. Force pre-loaded 128 weights: 352 KB.
+2026-11-05T14:35:39 [H3Multishot] 3 reference image(s) ride in every shot as <Picture 1..3>.
+2026-11-05T14:35:39 [H3Multishot] shot 1/4 (192f @ 1344x768)...
+2026-11-05T14:35:39 [32m[INFO][0m Requested to load MiniMaxH3TEModel_
+2026-11-05T14:35:39 [32m[INFO][0m Model MiniMaxH3TEModel_ prepared for dynamic VRAM loading. 14956MB Staged. 0 patches attached. Force pre-loaded 410 weights: 4572 KB.
+2026-11-05T14:35:51 [H3Multishot] TE evicted; 21.2 GB free for the DiT
+2026-11-05T14:35:51 [H3AutoReserve] keeping all 19.5 GB of weights resident would leave only -13.4 GB of slack over the pool's bare need - under the 2.1 GB driver headroom every clean run keeps (2026-08-21: that squeeze ran 22x slower than streaming). Reserving 17.0 GB and letting ~16.4 GB of weights stream.
+2026-11-05T14:35:51 [H3AutoReserve] driver headroom: raising the reserve 17.0 -> 19.1 GB so ~18.5 GB of weights stream instead of riding the last few percent of VRAM (that zone measured 2-12x slower).
+2026-11-05T14:35:51 [H3AutoReserve] shape cells=5536256: reserving 19.1 GB (first run at this shape: 88% of free | resident-clamp REFUSED (slack -13.4 GB < headroom 2.1 GB): streaming | +driver headroom 17.0 -> 19.1 GB)
+2026-11-05T14:35:51 [32m[INFO][0m Requested to load MiniMaxH3
+2026-11-05T14:35:51 [32m[INFO][0m Model MiniMaxH3 prepared for dynamic VRAM loading. 19995MB Staged. 208 patches attached. Force pre-loaded 210 weights: 1175 KB.
+2026-11-05T14:35:52   0%|          | 0/12 [00:00<?, ?it/s]
+2026-11-05T14:36:23   0%|          | 0/12 [00:00<?, ?it/s,   Model Initializing ...  ]
+2026-11-05T14:36:23   0%|          | 0/12 [00:31<?, ?it/s,  Model Initialization complete!  ]
+2026-11-05T14:36:50   8%|▊         | 1/12 [00:31<05:43, 31.19s/it,  Model Initialization complete!  ]
+2026-11-05T14:36:50   8%|▊         | 1/12 [00:54<05:43, 31.19s/it]                                   
+2026-11-05T14:37:20  17%|█▋        | 2/12 [00:54<04:34, 27.42s/it]
+2026-11-05T14:37:50  25%|██▌       | 3/12 [01:24<04:28, 29.85s/it]
+2026-11-05T14:38:20  33%|███▎      | 4/12 [01:54<03:59, 29.90s/it]
+2026-11-05T14:38:50  42%|████▏     | 5/12 [02:24<03:29, 29.89s/it]
+2026-11-05T14:39:20  50%|█████     | 6/12 [02:54<02:59, 29.88s/it]
+2026-11-05T14:39:50  58%|█████▊    | 7/12 [03:24<02:29, 29.91s/it]
+2026-11-05T14:40:19  67%|██████▋   | 8/12 [03:54<01:59, 29.90s/it]
+2026-11-05T14:40:49  75%|███████▌  | 9/12 [04:24<01:29, 29.87s/it]
+2026-11-05T14:41:19  83%|████████▎ | 10/12 [04:53<00:59, 29.89s/it]
+2026-11-05T14:41:49  92%|█████████▏| 11/12 [05:23<00:29, 29.85s/it]
+2026-11-05T14:41:49 100%|██████████| 12/12 [05:53<00:00, 29.85s/it]
+2026-11-05T14:41:52 100%|██████████| 12/12 [05:53<00:00, 29.47s/it]
+2026-11-05T14:41:52 [32m[INFO][0m Requested to load MiniMaxH3VideoVAE
+2026-11-05T14:41:52 [32m[INFO][0m 0 models unloaded.
+2026-11-05T14:41:52 [32m[INFO][0m Model MiniMaxH3VideoVAE prepared for dynamic VRAM loading. 4965MB Staged. 0 patches attached. Force pre-loaded 128 weights: 352 KB.
+2026-11-05T14:42:15 [32m[INFO][0m Requested to load MiniMaxH3AudioVAE
+2026-11-05T14:42:15 [32m[INFO][0m Model MiniMaxH3AudioVAE prepared for dynamic VRAM loading. 576MB Staged. 0 patches attached. Force pre-loaded 401 weights: 539 KB.
+2026-11-05T14:42:17 [H3Multishot] shot 1/4 saved -> /opt/comfyui/output/video/H3_SHOTS/shot_00005_.mp4
+2026-11-05T14:42:17 [H3Multishot] shot 2/4 (192f @ 1344x768)...
+2026-11-05T14:42:17 [H3Multishot] Ref2VA sections added for 6 reference item(s) (3 portrait, 1 continuation frame(s))
+2026-11-05T14:42:17 [32m[INFO][0m Model MiniMaxH3TEModel_ prepared for dynamic VRAM loading. 14956MB Staged. 0 patches attached. Force pre-loaded 410 weights: 4572 KB.
+2026-11-05T14:42:29 [32m[INFO][0m Model MiniMaxH3VideoVAE prepared for dynamic VRAM loading. 4965MB Staged. 0 patches attached. Force pre-loaded 128 weights: 352 KB.
+2026-11-05T14:42:31 [H3Multishot] TE evicted; 15.1 GB free for the DiT
+2026-11-05T14:42:31 [32m[INFO][0m Requested to load MiniMaxH3
+2026-11-05T14:42:31 [32m[INFO][0m 0 models unloaded.
+2026-11-05T14:42:31 [32m[INFO][0m Model MiniMaxH3 prepared for dynamic VRAM loading. 19995MB Staged. 208 patches attached. Force pre-loaded 210 weights: 1175 KB.
+2026-11-05T14:42:32   0%|          | 0/12 [00:00<?, ?it/s]
+2026-11-05T14:43:05   0%|          | 0/12 [00:00<?, ?it/s,   Model Initializing ...  ]
+2026-11-05T14:43:05   0%|          | 0/12 [00:32<?, ?it/s,  Model Initialization complete!  ]
+2026-11-05T14:43:36   8%|▊         | 1/12 [00:32<05:59, 32.72s/it,  Model Initialization complete!  ]
+2026-11-05T14:43:36   8%|▊         | 1/12 [01:03<05:59, 32.72s/it]                                   
+2026-11-05T14:44:08  17%|█▋        | 2/12 [01:03<05:15, 31.55s/it]
+2026-11-05T14:44:37  25%|██▌       | 3/12 [01:34<04:43, 31.55s/it]
+2026-11-05T14:45:09  33%|███▎      | 4/12 [02:04<03:56, 29.51s/it]
+2026-11-05T14:45:40  42%|████▏     | 5/12 [02:35<03:40, 31.49s/it]
+2026-11-05T14:46:12  50%|█████     | 6/12 [03:07<03:08, 31.49s/it]
+2026-11-05T14:46:43  58%|█████▊    | 7/12 [03:38<02:37, 31.49s/it]
+2026-11-05T14:47:15  67%|██████▋   | 8/12 [04:10<02:06, 31.56s/it]
+2026-11-05T14:47:46  75%|███████▌  | 9/12 [04:41<01:34, 31.49s/it]
+2026-11-05T14:48:18  83%|████████▎ | 10/12 [05:13<01:02, 31.48s/it]
+2026-11-05T14:48:49  92%|█████████▏| 11/12 [05:44<00:31, 31.50s/it]
+2026-11-05T14:48:49 100%|██████████| 12/12 [06:16<00:00, 31.54s/it]
+2026-11-05T14:48:51 100%|██████████| 12/12 [06:16<00:00, 31.35s/it]
+2026-11-05T14:48:51 [32m[INFO][0m Requested to load MiniMaxH3VideoVAE
+2026-11-05T14:48:51 [32m[INFO][0m Model MiniMaxH3VideoVAE prepared for dynamic VRAM loading. 4965MB Staged. 0 patches attached. Force pre-loaded 128 weights: 352 KB.
+2026-11-05T14:49:14 [32m[INFO][0m Requested to load MiniMaxH3AudioVAE
+2026-11-05T14:49:14 [32m[INFO][0m Model MiniMaxH3AudioVAE prepared for dynamic VRAM loading. 576MB Staged. 0 patches attached. Force pre-loaded 401 weights: 539 KB.
+2026-11-05T14:49:16 [H3Multishot] shot 2/4 saved -> /opt/comfyui/output/video/H3_SHOTS/shot_00006_.mp4
+2026-11-05T14:49:16 [H3Multishot] smart weld: seam cut moved 1ms into the head (quietest gap), word onsets preserved
+2026-11-05T14:49:16 [H3Multishot] shot 3/4 (192f @ 1344x768)...
+2026-11-05T14:49:16 [32m[INFO][0m Requested to load MiniMaxH3TEModel_
+2026-11-05T14:49:17 [32m[INFO][0m Model MiniMaxH3TEModel_ prepared for dynamic VRAM loading. 14956MB Staged. 0 patches attached. Force pre-loaded 410 weights: 4572 KB.
+2026-11-05T14:49:30 [32m[INFO][0m Model MiniMaxH3VideoVAE prepared for dynamic VRAM loading. 4965MB Staged. 0 patches attached. Force pre-loaded 128 weights: 352 KB.
+2026-11-05T14:49:32 [H3Multishot] TE evicted; 14.7 GB free for the DiT
+2026-11-05T14:49:32 [32m[INFO][0m Requested to load MiniMaxH3
+2026-11-05T14:49:32 [32m[INFO][0m 0 models unloaded.
+2026-11-05T14:49:32 [32m[INFO][0m Model MiniMaxH3 prepared for dynamic VRAM loading. 19995MB Staged. 208 patches attached. Force pre-loaded 210 weights: 1175 KB.
+2026-11-05T14:49:32   0%|          | 0/12 [00:00<?, ?it/s]
+2026-11-05T14:50:05   0%|          | 0/12 [00:00<?, ?it/s,   Model Initializing ...  ]
+2026-11-05T14:50:05   0%|          | 0/12 [00:32<?, ?it/s,  Model Initialization complete!  ]
+2026-11-05T14:50:35   8%|▊         | 1/12 [00:32<05:59, 32.70s/it,  Model Initialization complete!  ]
+2026-11-05T14:50:35   8%|▊         | 1/12 [00:59<05:59, 32.70s/it]                                   
+2026-11-05T14:51:06  17%|█▋        | 2/12 [00:59<04:55, 29.58s/it]
+2026-11-05T14:51:38  25%|██▌       | 3/12 [01:30<04:44, 31.57s/it]
+2026-11-05T14:52:09  33%|███▎      | 4/12 [02:02<04:12, 31.56s/it]
+2026-11-05T14:52:41  42%|████▏     | 5/12 [02:33<03:40, 31.55s/it]
+2026-11-05T14:53:12  50%|█████     | 6/12 [03:05<03:09, 31.56s/it]
+2026-11-05T14:53:44  58%|█████▊    | 7/12 [03:36<02:37, 31.56s/it]
+2026-11-05T14:54:15  67%|██████▋   | 8/12 [04:08<02:06, 31.56s/it]
+2026-11-05T14:54:47  75%|███████▌  | 9/12 [04:40<01:34, 31.55s/it]
+2026-11-05T14:55:18  83%|████████▎ | 10/12 [05:11<01:03, 31.55s/it]
+2026-11-05T14:55:50  92%|█████████▏| 11/12 [05:43<00:31, 31.50s/it]
+2026-11-05T14:55:50 100%|██████████| 12/12 [06:14<00:00, 31.49s/it]
+2026-11-05T14:55:52 100%|██████████| 12/12 [06:14<00:00, 31.22s/it]
+2026-11-05T14:55:52 [32m[INFO][0m Requested to load MiniMaxH3VideoVAE
+2026-11-05T14:55:52 [32m[INFO][0m Model MiniMaxH3VideoVAE prepared for dynamic VRAM loading. 4965MB Staged. 0 patches attached. Force pre-loaded 128 weights: 352 KB.
+2026-11-05T14:56:15 [32m[INFO][0m Requested to load MiniMaxH3AudioVAE
+2026-11-05T14:56:15 [32m[INFO][0m Model MiniMaxH3AudioVAE prepared for dynamic VRAM loading. 576MB Staged. 0 patches attached. Force pre-loaded 401 weights: 539 KB.
+2026-11-05T14:56:17 [H3Multishot] shot 3/4 saved -> /opt/comfyui/output/video/H3_SHOTS/shot_00007_.mp4
+2026-11-05T14:56:17 [H3Multishot] smart weld: seam cut moved 175ms into the head (quietest gap), word onsets preserved
+2026-11-05T14:56:17 [H3Multishot] shot 4/4 (192f @ 1344x768)...
+2026-11-05T14:56:17 [32m[INFO][0m Requested to load MiniMaxH3TEModel_
+2026-11-05T14:56:17 [32m[INFO][0m Model MiniMaxH3TEModel_ prepared for dynamic VRAM loading. 14956MB Staged. 0 patches attached. Force pre-loaded 410 weights: 4572 KB.
+2026-11-05T14:56:32 [32m[INFO][0m Model MiniMaxH3VideoVAE prepared for dynamic VRAM loading. 4965MB Staged. 0 patches attached. Force pre-loaded 128 weights: 352 KB.
+2026-11-05T14:56:34 [H3Multishot] TE evicted; 14.7 GB free for the DiT
+2026-11-05T14:56:34 [32m[INFO][0m Requested to load MiniMaxH3
+2026-11-05T14:56:34 [32m[INFO][0m 0 models unloaded.
+2026-11-05T14:56:34 [32m[INFO][0m Model MiniMaxH3 prepared for dynamic VRAM loading. 19995MB Staged. 208 patches attached. Force pre-loaded 210 weights: 1175 KB.
+2026-11-05T14:56:34   0%|          | 0/12 [00:00<?, ?it/s]
+2026-11-05T14:57:07   0%|          | 0/12 [00:00<?, ?it/s,   Model Initializing ...  ]
+2026-11-05T14:57:07   0%|          | 0/12 [00:32<?, ?it/s,  Model Initialization complete!  ]
+2026-11-05T14:57:36   8%|▊         | 1/12 [00:32<05:59, 32.65s/it,  Model Initialization complete!  ]
+2026-11-05T14:57:36   8%|▊         | 1/12 [00:59<05:59, 32.65s/it]                                   
+2026-11-05T14:58:08  17%|█▋        | 2/12 [00:59<04:55, 29.56s/it]
+2026-11-05T14:58:39  25%|██▌       | 3/12 [01:30<04:43, 31.50s/it]
+2026-11-05T14:59:11  33%|███▎      | 4/12 [02:02<04:11, 31.48s/it]
+2026-11-05T14:59:42  42%|████▏     | 5/12 [02:33<03:40, 31.50s/it]
+2026-11-05T15:00:14  50%|█████     | 6/12 [03:05<03:08, 31.48s/it]
+2026-11-05T15:00:45  58%|█████▊    | 7/12 [03:36<02:37, 31.49s/it]
+2026-11-05T15:01:17  67%|██████▋   | 8/12 [04:08<02:05, 31.48s/it]
+2026-11-05T15:01:48  75%|███████▌  | 9/12 [04:39<01:34, 31.50s/it]
+2026-11-05T15:02:20  83%|████████▎ | 10/12 [05:11<01:02, 31.49s/it]
+2026-11-05T15:02:51  92%|█████████▏| 11/12 [05:42<00:31, 31.49s/it]
+2026-11-05T15:02:51 100%|██████████| 12/12 [06:14<00:00, 31.49s/it]
+2026-11-05T15:02:53 100%|██████████| 12/12 [06:14<00:00, 31.17s/it]
+2026-11-05T15:02:53 [32m[INFO][0m Requested to load MiniMaxH3VideoVAE
+2026-11-05T15:02:53 [32m[INFO][0m Model MiniMaxH3VideoVAE prepared for dynamic VRAM loading. 4965MB Staged. 0 patches attached. Force pre-loaded 128 weights: 352 KB.
+2026-11-05T15:03:16 [32m[INFO][0m Requested to load MiniMaxH3AudioVAE
+2026-11-05T15:03:16 [32m[INFO][0m Model MiniMaxH3AudioVAE prepared for dynamic VRAM loading. 576MB Staged. 0 patches attached. Force pre-loaded 401 weights: 539 KB.
+2026-11-05T15:03:19 [H3Multishot] shot 4/4 saved -> /opt/comfyui/output/video/H3_SHOTS/shot_00008_.mp4
+2026-11-05T15:03:19 [H3Multishot] smart weld: seam cut moved 534ms into the head (quietest gap), word onsets preserved
+2026-11-05T15:03:20 [H3Multishot] done: 4 shots, 765 frames (~31.9s).
+2026-11-05T15:03:20 [32m[INFO][0m Comfy model compiler graph breaks: 11, rogues: 0
+2026-11-05T15:03:27 [32m[INFO][0m [32mPrompt executed in 00:27:48[0m

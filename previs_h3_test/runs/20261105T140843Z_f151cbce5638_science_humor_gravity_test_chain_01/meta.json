@@ -1,0 +1,13 @@
+{
+  "host": "f151cbce5638",
+  "snapshot_utc": "2026-11-05T14:08:50Z",
+  "gpu": "NVIDIA GeForce RTX 4090, 595.91.07, 24564 MiB",
+  "cpu": "AMD Ryzen 9 7950X 16-Core Processor", "cpu_count": 32,
+  "ram_gib": 124.9,
+  "cgroup_memory_max": "60999999488",
+  "models_dir": "/opt/models", "models_device": "overlay", "models_disk": null,
+  "disk_read_mbps": 4753, "disk_read_mode": "warm(no drop_caches)",
+  "torch": "2.11.0+cu130 13.0",
+  "note": "science humor gravity test chain_01, 16:9 ref2va turbo12 two voice_refs, Qwen sheets+backgrounds",
+  "raw_dir": "box/"
+}

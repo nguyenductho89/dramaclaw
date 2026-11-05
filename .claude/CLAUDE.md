@@ -467,6 +467,10 @@ A/B trên clip Freezone 2 nhân vật (ma cà rồng + cô gái, project `01M61J
 - **Endpoint Qwen riêng `q639jfhc6uaf3t` chưa nạp được LoRA:** `start.sh` cũ không đọc `COMFY_EXTRA_ARGS` và yaml nướng cứng trong image. Nguồn image nay ở `runpod/` của repo này (`runpod/qwen/start.sh` đọc `${COMFY_EXTRA_ARGS}`, yaml map thêm `loras/` và `model_patches/`) nhưng **chưa build/push**: cần secret `GHCR_PAT` rồi chạy `.github/workflows/build-runpod-worker-image.yml` (`image: qwen`), sau đó đổi tag image của endpoint. Chi tiết: `runpod/README.md`.
 - **Dáng và ControlNet:** không tài liệu chính chủ nào nói Qwen 2.1 edit đọc skeleton/sketch làm điều khiển dáng (chỉ Edit-2509 tuyên bố). Có `alibaba-pai/Qwen-Image-2.1-Fun-Controlnet-Union` (Pose/Depth/Canny/Scribble/Lineart), Comfy-Org đóng gói trong `model_patches/` của `Comfy-Org/Qwen-Image-2.1`; chưa rõ node ComfyUI nào áp dụng và có chạy cùng edit nhiều ảnh không. Chưa thử.
 
+## Bài thử hai nhân vật Science humor "gravity" (2026-11-05, tạm dừng)
+
+Ghi chép đầy đủ, số đo, lỗi, việc dở: `previs_h3_test/science_humor_gravity_test_run.md`. Tóm tắt: Qwen chỉ tạo sheet và nền trống, H3 tự đưa hai người vào cảnh; nền làm **ảnh tham chiếu** tốt hơn nền làm khung đầu (bản khung đầu bị vẽ lại sheet). Shot thoại ≥ 192 khung, 4090 khoảng 400 s/shot. Hai giọng nghe như một: user chốt Barnaby giọng Mỹ, Ambrose giọng Anh, chưa thiết kế lại. Bài học vận hành: zsh không tách `$VAR` và báo lỗi glob (dùng `bash -c`), so khoá SSH với `get-ssh-keys` trước khi tạo pod RunPod, `rsync` từ pod không đè `index.csv` và script. Pod RTX 4090 đã xoá.
+
 ## Đừng làm
 
 - Đừng tìm hay in `settings.db` / token chạy của DramaClaw (hệ thống chặn thao tác dò thông tin xác thực).

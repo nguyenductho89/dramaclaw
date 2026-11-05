@@ -57,7 +57,7 @@ SHEETS = {
 FRAMES = 192  # 17k+5 grid, 8 s. The generator notes that dialogue shots under 192 frames make the shot join clip audibly (runpod_minimax_h3_multishot_video.py).
 SPEECH_END = 6.30  # in the ep01 test H3 said a 14-syllable line in about 3.3 s and spoke again in the empty tail, so every line is followed by the official lip-close sentence
 VOICE = {
-    "Barnaby": "a warm, dry, amused voice with a light English accent, the voice in <Audio 1>",
+    "Barnaby": "a warm, dry, amused voice with a relaxed American accent, the voice in <Audio 1>",
     "Ambrose": "a low-pitched, crisp, formal, proud voice with a refined English accent, the voice in <Audio 2>",
 }
 SUBJECT = {"Barnaby": "<Subject 1> (S1)", "Ambrose": "<Subject 2> (S2)"}
@@ -69,7 +69,7 @@ LINES = [
      f"At 0.00 seconds {B} walks into frame from the left edge, his hands in his cardigan pockets, and {A} walks into frame from the right edge, holding a red apple in his left hand. At 1.50 seconds they stop in their places",
      f"At 3.00 seconds {A} taps the apple with his right forefinger. At 4.30 seconds {A} lowers his right hand, lifts his chin and raises the apple to chest height", f"{B} stays silent with closed lips, his hands in his cardigan pockets, and nods politely",
      f"{A} with his chin raised and the apple held up at chest height, and {B} with his hands in his pockets", f"{A} explains the falling apple to {B}"),
-    (1, "orchard", "Barnaby", "Lovely. But to Einstein, gravity isn't a pull.", 13, "Một câu làm hỏng cả vườn táo", "S2", 1.00,
+    (1, "orchard", "Barnaby", "Nice. But to Einstein, gravity isn't a pull.", 12, "Một câu làm hỏng cả vườn táo", "S2", 1.00,
      f"At 0.00 seconds {B} looks at {A}, his hands in his cardigan pockets",
      f"At 3.00 seconds {B} takes his right hand from his pocket and points at the apple", f"{A} stays silent with closed lips, holding the red apple at chest height in his left hand, and his eyebrows draw together",
      f"{B} pointing at the apple, and {A} staring at him with his eyebrows drawn together", f"{B} points at the apple and contradicts {A}"),
@@ -77,7 +77,7 @@ LINES = [
      f"At 0.00 seconds {A} stares at {B}, holding the red apple at chest height in his left hand, and {B} lowers his right hand to his side",
      f"At 3.00 seconds {A} raises his right forefinger", f"{B} stays silent with closed lips and tilts his head",
      f"{A} with his right forefinger raised, and {B} with his head tilted", f"{A} raises one finger and objects"),
-    (1, "orchard", "Barnaby", "Quite. But mass bends spacetime. The apple just takes the straightest path.", 15, "Nghe vô lý mà đúng trong lý thuyết", "S2", 1.00,
+    (1, "orchard", "Barnaby", "Sure. But mass bends spacetime. The apple just takes the straightest path.", 15, "Nghe vô lý mà đúng trong lý thuyết", "S2", 1.00,
      f"At 0.00 seconds {B} nods once at {A}, his right hand at his side",
      f"At 3.00 seconds {B} raises his right hand, flat, and moves it down in a straight line from chest height to waist height, away from {A}", f"{A} stays silent with closed lips, lowers his right hand, and looks down at the red apple in his left hand",
      f"{B} with his right hand held flat at waist height, and {A} looking at the apple", f"{B} moves one flat hand straight down while {A} looks at his apple"),
@@ -100,9 +100,10 @@ LINES = [
 ]
 
 
-def definitions(scene: str, first_shot: bool, first_frame: bool) -> tuple[str, str]:
-    subjects = (f"<Subject 1> is Barnaby, shown in <Picture 2> (one man in two views, not two people), with {BARNABY_ANCHOR}.\n"
-                f"<Subject 2> is Ambrose, shown in <Picture 3> (one man in two views, not two people), with {AMBROSE_ANCHOR}.")
+def definitions(scene: str, first_shot: bool, first_frame: bool, single: bool = False) -> tuple[str, str]:
+    note = "" if single else " (one man in two views, not two people)"
+    subjects = (f"<Subject 1> is Barnaby, shown in <Picture 2>{note}, with {BARNABY_ANCHOR}.\n"
+                f"<Subject 2> is Ambrose, shown in <Picture 3>{note}, with {AMBROSE_ANCHOR}.")
     retention = (f"<Subject 1> (appears in [Shot 1]): fully_preserved - {BARNABY_ANCHOR}, consistent for the whole video.\n"
                  f"<Subject 2> (appears in [Shot 1]): fully_preserved - {AMBROSE_ANCHOR}, consistent for the whole video.")
     if first_frame and not first_shot:
@@ -115,7 +116,7 @@ def definitions(scene: str, first_shot: bool, first_frame: bool) -> tuple[str, s
             f"<Picture 1> (setting): partially_preserved - {SCENES[scene]['place']}, used as the location for the whole video.\n{retention}")
 
 
-def shot(index: int, line: tuple, first_frame: bool) -> str:
+def shot(index: int, line: tuple, first_frame: bool, single: bool = False) -> str:
     # Each shot's prompt stands alone and is labelled [Shot 1], as in the official layout and its lint.
     _, scene, speaker, text, _, _, _, start, opening, mid, listener, end, summary = line
     seconds = FRAMES / 24
@@ -124,7 +125,7 @@ def shot(index: int, line: tuple, first_frame: bool) -> str:
         # Without a first frame the men are already standing there, so the walk-in sentence becomes a static opening.
         opening = opening.split(" At 1.50 seconds")[0]
         opening = re.sub(r"walks into frame from the (left|right) edge", "stands in place", opening).rstrip(".")
-    defs, retention = definitions(scene, index == 1, first_frame)
+    defs, retention = definitions(scene, index == 1, first_frame, single)
     begins = " that begins from <Picture 1>" if entering else ""
     setting = f"in the setting of <Picture 1>, keeping its layout and light" if index == 1 or not first_frame else f"in this setting: {SCENES[scene]['place']}"
     return (
@@ -168,6 +169,11 @@ def main() -> None:
                        "shots": [shot(i, line, True) for i, line in enumerate(lines, start=1)]}
         refs_only = {**base, "name": f"science_humor_gravity_test_chain_{num:02d}_refs_only", "start_image": None, "reference_images": [f"{plate}/{scene}.png", *sheets],
                      "shots": [shot(i, line, False) for i, line in enumerate(lines, start=1)]}
+        # Same as the first-frame variant, but each reference is ONE view cropped from the sheet (front views), so the reference can never be read as a two-up layout.
+        singles = [f"{SKIT}/character/barnaby_front.png", f"{SKIT}/character/ambrose_front.png"]
+        single = {**first_frame, "name": f"science_humor_gravity_test_chain_{num:02d}_single", "reference_images": singles,
+                  "shots": [shot(i, line, True, True) for i, line in enumerate(lines, start=1)]}
+        (OUT_DIR / f"chain_{num:02d}_single.json").write_text(json.dumps(single, ensure_ascii=False, indent=1) + "\n")
         (OUT_DIR / f"chain_{num:02d}.json").write_text(json.dumps(first_frame, ensure_ascii=False, indent=1) + "\n")
         (OUT_DIR / f"chain_{num:02d}_refs_only.json").write_text(json.dumps(refs_only, ensure_ascii=False, indent=1) + "\n")
     (OUT_DIR / "qwen_prompts.json").write_text(json.dumps({
@@ -214,9 +220,9 @@ Không có con số tính ra. Tốc độ thoại theo prompt: cao nhất {max(r
 
 ## Cần người bản ngữ đọc
 
-- "Lovely. But to Einstein, gravity isn't a pull."
+- "Nice. But to Einstein, gravity isn't a pull."
 - "Not a pull? Newton's laws still work for a great many things."
-- "Quite. But mass bends spacetime. The apple just takes the straightest path."
+- "Sure. But mass bends spacetime. The apple just takes the straightest path."
 - "Better view. Also, there's no air, so talk fast."
 - "Apollo Fifteen: hammer and feather, landed together."
 - "Of course. Galileo told you so. You're welcome."

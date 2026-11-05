@@ -6,9 +6,9 @@ Bản thử không có mở đầu và lời hứa theo khuôn tập dài: mục
 | Mốc | Chain, shot | Bối cảnh | Người nói | Lời | Trò đùa | Nguồn |
 |---|---|---|---|---|---|---|
 | 0:00.0-0:08.0 | 01, 1 | Vườn táo | Ambrose | The Earth pulls the apple down. Newton settled this. | Ambrose tưởng đã xong chuyện | S2 |
-| 0:08.0-0:16.0 | 01, 2 | Vườn táo | Barnaby | Lovely. But to Einstein, gravity isn't a pull. | Một câu làm hỏng cả vườn táo | S2 |
+| 0:08.0-0:16.0 | 01, 2 | Vườn táo | Barnaby | Nice. But to Einstein, gravity isn't a pull. | Một câu làm hỏng cả vườn táo | S2 |
 | 0:16.0-0:24.0 | 01, 3 | Vườn táo | Ambrose | Not a pull? Newton's laws still work for a great many things. |  | S3 |
-| 0:24.0-0:32.0 | 01, 4 | Vườn táo | Barnaby | Quite. But mass bends spacetime. The apple just takes the straightest path. | Nghe vô lý mà đúng trong lý thuyết | S2 |
+| 0:24.0-0:32.0 | 01, 4 | Vườn táo | Barnaby | Sure. But mass bends spacetime. The apple just takes the straightest path. | Nghe vô lý mà đúng trong lý thuyết | S2 |
 | 0:32.0-0:40.0 | 02, 1 | Mặt Trăng | Ambrose | Where is the orchard? And why am I on the Moon? | Cắt cảnh không báo trước |  |
 | 0:40.0-0:48.0 | 02, 2 | Mặt Trăng | Barnaby | Better view. Also, there's no air, so talk fast. | Đùa về việc không có không khí, dựng sẵn cho câu sau | S1 |
 | 0:48.0-0:56.0 | 02, 3 | Mặt Trăng | Barnaby | Apollo Fifteen: hammer and feather, landed together. |  | S1 |
@@ -28,9 +28,9 @@ Không có con số tính ra. Tốc độ thoại theo prompt: cao nhất 2.83 �
 
 ## Cần người bản ngữ đọc
 
-- "Lovely. But to Einstein, gravity isn't a pull."
+- "Nice. But to Einstein, gravity isn't a pull."
 - "Not a pull? Newton's laws still work for a great many things."
-- "Quite. But mass bends spacetime. The apple just takes the straightest path."
+- "Sure. But mass bends spacetime. The apple just takes the straightest path."
 - "Better view. Also, there's no air, so talk fast."
 - "Apollo Fifteen: hammer and feather, landed together."
 - "Of course. Galileo told you so. You're welcome."

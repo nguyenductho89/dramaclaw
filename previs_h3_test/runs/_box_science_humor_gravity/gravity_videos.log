@@ -1,0 +1,57 @@
+=== comfy_wait 14:08:43
+=== free_vram 14:08:43
+=== chain_01 14:08:43
+/opt/dramaclaw/previs_h3_test/scripts/snapshot_box.sh: line 29: /proc/sys/vm/drop_caches: Read-only file system
+snapshot -> /opt/dramaclaw/previs_h3_test/runs/20261105T140843Z_f151cbce5638_science_humor_gravity_test_chain_01/meta.json
+postrun done: box comfy.log graph.json live.log mem.csv meta.json phases.json quality.json result.json steps.json sysmon.csv video.mp4 
+{
+  "label": "science_humor_gravity_test_chain_01",
+  "box": "rented-4090-local",
+  "started_utc": "2026-11-05T14:08:50Z",
+  "run_dir": "20261105T140843Z_f151cbce5638_science_humor_gravity_test_chain_01",
+  "comfy_url": "http://127.0.0.1:8188",
+  "resolution": "1344x768",
+  "aspect_ratio": "16:9",
+  "shots": 4,
+  "frames_per_shot": 192,
+  "sampling": {
+    "pdd_nfe": "",
+    "pdd_file": "",
+    "turbo_lora": "minimax_h3_ref2v_turbo_4step_v0.1_comfyui_bf16.safetensors",
+    "chain_normalize": "off",
+    "steps": 12,
+    "output_scale": 1.0
+  },
+  "wall_seconds": 1600.5,
+  "error": null,
+  "video_bytes": 26339445
+}
+run dir: /opt/dramaclaw/previs_h3_test/runs/20261105T140843Z_f151cbce5638_science_humor_gravity_test_chain_01
+=== chain_01_refs_only 14:35:31
+/opt/dramaclaw/previs_h3_test/scripts/snapshot_box.sh: line 29: /proc/sys/vm/drop_caches: Read-only file system
+snapshot -> /opt/dramaclaw/previs_h3_test/runs/20261105T143532Z_f151cbce5638_science_humor_gravity_test_chain_01_refs_only/meta.json
+postrun done: box comfy.log graph.json live.log mem.csv meta.json phases.json quality.json result.json steps.json sysmon.csv video.mp4 
+{
+  "label": "science_humor_gravity_test_chain_01_refs_only",
+  "box": "rented-4090-local",
+  "started_utc": "2026-11-05T14:35:38Z",
+  "run_dir": "20261105T143532Z_f151cbce5638_science_humor_gravity_test_chain_01_refs_only",
+  "comfy_url": "http://127.0.0.1:8188",
+  "resolution": "1344x768",
+  "aspect_ratio": "16:9",
+  "shots": 4,
+  "frames_per_shot": 192,
+  "sampling": {
+    "pdd_nfe": "",
+    "pdd_file": "",
+    "turbo_lora": "minimax_h3_ref2v_turbo_4step_v0.1_comfyui_bf16.safetensors",
+    "chain_normalize": "off",
+    "steps": 12,
+    "output_scale": 1.0
+  },
+  "wall_seconds": 1670.5,
+  "error": null,
+  "video_bytes": 23616958
+}
+run dir: /opt/dramaclaw/previs_h3_test/runs/20261105T143532Z_f151cbce5638_science_humor_gravity_test_chain_01_refs_only
+=== done 15:03:30

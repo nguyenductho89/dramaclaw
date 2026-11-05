@@ -1,0 +1,13 @@
+NAME    MODEL                                    ROTA TRAN     SIZE TYPE FSTYPE MOUNTPOINT
+loop0                                               0         63.8M loop        
+loop1                                               0         63.8M loop        
+loop2                                               0        116.6M loop        
+loop3                                               0           74M loop        
+loop5                                               0        115.2M loop        
+loop6                                               0         50.3M loop        
+loop7                                               0         44.7M loop        
+loop8                                               0           74M loop        
+sda     SAMSUNG MZ7L3480                            0 sata   447.1G disk        
+├─sda1                                              0            1G part        
+└─sda2                                              0        446.1G part        
+nvme0n1 WD_BLACK SN850X 4000GB                      0 nvme     3.6T disk        /etc/resolv.conf

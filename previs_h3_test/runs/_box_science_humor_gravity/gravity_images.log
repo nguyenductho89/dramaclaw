@@ -1,0 +1,102 @@
+=== comfy_wait 13:41:27
+=== voice_ambrose 13:41:35
+Downloading sympy (6.0MiB)
+Downloading networkx (2.0MiB)
+Downloading numpy (16.0MiB)
+Downloading onnxruntime (22.7MiB)
+Downloading nvidia-cufft (208.1MiB)
+Downloading nvidia-nvjitlink (44.5MiB)
+Downloading pandas (11.5MiB)
+Downloading tokenizers (3.1MiB)
+Downloading scikit-learn (8.7MiB)
+Downloading nvidia-cublas (386.1MiB)
+Downloading nvidia-cuda-cupti (11.4MiB)
+Downloading pillow (6.6MiB)
+Downloading llvmlite (56.9MiB)
+Downloading soundfile (1.3MiB)
+Downloading nvidia-cufile (1.3MiB)
+Downloading nvidia-cuda-runtime (2.2MiB)
+Downloading nvidia-cusparse (144.0MiB)
+Downloading nvidia-cusparselt-cu13 (162.3MiB)
+Downloading torch (514.2MiB)
+Downloading nvidia-cudnn-cu13 (495.1MiB)
+Downloading nvidia-nvshmem-cu13 (129.1MiB)
+Downloading nvidia-cuda-cccl (3.9MiB)
+Downloading gradio (30.8MiB)
+Downloading transformers (11.4MiB)
+Downloading cuda-bindings (8.0MiB)
+Downloading numba (3.7MiB)
+Downloading torchaudio (1.7MiB)
+Downloading nvidia-nccl-cu13 (206.0MiB)
+Downloading triton (272.4MiB)
+Downloading nvidia-cusolver (217.4MiB)
+Downloading nvidia-cuda-nvrtc (44.8MiB)
+   Building sox==1.5.0
+      Built sox==1.5.0
+ Downloading soundfile
+ Downloading nvidia-cufile
+ Downloading torchaudio
+ Downloading nvidia-cuda-runtime
+ Downloading networkx
+ Downloading tokenizers
+ Downloading numba
+ Downloading sympy
+ Downloading nvidia-cuda-cccl
+ Downloading pillow
+ Downloading cuda-bindings
+ Downloading scikit-learn
+ Downloading nvidia-cuda-cupti
+ Downloading transformers
+ Downloading pandas
+ Downloading numpy
+ Downloading onnxruntime
+ Downloading gradio
+ Downloading nvidia-nvjitlink
+ Downloading nvidia-cuda-nvrtc
+ Downloading llvmlite
+ Downloading nvidia-nvshmem-cu13
+ Downloading nvidia-cusparse
+ Downloading nvidia-cusparselt-cu13
+ Downloading nvidia-nccl-cu13
+ Downloading nvidia-cufft
+ Downloading nvidia-cusolver
+ Downloading triton
+ Downloading nvidia-cublas
+ Downloading nvidia-cudnn-cu13
+ Downloading torch
+Installed 107 packages in 476ms
+/bin/sh: 1: sox: not found
+SoX could not be found!
+
+    If you do not have SoX, proceed here:
+     - - - http://sox.sourceforge.net/ - - -
+
+    If you do (or think that you should) have SoX, double-check your
+    path variables.
+    
+
+********
+Warning: flash-attn is not installed. Will only run the manual PyTorch version. Please install flash-attn for faster inference.
+********
+ 
+Fetching 4 files:   0%|          | 0/4 [00:00<?, ?it/s]Fetching 4 files:  25%|██▌       | 1/4 [00:00<00:00,  5.08it/s]Fetching 4 files: 100%|██████████| 4/4 [00:01<00:00,  2.74it/s]Fetching 4 files: 100%|██████████| 4/4 [00:01<00:00,  2.74it/s]
+loaded on cuda:0 in 12s
+Setting `pad_token_id` to `eos_token_id`:2150 for open-end generation.
+/root/.cache/uv/environments-v2/qwen-voice-design-27d93fc6020fc951/lib/python3.12/site-packages/triton/knobs.py:504: UserWarning: TRITON_DEFAULT_FP_FUSION is unset: defaulting to FP fusion ENABLED for backward compatibility in Triton 3.9. The default will change to DISABLED in Triton 3.10; set TRITON_DEFAULT_FP_FUSION=1 to keep fusion enabled or =0 to adopt the new default early and silence this warning.
+  warn_once(FP_FUSION_DEFAULT_WARNING)
+ambrose: 15.0s audio in 12s
+=== qwen_nodes 13:42:30
+=== qwen_images 13:42:30
+barnaby_sheet_s0.png 12.0s
+barnaby_sheet_s1.png 6.0s
+barnaby_sheet_s2.png 6.0s
+ambrose_sheet_s0.png 6.0s
+ambrose_sheet_s1.png 6.0s
+ambrose_sheet_s2.png 6.0s
+orchard_s0.png 6.0s
+orchard_s1.png 6.0s
+orchard_s2.png 6.0s
+moon_s0.png 6.0s
+moon_s1.png 6.0s
+moon_s2.png 6.0s
+=== done 13:43:48

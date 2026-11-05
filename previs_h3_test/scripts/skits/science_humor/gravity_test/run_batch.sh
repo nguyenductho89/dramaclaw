@@ -3,6 +3,8 @@
 #   bash previs_h3_test/scripts/skits/science_humor/gravity_test/run_batch.sh images
 #       Ambrose's voice, then 3 Qwen candidates each for the two character sheets and the two empty backgrounds.
 #       Pick one candidate per image and copy it to its final name before the videos stage (see pick_images below).
+#   bash previs_h3_test/scripts/skits/science_humor/gravity_test/run_batch.sh voices
+#       3 American candidates for Barnaby and 3 British candidates for Ambrose.
 #   bash previs_h3_test/scripts/skits/science_humor/gravity_test/run_batch.sh videos chain_01 chain_01_refs_only ...
 #       H3 chains one after the other; a finished chain is skipped on a rerun.
 # Writes /opt/bench/gravity_<stage>.done or .failed.
@@ -24,6 +26,17 @@ stamp() { echo "=== $1 $(date -u +%T)"; echo "$STAGE:$1,$(date -u +%FT%TZ)" >> /
 stamp comfy_wait
 for _ in $(seq 1 90); do curl -sf 127.0.0.1:8188/system_stats >/dev/null && break; sleep 2; done
 curl -sf 127.0.0.1:8188/system_stats >/dev/null || fail "ComfyUI is not answering"
+
+if [ "$STAGE" = voices ]; then
+  # Candidate voices: American for Barnaby, British for Ambrose. Pick one of each (lowest cosine between them), copy to voice/barnaby.wav and voice/ambrose.wav.
+  stamp free_vram
+  curl -s -X POST 127.0.0.1:8188/free -H 'Content-Type: application/json' -d '{"unload_models":true,"free_memory":true}' >/dev/null
+  stamp voice_barnaby_us
+  timeout 1200 uv run $S/qwen_voice_design.py "$D/voice/barnaby_us_cands" "$D/voice/barnaby_us_config.json" || fail "voice design barnaby"
+  stamp voice_ambrose_uk
+  timeout 1200 uv run $S/qwen_voice_design.py "$D/voice/ambrose_cands" "$D/voice/ambrose_candidates.json" || fail "voice design ambrose"
+  touch /opt/bench/gravity_voices.done; stamp done; exit 0
+fi
 
 if [ "$STAGE" = images ]; then
   stamp voice_ambrose

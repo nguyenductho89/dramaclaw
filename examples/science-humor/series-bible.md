@@ -22,7 +22,7 @@ Người đàn ông hư cấu 70 tuổi, sống ở thời nay. Từng sửa má
 
 > Barnaby (S1), a cheerful 70-year-old man with messy curly silver-white hair, a clean-shaven round face, thick black square-rimmed glasses, a mustard-yellow wool cardigan over a blue checked shirt, and a stubby pencil tucked behind his right ear
 
-**Giọng:** tiếng Anh dễ nghe, ấm, khô khan, thích thú, âm sắc Anh nhẹ. Tạo giọng mới bằng Qwen3-TTS; không dùng giọng thu âm của người thật.
+**Giọng:** tiếng Anh giọng Mỹ, ấm, khô khan, thích thú, thoải mái (đổi từ giọng Anh nhẹ ngày 2026-11-05 để hai nhân vật khác nhau rõ). Tạo giọng mới bằng Qwen3-TTS; không dùng giọng thu âm của người thật. Lời thoại dùng cách nói Mỹ ("Nice", "Sure"), không dùng "Lovely", "Quite".
 
 **Luật ngoại hình và danh tính**
 - Ông chỉ gợi không khí của ngoại hình Einstein. Mặt tròn cạo sạch, kính vuông dày và áo vàng là các điểm khác biệt, không bỏ.
@@ -43,7 +43,7 @@ Người đàn ông hư cấu, tên tạm, chưa kiểm trùng. Ngoại hình l�
 
 > Ambrose (S2), a lean, proud 65-year-old man with a long narrow face, a long wavy silver wig falling past his shoulders, a long dark brown late-17th-century coat with a white linen cravat
 
-**Giọng:** tiếng Anh giọng Anh trang trọng, sắc, kiêu hãnh, trầm hơn và dứt khoát hơn Barnaby. Tạo giọng mới bằng Qwen3-TTS; không dùng giọng thu âm của người thật.
+**Giọng:** tiếng Anh giọng Anh trang trọng (Received Pronunciation), sắc, kiêu hãnh, dứt khoát. Hai giọng khác nhau cả về giọng vùng: Barnaby Mỹ, Ambrose Anh. Đo bằng Resemblyzer ngày 2026-11-05: hai giọng cùng mô tả "giọng Anh" nghe như một (cosine cùng người 0,90, khác người 0,88). Tạo giọng mới bằng Qwen3-TTS; không dùng giọng thu âm của người thật.
 
 **Mô tả ngắn trong prompt H3:** Barnaby: messy curly silver-white hair, a clean-shaven round face, thick black square-rimmed glasses, a mustard-yellow cardigan and a pencil behind his right ear. Ambrose: a long wavy silver wig, a long dark brown coat and a white linen cravat.
 

@@ -44,7 +44,9 @@ if SKIT:
 ASPECT = (SKIT.get("aspect_ratio") or "9:16") if SKIT else "16:9"
 # Skit fields for ref2va chains: "checkpoint", "voice_ref" (audio path, needs ref2va), "turbo_lora", "turbo_steps".
 CHECKPOINT = (SKIT.get("checkpoint") or "fl2va") if SKIT else "fl2va"
-VOICE_REF = (SKIT.get("voice_ref") or "") if SKIT else ""
+# "voice_refs" and "reference_images" are lists in the order <Audio N> and <Picture N> use them; "voice_ref" is the older single form.
+VOICE_REFS = (SKIT.get("voice_refs") or ([SKIT["voice_ref"]] if SKIT.get("voice_ref") else [])) if SKIT else []
+REFERENCE_IMAGES = (SKIT.get("reference_images") or []) if SKIT else []
 if SKIT and SKIT.get("turbo_lora"):
     os.environ["RUNPOD_H3_MULTISHOT_TURBO_LORA"] = SKIT["turbo_lora"]
     os.environ["RUNPOD_H3_MULTISHOT_TURBO_STEPS"] = str(SKIT.get("turbo_steps") or 8)
@@ -157,10 +159,11 @@ def _run(D: Path, helper_errors: list):
         name = upload_image(Path(sp), "ms_start.png") if sp else None
     else:
         name = upload_image(T / "photo_f0.png", "ms_start.png")
-    voice_names = [upload_image(Path(VOICE_REF), "ms_voice" + Path(VOICE_REF).suffix)] if VOICE_REF else []
+    voice_names = [upload_image(Path(v), f"ms_voice_{k}{Path(v).suffix}") for k, v in enumerate(VOICE_REFS)]
+    reference_names = [upload_image(Path(p), f"ms_ref_{k}{Path(p).suffix}") for k, p in enumerate(REFERENCE_IMAGES)]
     graph = build_h3_multishot_graph(
         script=join_shots_script(SHOTS), shot_count=len(SHOTS), width=w, height=h, frames_per_shot=FRAMES, seed=SEED,
-        steps=int(sampling.get("steps") or 20), checkpoint=CHECKPOINT, start_image_name=name, voice_ref_names=voice_names,
+        steps=int(sampling.get("steps") or 20), checkpoint=CHECKPOINT, start_image_name=name, reference_image_names=reference_names, voice_ref_names=voice_names,
         pdd_nfe=str(sampling.get("pdd_nfe") or ""), pdd_file=str(sampling.get("pdd_file") or ""),
         output_scale=float(sampling.get("output_scale") or 1.0), turbo_lora=str(sampling.get("turbo_lora") or ""),
         chain_normalize=str(sampling.get("chain_normalize") or "off"), realism_lora=str(sampling.get("realism_lora") or ""),

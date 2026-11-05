@@ -2,6 +2,7 @@
 
   python previs_h3_test/scripts/qwen21_character_local.py portrait <prompt.txt> <out_dir> [--n 3] [--dry-run]
   python previs_h3_test/scripts/qwen21_character_local.py keyframes <skit_dir> <portrait.png> [--dry-run]
+  python previs_h3_test/scripts/qwen21_character_local.py prompts <qwen_prompts.json> <science_humor_dir> [--n 3] [--dry-run]
 
 portrait: text-to-image at 1344x768, writes portrait_sK.png.
 keyframes: edits the portrait using each chain's `keyframe_edit_prompt` and writes <skit_dir>/keyframes/chain_NN.png, the chain's
@@ -105,7 +106,7 @@ def render(graph: dict) -> bytes:
 
 def main() -> None:
     p = argparse.ArgumentParser()
-    p.add_argument("mode", choices=["portrait", "keyframes"])
+    p.add_argument("mode", choices=["portrait", "keyframes", "prompts"])
     p.add_argument("a")
     p.add_argument("b")
     p.add_argument("--n", type=int, default=3)
@@ -117,6 +118,15 @@ def main() -> None:
         prompt, out = Path(o.a).read_text().strip(), Path(o.b)
         jobs = [(t2i_graph(prompt, o.seed + k), out / f"portrait_s{k}.png", o.seed + k) for k in range(o.n)]
         log = out / "portrait_timing.json"
+    elif o.mode == "prompts":
+        # Character sheets and empty backgrounds only: H3 places the characters in the scene, so there is no compositing step.
+        spec, root = json.loads(Path(o.a).read_text()), Path(o.b)
+        jobs = []
+        for name, prompt in spec["sheets"].items():
+            jobs += [(t2i_graph(prompt, o.seed + k), root / "character" / "candidates" / f"{name}_sheet_s{k}.png", o.seed + k) for k in range(o.n)]
+        for scene, prompt in spec["backgrounds"].items():
+            jobs += [(t2i_graph(prompt, o.seed + k), root / "gravity_test" / "backgrounds" / "candidates" / f"{scene}_s{k}.png", o.seed + k) for k in range(o.n)]
+        log = root / "gravity_test" / "image_timing.json"
     else:
         skit, portrait = Path(o.a), Path(o.b)
         name = "dry-run.png" if o.dry_run else upload(portrait)

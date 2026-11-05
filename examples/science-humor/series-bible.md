@@ -2,16 +2,23 @@
 
 Tên nhân vật và tên kênh dưới đây là đề xuất, chưa kiểm trùng trên YouTube hay về nhãn hiệu.
 
-- **Kênh (đề xuất):** Barnaby Breaks Things
+- **Kênh (đề xuất):** Barnaby and Ambrose
 - **Mô tả kênh:** Science explained with humor.
+- **Format (đổi 2026-11-05):** hai nhân vật trò chuyện về khoa học, bối cảnh phía sau minh hoạ cho điều họ nói. Không có minh hoạ thí nghiệm hay công thức, không có voiceover.
 - **Ngôn ngữ:** chỉ tiếng Anh. Khán giả mục tiêu là Mỹ/Anh; xem rủi ro giấy phép trong [risks.md](risks.md).
-- **Khổ hình:** 16:9, xuất 1920×1080. Mỗi tập 6-7 phút.
+- **Khổ hình:** 16:9, xuất 1920×1080. Mỗi tập 6-7 phút, khoảng 550-700 từ (sẽ đo lại).
+
+## Phân vai
+
+- **Barnaby nói kiến thức hiện đại** (từ khoảng năm 1900 tới nay). **Ambrose nói khoa học cổ điển** (Galileo, Newton và thế kỷ 17-19).
+- Họ tranh luận, nhưng không ai là kẻ ngốc: khoa học cổ điển vẫn đúng trong phạm vi của nó, và lời thoại phải nói rõ phạm vi đó.
+- Không ai tự nhận công. Cả hai nhắc đúng tên người phát hiện.
 
 ## Nhân vật: Barnaby Quill
 
-Người đàn ông hư cấu 70 tuổi, sống ở thời nay. Từng sửa máy móc cho một xưởng in đã đóng cửa, không có học vị. Ông tò mò, đãng trí, tự tin quá mức, thua thí nghiệm mà vẫn vui. Ông đọc nghiên cứu của người khác rồi tự thử ở nhà, nên luôn ghi công đúng người.
+Người đàn ông hư cấu 70 tuổi, sống ở thời nay. Từng sửa máy móc cho một xưởng in đã đóng cửa, không có học vị. Ông tò mò, đãng trí, tự tin quá mức, thua cãi mà vẫn vui. Ông đọc nghiên cứu của người khác, nên luôn ghi công đúng người.
 
-**Khối mô tả, chép nguyên văn vào mọi shot có mặt ông:**
+**Khối mô tả, dùng cho prompt sheet:**
 
 > Barnaby (S1), a cheerful 70-year-old man with messy curly silver-white hair, a clean-shaven round face, thick black square-rimmed glasses, a mustard-yellow wool cardigan over a blue checked shirt, and a stubby pencil tucked behind his right ear
 
@@ -25,33 +32,69 @@ Người đàn ông hư cấu 70 tuổi, sống ở thời nay. Từng sửa má
 - Tên Einstein chỉ xuất hiện khi ghi công trong nội dung khoa học. Không đặt ở tiêu đề, thumbnail, tên kênh.
 
 **Chi tiết chạy xuyên series (đổi cách dùng mỗi tập)**
-- Ông đánh số thí nghiệm: tập 1 là "Experiment one", các tập sau đếm tiếp.
 - Cây bút chì sau tai: ông hay tìm nó mà không thấy.
-- Chiếc áo cardigan chịu hậu quả của khoa học.
+- Ông bị lạc giữa các bối cảnh và không thấy có gì lạ.
+
+## Nhân vật: Ambrose Whitlock
+
+Người đàn ông hư cấu, tên tạm, chưa kiểm trùng. Ngoại hình lấy cảm hứng từ Isaac Newton, mặc trang phục cùng kiểu. Ông kiêu hãnh, chính xác, khó chịu vì bị thế kỷ sau sửa lại, nhưng tò mò hơn ông chịu nhận. Trong truyện ông không phải Newton: ông nhắc Newton bằng tên, như một người hâm mộ cuồng nhiệt, và không tự nhận phát hiện của Newton.
+
+**Khối mô tả, dùng cho prompt sheet:**
+
+> Ambrose (S2), a lean, proud 65-year-old man with a long narrow face, a long wavy silver wig falling past his shoulders, a long dark brown late-17th-century coat with a white linen cravat
+
+**Giọng:** tiếng Anh giọng Anh trang trọng, sắc, kiêu hãnh, trầm hơn và dứt khoát hơn Barnaby. Tạo giọng mới bằng Qwen3-TTS; không dùng giọng thu âm của người thật.
+
+**Mô tả ngắn trong prompt H3:** Barnaby: messy curly silver-white hair, a clean-shaven round face, thick black square-rimmed glasses, a mustard-yellow cardigan and a pencil behind his right ear. Ambrose: a long wavy silver wig, a long dark brown coat and a white linen cravat.
+
+**Chi tiết chạy xuyên series:** ông luôn cầm một quả táo đỏ bằng tay trái, và luôn giành phần công cho khoa học cổ điển ("you're welcome").
 
 ## Bối cảnh
 
-Chép nguyên văn vào mọi shot của cảnh đó.
+Mỗi tập chọn bối cảnh minh hoạ cho điều đang nói. Bối cảnh phi thực tế là trò đùa: hai ông xuất hiện ở đó trong trang phục thường ngày, nên người xem nhận ra là hư cấu. Khi một chi tiết nguy hiểm thật (như không có không khí trên Mặt Trăng), lời thoại phải đùa về nó để không ai tưởng thật.
 
-- **Bếp:** a small modern home kitchen with pale green cabinets on the back wall and a window on the right letting in soft morning daylight
-- **Xưởng:** a cluttered modern home workshop with a pegboard of hand tools on the back wall and a bright work lamp on the left
+Qwen-Image chỉ tạo ảnh nền trống và sheet nhân vật. H3 đưa hai người vào cảnh; không ghép ảnh trước.
 
-## Hình ảnh
+Barnaby đứng ở phần ba bên trái, Ambrose ở phần ba bên phải, cùng cỡ và cùng độ sâu, quay ba phần tư về phía nhau và về phía máy. Cách đứng này để mặt không quay nghiêng, bút chì sau tai phải của Barnaby không bị khuất, và Ambrose cầm táo bằng tay trái, phía gần máy. Nắng đặt sau máy, hơi lệch trái, để hai mặt đều sáng.
 
-- **Bảng màu minh hoạ (Manim, Three.js):** nền `#1F2A30`, chữ `#F4EFE3`, vàng cardigan `#D9A441`, xanh áo `#5B8DB8`, đỏ cảnh báo `#D1495B`.
-- **Font:** IBM Plex Sans.
-- **Đo lường:** nói đơn vị mét kèm feet hoặc inch khi con số quan trọng.
+- **Vườn táo:** an old English apple orchard at golden evening, rows of apple trees heavy with red apples in the background, soft low sunlight from behind the camera and slightly to the left
+- **Mặt Trăng:** the grey dusty surface of the Moon, a black starless sky above, the blue Earth small, just above the horizon near the center of the frame, low white sunlight from behind the camera and slightly to the left
+
+Bối cảnh chỉ là phông nền. Điều cần chính xác nằm trong lời thoại có nguồn. Không yêu cầu H3 diễn thí nghiệm, chuyển động vật lý, chữ, sơ đồ hay công thức.
+
+## Đo lường
+
+Nói đơn vị mét kèm feet hoặc inch khi con số quan trọng.
 
 ## Luật nội dung
 
-- Mỗi tập có một thí nghiệm và một trò đùa mới, và cấu trúc phải khác tập trước.
-- Trò đùa đến từ khoa học. Phóng đại phải nhận ra được là phóng đại.
+- Mỗi tập có câu hỏi, bối cảnh và trò đùa mới, và cấu trúc phải khác tập trước.
+- Trò đùa đến từ khoa học hoặc từ cuộc cãi nhau giữa cổ điển và hiện đại. Phóng đại phải nhận ra được là phóng đại.
 - Mọi tuyên bố có nguồn. Điều còn tranh cãi phải nói là còn tranh cãi.
-- Camera cố định, ngang mắt, chưa thử selfie cầm tay.
+- Camera cố định, ngang mắt.
 
-## Series 1: danh sách tập đã kiểm nguồn (2026-11-05)
+## Series 1: cổ điển và hiện đại (nháp, nguồn chưa kiểm)
 
-Chú thích: **đã đọc** là đã mở tài liệu gốc; **tóm tắt** là mới đọc abstract; **thứ cấp** là chưa đọc nguồn gốc. Viết tập nào phải đọc lại nguồn của tập đó.
+Viết tập nào phải đọc nguồn của tập đó.
+
+| Tập | Câu hỏi | Ambrose (cổ điển) | Barnaby (hiện đại) | Bối cảnh |
+|---|---|---|---|---|
+| 1 | What is gravity, really? | Lực hấp dẫn | Không-thời gian cong | Vườn táo, Mặt Trăng |
+| 2 | What is light made of? | Lăng kính, hạt ánh sáng | Photon, lưỡng tính | Phòng tối có lăng kính, cạnh một ngôi sao |
+| 3 | Is time the same for everyone? | Thời gian tuyệt đối | Tương đối, GPS | Tháp đồng hồ cổ, quỹ đạo Trái Đất |
+| 4 | Is empty space really empty? | Không gian tuyệt đối | Vũ trụ giãn nở | Đài thiên văn, không gian sâu |
+| 5 | What is everything made of? | Hạt cứng | Lượng tử | Phòng giả kim, phông trừu tượng |
+| 6 | Why do tides happen? | Lực của Mặt Trăng | Mô hình hiện đại | Bờ biển, nhìn từ quỹ đạo |
+| 7 | Why did Mercury break the rules? | Quỹ đạo | Thuyết tương đối rộng | Hệ Mặt Trời |
+| 8 | How fast is sound? | Newton tính thiếu | Giải thích đúng | Cánh đồng đại bác |
+| 9 | Do black holes exist? | "Sao tối" của Michell, 1783 | Lỗ đen | Thư viện, gần lỗ đen |
+| 10 | What did Newton get right? | Vẫn đủ cho nhiều chuyến bay vũ trụ | Giới hạn của lý thuyết | Bệ phóng, Mặt Trăng |
+
+## Kho đề đời thường (format cũ, chưa dùng)
+
+Các đề này viết cho format một người có thí nghiệm. Giữ lại vì nguồn đã kiểm. `ep01-script.md` và thư mục `ep01/` là bài thử của format đó.
+
+Chú thích: **đã đọc** là đã mở tài liệu gốc; **tóm tắt** là mới đọc abstract; **thứ cấp** là chưa đọc nguồn gốc.
 
 | Tập | Tiêu đề nháp | Nói được | Không được nói | Nguồn |
 |---|---|---|---|---|

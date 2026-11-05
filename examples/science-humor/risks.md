@@ -31,9 +31,13 @@ Worker đã chạy ở vùng nào thì ghi vào đây:
 
 Hebrew University/GreenLight giữ và thực thi quyền về tên, hình ảnh Einstein. Nhân vật hư cấu giảm rủi ro, nhưng không xoá hết. Không dùng tên hay ảnh thật của ông trên merch, quảng cáo, logo, thumbnail. Xem mục nhân vật trong [series-bible.md](series-bible.md).
 
+## Newton
+
+Ambrose lấy cảm hứng từ Newton và mặc trang phục cùng kiểu. Newton mất năm 1727, nhưng tôi chưa kiểm luật hay thương hiệu nào liên quan tới tên ông. Vẫn để nhân vật hư cấu và không đặt tên Newton ở tên kênh.
+
 ## YouTube
 
 - **Nhãn altered/synthetic:** bật cho mọi tập. [Trang trợ giúp](https://support.google.com/youtube/answer/14328491) yêu cầu công bố cảnh thực tế không có thật. Không có ví dụ về người dẫn AI hư cấu; bật là cách đọc an toàn của tôi.
-- **Mô tả mọi tập:** "AI-generated fictional character. Made with MiniMax H3. Sources below."
-- **Nội dung lặp lại:** mỗi tập đổi cấu trúc và thí nghiệm.
+- **Mô tả mọi tập:** "AI-generated fictional characters. Made with MiniMax H3. Sources below."
+- **Nội dung lặp lại:** từ 2026-11-05 toàn bộ hình là AI, không còn lớp minh hoạ bằng code tạo khác biệt. Mỗi tập phải đổi câu hỏi, bối cảnh, cấu trúc và trò đùa; cần có kịch bản viết riêng và nguồn rõ. [TechCrunch](https://techcrunch.com/2026/07/20/youtube-clarifies-policies-around-ai-slop-and-upsetting-videos/) mô tả chính sách tháng 7/2026, tôi chưa đọc đủ văn bản chính thức.
 - **Tập 6:** [chính sách nội dung nguy hiểm](https://support.google.com/youtube/answer/2801964) không nêu tên lò vi sóng, nhưng câu "don't try this at home" riêng nó không đủ làm bối cảnh. Không hướng dẫn từng bước, dùng hình động.

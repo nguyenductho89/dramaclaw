@@ -1,13 +1,17 @@
 """Stitch two chain videos together with a Ken Burns-style scene transition between them, free (no GPU).
 
-Rise off the first background's still image, drift through a procedural starfield (with a small Earth dot,
-for Earth<->sky transitions), then descend into the second background's still image, crossfading the whole
-thing with the two chain videos at the seams. Pure ffmpeg + PIL, local, no AI video generation.
+Rise off the first background's still image, drift through the middle segment (by default a procedural
+starfield with a small Earth dot; pass --wormhole-image for the "hold hands and fly through the wormhole"
+still — see series-bible.md's "Cỗ máy wormhole" section — zoomed toward its own vanishing point instead), then
+descend into the second background's still image, crossfading the whole thing with the two chain videos at the
+seams. Pure ffmpeg + PIL, local, no AI video generation — this is NOT an H3 shot, so it is exempt from the
+series bible's "camera cố định" rule (that rule binds H3-rendered shots only).
 
   uv run previs_h3_test/scripts/skits/science_humor/make_ken_burns_transition.py \
       runs/.../chain_01_single/video.mp4 gravity_test/backgrounds/orchard.png \
       gravity_test/backgrounds/moon.png runs/.../chain_02_refs_only/video.mp4 \
-      runs/_science_humor_gravity_full_preview/full_preview_kenburns.mp4
+      runs/_science_humor_gravity_full_preview/full_preview_kenburns.mp4 \
+      --wormhole-image gravity_test/transition/wormhole_flight.png
 
 Assumes both chain videos and both background stills share the same resolution/fps (checked at runtime).
 Confirmed look: previs_h3_test/science_humor_gravity_test_run.md, "Ken Burns transition" section.
@@ -77,6 +81,9 @@ def main() -> None:
     ap.add_argument("--star-xfade", type=float, default=0.3, help="crossfade between the 3 transition segments")
     ap.add_argument("--seed", type=int, default=7)
     ap.add_argument("--no-earth", action="store_true", help="omit the small Earth dot in the starfield")
+    ap.add_argument("--wormhole-image", type=Path, default=None,
+                     help="still of the two men holding hands in the wormhole tunnel (gravity_test/transition/wormhole_flight.png) "
+                          "to zoom through in the middle segment, instead of the procedural starfield")
     ap.add_argument("--video-bitrate", default="3000k")
     args = ap.parse_args()
 
@@ -91,17 +98,25 @@ def main() -> None:
 
     with tempfile.TemporaryDirectory() as tmp:
         t = Path(tmp)
-        star_png = t / "starfield.png"
-        make_starfield(star_png, w, h, args.seed, not args.no_earth)
-
         rise = t / "t1_rise.mp4"
         star = t / "t2_star.mp4"
         land = t / "t3_land.mp4"
+
+        if args.wormhole_image:
+            # Zoom straight toward the image's own vanishing point (it already reads as a tunnel receding to
+            # its center — see the prompt in gen_chains.py's transition-asset generation note) to read as
+            # "being pulled through", rather than the generic small pan used for the plain starfield.
+            zoompan_clip(args.wormhole_image, star, w, h, fps, args.star_dur,
+                         zoom_expr="min(1.0+0.09*on,1.9)", x_expr="iw/2-(iw/zoom/2)", y_expr="ih/2-(ih/zoom/2)")
+        else:
+            star_png = t / "starfield.png"
+            make_starfield(star_png, w, h, args.seed, not args.no_earth)
+            zoompan_clip(star_png, star, w, h, fps, args.star_dur,
+                         zoom_expr="min(1.02+0.0008*on,1.08)", x_expr="iw/2-(iw/zoom/2)", y_expr="ih/2-(ih/zoom/2)")
+
         zoompan_clip(args.bg_a, rise, w, h, fps, args.rise_dur,
                      zoom_expr="min(zoom+0.0045,1.35)", x_expr="iw/2-(iw/zoom/2)",
                      y_expr=f"max(0,ih-ih*0.55-ih*(1-on/{max(1, round(args.rise_dur * fps))}))")
-        zoompan_clip(star_png, star, w, h, fps, args.star_dur,
-                     zoom_expr="min(1.02+0.0008*on,1.08)", x_expr="iw/2-(iw/zoom/2)", y_expr="ih/2-(ih/zoom/2)")
         zoompan_clip(args.bg_b, land, w, h, fps, args.land_dur,
                      zoom_expr="max(1.30-0.0045*on,1.0)", x_expr="iw/2-(iw/zoom/2)", y_expr="ih/2-(ih/zoom/2)")
 

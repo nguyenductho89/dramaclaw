@@ -437,6 +437,182 @@ def build_h3_multishot_graph(
     return graph
 
 
+_MEMORY_CONTINUITY_MODES = ("cut", "seamless", "seamless_tail", "latent_handoff", "first_frame", "flf_chain", "context_pin")
+# `context_pin` needs the `ComfyUI-H3-Motion-Context` pack (not installed anywhere this project runs yet — see
+# PLAN_h3_memory_sampler_antidrift.md's Phase 2). The other modes, including `seamless_tail`, run on the stock
+# `jlucasmcrell/ComfyUI-H3-Multishot` pack already installed by `setup_h3_box.sh --with-ref2va`.
+_MEMORY_CONTINUITY_NEEDS_MOTION_CONTEXT = ("context_pin",)
+
+
+def build_h3_multishot_memory_graph(
+    *,
+    script: str,
+    shot_count: int,
+    width: int,
+    height: int,
+    frames_per_shot: int,
+    seed: int,
+    steps: int,
+    checkpoint: Checkpoint = "ref2va",
+    continuity: str = "latent_handoff",
+    sampler_name: str = "res_multistep",
+    scheduler: str = "simple",
+    seed_per_shot: bool = True,
+    start_image_name: str | None = None,
+    reference_image_names: list[str] | None = None,
+    reference_subjects: str = "",
+    voice_ref_names: list[str] | None = None,
+    master_normalize: str = "luma+contrast",
+    memory_frames: int = 0,
+    anchor_frames: int = 1,
+    bank_pinned: int = 1,
+) -> dict[str, Any]:
+    """Build the `H3MultishotMemorySampler` API graph — PLAN_h3_memory_sampler_antidrift.md's Phase 1 (no extra
+    pack install): an experiment to see whether this node's anti-drift dials fix the gravity test's two unsolved
+    bugs (background drift across shots, sheets/reference images leaking into frame) more thoroughly than the
+    current `_refs_only`/`_single` workarounds around `build_h3_multishot_graph`'s plain `H3MultishotSampler`.
+
+    Deliberately separate from `build_h3_multishot_graph`: that one stays untouched and is still what production
+    uses. This function is for the standalone test in `gravity_test/` only, until real render results justify
+    switching `gen_chains.py`/`run_batch.sh` over (see the plan's step 4).
+
+    `continuity="first_frame"` needs `checkpoint="fl2va"` per the node's own tooltip ("ref2va is trained for
+    reference rows, not first-frame hand-off"), which also disables the reference-image bank — so it cannot be
+    combined with `reference_image_names`/`voice_ref_names`. `continuity="context_pin"` needs the
+    `ComfyUI-H3-Motion-Context` pack, not installed by `setup_h3_box.sh` yet (Phase 2 of the plan).
+    `reference_subjects` groups `reference_image_names` into people, comma-counts in picture order (e.g. "2,2" for
+    2 refs each of 2 people) — leave empty only for a single character's references, since empty means "all one
+    person" and averages multiple people's faces together.
+    """
+    from novelvideo.config import (
+        RUNPOD_H3_AUDIO_VAE,
+        RUNPOD_H3_TEXT_ENCODER,
+        RUNPOD_H3_UNET_FL2VA,
+        RUNPOD_H3_UNET_REF2VA,
+        RUNPOD_H3_VIDEO_VAE,
+    )
+
+    if not (1 <= shot_count <= 64):
+        raise ValueError(f"shot_count must be 1-64, got {shot_count}")
+    if width % 32 or height % 32:
+        raise ValueError(f"width/height must be multiples of 32, got {width}x{height}")
+    if continuity not in _MEMORY_CONTINUITY_MODES:
+        raise ValueError(f"continuity must be one of {_MEMORY_CONTINUITY_MODES}, got {continuity!r}")
+    if continuity in _MEMORY_CONTINUITY_NEEDS_MOTION_CONTEXT:
+        raise ValueError(f"continuity={continuity!r} needs the ComfyUI-H3-Motion-Context pack (not installed — Phase 2)")
+    reference_image_names = reference_image_names or []
+    voice_ref_names = voice_ref_names or []
+    if continuity == "first_frame":
+        if checkpoint != "fl2va":
+            raise ValueError("continuity='first_frame' needs checkpoint='fl2va' (ref2va is reference-row trained, not first-frame hand-off)")
+        if reference_image_names or voice_ref_names:
+            raise ValueError("continuity='first_frame' disables the reference bank — fl2va has no reference rows")
+    elif checkpoint == "fl2va" and (reference_image_names or voice_ref_names):
+        raise ValueError("reference_images/voice_ref need checkpoint='ref2va' (fl2va was not trained with reference rows)")
+    if len(voice_ref_names) > 3:
+        raise ValueError("at most 3 voice_ref slots (voice_ref, voice_ref_2, voice_ref_3)")
+    if not (0 <= memory_frames <= 3):
+        raise ValueError(f"memory_frames must be 0-3, got {memory_frames}")
+    if not (0 <= anchor_frames <= 9):
+        raise ValueError(f"anchor_frames must be 0-9, got {anchor_frames}")
+    if not (0 <= bank_pinned <= 3):
+        raise ValueError(f"bank_pinned must be 0-3, got {bank_pinned}")
+    if reference_subjects:
+        counts = [c.strip() for c in reference_subjects.split(",")]
+        if not all(c.isdigit() for c in counts) or sum(int(c) for c in counts) != len(reference_image_names):
+            raise ValueError(f"reference_subjects {reference_subjects!r} must be comma-separated counts summing to len(reference_image_names)={len(reference_image_names)}")
+
+    unet_name = RUNPOD_H3_UNET_REF2VA if checkpoint == "ref2va" else RUNPOD_H3_UNET_FL2VA
+
+    graph: dict[str, Any] = {
+        "1": {
+            "class_type": "H3ModelLoaderAny",
+            "inputs": {"model_name": unet_name, "activation_reserve_gb": 0.0},
+        },
+        "2": {
+            "class_type": "H3ClipLoaderAny",
+            "inputs": {"clip_name": RUNPOD_H3_TEXT_ENCODER, "type": "minimax"},
+        },
+        "3": {"class_type": "VAELoader", "inputs": {"vae_name": RUNPOD_H3_VIDEO_VAE}},
+        "4": {"class_type": "VAELoader", "inputs": {"vae_name": RUNPOD_H3_AUDIO_VAE}},
+        "10": {
+            "class_type": "H3MultishotMemorySampler",
+            "inputs": {
+                "model": ["1", 0],
+                "clip": ["2", 0],
+                "video_vae": ["3", 0],
+                "audio_vae": ["4", 0],
+                "script": script,
+                "shot_count": shot_count,
+                "width": width,
+                "height": height,
+                "frames_per_shot": frames_per_shot,
+                "seed": seed,
+                "steps": steps,
+                "seed_per_shot": seed_per_shot,
+                "sampler_name": sampler_name,
+                "scheduler": scheduler,
+                "continuity": continuity,
+                "master_normalize": master_normalize,
+                "memory_frames": memory_frames,
+                "anchor_frames": anchor_frames,
+                "bank_pinned": bank_pinned,
+                "reference_subjects": reference_subjects,
+                "save_every_shot": True,
+            },
+        },
+        "30": {
+            "class_type": "CreateVideo",
+            "inputs": {
+                "images": ["10", 0],
+                "audio": ["10", 1],
+                "fps": _FPS,
+                "bit_depth": "auto",
+                "color_space": "sRGB",
+                "codec": "none",
+            },
+        },
+        "31": {
+            "class_type": "SaveVideo",
+            "inputs": {
+                "video": ["30", 0],
+                "filename_prefix": "dramaclaw_h3_multishot_memory",
+                "format": "mp4",
+                "format.codec": "h264",
+                "format.codec.encoding": "re-encode",
+                "format.codec.encoding.crf": 14.0,
+                "codec": "auto",
+            },
+        },
+    }
+
+    if start_image_name:
+        graph["100"] = {"class_type": "LoadImage", "inputs": {"image": start_image_name}}
+        graph["10"]["inputs"]["start_image"] = ["100", 0]
+
+    if reference_image_names:
+        for k, name in enumerate(reference_image_names):
+            graph[str(110 + k)] = {"class_type": "LoadImage", "inputs": {"image": name}}
+        # ImageBatch chains exactly 2 images per node (same fold as build_h3_multishot_graph).
+        batched = ["110", 0]
+        for k in range(1, len(reference_image_names)):
+            node_id = str(120 + k)
+            graph[node_id] = {
+                "class_type": "ImageBatch",
+                "inputs": {"image1": batched, "image2": [str(110 + k), 0]},
+            }
+            batched = [node_id, 0]
+        graph["10"]["inputs"]["reference_images"] = batched
+
+    voice_slot_keys = ["voice_ref", "voice_ref_2", "voice_ref_3"]
+    for k, name in enumerate(voice_ref_names):
+        node_id = str(200 + k)
+        graph[node_id] = {"class_type": "LoadAudio", "inputs": {"audio": name}}
+        graph["10"]["inputs"][voice_slot_keys[k]] = [node_id, 0]
+
+    return graph
+
+
 async def run_h3_multishot_job(
     *,
     api_key: str,

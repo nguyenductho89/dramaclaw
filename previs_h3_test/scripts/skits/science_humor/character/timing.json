@@ -2,37 +2,25 @@
  {
   "name": "barnaby",
   "candidate": 1,
-  "seconds": 24.3,
-  "conversation_id": "2AttRUpaJGYR7DnDqlSa5Q"
+  "seconds": 22.1,
+  "conversation_id": "Bni0ux9tZDX_cg_zo0gLIg"
  },
  {
   "name": "barnaby",
   "candidate": 2,
   "seconds": 20.0,
-  "conversation_id": "2AttRUpaJGYR7DnDqlSa5Q"
- },
- {
-  "name": "barnaby",
-  "candidate": 3,
-  "seconds": 26.6,
-  "conversation_id": "2AttRUpaJGYR7DnDqlSa5Q"
+  "conversation_id": "Bni0ux9tZDX_cg_zo0gLIg"
  },
  {
   "name": "ambrose",
   "candidate": 1,
-  "seconds": 19.1,
-  "conversation_id": "2AttRUpaJGYR7DnDqlSa5Q"
+  "seconds": 19.0,
+  "conversation_id": "Bni0ux9tZDX_cg_zo0gLIg"
  },
  {
   "name": "ambrose",
   "candidate": 2,
-  "seconds": 18.7,
-  "conversation_id": "2AttRUpaJGYR7DnDqlSa5Q"
- },
- {
-  "name": "ambrose",
-  "candidate": 3,
-  "seconds": 21.1,
-  "conversation_id": "2AttRUpaJGYR7DnDqlSa5Q"
+  "seconds": 19.1,
+  "conversation_id": "Bni0ux9tZDX_cg_zo0gLIg"
  }
 ]

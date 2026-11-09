@@ -37,38 +37,57 @@ SHEET_REFS = {
     "barnaby": f"{SKIT}/character/real_refs/einstein_1921_schmutzer.jpg",
     "ambrose": f"{SKIT}/character/real_refs/newton_1689_kneller.jpg",
 }
+# 2026-11-09: both backdrops changed from a plain empty plate to an elaborate themed scene per an explicit user
+# request, then revised again same day: the extra figures must show plausible continuous background motion (the
+# serpent coiling, the astronaut walking, Adam and Eve reaching for/sharing the fruit), not stand frozen. Each
+# scene's `motion` field is a separate sentence folded into every shot's detailed_description (shot(), below) —
+# worded as an unhurried, perpetual loop, since it has no per-shot start/end state to track like Barnaby/Ambrose's
+# own actions do, and stays small/distant so it never competes with the two-shot in front of it. They are still
+# described as non-speaking background elements — part of "the setting", not a third/fourth <Subject> — so they
+# stay out of the way of the two-speaker prompt structure (subject_definitions/retention_analysis still only
+# define Barnaby and Ambrose). Adam and Eve are kept modestly covered and mostly facing away, for a family-friendly
+# channel; the fruit-sharing gesture is readable without needing nudity.
 SCENES = {
     "orchard": {
-        "place": "an old English apple orchard at golden evening, rows of apple trees heavy with red apples in the background, soft low sunlight from behind the camera and slightly to the left",
+        "place": ("the Garden of Eden at golden evening: a lush orchard around the Tree of Knowledge, heavy with red apples, a serpent coiled in its branches, and far in the background two small distant figures, "
+                  "a man and a woman modestly covered by leaves and drapery, standing together near the tree, soft low sunlight from behind the camera and slightly to the left"),
         "light": "soft low evening sunlight from behind the camera and slightly to the left",
-        "sound": "A quiet orchard in the evening with soft birdsong and a light breeze in the leaves.",
-        "name": "Vườn táo",
-        "plate": ("Photorealistic horizontal film still of an empty old English apple orchard at golden evening. Eye-level camera, with the horizon about two-thirds of the way up the frame. Untouched open grass "
-                  "below it, rows of apple trees heavy with red apples in the background, slightly out of focus. "
-                  "Soft low sunlight from behind the camera and slightly to the left, soft gentle contrast, natural colours, natural film look. "
-                  "A calm, empty orchard."),
+        "motion": ("Far in the background and out of focus, the serpent coils slowly around a low branch of the Tree of Knowledge, and the woman reaches up, picks an apple, and offers it to the man beside her, "
+                   "who takes a slow bite — an unhurried loop of the same small gesture, repeating throughout the shot, too far away for any detail or expression to read"),
+        "sound": "A quiet garden in the evening with soft birdsong and a light breeze in the leaves.",
+        "name": "Vườn Địa Đàng",
+        "plate": ("Photorealistic horizontal film still of the Garden of Eden at golden evening. Eye-level camera, with the horizon about two-thirds of the way up the frame. Lush untouched grass below it, the Tree "
+                  "of Knowledge at the center background, heavy with red apples, a serpent coiled around one of its branches. Far in the background, small and out of focus, a man and a woman, modestly covered by "
+                  "leaves and drapery, stand together near the foot of the tree — she reaches up toward an apple on a low branch, offering it to him. No one else in the frame. "
+                  "Soft low sunlight from behind the camera and slightly to the left, soft gentle contrast, natural colours, natural film look. A calm, empty foreground."),
     },
     "moon": {
-        "place": "the grey dusty surface of the Moon, a black starless sky above, the blue Earth small, just above the horizon near the center of the frame, low white sunlight from behind the camera and slightly to the left",
+        "place": ("the Apollo 11 Moon landing site, 1969: the grey dusty lunar surface, a black starless sky, the blue Earth small near the horizon, an American flag planted in the dust, the lunar module standing "
+                  "nearby, and a lone astronaut in a bulky white spacesuit with a gold reflective visor walking near the module, low white sunlight from behind the camera and slightly to the left"),
         "light": "low white sunlight from behind the camera and slightly to the left",
+        "motion": ("Far in the background and out of focus, the astronaut walks slowly past the lunar module in bouncing, low-gravity strides, pausing now and then to crouch and pick up a rock — an unhurried loop of "
+                   "the same small routine, repeating throughout the shot, too far away for any detail to read"),
         "sound": "Complete, empty silence with no wind and no ambient sound, only the voice of whoever is speaking.",
-        "name": "Mặt Trăng",
-        "plate": ("Photorealistic horizontal film still of the empty grey dusty surface of the Moon. Eye-level camera, with the horizon about two-thirds of the way up the frame. An undisturbed expanse of flat grey dust "
-                  "below it, a pure black sky, the blue Earth small, just above the horizon near the center of the frame. "
-                  "Low white sunlight from behind the camera and slightly to the left, soft gentle contrast, natural film look. "
-                  "A silent, empty lunar plain."),
+        "name": "Mặt Trăng (bãi đáp Apollo 11)",
+        "plate": ("Photorealistic horizontal film still of the Apollo 11 Moon landing site, 1969. Eye-level camera, with the horizon about two-thirds of the way up the frame. The grey dusty lunar surface below it, "
+                  "a pure black sky, the blue Earth small, just above the horizon near the center of the frame. An American flag stands planted in the regolith in the midground, hanging stiff on its horizontal "
+                  "rod. The lunar excursion module sits nearby, gold foil and silver panels, legs planted in the dust — it is a real spacecraft about 7 metres/23 feet tall, several times taller than a standing "
+                  "person, and must be drawn at that correct scale for its distance from the camera, not shrunk to fit the frame. Far behind the module, small and indistinct with its back three-quarters to the "
+                  "camera, a single astronaut in a bulky white spacesuit walks slowly across the dust — roughly the height of an adult person at that same distance, too far away and too small in frame for any "
+                  "visor or suit detail to read clearly; it must not look larger, closer or more detailed than that. No one else in the frame. "
+                  "Low white sunlight from behind the camera and slightly to the left, soft gentle contrast, natural film look. A silent, empty foreground."),
     },
 }
 SHEETS = {
-    "barnaby": ("Photorealistic horizontal character reference photograph of one man, shown twice side by side at the same size from the waist up: "
+    "barnaby": ("Photorealistic horizontal character reference photograph of one man, shown twice side by side at the same size, full length from head to foot with both feet visible: "
                 "facing the lens on the left half, and turned toward the right of the frame on the right half. The man in the reference image, closely resembling him: "
                 "a cheerful 70-year-old with a wild halo of frizzy white hair, a thick white moustache, a weathered round face with deep smile-lines, round wire-rimmed glasses, "
-                "a mustard-yellow wool cardigan over a blue checked shirt, and a stubby pencil tucked behind his right ear. Friendly closed-mouth expression. "
+                "a mustard-yellow wool cardigan over a blue checked shirt, brown trousers, and a stubby pencil tucked behind his right ear. Friendly closed-mouth expression. "
                 "Plain light grey studio background with nothing else in the image, the two views separated only by empty grey space, soft even studio light, natural skin."),
-    "ambrose": ("Photorealistic horizontal character reference photograph of one man, shown twice side by side at the same size from the waist up: "
+    "ambrose": ("Photorealistic horizontal character reference photograph of one man, shown twice side by side at the same size, full length from head to foot with both feet visible: "
                 "facing the lens on the right half, and turned toward the left of the frame on the left half. The man in the reference image, closely resembling him: "
-                "a lean, intent 65-year-old with a long narrow face with deep-set eyes, a long wavy grey wig falling past his shoulders, a long dark brown late-17th-century coat and a white linen cravat. "
-                "Calm closed-mouth expression, chin slightly raised. Plain light grey studio background with nothing else in the image, the two views separated only by empty grey space, soft even studio light, natural skin."),
+                "a lean, intent 65-year-old with a long narrow face with deep-set eyes, a long wavy grey wig falling past his shoulders, a long dark brown late-17th-century coat, breeches and stockings, and a "
+                "white linen cravat. Calm closed-mouth expression, chin slightly raised. Plain light grey studio background with nothing else in the image, the two views separated only by empty grey space, soft even studio light, natural skin."),
 }
 FRAMES = 192  # 17k+5 grid, 8 s. The generator notes that dialogue shots under 192 frames make the shot join clip audibly (runpod_minimax_h3_multishot_video.py).
 SPEECH_END = 6.30  # in the ep01 test H3 said a 14-syllable line in about 3.3 s and spoke again in the empty tail, so every line is followed by the official lip-close sentence
@@ -78,6 +97,60 @@ VOICE = {
 }
 SUBJECT = {"Barnaby": "<Subject 1> (S1)", "Ambrose": "<Subject 2> (S2)"}
 B, A = "<Subject 1>", "<Subject 2>"
+
+# 2026-11-09: per-shot camera direction, gravity test only — explicit user request ("camera thay đổi phù hợp kịch
+# bản để nhấn mạnh nội dung"), NOT a series-wide change to series-bible.md's "camera cố định" rule. Only a slow
+# push-in is used, never a pull-back/reveal or a pan: a pull-back on a chain's shot 1 would have to start tighter
+# than the plate/storyboard frame already pinned as <Picture 1>/frame 0, contradicting it; a pan risks the
+# carefully pinned left-third/right-third blocking (series-bible.md's "Bối cảnh" positioning). Shot 1 of each
+# chain (already carrying the walk-in/drift-down entrance) and one punchline beat are static by design, not by
+# omission, to avoid compounding two kinds of novel motion in one shot on this pipeline's first attempt at any
+# camera movement. Keyed by (chain_num, 1-based shot position within the chain) — matches `index` in shot(), not
+# `prompt_index`, so a V2 one-shot file still gets the camera move for the line's real position.
+CAMERA = {
+    (1, 1): None,
+    (1, 2): ("push_one", "Barnaby", "his surprising rebuttal"),
+    (1, 3): ("push_one", "Ambrose", "his comeback"),
+    (1, 4): ("push_both", None, "the strange idea landing"),
+    (2, 1): None,
+    (2, 2): None,
+    (2, 3): ("push_one", "Barnaby", "the historical detail"),
+    (2, 4): ("push_one", "Ambrose", "his victory line"),
+}
+
+
+def _camera_text(chain_num: int, line_pos: int) -> dict:
+    """Text fragments for shot()'s camera-related sentences, keyed by move type. Returns the exact original
+    static-camera text when there is no move for this shot, so every other (chain_num, line_pos) is byte-for-byte
+    unchanged from before this feature.
+
+    For a moving shot, `position_prefix` scopes the whole "full-length head to foot ... life-size scale ...
+    clear space" framing sentence to the shot's START only (a flaw caught by the review skill on the first
+    draft: stating that framing unconditionally, then also saying the shot tightens to a medium two-shot by the
+    end, contradicted itself — a medium shot cannot also be full-length). The actual push is then its own
+    sentence in `framing_tail`, not folded into the same clause as the end-state framing."""
+    move = CAMERA.get((chain_num, line_pos))
+    if move is None:
+        return {
+            "summary_kind": "static",
+            "shot_open": "static horizontal wide two-shot at eye level",
+            "position_prefix": "",
+            "framing_tail": "with clear space above their heads and below their feet.",
+            "no_replace": "Do not replace character action with camera movement, lighting changes, particles, fog, or environmental effects.",
+            "hold": "The camera holds this framing until the final frame.",
+        }
+    kind, target, reason = move
+    end_desc = (f"a medium two-shot centered slightly on {SUBJECT[target][:11]}" if kind == "push_one"
+                else "a closer two-shot still showing both men from the waist up")
+    return {
+        "summary_kind": "slow push-in",
+        "shot_open": "horizontal wide two-shot at eye level",
+        "position_prefix": "At the start of the shot, ",
+        "framing_tail": (f"with clear space above their heads and below their feet. The camera then slowly and smoothly pushes in "
+                         f"throughout the rest of the shot, tightening toward {end_desc} by the end, to emphasize {reason}."),
+        "no_replace": "The camera's own slow push-in is the only camera movement in this shot; it does not replace any character action or dialogue below.",
+        "hold": "The push-in is smooth, slow and continuous, with no sudden movement or cut, completing by the final frame.",
+    }
 
 # chain, scene, speaker, line, syllables, joke, sources, speech start, opening actions, mid action, listener action, end state, summary
 LINES = [
@@ -130,7 +203,10 @@ def definitions(scene: str, first_shot: bool, first_frame: bool, single: bool = 
         return (f"<Picture 1> is the first frame of [Shot 1], showing {SCENES[scene]['place']}, with <Subject 1> and <Subject 2> already standing in place as described below.\n{subjects}",
                 f"<Picture 1> ([Shot 1] first frame): fully_preserved - the video starts exactly from its framing, lighting and the two men's starting positions, and the background stays the same for the rest of the video.\n{retention}")
     if first_frame and first_shot:
-        return (f"<Picture 1> is the first frame of [Shot 1], showing {SCENES[scene]['place']}, with nobody in frame yet.\n{subjects}",
+        # "with neither of them in it yet" (not "nobody") since 2026-11-09: the themed backgrounds now describe
+        # their own small background figures (Adam/Eve, the astronaut) — saying "nobody" would read as self-
+        # contradicting the place description one clause earlier.
+        return (f"<Picture 1> is the first frame of [Shot 1], showing {SCENES[scene]['place']}, with neither of the two men below in it yet.\n{subjects}",
                 f"<Picture 1> ([Shot 1] first frame): fully_preserved - the video starts exactly from its framing and lighting, and the background stays the same when the men walk in.\n{retention}")
     return (f"<Picture 1> shows the setting: {SCENES[scene]['place']}.\n{subjects}",
             f"<Picture 1> (setting): partially_preserved - {SCENES[scene]['place']}, used as the location for the whole video.\n{retention}")
@@ -154,16 +230,24 @@ def _static_opening(index: int, opening: str) -> str:
 def storyboard_prompt(index: int, line: tuple) -> str:
     """Gemini image-compose prompt for a shot's opening frame: Image 1 = the empty plate, Image 2/3 = the two
     character sheets. Pose text reuses `_static_opening` so the frame matches the pose `shot()` describes for the
-    same shot (so the storyboard and the H3 prompt never contradict each other)."""
+    same shot (so the storyboard and the H3 prompt never contradict each other).
+
+    2026-11-09: added the relight/shadow/grounding sentence after a real render (`chain_01_sb`, see
+    science_humor_gravity_test_run.md) showed the men looking "cut out and pasted" onto the background — traced to
+    this prompt back then only saying to keep Image 2/3's face/hair/clothing unchanged, which Gemini read as
+    keeping their flat, even studio lighting too, instead of relighting them to the scene. Worded scene-agnostically
+    ("foreground terrain", not "grass") since this prompt is shared by every SCENES entry, present and future."""
     _, scene, speaker, text, _, _, _, start, opening, mid, listener, end, summary = line
     pose = _static_opening(index, opening).replace(B, "Barnaby").replace(A, "Ambrose")
     return (
         "Compose a new photorealistic horizontal 16:9 film still, the opening frame of one shot in a two-man science-comedy series. "
-        "Image 1 is the location and camera: keep its background, framing and lighting exactly, static eye-level camera, no people in it. "
+        "Image 1 is the location and camera: keep its background, framing and lighting exactly, static eye-level camera, keep any small distant background figures in it exactly as they are, with neither Barnaby nor Ambrose in it yet. "
         "Image 2 shows Barnaby, one man in two views, not two people: keep his face, hair, glasses, cardigan and pencil unchanged. "
         "Image 3 shows Ambrose, one man in two views, not two people: keep his face, wig, coat and cravat unchanged. "
-        "Barnaby stands in the left third of the frame and Ambrose stands in the right third, each seen from the thighs up, the same size, the same distance from the camera, at life-size scale with the location, "
-        "both turned three-quarters toward each other and toward the camera so both faces stay clearly visible, with clear space above their heads. "
+        "Barnaby stands in the left third of the frame and Ambrose stands in the right third, each seen full-length from head to foot with both feet clearly on the ground, the same size, the same distance from the camera, at life-size scale with the location, "
+        "both turned three-quarters toward each other and toward the camera so both faces stay clearly visible, with clear space above their heads and below their feet. "
+        "Relight both men to match Image 1's own sunlight exactly — its direction, warm colour temperature and contrast — not the flat, even studio lighting of Image 2/3; their clothing, hair and face keep their own colours, only the lighting on them changes. "
+        "Each man casts a soft, visible contact shadow on the ground directly beneath his own feet, matching the shadows already in Image 1. A little of the nearest foreground terrain overlaps the lowest part of his legs or feet, so each man reads as standing inside the scene, not cut out and pasted on top of it. "
         f"{pose}. "
         "Natural skin texture, soft gentle contrast, natural film look, photorealistic. Show each man once. No text, logos or watermarks."
     )
@@ -175,9 +259,10 @@ def shot(index: int, line: tuple, first_frame: bool, single: bool = False, story
     the shot-1 opening must be static too, but "begins from <Picture 1>" still holds literally (frame 0 = Picture 1).
     `force_first`: treat this shot as [Shot 1]/<Picture 1> of its own one-shot H3 chain regardless of `index` (used
     by `shot_single` for the per-shot storyboard variant); the pose transform still keys off the real `index`."""
-    _, scene, speaker, text, _, _, _, start, opening, mid, listener, end, summary = line
+    chain_num, scene, speaker, text, _, _, _, start, opening, mid, listener, end, summary = line
     seconds = FRAMES / 24
     prompt_index = 1 if force_first else index
+    cam = _camera_text(chain_num, index)
     if index == 1 and (not first_frame or storyboard):
         # Without a first frame, or with a storyboard frame that already has both men positioned, the men are
         # already standing there: the entrance sentence becomes a static opening.
@@ -189,17 +274,18 @@ def shot(index: int, line: tuple, first_frame: bool, single: bool = False, story
     setting = f"in the setting of <Picture 1>, keeping its layout and light" if prompt_index == 1 or not first_frame else f"in this setting: {SCENES[scene]['place']}"
     return (
         f"subject_definitions:\n{defs}\n\n"
-        f"summary:\nA {seconds:.0f}-second 16:9 static medium two-shot{begins}. {summary}. Ends with {end}.\n\n"
+        f"summary:\nA {seconds:.0f}-second 16:9 {cam['summary_kind']} wide two-shot{begins}. {summary}. Ends with {end}.\n\n"
         f"retention_analysis:\n{retention}\n\n"
         "detailed_description:\n"
         f"Live-action film footage, horizontal 16:9 framing, a science comedy, {SCENES[scene]['light']}, soft gentle contrast, natural skin tones, natural film look.\n"
-        f"[Shot 1] {'The shot begins from <Picture 1>: a' if entering else 'A'} static horizontal medium two-shot at eye level {setting}. "
-        f"{'Once they have walked in, ' if walked_in else ''}<Subject 1> stands in the left third of the frame and <Subject 2> stands in the right third, each seen from the thighs up, the same size, the same distance from the camera, at life-size scale with the setting, "
-        f"both turned three-quarters toward each other and toward the camera so both faces stay clearly visible, with clear space above their heads. "
+        f"[Shot 1] {'The shot begins from <Picture 1>: a' if entering else 'A'} {cam['shot_open']} {setting}. "
+        f"{cam['position_prefix']}{'Once they have walked in, ' if walked_in else ''}<Subject 1> stands in the left third of the frame and <Subject 2> stands in the right third, each seen full-length from head to foot with both feet clearly on the ground, the same size, the same distance from the camera, at life-size scale with the setting, "
+        f"both turned three-quarters toward each other and toward the camera so both faces stay clearly visible, {cam['framing_tail']} "
+        f"{SCENES[scene]['motion']}, unrelated to and unaffected by what <Subject 1> and <Subject 2> do or say in the foreground. "
         f"{opening}. At {start:.2f} seconds {SUBJECT[speaker]} says it in {VOICE[speaker]}: <d>[English] {text}</d> Exactly as the voice stops, the lips close and the jaw ceases all speaking motion. This single line is the only speech in the video. {listener}. {mid}. "
         f"At {SPEECH_END:.2f} seconds {SUBJECT[speaker][:11]} finishes, and both stay silent with closed lips until the final frame. "
-        "Do not replace character action with camera movement, lighting changes, particles, fog, or environmental effects. "
-        f"All motion happens at natural real-time speed, not slow motion. The camera holds this framing until the final frame. At {seconds:.2f} seconds, the shot ends on {end}. "
+        f"{cam['no_replace']} "
+        f"All motion happens at natural real-time speed, not slow motion. {cam['hold']} At {seconds:.2f} seconds, the shot ends on {end}. "
         "There are no subtitles, captions, on-screen text, logos or watermarks anywhere in frame.\n\n"
         f"overall_soundscape:\n{SCENES[scene]['sound']}\n\nnon_diegetic_music:\nN/A"
     )

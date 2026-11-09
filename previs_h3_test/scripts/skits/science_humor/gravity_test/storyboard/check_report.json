@@ -1,16 +1,58 @@
 {
- "previs_h3_test/scripts/skits/science_humor/gravity_test/storyboard/candidates/chain_01_shot1_s1.png": [
+ "previs_h3_test/scripts/skits/science_humor/gravity_test/storyboard/chain_02_shot1.png": [
   {
-   "x": 333,
-   "px": 121,
-   "barnaby": 0.77,
-   "ambrose": 0.08
+   "x": 257,
+   "px": 79,
+   "barnaby": 0.57,
+   "ambrose": 0.1
   },
   {
-   "x": 936,
-   "px": 118,
+   "x": 1045,
+   "px": 73,
    "barnaby": 0.23,
-   "ambrose": 0.6
+   "ambrose": 0.63
+  }
+ ],
+ "previs_h3_test/scripts/skits/science_humor/gravity_test/storyboard/chain_02_shot2.png": [
+  {
+   "x": 272,
+   "px": 82,
+   "barnaby": 0.63,
+   "ambrose": 0.11
+  },
+  {
+   "x": 1041,
+   "px": 74,
+   "barnaby": 0.16,
+   "ambrose": 0.52
+  }
+ ],
+ "previs_h3_test/scripts/skits/science_humor/gravity_test/storyboard/chain_02_shot3.png": [
+  {
+   "x": 271,
+   "px": 77,
+   "barnaby": 0.64,
+   "ambrose": 0.12
+  },
+  {
+   "x": 1024,
+   "px": 66,
+   "barnaby": 0.14,
+   "ambrose": 0.57
+  }
+ ],
+ "previs_h3_test/scripts/skits/science_humor/gravity_test/storyboard/chain_02_shot4.png": [
+  {
+   "x": 235,
+   "px": 87,
+   "barnaby": 0.6,
+   "ambrose": 0.16
+  },
+  {
+   "x": 1057,
+   "px": 77,
+   "barnaby": 0.11,
+   "ambrose": 0.56
   }
  ]
 }

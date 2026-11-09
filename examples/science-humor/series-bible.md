@@ -4,7 +4,8 @@ Tên nhân vật và tên kênh dưới đây là đề xuất, chưa kiểm tr�
 
 - **Kênh (đề xuất):** Barnaby and Ambrose
 - **Mô tả kênh:** Science explained with humor.
-- **Format (đổi 2026-11-05):** hai nhân vật trò chuyện về khoa học, bối cảnh phía sau minh hoạ cho điều họ nói. Không có minh hoạ thí nghiệm hay công thức, không có voiceover.
+- **Format (đổi 2026-11-09, lần 2 trong ngày):** hai nhà du hành thời gian trò chuyện về khoa học khi dừng chân ở các thời điểm lịch sử khác nhau (quá khứ hoặc tương lai, tuỳ tập), đi lại bằng một **cỗ máy wormhole xuyên thời gian** — xem mục "Cỗ máy wormhole" bên dưới. Bối cảnh phía sau minh hoạ cho điều họ nói. Không có minh hoạ thí nghiệm hay công thức, không có voiceover.
+- **Đổi so với format cũ (2026-11-05 → 2026-11-09):** trước đây hai ông chỉ "tự nhiên xuất hiện", không giải thích, không thấy lạ — trò đùa nằm ở việc họ thản nhiên trước hoàn cảnh phi lý. Nay đổi sang có cơ chế rõ ràng (wormhole): trò đùa chuyển sang độ hoành tráng/buồn cười của cảnh bay qua cổng, và vào ai mới thực sự "lái" được cỗ máy (xem chi tiết chạy xuyên series của Barnaby).
 - **Ngôn ngữ:** chỉ tiếng Anh. Khán giả mục tiêu là Mỹ/Anh; xem rủi ro giấy phép trong [risks.md](risks.md).
 - **Khổ hình:** 16:9, xuất 1920×1080. Mỗi tập 6-7 phút, khoảng 550-700 từ (sẽ đo lại).
 
@@ -32,7 +33,7 @@ Người đàn ông hư cấu 70 tuổi, sống ở thời nay. Từng sửa má
 
 **Chi tiết chạy xuyên series (đổi cách dùng mỗi tập)**
 - Cây bút chì sau tai: ông hay tìm nó mà không thấy.
-- Ông bị lạc giữa các bối cảnh và không thấy có gì lạ.
+- **Đổi 2026-11-09**, thay cho "ông bị lạc giữa các bối cảnh và không thấy có gì lạ": mỗi lần xuyên wormhole, Ambrose luôn nhận mình là người lái cỗ máy, dù chính Barnaby mới là người thực sự giữ cho nó chạy được — bắt nguồn từ nghề sửa máy cũ của ông (xem lý lịch phía trên). Barnaby không cãi lại, chỉ lặng lẽ chỉnh lại thứ gì đó trước khi bước qua cổng.
 
 ## Nhân vật: Ambrose Whitlock
 
@@ -48,18 +49,34 @@ Người đàn ông hư cấu, tên tạm, chưa kiểm trùng. **Ngoại hình 
 
 **Chi tiết chạy xuyên series:** ông luôn cầm một quả táo đỏ bằng tay trái, và luôn giành phần công cho khoa học cổ điển ("you're welcome").
 
+## Cỗ máy wormhole (mới 2026-11-09)
+
+Hai ông đi giữa các thời điểm bằng một **cổng wormhole xuyên thời gian có thể đi qua được (traversable wormhole time machine)**: một cổng tròn phát sáng, lơ lửng giữa không trung, viền ánh sáng xanh-tím, một đường hầm ánh sáng và sao cuộn xoáy hút vào tâm. Không giải thích nguồn gốc hay cách chế tạo cỗ máy — đó không phải trọng tâm của chương trình, chỉ cần người xem hiểu đây là cách họ di chuyển.
+
+**Khối mô tả, dùng lại y nguyên mỗi lần nhắc tới cổng:**
+
+> a swirling, glowing circular wormhole portal hanging in mid-air, rimmed with blue-violet light, a tunnel of light and stars receding into its center
+
+**Cảnh chuyển cảnh:** giữa hai bối cảnh trong cùng một tập, hai ông nắm tay nhau, bước vào cổng wormhole, rồi xuất hiện ở bối cảnh tiếp theo. Cảnh này dựng bằng **ffmpeg thuần, không qua H3** (`make_ken_burns_transition.py`, mở rộng 2026-11-09): không vi phạm luật "camera cố định" vì không phải cảnh do H3 sinh — H3 chỉ render hai cảnh trò chuyện tĩnh, đoạn nắm-tay-bay-qua-cổng là hiệu ứng dựng phim trên ảnh tĩnh (xem mục "Bối cảnh" bên dưới cho ảnh nắm tay dùng trong đoạn này).
+
 ## Bối cảnh
 
-Mỗi tập chọn bối cảnh minh hoạ cho điều đang nói. Bối cảnh phi thực tế là trò đùa: hai ông xuất hiện ở đó trong trang phục thường ngày, nên người xem nhận ra là hư cấu. Khi một chi tiết nguy hiểm thật (như không có không khí trên Mặt Trăng), lời thoại phải đùa về nó để không ai tưởng thật.
+Mỗi tập chọn bối cảnh minh hoạ cho điều đang nói, ở một thời điểm cụ thể (quá khứ hoặc tương lai) mà wormhole đưa họ tới. Bối cảnh phi thực tế là trò đùa: hai ông xuất hiện ở đó trong trang phục thường ngày, nên người xem nhận ra là hư cấu. Khi một chi tiết nguy hiểm thật (như không có không khí trên Mặt Trăng), lời thoại phải đùa về nó để không ai tưởng thật.
 
-Gemini WebAI tạo ảnh nền trống, sheet nhân vật, và (từ 2026-11-09) storyboard frame — ảnh ghép sẵn hai người vào đúng bố cục cảnh, dùng làm khung đầu cho H3 thay vì chỉ nền trống.
+Gemini WebAI tạo ảnh nền trống, sheet nhân vật, và (từ 2026-11-09) storyboard frame — ảnh ghép sẵn hai người vào đúng bố cục cảnh, dùng làm khung đầu cho H3 thay vì chỉ nền trống. `gemini_webai_images.py` tự xoá watermark sparkle hiển thị khỏi mọi ảnh tải về (`remove_watermark()` trong `fit_16x9()`), không cần xử lý tay.
 
-Barnaby đứng ở phần ba bên trái, Ambrose ở phần ba bên phải, cùng cỡ và cùng độ sâu, quay ba phần tư về phía nhau và về phía máy. Cách đứng này để mặt không quay nghiêng, bút chì sau tai phải của Barnaby không bị khuất, và Ambrose cầm táo bằng tay trái, phía gần máy. Nắng đặt sau máy, hơi lệch trái, để hai mặt đều sáng.
+**Luật chiếu sáng storyboard (mới 2026-11-09, sau khi phát hiện ảnh "dán cắt")**: ảnh sheet nhân vật chụp kiểu studio (nền xám, ánh sáng đều) — nếu prompt compose không yêu cầu rõ, Gemini có xu hướng giữ nguyên ánh sáng phẳng đó khi ghép người vào cảnh, tạo cảm giác người bị dán lên nền thay vì đứng trong đó (không bóng đổ dưới chân, tông sáng lệch khỏi nền, không có gì tiền cảnh che chân). Mọi prompt storyboard compose (`storyboard_prompt()` trong `gravity_test/gen_chains.py`) phải luôn yêu cầu rõ cả 3: (1) chiếu sáng lại nhân vật đúng hướng/tông màu ảnh nền, không theo ánh sáng sheet; (2) bóng đổ dưới chân khớp bóng đã có trong ảnh nền; (3) một phần cảnh tiền cảnh che nhẹ chân/ống quần.
 
-- **Vườn táo:** an old English apple orchard at golden evening, rows of apple trees heavy with red apples in the background, soft low sunlight from behind the camera and slightly to the left
-- **Mặt Trăng:** the grey dusty surface of the Moon, a black starless sky above, the blue Earth small, just above the horizon near the center of the frame, low white sunlight from behind the camera and slightly to the left
+Barnaby đứng ở phần ba bên trái, Ambrose ở phần ba bên phải, cùng cỡ và cùng độ sâu, quay ba phần tư về phía nhau và về phía máy. Cách đứng này để mặt không quay nghiêng, bút chì sau tai phải của Barnaby không bị khuất, và Ambrose cầm táo bằng tay trái, phía gần máy. Nắng đặt sau máy, hơi lệch trái, để hai mặt đều sáng. **Khung toàn thân (đổi 2026-11-09, theo yêu cầu):** cả hai thấy trọn từ đầu tới chân, không còn khung nửa người — cỡ cảnh đổi từ "medium two-shot" sang "wide two-shot", chừa khoảng trống cả trên đỉnh đầu lẫn dưới chân.
 
-Bối cảnh chỉ là phông nền. Điều cần chính xác nằm trong lời thoại có nguồn. Không yêu cầu H3 diễn thí nghiệm, chuyển động vật lý, chữ, sơ đồ hay công thức.
+**Bối cảnh (đổi 2026-11-09, theo yêu cầu dùng cảnh chi tiết hơn, có chuyển động):** hai bối cảnh trống trước đây đổi thành cảnh có chủ đề; người/vật thêm vào là phông nền có chuyển động nhẹ, lặp lại, xa và mờ — không phải nhân vật thứ ba (không nói, không có `<Subject N>` riêng), không ảnh hưởng luật "chỉ hai người nói" trong prompt H3. Chuyển động nền độc lập với hành động của Barnaby/Ambrose ở tiền cảnh, lặp vòng đều trong suốt shot (không cần khớp đầu/cuối giữa các shot như hành động của hai ông).
+
+- **Vườn Địa Đàng** (trước là "vườn táo" trống): Cây Tri Thức giữa nền, trĩu táo đỏ, một con rắn cuộn quanh cành thấp. Xa phía sau, hai bóng người nhỏ, mờ (gợi ý Adam và Eva, che bằng lá và vải) — người nữ hái một quả táo rồi đưa cho người nam, người nam cắn một miếng, lặp lại vòng cử chỉ nhỏ này suốt shot, quá xa để thấy rõ chi tiết hay biểu cảm. Nắng vàng chiều tà như cũ.
+- **Mặt Trăng, bãi đáp Apollo 11 1969** (trước là mặt trăng trống): bề mặt xám, bầu trời đen, Trái Đất nhỏ ở xa; cờ Mỹ cắm trên nền đất; mô-đun đổ bộ (lunar module) gần đó; một phi hành gia vô danh (mặt khuất sau tấm che vàng phản chiếu, không giống ai cụ thể) đi bước nhảy chậm kiểu trọng lực yếu quanh mô-đun, thỉnh thoảng cúi nhặt đá — lặp lại suốt shot, quá xa để thấy rõ chi tiết. Giữ nguyên nắng trắng lạnh và sự im lặng tuyệt đối (vẫn đúng khoa học: Mặt Trăng không có khí quyển).
+
+Prompt đầy đủ nằm trong `SCENES` của `gravity_test/gen_chains.py` (field `place`/`plate`/`motion`), không chép lại ở đây để tránh lệch khi sửa. Ảnh "hai ông nắm tay bay qua cổng wormhole" dùng cho đoạn chuyển cảnh (không phải H3, xem mục "Cỗ máy wormhole") nằm ở `gravity_test/transition/`.
+
+Bối cảnh chỉ là phông nền. Điều cần chính xác nằm trong lời thoại có nguồn. Không yêu cầu H3 diễn thí nghiệm, chuyển động vật lý, chữ, sơ đồ hay công thức. **Camera cố định (dưới) áp dụng cho mọi shot do H3 sinh** — đoạn nắm tay bay qua wormhole không phải shot H3, dựng bằng ffmpeg trên ảnh tĩnh nên không tính vào luật này.
 
 ## Đo lường
 
@@ -70,7 +87,7 @@ Nói đơn vị mét kèm feet hoặc inch khi con số quan trọng.
 - Mỗi tập có câu hỏi, bối cảnh và trò đùa mới, và cấu trúc phải khác tập trước.
 - Trò đùa đến từ khoa học hoặc từ cuộc cãi nhau giữa cổ điển và hiện đại. Phóng đại phải nhận ra được là phóng đại.
 - Mọi tuyên bố có nguồn. Điều còn tranh cãi phải nói là còn tranh cãi.
-- Camera cố định, ngang mắt.
+- Camera cố định, ngang mắt. **Ngoại lệ đang thử nghiệm (2026-11-09), chỉ riêng bài test gravity, chưa áp dụng toàn series:** mỗi shot có thể đi kèm một chuyển động camera đơn giản (chỉ push-in chậm, không pan/arc/handheld) để nhấn nội dung đang nói — xem `CAMERA`/`_camera_text()` trong `gravity_test/gen_chains.py`. Shot 1 của mỗi chain (đang mang theo hành động vào khung) và 1 nhịp chốt hài vẫn giữ camera tĩnh có chủ đích, không phải bỏ sót.
 
 ## Series 1: cổ điển và hiện đại (nháp, nguồn chưa kiểm)
 

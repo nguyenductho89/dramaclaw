@@ -5,14 +5,14 @@ Bản thử không có mở đầu và lời hứa theo khuôn tập dài: mục
 
 | Mốc | Chain, shot | Bối cảnh | Người nói | Lời | Trò đùa | Nguồn |
 |---|---|---|---|---|---|---|
-| 0:00.0-0:08.0 | 01, 1 | Vườn táo | Ambrose | The Earth pulls the apple down. Newton settled this. | Ambrose tưởng đã xong chuyện | S2 |
-| 0:08.0-0:16.0 | 01, 2 | Vườn táo | Barnaby | Nice. But to Einstein, gravity isn't a pull. | Một câu làm hỏng cả vườn táo | S2 |
-| 0:16.0-0:24.0 | 01, 3 | Vườn táo | Ambrose | Not a pull? Newton's laws still work for a great many things. |  | S3 |
-| 0:24.0-0:32.0 | 01, 4 | Vườn táo | Barnaby | Sure. But mass bends spacetime. The apple just takes the straightest path. | Nghe vô lý mà đúng trong lý thuyết | S2 |
-| 0:32.0-0:40.0 | 02, 1 | Mặt Trăng | Ambrose | Where is the orchard? And why am I on the Moon? | Ambrose rơi xuống Mặt Trăng từ từ vì trọng lực yếu, Barnaby thấy bình thường (đúng tính cách lạc giữa bối cảnh) |  |
-| 0:40.0-0:48.0 | 02, 2 | Mặt Trăng | Barnaby | Better view. Also, there's no air, so talk fast. | Đùa về việc không có không khí, dựng sẵn cho câu sau | S1 |
-| 0:48.0-0:56.0 | 02, 3 | Mặt Trăng | Barnaby | Apollo Fifteen: hammer and feather, landed together. |  | S1 |
-| 0:56.0-1:04.0 | 02, 4 | Mặt Trăng | Ambrose | Of course. Galileo told you so. You're welcome. | Ambrose giành công cho khoa học cổ điển | S1 |
+| 0:00.0-0:08.0 | 01, 1 | Vườn Địa Đàng | Ambrose | The Earth pulls the apple down. Newton settled this. | Ambrose tưởng đã xong chuyện | S2 |
+| 0:08.0-0:16.0 | 01, 2 | Vườn Địa Đàng | Barnaby | Nice. But to Einstein, gravity isn't a pull. | Một câu làm hỏng cả vườn táo | S2 |
+| 0:16.0-0:24.0 | 01, 3 | Vườn Địa Đàng | Ambrose | Not a pull? Newton's laws still work for a great many things. |  | S3 |
+| 0:24.0-0:32.0 | 01, 4 | Vườn Địa Đàng | Barnaby | Sure. But mass bends spacetime. The apple just takes the straightest path. | Nghe vô lý mà đúng trong lý thuyết | S2 |
+| 0:32.0-0:40.0 | 02, 1 | Mặt Trăng (bãi đáp Apollo 11) | Ambrose | Where is the orchard? And why am I on the Moon? | Ambrose rơi xuống Mặt Trăng từ từ vì trọng lực yếu, Barnaby thấy bình thường (đúng tính cách lạc giữa bối cảnh) |  |
+| 0:40.0-0:48.0 | 02, 2 | Mặt Trăng (bãi đáp Apollo 11) | Barnaby | Better view. Also, there's no air, so talk fast. | Đùa về việc không có không khí, dựng sẵn cho câu sau | S1 |
+| 0:48.0-0:56.0 | 02, 3 | Mặt Trăng (bãi đáp Apollo 11) | Barnaby | Apollo Fifteen: hammer and feather, landed together. |  | S1 |
+| 0:56.0-1:04.0 | 02, 4 | Mặt Trăng (bãi đáp Apollo 11) | Ambrose | Of course. Galileo told you so. You're welcome. | Ambrose giành công cho khoa học cổ điển | S1 |
 
 ## Nguồn
 

@@ -2,7 +2,49 @@
  {
   "name": "chain_01_shot1",
   "candidate": 1,
-  "seconds": 21.4,
-  "conversation_id": "YRPF1ym341qQkWlA9VgvQA"
+  "seconds": 35.8,
+  "conversation_id": "G89VakTL55SOeiCbQVhsDg"
+ },
+ {
+  "name": "chain_01_shot2",
+  "candidate": 1,
+  "seconds": 35.1,
+  "conversation_id": "G89VakTL55SOeiCbQVhsDg"
+ },
+ {
+  "name": "chain_01_shot3",
+  "candidate": 1,
+  "seconds": 35.2,
+  "conversation_id": "G89VakTL55SOeiCbQVhsDg"
+ },
+ {
+  "name": "chain_01_shot4",
+  "candidate": 1,
+  "seconds": 31.4,
+  "conversation_id": "G89VakTL55SOeiCbQVhsDg"
+ },
+ {
+  "name": "chain_02_shot1",
+  "candidate": 1,
+  "seconds": 28.5,
+  "conversation_id": "G89VakTL55SOeiCbQVhsDg"
+ },
+ {
+  "name": "chain_02_shot2",
+  "candidate": 1,
+  "seconds": 27.1,
+  "conversation_id": "G89VakTL55SOeiCbQVhsDg"
+ },
+ {
+  "name": "chain_02_shot3",
+  "candidate": 1,
+  "seconds": 26.2,
+  "conversation_id": "G89VakTL55SOeiCbQVhsDg"
+ },
+ {
+  "name": "chain_02_shot4",
+  "candidate": 1,
+  "seconds": 31.3,
+  "conversation_id": "G89VakTL55SOeiCbQVhsDg"
  }
 ]

@@ -20,16 +20,15 @@ Người đàn ông hư cấu 70 tuổi, sống ở thời nay. Từng sửa má
 
 **Khối mô tả, dùng cho prompt sheet:**
 
-> Barnaby (S1), a cheerful 70-year-old man with messy curly silver-white hair, a clean-shaven round face, thick black square-rimmed glasses, a mustard-yellow wool cardigan over a blue checked shirt, and a stubby pencil tucked behind his right ear
+> Barnaby (S1), a cheerful 70-year-old man closely resembling Albert Einstein: a wild halo of frizzy white hair, a thick white moustache, a weathered round face with deep smile-lines, round wire-rimmed glasses, a mustard-yellow wool cardigan over a blue checked shirt, and a stubby pencil tucked behind his right ear
 
 **Giọng:** tiếng Anh giọng Mỹ, ấm, khô khan, thích thú, thoải mái (đổi từ giọng Anh nhẹ ngày 2026-11-05 để hai nhân vật khác nhau rõ). Tạo giọng mới bằng Qwen3-TTS; không dùng giọng thu âm của người thật. Lời thoại dùng cách nói Mỹ ("Nice", "Sure"), không dùng "Lovely", "Quite".
 
-**Luật ngoại hình và danh tính**
-- Ông chỉ gợi không khí của ngoại hình Einstein. Mặt tròn cạo sạch, kính vuông dày và áo vàng là các điểm khác biệt, không bỏ.
-- Nếu sheet làm ông giống chân dung Einstein thì sửa sheet.
-- Trong truyện, ông không phải Einstein và không phải người quen của Einstein. Không nhắc tới sự giống nhau, không đùa về nó.
+**Luật ngoại hình và danh tính (đổi 2026-11-09, theo yêu cầu dùng ảnh thật)**
+- Ông **cố tình giống hẳn** Albert Einstein — ngược với luật cũ "chỉ gợi không khí, giữ điểm khác biệt". Sheet dựng bằng Gemini, dùng ảnh thật Einstein năm 1921 (Ferdinand Schmutzer, public domain) làm identity reference; xem `character/real_refs/SOURCES.md`. Áo cardigan vàng mù tạt và bút chì sau tai là chi tiết riêng của Barnaby, không đổi.
+- Trong truyện, ông vẫn **không phải Einstein** và không phải người quen của Einstein — không có lời thoại nào tự nhận là ông, họ hàng, hay Einstein đổi tên. Không nhắc tới sự giống nhau, không đùa về nó.
 - Không dùng tư thế lè lưỡi, phòng cấp bằng sáng chế, bảng E=mc², tẩu thuốc, giọng Đức.
-- Tên Einstein chỉ xuất hiện khi ghi công trong nội dung khoa học. Không đặt ở tiêu đề, thumbnail, tên kênh.
+- Tên Einstein chỉ xuất hiện khi ghi công trong nội dung khoa học. Không đặt ở tiêu đề, thumbnail, tên kênh — **quy tắc này quan trọng hơn trước** vì ngoại hình giờ giống thật; Hebrew University/GreenLight thực thi quyền hình ảnh Einstein tách biệt khỏi bản quyền ảnh đã hết hạn. Rủi ro đã ghi và được người dùng chấp nhận, xem `risks.md`.
 
 **Chi tiết chạy xuyên series (đổi cách dùng mỗi tập)**
 - Cây bút chì sau tai: ông hay tìm nó mà không thấy.
@@ -37,15 +36,15 @@ Người đàn ông hư cấu 70 tuổi, sống ở thời nay. Từng sửa má
 
 ## Nhân vật: Ambrose Whitlock
 
-Người đàn ông hư cấu, tên tạm, chưa kiểm trùng. Ngoại hình lấy cảm hứng từ Isaac Newton, mặc trang phục cùng kiểu. Ông kiêu hãnh, chính xác, khó chịu vì bị thế kỷ sau sửa lại, nhưng tò mò hơn ông chịu nhận. Trong truyện ông không phải Newton: ông nhắc Newton bằng tên, như một người hâm mộ cuồng nhiệt, và không tự nhận phát hiện của Newton.
+Người đàn ông hư cấu, tên tạm, chưa kiểm trùng. **Ngoại hình giống hẳn Isaac Newton (đổi 2026-11-09, theo yêu cầu dùng ảnh thật)** — sheet dựng bằng Gemini, dùng chân dung Godfrey Kneller 1689 (Newton 46 tuổi, public domain) làm identity reference; xem `character/real_refs/SOURCES.md`. Mặc trang phục cùng kiểu thế kỷ 17. Ông kiêu hãnh, chính xác, khó chịu vì bị thế kỷ sau sửa lại, nhưng tò mò hơn ông chịu nhận. Trong truyện ông không phải Newton: ông nhắc Newton bằng tên, như một người hâm mộ cuồng nhiệt, và không tự nhận phát hiện của Newton. Newton mất năm 1727, chưa ghi nhận ai thực thi quyền hình ảnh cho ông (khác Einstein) — xem `risks.md`.
 
 **Khối mô tả, dùng cho prompt sheet:**
 
-> Ambrose (S2), a lean, proud 65-year-old man with a long narrow face, a long wavy silver wig falling past his shoulders, a long dark brown late-17th-century coat with a white linen cravat
+> Ambrose (S2), a lean, intent 65-year-old man closely resembling the young Isaac Newton: a long narrow face with deep-set eyes, a long wavy grey wig falling past his shoulders, a long dark brown late-17th-century coat with a white linen cravat
 
 **Giọng:** tiếng Anh giọng Anh trang trọng (Received Pronunciation), sắc, kiêu hãnh, dứt khoát. Hai giọng khác nhau cả về giọng vùng: Barnaby Mỹ, Ambrose Anh. Đo bằng Resemblyzer ngày 2026-11-05: hai giọng cùng mô tả "giọng Anh" nghe như một (cosine cùng người 0,90, khác người 0,88). Tạo giọng mới bằng Qwen3-TTS; không dùng giọng thu âm của người thật.
 
-**Mô tả ngắn trong prompt H3:** Barnaby: messy curly silver-white hair, a clean-shaven round face, thick black square-rimmed glasses, a mustard-yellow cardigan and a pencil behind his right ear. Ambrose: a long wavy silver wig, a long dark brown coat and a white linen cravat.
+**Mô tả ngắn trong prompt H3:** Barnaby: a wild halo of frizzy white hair, a thick white moustache, a weathered round face, round wire-rimmed glasses, a mustard-yellow cardigan and a pencil behind his right ear. Ambrose: a long wavy grey wig, a long narrow face with deep-set eyes, a long dark brown coat and a white linen cravat.
 
 **Chi tiết chạy xuyên series:** ông luôn cầm một quả táo đỏ bằng tay trái, và luôn giành phần công cho khoa học cổ điển ("you're welcome").
 
@@ -53,7 +52,7 @@ Người đàn ông hư cấu, tên tạm, chưa kiểm trùng. Ngoại hình l�
 
 Mỗi tập chọn bối cảnh minh hoạ cho điều đang nói. Bối cảnh phi thực tế là trò đùa: hai ông xuất hiện ở đó trong trang phục thường ngày, nên người xem nhận ra là hư cấu. Khi một chi tiết nguy hiểm thật (như không có không khí trên Mặt Trăng), lời thoại phải đùa về nó để không ai tưởng thật.
 
-Qwen-Image chỉ tạo ảnh nền trống và sheet nhân vật. H3 đưa hai người vào cảnh; không ghép ảnh trước.
+Gemini WebAI tạo ảnh nền trống, sheet nhân vật, và (từ 2026-11-09) storyboard frame — ảnh ghép sẵn hai người vào đúng bố cục cảnh, dùng làm khung đầu cho H3 thay vì chỉ nền trống.
 
 Barnaby đứng ở phần ba bên trái, Ambrose ở phần ba bên phải, cùng cỡ và cùng độ sâu, quay ba phần tư về phía nhau và về phía máy. Cách đứng này để mặt không quay nghiêng, bút chì sau tai phải của Barnaby không bị khuất, và Ambrose cầm táo bằng tay trái, phía gần máy. Nắng đặt sau máy, hơi lệch trái, để hai mặt đều sáng.
 

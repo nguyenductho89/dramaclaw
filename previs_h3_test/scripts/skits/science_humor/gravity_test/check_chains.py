@@ -3,15 +3,22 @@
 # requires-python = ">=3.12,<3.13"
 # dependencies = ["faster-whisper", "resemblyzer", "setuptools<81", "numpy<2.3", "opencv-python-headless>=4.9", "librosa", "soundfile"]
 # ///
-"""Objective checks for the gravity test videos: who spoke each line, what was said, extra speech, and each face.
+"""Objective checks for the gravity test videos and storyboard images: who spoke each line, what was said, extra
+speech, and each face.
 
   uv run previs_h3_test/scripts/skits/science_humor/gravity_test/check_chains.py <chain_name> <video.mp4> [<chain_name> <video.mp4> ...]
+  uv run previs_h3_test/scripts/skits/science_humor/gravity_test/check_chains.py --storyboard <image.png> [<image.png> ...]
 
 <chain_name> is the JSON name in gravity_test/ (chain_01, chain_01_refs_only, ...). Per shot it reports:
 - the words H3 spoke (faster-whisper base.en) against the script line, as a 0-1 match;
 - which voice spoke each segment (Resemblyzer cosine to voice/barnaby.wav and voice/ambrose.wav) against the expected speaker;
 - speech that starts after the line should have ended (the extra-speech defect from the ep01 test);
 - from frames in the shot, how many faces YuNet finds and the SFace cosine of each face to both character sheets.
+
+`--storyboard` runs only the face check, against Gemini's composed storyboard candidates
+(gravity_test/storyboard/candidates/*.png) BEFORE spending any GPU on them — it exists so a candidate with the
+wrong face (or a missing/extra face) can be ruled out while picking, not after rendering H3 on top of it.
+
 Cosine guides only: SFace same-person threshold is 0.363 and it cannot tell two looks of one person apart.
 """
 import difflib
@@ -89,11 +96,42 @@ def sheet_embeddings():
     return refs
 
 
+def check_storyboard(image_paths: list[str]) -> int:
+    """Face-only check for Gemini storyboard candidates, before any H3 render. For each image: how many faces
+    YuNet finds (left to right) and each one's SFace cosine to both character sheets — same metric and threshold
+    `main()` reports per H3 frame, just run directly on the candidate PNG."""
+    cv2, fs, det, rec = face_tools()
+    sheets = sheet_embeddings()
+    print("faces found in sheets:", {k: len(v) for k, v in sheets.items()})
+    report = {}
+    for path in image_paths:
+        img = cv2.imread(path)
+        if img is None:
+            print(f"{path}: could not read image")
+            continue
+        found = sorted(faces_in(img), key=lambda f: f[0])  # left to right
+        cells = [{"x": round(x), "px": h,
+                  **{n: round(max((float(rec.match(e, r, cv2.FaceRecognizerSF_FR_COSINE)) for r in sheets[n]), default=-1), 2) for n in sheets}}
+                 for x, h, e in found]
+        report[path] = cells
+        print(f"{path}: {len(cells)} face(s) left->right: {cells}")
+    out = SKIT / "gravity_test" / "storyboard" / "check_report.json"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(report, indent=1) + "\n")
+    print("\nwritten", out)
+    return 0
+
+
 def main() -> int:
+    args = sys.argv[1:]
+    if args and args[0] == "--storyboard":
+        # Dispatched before the faster-whisper/resemblyzer imports below: storyboard candidates need only the
+        # (much lighter, already-loaded-by-face_tools) face check, not the whisper/voice models the video path needs.
+        return check_storyboard(args[1:])
+
     from faster_whisper import WhisperModel
     from resemblyzer import VoiceEncoder, preprocess_wav
 
-    args = sys.argv[1:]
     if not args or len(args) % 2:
         sys.exit(__doc__)
     cv2, fs, det, rec = face_tools()

@@ -1,0 +1,51 @@
+{
+  "file": "/opt/dramaclaw/previs_h3_test/runs/20261106T041954Z_a0722bf62ac3_science_humor_gravity_test_chain_02_refs_only/video.mp4",
+  "ffprobe": {
+    "programs": [],
+    "streams": [
+      {
+        "codec_name": "h264",
+        "codec_type": "video",
+        "width": 1344,
+        "height": 768,
+        "r_frame_rate": "24/1",
+        "duration": "31.875000",
+        "bit_rate": "6469372",
+        "nb_frames": "765"
+      },
+      {
+        "codec_name": "aac",
+        "codec_type": "audio",
+        "sample_rate": "32000",
+        "channels": 2,
+        "r_frame_rate": "0/0",
+        "duration": "31.755031",
+        "bit_rate": "136241",
+        "nb_frames": "994"
+      }
+    ],
+    "format": {
+      "duration": "31.875000",
+      "size": "26336333",
+      "bit_rate": "6609903"
+    }
+  },
+  "luma": {
+    "samples": 128,
+    "mean": 65.08,
+    "first": 66.98,
+    "last": 63.98,
+    "min": 62.85,
+    "max": 67.12,
+    "max_jump": 0.8,
+    "first_tenth_mean": 66.79,
+    "last_tenth_mean": 63.9
+  },
+  "frame_bytes": {
+    "count": 765,
+    "mean": 33695,
+    "min": 1312,
+    "max": 264125
+  },
+  "laplacian_var": "skipped: ModuleNotFoundError"
+}

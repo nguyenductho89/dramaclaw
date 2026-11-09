@@ -1,0 +1,30 @@
+{
+  "label": "science_humor_gravity_test_chain_01_single",
+  "box": "rented-4090-local",
+  "started_utc": "2026-11-06T04:49:47Z",
+  "run_dir": "20261106T044933Z_a0722bf62ac3_science_humor_gravity_test_chain_01_single",
+  "comfy_url": "http://127.0.0.1:8188",
+  "resolution": "1344x768",
+  "aspect_ratio": "16:9",
+  "shots": 4,
+  "frames_per_shot": 192,
+  "sampling": {
+    "pdd_nfe": "",
+    "pdd_file": "",
+    "turbo_lora": "minimax_h3_ref2v_turbo_4step_v0.1_comfyui_bf16.safetensors",
+    "chain_normalize": "off",
+    "steps": 12,
+    "output_scale": 1.0
+  },
+  "logs": [
+    "    0.0s submitted prompt 84e041b5-89fd-43c2-8582-7936b19e31e6",
+    "    5.0s running=1 pending=0",
+    " 1646.3s event execution_start {\"prompt_id\": \"84e041b5-89fd-43c2-8582-7936b19e31e6\", \"timestamp\": 1793940587385}",
+    " 1646.3s event execution_cached {\"nodes\": [\"1\", \"2\", \"3\", \"4\", \"7\", \"200\", \"201\"], \"prompt_id\": \"84e041b5-89fd-43c2-8582-7936b19e31e6\", \"timestamp\": 1793940587393}",
+    " 1646.3s event execution_success {\"prompt_id\": \"84e041b5-89fd-43c2-8582-7936b19e31e6\", \"timestamp\": 1793942232354}"
+  ],
+  "wall_seconds": 1646.3,
+  "error": null,
+  "video_bytes": 23966670,
+  "helper_errors": []
+}

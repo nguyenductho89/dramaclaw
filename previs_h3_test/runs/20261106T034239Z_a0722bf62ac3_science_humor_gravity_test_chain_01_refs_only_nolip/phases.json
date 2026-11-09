@@ -1,0 +1,38 @@
+{
+  "shots": [
+    {
+      "shot": 1,
+      "of": 1,
+      "start": "2026-11-06T03:42:54",
+      "encode_text_s": 18.0,
+      "dit_s": 362.0,
+      "init_s": 31.92,
+      "sampling_s": 349,
+      "s_per_step": 29.59,
+      "decode_video_s": 27.0,
+      "decode_audio_s": 11.0,
+      "shot_total_s": 418.0,
+      "dit_free_gb": 21.2,
+      "missing": []
+    }
+  ],
+  "storage_policy": [
+    "fast_disk=False"
+  ],
+  "staged_mb": {
+    "MiniMaxH3AudioVAE": 576,
+    "MiniMaxH3VideoVAE": 4965,
+    "MiniMaxH3TEModel_": 14956,
+    "MiniMaxH3": 19995
+  },
+  "avg": {
+    "encode_text_s": 18.0,
+    "dit_s": 362.0,
+    "init_s": 31.9,
+    "sampling_s": 349.0,
+    "s_per_step": 29.6,
+    "decode_video_s": 27.0,
+    "decode_audio_s": 11.0,
+    "shot_total_s": 418.0
+  }
+}

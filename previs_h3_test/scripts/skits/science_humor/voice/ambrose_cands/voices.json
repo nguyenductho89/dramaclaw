@@ -1,0 +1,23 @@
+{
+ "model": "Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign",
+ "device": "cuda:0",
+ "seed": 1234,
+ "text": "Sir, I have read every line of the Principia, twice, and I shall thank you not to interrupt me again. Observe the apple. It falls, as it has always fallen, and I see no reason to apologise for it.",
+ "voices": {
+  "deepbass": {
+   "instruct": "A proud English man of about sixty-five with a very deep, resonant bass-baritone voice, slow and grave, with a precise upper-class Received Pronunciation accent, like a stern Victorian judge delivering a verdict.",
+   "seconds": 14.96,
+   "generate_s": 36.3
+  },
+  "gravelly": {
+   "instruct": "A proud English man of about sixty-five with a low, rough, gravelly voice and a clipped, formal British accent, speaking in short firm phrases, like an old army colonel correcting a recruit.",
+   "seconds": 15.92,
+   "generate_s": 36.9
+  },
+  "fussy": {
+   "instruct": "A proud English man of about sixty-five with a thin, high-pitched, nasal voice, quick, fussy and precise, with a refined British accent, like an indignant old clerk who cannot bear being contradicted.",
+   "seconds": 13.44,
+   "generate_s": 32.4
+  }
+ }
+}

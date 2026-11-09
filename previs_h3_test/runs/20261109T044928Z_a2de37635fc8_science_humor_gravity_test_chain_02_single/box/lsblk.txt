@@ -1,0 +1,18 @@
+NAME        MODEL                                    ROTA TRAN     SIZE TYPE  FSTYPE MOUNTPOINT
+loop0                                                   0         63.8M loop         
+loop1                                                   0         63.8M loop         
+loop2                                                   0        116.6M loop         
+loop3                                                   0           74M loop         
+loop4                                                   0         32.5M loop         
+loop5                                                   0        115.2M loop         
+loop7                                                   0         44.7M loop         
+loop8                                                   0           74M loop         
+nvme0n1     Fanxiang S790 4TB                           0 nvme     3.6T disk         
+`-nvme0n1p1                                             0 nvme     3.5T part         
+  `-md0                                                 0            7T raid0        /etc/resolv.conf
+nvme1n1     Fanxiang S790 4TB                           0 nvme     3.6T disk         
+|-nvme1n1p1                                             0 nvme       1G part         
+|-nvme1n1p2                                             0 nvme     100G part         /usr/lib/xorg/modules/extensions/libglxserver_nvidia.so.580.142
+|-nvme1n1p3                                             0 nvme       8G part         [SWAP]
+`-nvme1n1p4                                             0 nvme     3.5T part         
+  `-md0                                                 0            7T raid0        /etc/resolv.conf

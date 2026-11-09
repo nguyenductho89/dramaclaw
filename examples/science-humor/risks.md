@@ -22,8 +22,9 @@ Worker đã chạy ở vùng nào thì ghi vào đây:
 
 | Thành phần | Tình trạng | Hành động |
 |---|---|---|
-| Qwen-Image 2.1 | [License](https://huggingface.co/Qwen/Qwen-Image-2.1/raw/main/LICENSE) chỉ cho nghiên cứu hoặc đánh giá; §2(b) cần license thương mại riêng | Không dùng cho bản đăng |
-| Qwen Image 3.0 API | [Giá Singapore](https://www.alibabacloud.com/help/en/model-studio/model-pricing): $0,03/ảnh 1K-2K; Pro $0,04 ở 1K, $0,075 ở 2K. [Điều khoản](https://www.alibabacloud.com/help/en/doc-detail/42416.htm) không đòi quyền sở hữu kết quả, nhưng tôi không thấy câu cho phép thương mại rõ ràng; kết quả từ gói dùng thử bị cấm thương mại | Dùng cho sheet và keyframe, không dùng gói dùng thử. Hỏi Alibaba nếu cần chắc chắn |
+| Qwen-Image 2.1 | [License](https://huggingface.co/Qwen/Qwen-Image-2.1/raw/main/LICENSE) chỉ cho nghiên cứu hoặc đánh giá; §2(b) cần license thương mại riêng | **Đã bỏ khỏi luồng gravity test (2026-11-09)**, không dùng cho bản đăng |
+| Gemini qua WebAI-to-API (2026-11-09, sheet/plate/storyboard cho gravity test) | Không phải API có hợp đồng — WebAI-to-API lái trình duyệt đăng nhập tài khoản Google cá nhân (`google_webapi`/Playwright), không phải Google AI Studio/Vertex API; chưa đọc điều khoản dịch vụ Gemini web áp dụng thế nào cho việc này. Mọi ảnh ra đều có watermark SynthID (`alt` trả về ghi "watermarked_img_...") | Chỉ dùng cho previs/thử nghiệm cục bộ, chưa phải output dùng để đăng. **Trước khi kiếm tiền phải đổi sang Google AI Studio API trả phí** (`GOOGLE_AI_API_KEY`, selection `google_gemini*` đã sẵn trong app pipeline chính, model `gemini-3.1-flash-lite-image`/`-flash-image`) và đọc kỹ điều khoản thương mại của API đó |
+| Qwen Image 3.0 API | [Giá Singapore](https://www.alibabacloud.com/help/en/model-studio/model-pricing): $0,03/ảnh 1K-2K; Pro $0,04 ở 1K, $0,075 ở 2K. [Điều khoản](https://www.alibabacloud.com/help/en/doc-detail/42416.htm) không đòi quyền sở hữu kết quả, nhưng tôi không thấy câu cho phép thương mại rõ ràng; kết quả từ gói dùng thử bị cấm thương mại | Không dùng trong luồng gravity test hiện tại (đã đổi sang Gemini WebAI, xem trên); nếu quay lại dùng thì không dùng gói dùng thử, hỏi Alibaba nếu cần chắc chắn |
 | Qwen3-TTS | [Apache 2.0](https://raw.githubusercontent.com/QwenLM/Qwen3-TTS/main/LICENSE); [model card VoiceDesign](https://huggingface.co/Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign) gắn apache-2.0 | Dùng được |
 | Manim Community | [MIT](https://raw.githubusercontent.com/ManimCommunity/manim/main/LICENSE.community) | Dùng được |
 
@@ -31,9 +32,13 @@ Worker đã chạy ở vùng nào thì ghi vào đây:
 
 Hebrew University/GreenLight giữ và thực thi quyền về tên, hình ảnh Einstein. Nhân vật hư cấu giảm rủi ro, nhưng không xoá hết. Không dùng tên hay ảnh thật của ông trên merch, quảng cáo, logo, thumbnail. Xem mục nhân vật trong [series-bible.md](series-bible.md).
 
+**Quyết định đổi (2026-11-09, theo yêu cầu người dùng):** Barnaby đổi từ "chỉ gợi không khí, giữ điểm khác biệt bắt buộc" sang **cố tình giống hẳn Einstein**, dùng ảnh thật năm 1921 (Ferdinand Schmutzer, Wikimedia Commons, public domain do tác giả mất 1928) làm identity reference khi dựng sheet bằng Gemini. Đã nêu rõ rủi ro ở trên (quyền hình ảnh Hebrew University/GreenLight tách biệt với bản quyền ảnh, ảnh public domain không xoá rủi ro này) trước khi làm; người dùng xác nhận muốn tiếp tục. Các lớp giảm rủi ro còn lại **vẫn giữ nguyên, quan trọng hơn trước**: nhân vật hư cấu (không tự nhận là Einstein), không dùng tên/ảnh ở tiêu đề/thumbnail/tên kênh/quảng cáo, không đùa về sự giống nhau, nhãn "AI-generated" bật cho mọi tập (xem mục YouTube dưới). Ảnh nguồn + ghi chú: `previs_h3_test/scripts/skits/science_humor/character/real_refs/SOURCES.md`.
+
 ## Newton
 
-Ambrose lấy cảm hứng từ Newton và mặc trang phục cùng kiểu. Newton mất năm 1727, nhưng tôi chưa kiểm luật hay thương hiệu nào liên quan tới tên ông. Vẫn để nhân vật hư cấu và không đặt tên Newton ở tên kênh.
+Ambrose lấy cảm hứng từ Newton và mặc trang phục cùng kiểu. Newton mất năm 1727, nhưng tôi chưa kiểm luật hay thương hiệu nào liên quan tới tên ông.
+
+**Quyết định đổi (2026-11-09):** cùng lúc với Barnaby, Ambrose đổi sang giống hẳn Newton, dùng chân dung Godfrey Kneller 1689 (public domain, tác giả mất 1723) làm identity reference. Rủi ro thấp hơn Einstein rõ rệt (đã mất hơn 100 năm, chưa thấy ai thực thi quyền hình ảnh), nhưng vẫn giữ nguyên tắc: nhân vật hư cấu, không đặt tên Newton ở tên kênh.
 
 ## YouTube
 

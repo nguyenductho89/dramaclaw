@@ -62,20 +62,31 @@ SCENES = {
                   "Soft low sunlight from behind the camera and slightly to the left, soft gentle contrast, natural colours, natural film look. A calm, empty foreground."),
     },
     "moon": {
-        "place": ("the Apollo 11 Moon landing site, 1969: the grey dusty lunar surface, a black starless sky, the blue Earth small near the horizon, an American flag planted in the dust, the lunar module standing "
-                  "nearby, and a lone astronaut in a bulky white spacesuit with a gold reflective visor walking near the module, low white sunlight from behind the camera and slightly to the left"),
+        "place": ("the Apollo 11 Moon landing site, 1969: the grey dusty lunar surface, a black starless sky, the blue Earth small near the horizon, the lunar module standing "
+                  "right behind where the men stand, towering over them and rising out of the top of the frame, a tiny flag and a tiny distant astronaut in a bulky white spacesuit far away on the horizon, low white sunlight from behind the camera and slightly to the left"),
         "light": "low white sunlight from behind the camera and slightly to the left",
-        "motion": ("Far in the background and out of focus, the astronaut walks slowly past the lunar module in bouncing, low-gravity strides, pausing now and then to crouch and pick up a rock — an unhurried loop of "
+        "motion": ("Far in the background and out of focus, the tiny astronaut walks slowly along the horizon in bouncing, low-gravity strides, pausing now and then to crouch and pick up a rock — an unhurried loop of "
                    "the same small routine, repeating throughout the shot, too far away for any detail to read"),
         "sound": "Complete, empty silence with no wind and no ambient sound, only the voice of whoever is speaking.",
         "name": "Mặt Trăng (bãi đáp Apollo 11)",
-        "plate": ("Photorealistic horizontal film still of the Apollo 11 Moon landing site, 1969. Eye-level camera, with the horizon about two-thirds of the way up the frame. The grey dusty lunar surface below it, "
-                  "a pure black sky, the blue Earth small, just above the horizon near the center of the frame. An American flag stands planted in the regolith in the midground, hanging stiff on its horizontal "
-                  "rod. The lunar excursion module sits nearby, gold foil and silver panels, legs planted in the dust — it is a real spacecraft about 7 metres/23 feet tall, several times taller than a standing "
-                  "person, and must be drawn at that correct scale for its distance from the camera, not shrunk to fit the frame. Far behind the module, small and indistinct with its back three-quarters to the "
-                  "camera, a single astronaut in a bulky white spacesuit walks slowly across the dust — roughly the height of an adult person at that same distance, too far away and too small in frame for any "
-                  "visor or suit detail to read clearly; it must not look larger, closer or more detailed than that. No one else in the frame. "
-                  "Low white sunlight from behind the camera and slightly to the left, soft gentle contrast, natural film look. A silent, empty foreground."),
+        # 2026-11-09 (evening): measured ~0.33x background scale in the wide full-length framing (the module was
+        # drawn ~870 px too small for the men's depth). New composition, per an explicit user request: the two men
+        # stand right under the module, shown from the knees up, so the module visibly towers over them.
+        # Numbers: camera 1.5 m high, module 6 m away (7 m tall -> top cut off by the frame, ~170 px/m at its depth),
+        # men 4 m from the camera (~255 px/m, faces ~59 px), feet below the frame edge.
+        "plate": ("Photorealistic horizontal film still at the Apollo 11 Moon landing site, 1969. The camera is a normal eye-level view, 1.5 metres (5 feet) above the ground, about 6 metres in front of the "
+                  "lunar excursion module. The module is a real spacecraft 7 metres/23 feet tall, four times the height of a standing man, and is drawn at that true scale: it fills the centre and the whole upper part "
+                  "of the frame and rises beyond the top edge, so its top is not visible. Its gold-foil descent stage, its ladder with rungs about 40 cm apart, its leg struts and its round footpads each look huge "
+                  "next to a person; its footpads rest on the ground at the very bottom edge of the frame. The grey dusty lunar surface fills the lower third; the horizon lies about two-thirds of the way down the frame, "
+                  "with a pure black sky above it and the small blue Earth in the upper right. Far away on the horizon at the left, tiny, an American flag stands in the dust, and a single astronaut in a bulky white "
+                  "spacesuit walks very far in the distance, only a few pixels tall, with no visor or suit detail readable. No one else in the frame. A clear, empty foreground of dust in the bottom centre of the frame. "
+                  "Low white sunlight from behind the camera and slightly to the left, soft gentle contrast, natural film look."),
+        "men": ("each seen from the knees up with his head, torso and hands fully in frame, standing side by side about 2 metres in front of the lunar module's legs and ladder and about 4 metres from the camera, "
+                "the same size, the same distance from the camera, with the lunar module towering behind and above them — its footpads, ladder, struts and descent stage are each larger than a man and its body rises beyond the top of the frame — "
+                "and with clear space above their heads"),
+        "men_h3": ("each seen from the knees up with his head, torso and hands fully in frame, standing side by side directly in front of the lunar module's legs and ladder, the same size, the same distance from the camera, "
+                   "with the lunar module towering behind and above them, several times taller than either man, its body rising beyond the top of the frame"),
+        "shadow": "Each man's long soft shadow falls on the ground beside him in the same direction as the lunar module's shadow already in Image 1, so each man reads as standing inside the scene, not cut out and pasted on top of it. ",
     },
 }
 SHEETS = {
@@ -239,17 +250,47 @@ def storyboard_prompt(index: int, line: tuple) -> str:
     ("foreground terrain", not "grass") since this prompt is shared by every SCENES entry, present and future."""
     _, scene, speaker, text, _, _, _, start, opening, mid, listener, end, summary = line
     pose = _static_opening(index, opening).replace(B, "Barnaby").replace(A, "Ambrose")
+    men = SCENES[scene].get("men", "each seen full-length from head to foot with both feet clearly on the ground, the same size, the same distance from the camera, at life-size scale with the location")
+    shadow = SCENES[scene].get("shadow", "Each man casts a soft, visible contact shadow on the ground directly beneath his own feet, matching the shadows already in Image 1. A little of the nearest foreground terrain overlaps the lowest part of his legs or feet, so each man reads as standing inside the scene, not cut out and pasted on top of it. ")
     return (
         "Compose a new photorealistic horizontal 16:9 film still, the opening frame of one shot in a two-man science-comedy series. "
         "Image 1 is the location and camera: keep its background, framing and lighting exactly, static eye-level camera, keep any small distant background figures in it exactly as they are, with neither Barnaby nor Ambrose in it yet. "
+        "One camera, one ground plane: the camera is about 1.6 metres (5.3 feet) above the ground, so the horizon line of Image 1 passes through both men's chests, and both men stand on that same ground plane, in front of the background objects, not floating above them. "
+        "Both men are about 1.75 metres (5.7 feet) tall, so every background object keeps its real size relative to them: anything several metres tall (a tree, a lander, a building) stays several times taller than a standing man and must not shrink to fit the frame. "
         "Image 2 shows Barnaby, one man in two views, not two people: keep his face, hair, glasses, cardigan and pencil unchanged. "
         "Image 3 shows Ambrose, one man in two views, not two people: keep his face, wig, coat and cravat unchanged. "
-        "Barnaby stands in the left third of the frame and Ambrose stands in the right third, each seen full-length from head to foot with both feet clearly on the ground, the same size, the same distance from the camera, at life-size scale with the location, "
-        "both turned three-quarters toward each other and toward the camera so both faces stay clearly visible, with clear space above their heads and below their feet. "
+        f"Barnaby stands in the left third of the frame and Ambrose stands in the right third, {men}, "
+        "both turned three-quarters toward each other and toward the camera so both faces stay clearly visible"
+        f"{'. ' if 'men' in SCENES[scene] else ', with clear space above their heads and below their feet. '}"
         "Relight both men to match Image 1's own sunlight exactly — its direction, warm colour temperature and contrast — not the flat, even studio lighting of Image 2/3; their clothing, hair and face keep their own colours, only the lighting on them changes. "
-        "Each man casts a soft, visible contact shadow on the ground directly beneath his own feet, matching the shadows already in Image 1. A little of the nearest foreground terrain overlaps the lowest part of his legs or feet, so each man reads as standing inside the scene, not cut out and pasted on top of it. "
+        f"{shadow}"
         f"{pose}. "
         "Natural skin texture, soft gentle contrast, natural film look, photorealistic. Show each man once. No text, logos or watermarks."
+    )
+
+
+def storyboard_prompt_qwen(index: int, line: tuple) -> str:
+    """Qwen-Image 2.1 compose twin of `storyboard_prompt`, for qwen_images.py storyboard mode (image_1 = the empty
+    plate = the edit target, image_2/3 = the two sheets). Follows the layout of `build_qwen21_compose_prompt`
+    (generators/prompt_builder.py), the form verified on a real GPU: <imageN> tags, one paragraph, no double quotes,
+    the word "photorealistic", no aspect-ratio token (the output size comes from image_1), identity sheets described
+    as views of ONE person. The relight / contact-shadow / foreground-overlap sentences are the same fix as in
+    `storyboard_prompt`, worded as instructions to do something rather than a list of things to avoid."""
+    _, scene, speaker, text, _, _, _, start, opening, mid, listener, end, summary = line
+    pose = _static_opening(index, opening).replace(B, "Barnaby").replace(A, "Ambrose").replace('"', "")
+    return (
+        "<image1> is a reference photo of the location and camera; keep its background, framing, static eye-level camera, lighting and any small distant background figures exactly as they are. "
+        "<image2> is one or more reference views of Barnaby (the same single person, not different people); match Barnaby's face, hair, glasses, cardigan and pencil exactly as shown, and render Barnaby as one person in the scene, not a copy of the reference sheet itself. "
+        "<image3> is one or more reference views of Ambrose (the same single person, not different people); match Ambrose's face, wig, coat and cravat exactly as shown, and render Ambrose as one person in the scene, not a copy of the reference sheet itself. "
+        "Compose a new photorealistic photograph, the opening frame of one shot in a two-man science-comedy series, set in the location from <image1>, matching its lighting and background elements. "
+        "Barnaby (matching <image2> exactly) stands in the left third of the frame and Ambrose (matching <image3> exactly) stands in the right third, each seen full-length from head to foot with both feet on the ground, at the same distance from the camera, at life-size scale with the location, "
+        "both turned three-quarters toward each other and toward the camera so both faces are clearly visible, with clear space above their heads and below their feet. "
+        "Relight both men to the sunlight of <image1>: its direction, warm colour temperature and contrast replace the even studio lighting of <image2> and <image3>, while their clothing, hair and face keep their own colours. "
+        "Each man casts a soft, visible contact shadow on the ground directly beneath his own feet, matching the shadows already in <image1>, and a little of the nearest foreground terrain overlaps the lowest part of his legs or feet, so each man stands inside the scene. "
+        f"{pose}. "
+        "Show exactly 2 people, Barnaby and Ambrose, each appearing once. "
+        "Render the people and the scene as a real photograph with natural skin texture, soft gentle contrast and a natural film look, not as a sketch, illustration, painting or 3D render. "
+        "Do not add any object, furniture or prop that is not already visible in <image1>."
     )
 
 
@@ -269,6 +310,10 @@ def shot(index: int, line: tuple, first_frame: bool, single: bool = False, story
         opening = _static_opening(index, opening)
     defs, retention = definitions(scene, prompt_index == 1, first_frame, single, storyboard)
     entering = prompt_index == 1 and first_frame
+    men = SCENES[scene].get("men_h3", "each seen full-length from head to foot with both feet clearly on the ground, the same size, the same distance from the camera, at life-size scale with the setting")
+    tail = cam["framing_tail"]
+    if "men_h3" in SCENES[scene]:
+        tail = tail.replace("with clear space above their heads and below their feet.", "with clear space above their heads.")
     walked_in = entering and not storyboard  # storyboard already shows them in place, so nobody "walks in"
     begins = " that begins from <Picture 1>" if entering else ""
     setting = f"in the setting of <Picture 1>, keeping its layout and light" if prompt_index == 1 or not first_frame else f"in this setting: {SCENES[scene]['place']}"
@@ -279,8 +324,8 @@ def shot(index: int, line: tuple, first_frame: bool, single: bool = False, story
         "detailed_description:\n"
         f"Live-action film footage, horizontal 16:9 framing, a science comedy, {SCENES[scene]['light']}, soft gentle contrast, natural skin tones, natural film look.\n"
         f"[Shot 1] {'The shot begins from <Picture 1>: a' if entering else 'A'} {cam['shot_open']} {setting}. "
-        f"{cam['position_prefix']}{'Once they have walked in, ' if walked_in else ''}<Subject 1> stands in the left third of the frame and <Subject 2> stands in the right third, each seen full-length from head to foot with both feet clearly on the ground, the same size, the same distance from the camera, at life-size scale with the setting, "
-        f"both turned three-quarters toward each other and toward the camera so both faces stay clearly visible, {cam['framing_tail']} "
+        f"{cam['position_prefix']}{'Once they have walked in, ' if walked_in else ''}<Subject 1> stands in the left third of the frame and <Subject 2> stands in the right third, {men}, "
+        f"both turned three-quarters toward each other and toward the camera so both faces stay clearly visible, {tail} "
         f"{SCENES[scene]['motion']}, unrelated to and unaffected by what <Subject 1> and <Subject 2> do or say in the foreground. "
         f"{opening}. At {start:.2f} seconds {SUBJECT[speaker]} says it in {VOICE[speaker]}: <d>[English] {text}</d> Exactly as the voice stops, the lips close and the jaw ceases all speaking motion. This single line is the only speech in the video. {listener}. {mid}. "
         f"At {SPEECH_END:.2f} seconds {SUBJECT[speaker][:11]} finishes, and both stay silent with closed lips until the final frame. "
@@ -315,6 +360,7 @@ def main() -> None:
             # Kept on every variant below (bench_multishot30_local.py ignores keys it does not read) so one
             # gen_chains.py run keeps the H3 prompt and the storyboard prompt in sync.
             "storyboard_prompts": [storyboard_prompt(i, line) for i, line in enumerate(lines, start=1)],
+            "storyboard_prompts_qwen": [storyboard_prompt_qwen(i, line) for i, line in enumerate(lines, start=1)],
         }
         storyboard = f"{SKIT}/gravity_test/storyboard"
         # Each reference is ONE view cropped from the sheet (front views), so the reference can never be read as a
@@ -340,6 +386,7 @@ def main() -> None:
             one_shot = {**base, "name": f"science_humor_gravity_test_shot_{num:02d}_{i}_sb",
                         "start_image": f"{storyboard}/chain_{num:02d}_shot{i}.png", "reference_images": singles,
                         "storyboard_prompts": [base["storyboard_prompts"][i - 1]],
+                        "storyboard_prompts_qwen": [base["storyboard_prompts_qwen"][i - 1]],
                         "shots": [shot(i, line, True, single=True, storyboard=True, force_first=True)]}
             (OUT_DIR / f"shot_{num:02d}_{i}_sb.json").write_text(json.dumps(one_shot, ensure_ascii=False, indent=1) + "\n")
         # Same as the first-frame variant, but with the `singles` references defined above.

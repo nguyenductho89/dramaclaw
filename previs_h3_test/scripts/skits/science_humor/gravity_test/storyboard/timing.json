@@ -1,50 +1,26 @@
 [
  {
-  "name": "chain_01_shot1",
-  "candidate": 1,
-  "seconds": 35.8,
-  "conversation_id": "G89VakTL55SOeiCbQVhsDg"
- },
- {
-  "name": "chain_01_shot2",
-  "candidate": 1,
-  "seconds": 35.1,
-  "conversation_id": "G89VakTL55SOeiCbQVhsDg"
- },
- {
-  "name": "chain_01_shot3",
-  "candidate": 1,
-  "seconds": 35.2,
-  "conversation_id": "G89VakTL55SOeiCbQVhsDg"
- },
- {
-  "name": "chain_01_shot4",
-  "candidate": 1,
-  "seconds": 31.4,
-  "conversation_id": "G89VakTL55SOeiCbQVhsDg"
- },
- {
   "name": "chain_02_shot1",
   "candidate": 1,
-  "seconds": 28.5,
-  "conversation_id": "G89VakTL55SOeiCbQVhsDg"
+  "seconds": 24.1,
+  "conversation_id": "goR8XL11_hplk5TOrrPEdw"
  },
  {
   "name": "chain_02_shot2",
   "candidate": 1,
-  "seconds": 27.1,
-  "conversation_id": "G89VakTL55SOeiCbQVhsDg"
+  "seconds": 20.1,
+  "conversation_id": "goR8XL11_hplk5TOrrPEdw"
  },
  {
   "name": "chain_02_shot3",
   "candidate": 1,
-  "seconds": 26.2,
-  "conversation_id": "G89VakTL55SOeiCbQVhsDg"
+  "seconds": 30.1,
+  "conversation_id": "goR8XL11_hplk5TOrrPEdw"
  },
  {
   "name": "chain_02_shot4",
   "candidate": 1,
-  "seconds": 31.3,
-  "conversation_id": "G89VakTL55SOeiCbQVhsDg"
+  "seconds": 21.7,
+  "conversation_id": "goR8XL11_hplk5TOrrPEdw"
  }
 ]

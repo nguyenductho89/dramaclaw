@@ -2,10 +2,11 @@
 # pod_up.sh HOST PORT: wait for SSH, check the pod network, upload code (incl. the character sheets, backgrounds and
 # storyboard frames already picked LOCALLY by gemini_webai_images.py — see run_batch.sh), install ComfyUI + models,
 # and start ComfyUI in tmux. Run from anywhere; the repo root is found from this file. There is no pod-side images
-# stage any more (Qwen is gone from this pipeline); run `run_batch.sh voices` then `run_batch.sh videos ...` by hand
-# over SSH once this script finishes.
+# stage unless you pass --with-qwen as a 3rd argument (downloads Qwen-Image 2.1, tens of GB more — mind the bandwidth fee; then
+# `run_batch.sh images storyboard` works); run `run_batch.sh voices` then `run_batch.sh videos ...` by hand over SSH
+# once this script finishes.
 # Exit codes: 1 no SSH or upload failed, 3 pod network too slow (delete the pod).
-H=${1:?host}; P=${2:?port}
+H=${1:?host}; P=${2:?port}; QWEN=${3:-}
 SSH="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=15 -o LogLevel=ERROR -p $P root@$H"
 R=$(cd "$(dirname "$0")/../../../../.." && pwd)
 for i in $(seq 1 60); do $SSH true 2>/dev/null && break; sleep 15; done
@@ -21,7 +22,7 @@ cd "$R" && COPYFILE_DISABLE=1 tar czf - --exclude='__pycache__' --exclude='*.pyc
   --exclude='*/candidates' \
   src pyproject.toml previs_h3_test/scripts | $SSH 'tar xzf - -C /opt/dramaclaw' || { echo "UPLOAD FAILED"; exit 1; }
 echo "upload ok $(date -u +%T)"
-$SSH 'cd /opt/dramaclaw && bash previs_h3_test/scripts/setup_h3_box.sh --with-ref2va > /opt/bench/setup.log 2>&1; echo setup-exit $?' || exit 1
+$SSH 'cd /opt/dramaclaw && bash previs_h3_test/scripts/setup_h3_box.sh --with-ref2va $QWEN > /opt/bench/setup.log 2>&1; echo setup-exit $?' || exit 1
 $SSH 'tail -3 /opt/bench/setup.log | cut -c1-200'
 $SSH 'command -v tmux >/dev/null || apt-get install -y tmux >/dev/null 2>&1; tmux new -d -s comfy /opt/run_comfy.sh; sleep 3; tmux ls'
 echo "comfy started $(date -u +%T) — run run_batch.sh voices / videos by hand over SSH"

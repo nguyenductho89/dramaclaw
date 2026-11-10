@@ -53,6 +53,15 @@ Với vật đứng trên cùng một mặt đất phẳng, chiều cao px tỉ 
 
 Ví dụ làm tay thật (`chain_02_shot3.png`, Mặt Trăng): chân trời y≈233 (đo cột sáng); Barnaby 628px chân y735 → K=0,736; Ambrose 617px chân y725 → K=0,738 (khớp 0,2%, camera ~1,36 m). Kỳ vọng vs đo: module 7 m → 1006 vs 340px (**0,34×**); phi hành gia 1,8 m → 194 vs 61px (**0,32×**); cột cờ ~2,4 m → 384 vs 148px (**0,39×**). Cả ba lệch cùng hệ số ~0,3-0,4 → **lỗi cả lớp nền (nhỏ ~3× so với hai người)**, không phải lỗi từng vật.
 
+## Thêm khi ảnh do Qwen-Image 2.1 sinh (qwen_images.py)
+
+Quy trình đo giữ nguyên. Ngoài ra kiểm các lỗi riêng của Qwen compose:
+- **Kết cấu "tranh sơn" và quầng sáng quanh người** (edit ~1 megapixel để lại halo, ghi trong docstring `qwen21_character_local.py`): phóng to viền quanh nhân vật, nếu thấy quầng thì ghi CẢNH BÁO.
+- **Sheet bị chép nguyên vào khung** (hai-ba góc nhìn cùng một người xuất hiện như hai-ba người): đếm người, ghi CHẶN nếu nhiều hơn số trong prompt. (H3 từng vẽ lại sheet vào khung; Qwen có thể sao chép sheet tương tự, chưa kiểm trên GPU.)
+- **Danh tính trôi**: chạy `check_chains.py --storyboard <ảnh>` (SFace, ngưỡng 0,363) như với Gemini; không có bước nào thay được.
+- **Kích thước**: `finish()` ép ảnh về 1344x768; nếu log có dòng WARNING "not 16:9" thì nền (`<image1>`) không phải 16:9 và ảnh bị kéo giãn — đo tỷ lệ trên ảnh đó vô nghĩa, sinh lại với nền đúng khổ.
+- **Ý kiến thứ hai từ Qwen-VL** (tùy chọn): cần `QWEN_API_KEY` trong `.env` (hiện để trống nên chưa dùng được). Vẫn chỉ tham khảo, số đo PIL là căn cứ chính.
+
 ## Định dạng báo cáo
 
 1. **Bảng đo**:

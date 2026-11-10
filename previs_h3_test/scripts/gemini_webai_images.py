@@ -37,7 +37,7 @@ Every image Gemini returns carries a small, visible, semi-transparent white spar
 from SynthID (invisible, not touched by this script) — landing consistently in roughly the same screen position
 across sheet/plate/storyboard/transition images alike (empirically confirmed 2026-11-09 across 14 real generations:
 position varies only slightly, always within roughly x=1080-1310, y=500-730 of the final 1344x768 canvas). `fit_16x9`
-calls `remove_watermark()` on every image for exactly this reason — template-match + inpaint, not a crop (cropping
+calls the app's `remove_gemini_watermark()` on every image for exactly this reason — template-match + inpaint, not a crop (cropping
 would eat into Ambrose's body, which sits in the right third of frame per series-bible.md and can overlap this same
 screen region). A low-confidence match leaves the image untouched and prints a warning rather than guessing wrong;
 `clean <image.png> ...` re-runs this on images already saved to disk (no new Gemini call) for one-off cleanup.
@@ -46,12 +46,10 @@ screen region). A low-confidence match leaves the image untouched and prints a w
 """
 import argparse
 import base64
-import http.cookiejar
 import json
 import mimetypes
 import os
 import time
-import urllib.request
 from pathlib import Path
 
 import httpx
@@ -63,76 +61,34 @@ COOKIE_FILE = Path(os.environ.get("GEMINI_WEBAI_COOKIE_FILE_HOST", str(R / "../W
 TIMEOUT = float(os.environ.get("GEMINI_WEBAI_TIMEOUT_SECONDS", "180"))
 TARGET_SIZE = (1344, 768)  # matches dims_for_multishot("16:9") in runpod_minimax_h3_multishot_video.py
 
-# Gemini's visible sparkle watermark (see module docstring). Template cropped from barnaby_sheet.png, the clearest
-# isolated sample (plain grey studio background). Tuned empirically against 14 real generations (sheets, plates,
-# all 8 storyboard shots, the wormhole transition image, a plain test image) — see
-# previs_h3_test/science_humor_gravity_test_run.md's 2026-11-09 watermark entry for the full data and what was
-# tried and discarded:
-# - The watermark lands at a near-FIXED absolute position on the final 1344x768 canvas regardless of image
-#   content (confirmed by independently hand-measuring it in 6+ unrelated images, all landing within ~15px of
-#   WATERMARK_CENTER) — this is a UI overlay, not content-aware placement, and `remove_watermark` always runs
-#   post-crop/resize (inside `fit_16x9`) so the canvas is always normalized first. Detection is therefore anchored
-#   to a small window around that known centre, NOT a free search of the whole image: an earlier free full-image
-#   search (even restricted to the template's own scale) found confident-looking but WRONG matches on organic
-#   texture (grass, lunar regolith) elsewhere in frame, since a soft radial blob is generic enough to coincidentally
-#   match natural photo noise — anchoring the window removes that failure mode.
-# - On the Moon-themed images specifically (moon.png, every chain_02 storyboard shot, the wormhole transition),
-#   grayscale template matching scores POORLY even AT the hand-confirmed exact watermark location (score ~-0.3) —
-#   lunar regolith's own fine speckled texture swamps the weak semi-transparent overlay's correlation signal. This
-#   is a real, known limitation, not a bug to chase further: those images fall through to the "low confidence,
-#   leave unchanged" path and need a human to check them (see verification steps in the plan this was built from).
-# - Removal uses a shape-fitted inpaint mask (just the icon's bright core, dilated slightly — not a filled
-#   rectangle) with a small inpaint radius: a full rectangular mask let `cv2.inpaint` bleed in nearby strongly-
-#   coloured content (bled Barnaby's trouser leg into the hole on barnaby_sheet.png in testing) and, with a larger
-#   radius, created a visible cross-hatch artifact in holes over fine repetitive texture (lunar regolith). An
-#   algebraic "unscreen" correction (compute the overlay's per-pixel alpha from the template, solve for the
-#   underlying pixel) was also tried and is cleaner in principle, but proved too sensitive to sub-pixel
-#   match-to-reality misalignment, consistently leaving a faint residual ghost of the icon's own shape.
-WATERMARK_TEMPLATE = Path(__file__).resolve().parent / "gemini_watermark_template.png"
-WATERMARK_CENTER = (1240, 650)  # (x, y) on a 1344x768 canvas
-WATERMARK_WINDOW = (90, 90)  # half-extent of the search box around WATERMARK_CENTER
-WATERMARK_SCALES = tuple(round(0.85 + 0.02 * i, 2) for i in range(16))  # 0.85..1.15 step 0.02
-WATERMARK_SCORE_MIN = 0.45
-WATERMARK_ALPHA_THRESHOLD = 0.04  # template pixels lighter than this fraction above background count as "icon"
-WATERMARK_MASK_DILATE = 9  # px, grows the shape mask past the alpha threshold to cover soft edge falloff
-WATERMARK_INPAINT_RADIUS = 4
+# These four helpers now live in the app so BOTH this CLI and Freezone use one copy
+# (2026-11-10). Loaded by file path, not by `import novelvideo...`: this script runs
+# under `uv run` with its own PEP-723 dependency set and no package install — the same
+# trick `qwen_images.py:_load_lint()` uses for the Qwen prompt linter. The app-side
+# modules deliberately keep zero top-level `novelvideo` imports for exactly this.
+def _load_app_module(name: str, relative: str):
+    import importlib.util
+
+    path = R / "src" / "novelvideo" / relative
+    spec = importlib.util.spec_from_file_location(name, path)
+    if spec is None or spec.loader is None:
+        raise SystemExit(f"cannot load {path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
-def _ref_filename(index: int, mime: str) -> str:
-    """Extension must match the declared MIME or WebAI-to-API returns HTTP 400 (nanobanana_grid.py:_webai_ref_filename)."""
-    ext = mimetypes.guess_extension(mime or "") or ".png"
-    return f"ref_{index}{ext}"
+_webai_client = _load_app_module("gemini_webai_client", "generators/gemini_webai_client.py")
+_webai_post = _load_app_module("gemini_webai_postprocess", "generators/gemini_webai_postprocess.py")
+
+_ref_filename = _webai_client.webai_ref_filename
+_download_artifact = _webai_client.download_webai_artifact
+remove_watermark = _webai_post.remove_gemini_watermark
+WATERMARK_SCORE_MIN = _webai_post.WATERMARK_SCORE_MIN
 
 
 def _mime_of(path: Path) -> str:
     return mimetypes.guess_type(path.name)[0] or "image/png"
-
-
-def _download_artifact(url: str, cookie_file: Path) -> tuple[bytes | None, str]:
-    """Same trick as nanobanana_grid.py:_download_webai_artifact: the artifact URL is a private googleusercontent
-    link gated by the same Google session WebAI-to-API's browser is logged into; `=s0` asks for full resolution."""
-    raw = json.loads(cookie_file.expanduser().read_text())
-    jar = http.cookiejar.CookieJar()
-    for cookie in raw.get("cookies", []):
-        expires = cookie.get("expires", -1)
-        jar.set_cookie(
-            http.cookiejar.Cookie(
-                0, cookie["name"], cookie["value"], None, False, cookie["domain"], True,
-                cookie["domain"].startswith("."), cookie.get("path", "/"), True, bool(cookie.get("secure")),
-                None if expires is None or expires <= 0 else int(expires), False, None, None, {},
-            )
-        )
-    last_segment = url.rsplit("/", 1)[-1]
-    full_res_url = url.split("=")[0] + "=s0" if "=s" not in last_segment else url
-    opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
-    try:
-        with opener.open(urllib.request.Request(full_res_url, headers={"User-Agent": "Mozilla/5.0"}), timeout=180) as resp:
-            data = resp.read()
-    except Exception as exc:  # noqa: BLE001
-        return None, f"failed to download webai image artifact: {exc}"
-    if not data.startswith((b"\x89PNG", b"\xff\xd8")):
-        return None, "downloaded artifact is not a valid image (cookie expired? re-run verify_login.py on the host)"
-    return data, ""
 
 
 def generate(client: httpx.Client, prompt: str, refs: list[tuple[str, bytes, str]], conversation_id: str | None) -> tuple[bytes | None, str, str | None]:
@@ -156,76 +112,6 @@ def generate(client: httpx.Client, prompt: str, refs: list[tuple[str, bytes, str
         return None, f"no image artifact in response (model said: {text[:200]!r})", conversation_id
     image_bytes, err = _download_artifact(image_url, COOKIE_FILE)
     return image_bytes, err, conversation_id
-
-
-def _watermark_shape_mask(template_gray) -> "np.ndarray":
-    """The icon's own silhouette (not its bounding rectangle): template pixels raised WATERMARK_ALPHA_THRESHOLD
-    above the template's own background level, dilated a little to cover the soft edge falloff. A shape mask (not a
-    filled rectangle) keeps the inpainted hole small, which matters twice over — it avoids pulling in nearby
-    strongly-coloured content (a filled rectangle bled a character's trouser leg into the hole in testing) and
-    avoids the cross-hatch artifact `cv2.inpaint` produces on a large hole over fine repetitive texture."""
-    import cv2
-    import numpy as np
-
-    corner = np.concatenate([
-        template_gray[:15, :15].ravel(), template_gray[:15, -15:].ravel(),
-        template_gray[-15:, :15].ravel(), template_gray[-15:, -15:].ravel(),
-    ]).astype(np.float32)
-    bg_level = float(np.median(corner))
-    alpha = (template_gray.astype(np.float32) - bg_level) / (255.0 - bg_level)
-    mask = (alpha > WATERMARK_ALPHA_THRESHOLD).astype(np.uint8) * 255
-    return cv2.dilate(mask, np.ones((WATERMARK_MASK_DILATE, WATERMARK_MASK_DILATE), np.uint8))
-
-
-def remove_watermark(im: "Image.Image", label: str = "") -> "Image.Image":
-    """Find and inpaint Gemini's visible sparkle watermark (see the WATERMARK_* constants' block comment for the
-    empirical reasoning). Detection is anchored to a small window around WATERMARK_CENTER rather than searching the
-    whole image, and only a narrow scale band close to the template's own captured size. Below
-    WATERMARK_SCORE_MIN, leaves `im` untouched and prints a warning instead of guessing — this reliably happens for
-    Moon-themed images (see the block comment), where a human should check the result by eye."""
-    import cv2
-    import numpy as np
-    from PIL import Image
-
-    if not WATERMARK_TEMPLATE.exists():
-        print(f"remove_watermark: template missing at {WATERMARK_TEMPLATE}, skipping")
-        return im
-    template_gray = cv2.cvtColor(cv2.imread(str(WATERMARK_TEMPLATE)), cv2.COLOR_BGR2GRAY)
-    th, tw = template_gray.shape
-    shape_mask_template = _watermark_shape_mask(template_gray)
-
-    arr = cv2.cvtColor(np.array(im), cv2.COLOR_RGB2BGR)
-    h, w = arr.shape[:2]
-    cx, cy = WATERMARK_CENTER
-    wx, wy = WATERMARK_WINDOW
-    rx0, ry0 = max(0, cx - wx), max(0, cy - wy)
-    rx1, ry1 = min(w, cx + wx), min(h, cy + wy)
-    region_gray = cv2.cvtColor(arr[ry0:ry1, rx0:rx1], cv2.COLOR_BGR2GRAY)
-
-    best = (-1.0, None, None)
-    for scale in WATERMARK_SCALES:
-        tw_s, th_s = round(tw * scale), round(th * scale)
-        if tw_s > region_gray.shape[1] or th_s > region_gray.shape[0] or tw_s < 4 or th_s < 4:
-            continue
-        tmpl_s = cv2.resize(template_gray, (tw_s, th_s))
-        res = cv2.matchTemplate(region_gray, tmpl_s, cv2.TM_CCOEFF_NORMED)
-        _, maxval, _, maxloc = cv2.minMaxLoc(res)
-        if maxval > best[0]:
-            best = (maxval, maxloc, (tw_s, th_s))
-    score, loc, size = best
-    tag = f" ({label})" if label else ""
-    if loc is None or score < WATERMARK_SCORE_MIN:
-        print(f"remove_watermark: no confident match{tag} (best score {score:.2f} < {WATERMARK_SCORE_MIN}), leaving image as-is — check it by eye")
-        return im
-
-    bx0, by0 = rx0 + loc[0], ry0 + loc[1]
-    bx1, by1 = bx0 + size[0], by0 + size[1]
-    shape_mask = cv2.resize(shape_mask_template, size, interpolation=cv2.INTER_NEAREST)
-    full_mask = np.zeros((h, w), dtype=np.uint8)
-    full_mask[by0:by1, bx0:bx1] = shape_mask
-    cleaned = cv2.inpaint(arr, full_mask, inpaintRadius=WATERMARK_INPAINT_RADIUS, flags=cv2.INPAINT_TELEA)
-    print(f"remove_watermark: inpainted{tag} at ({bx0},{by0})-({bx1},{by1}), score {score:.2f}")
-    return Image.fromarray(cv2.cvtColor(cleaned, cv2.COLOR_BGR2RGB))
 
 
 def fit_16x9(data: bytes, label: str = "") -> bytes:
@@ -286,7 +172,10 @@ def _generate_candidates(client: httpx.Client, prompt: str, refs: list[tuple[str
     paths = []
     for k in range(1, n + 1):
         t0 = time.time()
-        image_bytes, err, conversation_id = generate(client, prompt, refs, conversation_id)
+        try:
+            image_bytes, err, conversation_id = generate(client, prompt, refs, conversation_id)
+        except httpx.TimeoutException as e:
+            image_bytes, err = None, f"timeout: {e!r}"
         if image_bytes is None:
             print(f"{name}_s{k}: FAILED — {err}", flush=True)
             continue
@@ -299,10 +188,13 @@ def _generate_candidates(client: httpx.Client, prompt: str, refs: list[tuple[str
     return paths, conversation_id
 
 
-def cmd_sheet_or_plate(mode: str, out_dir: Path, prompts_file: Path, n: int) -> None:
+def cmd_sheet_or_plate(mode: str, out_dir: Path, prompts_file: Path, n: int, only: str | None = None) -> None:
     prompts = json.loads(prompts_file.read_text())[{"sheet": "sheets", "plate": "backgrounds"}[mode]]
+    if only:
+        prompts = {k: v for k, v in prompts.items() if k == only}
     session_file = out_dir / "session.json"
-    conversation_id = load_session(session_file)
+    # --only starts a fresh conversation and leaves session.json alone: a shared conversation leaks figures between scenes.
+    conversation_id = None if only else load_session(session_file)
     timing: list[dict] = []
     rows = []
     with httpx.Client() as client:
@@ -316,7 +208,8 @@ def cmd_sheet_or_plate(mode: str, out_dir: Path, prompts_file: Path, n: int) -> 
                 refs = [(_ref_filename(0, _mime_of(p)), p.read_bytes(), _mime_of(p))]
             paths, conversation_id = _generate_candidates(client, prompt, refs, n, conversation_id, out_dir / "candidates", name, timing)
             rows.append(paths)
-    save_session(session_file, conversation_id)
+    if not only:
+        save_session(session_file, conversation_id)
     (out_dir / "timing.json").write_text(json.dumps(timing, indent=1) + "\n")
     _report_candidates(rows, out_dir)
 
@@ -330,7 +223,7 @@ def _report_candidates(rows: list[list[Path]], out_dir: Path) -> None:
         print("wrote 0 candidates — every generation failed above (e.g. a daily quota message); no contact sheet written")
 
 
-def cmd_storyboard(gravity_dir: Path, n: int) -> None:
+def cmd_storyboard(gravity_dir: Path, n: int, only: str | None = None) -> None:
     """2026-11-09: one conversation_id PER CHAIN (per scene), not one shared across every chain — a shared
     conversation was found to bleed background figures between unrelated scenes (Eden's Adam/Eve turned up, bare
     and unsuited, standing on the Moon in one chain_02 shot) and to make a scene's own background figure
@@ -344,6 +237,8 @@ def cmd_storyboard(gravity_dir: Path, n: int) -> None:
     rows = []
     with httpx.Client() as client:
         for chain_file in sorted(gravity_dir.glob("chain_[0-9][0-9].json")):
+            if only and chain_file.stem != only:
+                continue
             chain = json.loads(chain_file.read_text())
             if "storyboard_prompts" not in chain:
                 print(f"skip {chain_file.name}: no storyboard_prompts (regenerate with gen_chains.py)")
@@ -391,6 +286,7 @@ def main() -> None:
     p.add_argument("arg", nargs="?")
     p.add_argument("more", nargs="*", help="clean mode only: additional image paths beyond <target>")
     p.add_argument("--n", type=int, default=3)
+    p.add_argument("--only", help="storyboard: one chain file stem (chain_02); sheet/plate: one prompt key (moon)")
     a = p.parse_args()
     if a.mode == "clean":
         cmd_clean([Path(a.target), *([Path(a.arg)] if a.arg else []), *(Path(x) for x in a.more)])
@@ -398,11 +294,11 @@ def main() -> None:
     if not COOKIE_FILE.exists():
         raise SystemExit(f"GEMINI_WEBAI_COOKIE_FILE_HOST not found: {COOKIE_FILE} (run verify_login.py on the host)")
     if a.mode == "storyboard":
-        cmd_storyboard(Path(a.target), a.n)
+        cmd_storyboard(Path(a.target), a.n, a.only)
     else:
         if not a.arg:
             raise SystemExit(f"{a.mode} needs <out_dir> <image_prompts.json>")
-        cmd_sheet_or_plate(a.mode, Path(a.target), Path(a.arg), a.n)
+        cmd_sheet_or_plate(a.mode, Path(a.target), Path(a.arg), a.n, a.only)
 
 
 if __name__ == "__main__":

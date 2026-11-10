@@ -65,6 +65,16 @@ Khi khung có ≥3 vật hoặc nhiều lớp độ sâu, nêu từng vật riê
 
 Mẫu prompt đầy đủ cho cảnh phố (người lớn 1,85 m + bé + chó + xe đạp + ô tô + cửa + bà cụ xa + cột đèn) đã soạn theo các điểm trên; **chưa sinh ảnh kiểm chứng** vì quota ảnh Gemini hết hôm đó — khi sinh được, chạy `image-scale-review` để xác nhận trước khi tin.
 
+## Khi model là Qwen-Image 2.1 (compose nhiều ảnh tham chiếu)
+
+Các câu số thật/bội số/chân trời ở trên dùng nguyên văn; chỉ đổi khuôn vỏ theo luật Qwen (khuôn đã kiểm chứng trên GPU thật là `build_qwen21_compose_prompt` trong `src/novelvideo/generators/prompt_builder.py`; mẫu cho storyboard là `storyboard_prompt_qwen` trong `gravity_test/gen_chains.py`):
+- Gọi ảnh bằng thẻ `<image1>`, `<image2>`..., KHÔNG viết "Image 1". `<image1>` là ảnh đích (nền) và cũng quyết định kích thước đầu ra; các ảnh sau là tham chiếu. Thẻ phải đủ từ 1 tới N và đúng thứ tự file gửi lên.
+- Mỗi ảnh một câu nêu vai trò riêng; sheet nhân vật mô tả là "một hoặc nhiều góc nhìn của CÙNG một người, không phải nhiều người" và dặn "render một người trong cảnh, không sao chép lại sheet".
+- Một đoạn văn, không xuống dòng, không dấu nháy kép, có từ "photorealistic", không có token tỷ lệ khung ("16:9", "4K") — kích thước do `<image1>` quyết định.
+- Câu "chống" viết thành việc phải làm khi được: "Relight both men to the sunlight of <image1>", "Show exactly 2 people, each appearing once". Riêng "Do not add any object ... not already visible in <image1>" là câu cấm đã được repo kiểm chứng, giữ nguyên.
+- Qwen nhìn thấy số thật và bội số y như Gemini nhưng cũng co vật nền cho vừa khung: vẫn phải verify bằng `image-scale-review`, chưa có lý do tin Qwen đúng tỷ lệ hơn Gemini.
+- Sinh bằng `previs_h3_test/scripts/qwen_images.py` (modes plate | sheet | storyboard, có `--dry-run` để lint prompt). Qwen 2.1 chỉ có giấy phép nghiên cứu/đánh giá: dùng cho bản thử, không dùng cho bản đăng kiếm tiền.
+
 ## Bẫy & anti-pattern cần né
 
 - **Chỉ nói "life-size" / "at the correct scale" chung chung** mà không neo số thật → vô dụng, model vẫn co vừa khung. Luôn kèm mét + bội số.

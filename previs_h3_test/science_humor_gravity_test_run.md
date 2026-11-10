@@ -305,3 +305,11 @@ Theo yêu cầu: "camera luôn tĩnh à? hãy sửa lại script để camera li
 - **Review skill bắt được 1 lỗi tự mâu thuẫn ở bản đầu**: câu mô tả "toàn thân, tỉ lệ người thật" được ghi như đúng suốt cả shot, trong khi cuối câu lại nói camera siết về "medium two-shot" (không còn thấy chân) — tự mâu thuẫn. Đã sửa: tách rõ "lúc đầu shot" (toàn thân) và "cuối shot" (đã siết gần) thành 2 câu riêng thay vì 1 câu chung.
 - Dry-run graph + kiểm `<Picture N>`/lưới khung lại sạch cho cả 16 file sau khi sửa.
 - **Chưa render thật** — chưa biết H3 xử lý push-in prompt-only (không LoRA camera) tốt tới đâu; cần thuê pod để kiểm bằng mắt.
+
+## 2026-11-09: Qwen-Image 2.1 as an alternative to Gemini for plates, sheets and storyboards
+
+- Why: Gemini WebAI needs a Google login/cookie on this Mac, so it cannot run on the rented GPU box. Qwen-Image 2.1 already sits in the H3 box's ComfyUI (`setup_h3_box.sh --with-qwen`).
+- New: `scripts/qwen_images.py` (modes `plate`, `sheet`, `storyboard`, `--dry-run`), `storyboard_prompt_qwen()` + `storyboard_prompts_qwen` key in every chain JSON (gen_chains.py; the H3 `shots[]` text is unchanged — diff is pure additions), `run_batch.sh images <mode>`, `pod_up.sh HOST PORT --with-qwen`.
+- Verified: dry-run builds the graphs, and the repo's `lint_qwen21_compose_prompt` passes on all 8 storyboard prompts. NOT verified: any real generation — no GPU was rented, so image quality, identity (SFace), scale and the sheet-from-real-photo edit are all untested.
+- Licence: Qwen-Image 2.1 is research/evaluation only (see `qwen21_character_local.py`); this series is meant for YouTube, so Qwen output is test-only unless the licence is cleared.
+- `QWEN_API_KEY` in `.env` is empty, so the DashScope Qwen-VL second opinion in `image-scale-review` is not usable yet.

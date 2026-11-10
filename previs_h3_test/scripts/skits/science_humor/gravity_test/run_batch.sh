@@ -4,10 +4,13 @@
 #       3 American candidates for Barnaby and 3 British candidates for Ambrose.
 #   bash previs_h3_test/scripts/skits/science_humor/gravity_test/run_batch.sh videos chain_01 chain_01_refs_only ...
 #       H3 chains one after the other; a finished chain is skipped on a rerun.
-# There is no `images` stage here any more: character sheets, empty backgrounds, and storyboard frames are now
-# generated on the LOCAL machine by gemini_webai_images.py (not Qwen on the pod — Qwen-Image 2.1 is
-# research/evaluation-licensed only and is no longer in this pipeline). Generate and pick those locally first, then
-# upload them alongside the code (pod_up.sh's tar) before running this script's `videos` stage.
+#   bash previs_h3_test/scripts/skits/science_humor/gravity_test/run_batch.sh images storyboard --n 2 [--only chain_02_shot3]
+#       Qwen-Image 2.1 on the pod (qwen_images.py; modes plate | sheet | storyboard; needs pod_up.sh ... --with-qwen).
+#       Candidates are written to the usual candidates/ folders: pull them back, pick one per name, copy it to its final
+#       name, run check_chains.py --storyboard and the image-scale-review skill locally, then upload and run `videos`.
+# Without that stage the character sheets, empty backgrounds and storyboard frames are made on the LOCAL machine by
+# gemini_webai_images.py (Gemini needs a Google login, so it cannot run on the pod). Qwen-Image 2.1 is
+# research/evaluation-licensed only: use it for test output, not for a monetised release.
 # Writes /opt/bench/gravity_<stage>.done or .failed.
 set -uo pipefail
 cd /opt/dramaclaw
@@ -17,7 +20,7 @@ D=$S/skits/science_humor
 G=$D/gravity_test
 export PYTHONPATH=/opt/dramaclaw/src
 export PATH="$HOME/.local/bin:$PATH"
-STAGE=${1:?stage: voices or videos}; shift || true
+STAGE=${1:?stage: voices, images or videos}; shift || true
 LOG=/opt/bench/gravity_$STAGE.log
 rm -f /opt/bench/gravity_$STAGE.done /opt/bench/gravity_$STAGE.failed
 exec > >(tee -a "$LOG") 2>&1
@@ -37,6 +40,24 @@ if [ "$STAGE" = voices ]; then
   stamp voice_ambrose_uk
   timeout 1200 uv run $S/qwen_voice_design.py "$D/voice/ambrose_cands" "$D/voice/ambrose_candidates.json" || fail "voice design ambrose"
   touch /opt/bench/gravity_voices.done; stamp done; exit 0
+fi
+
+if [ "$STAGE" = images ]; then
+  for n in QwenImage21Cache TextEncodeQwenImage21; do
+    curl -s 127.0.0.1:8188/object_info | grep -q "\"$n\"" || fail "node $n missing (pod_up.sh needs --with-qwen)"
+  done
+  MODE=${1:?images mode: plate, sheet or storyboard}; shift
+  stamp free_vram
+  curl -s -X POST 127.0.0.1:8188/free -H 'Content-Type: application/json' -d '{"unload_models":true,"free_memory":true}' >/dev/null
+  stamp "qwen_$MODE"
+  case $MODE in
+    plate) OUT=$G/backgrounds ;;
+    sheet) OUT=$D/character ;;
+    storyboard) OUT=$G ;;
+    *) fail "unknown images mode $MODE" ;;
+  esac
+  timeout 3600 $PY $S/qwen_images.py "$MODE" "$OUT" "$@" || fail "qwen_images $MODE"
+  touch /opt/bench/gravity_images.done; stamp done; exit 0
 fi
 
 # videos

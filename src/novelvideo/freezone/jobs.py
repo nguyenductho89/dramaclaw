@@ -63,8 +63,16 @@ async def run_freezone_gen(
     request_schema: Optional[dict[str, Any]] = None,
     output_task_type: str = "freezone_gen",
     egress_context: TrustedEgressContext | None = None,
+    webai_scene_key: str = "",
 ) -> Path:
     """text → image (with optional reference images).
+
+    `webai_scene_key` only matters for the `gemini_webai` provider: it groups
+    generations into one Gemini conversation so a scene keeps its look across
+    frames. Empty (the default) means a fresh conversation every time, which is
+    what every caller did before this existed. See
+    `novelvideo.freezone.webai_sessions` — and note the scoping rule there: one
+    conversation per SCENE, never one shared across scenes.
 
     Routes through nanobanana_grid for the supported SuperTale providers.
     """
@@ -119,6 +127,10 @@ async def run_freezone_gen(
         )
     cfg["newapi_model_params"] = model_params or {}
     cfg["newapi_request_schema"] = request_schema or {}
+
+    from novelvideo.freezone.webai_sessions import load_session, save_session
+
+    webai_session = load_session(project_dir, webai_scene_key)
     if reference_paths:
         await generate_reference_edit_image(
             prompt=prompt,
@@ -131,6 +143,7 @@ async def run_freezone_gen(
             config=cfg,
             egress_context=egress_context,
             egress_capability="freezone.image.generate",
+            webai_session=webai_session,
         )
     else:
         await generate_text_to_image(
@@ -143,7 +156,9 @@ async def run_freezone_gen(
             config=cfg,
             egress_context=egress_context,
             egress_capability="freezone.image.generate",
+            webai_session=webai_session,
         )
+    save_session(project_dir, webai_scene_key, webai_session)
     return out
 
 
@@ -161,8 +176,28 @@ async def run_freezone_mask_edit(
     provider: Optional[str] = None,
     model: Optional[str] = None,
     egress_context: TrustedEgressContext | None = None,
+    mask_mode: str = "auto",
 ) -> Path:
-    """Masked erase/edit via the same provider routing used by Freezone image edit."""
+    """Masked erase/edit via the same provider routing used by Freezone image edit.
+
+    Two genuinely different mechanisms, picked by `mask_mode`:
+
+    - `"annotation"` — the original path, and the only one most providers can do:
+      the red-highlight PNG goes in as reference image #2 and a prompt tells the
+      model to edit only the highlighted region. Pixels outside it are preserved
+      only as well as the model chooses to.
+    - `"latent"` — for providers whose ComfyUI graph has a real
+      `SetLatentNoiseMask` input (`mask_utils.LATENT_MASK_PROVIDERS`): the
+      highlight is converted back to a binary mask and passed as a mask, not a
+      reference, so pixels outside it are mathematically untouched.
+
+    `"auto"` (the default) picks latent when the resolved provider supports it and
+    annotation otherwise, so existing callers transparently get the better path on
+    RunPod Qwen and byte-identical behaviour everywhere else. An explicit
+    `"latent"` against a provider that has no latent mask is an error rather than a
+    silent downgrade — a caller that asked for a precise mask should hear that it
+    cannot have one.
+    """
     out = output_path_for_job(project_dir, "freezone_mask_edit", job_id)
     out.parent.mkdir(parents=True, exist_ok=True)
 
@@ -202,18 +237,53 @@ async def run_freezone_mask_edit(
             image_size_override=image_size,
         )
     provider_name = str(cfg.get("provider") or provider or "newapi").strip().lower()
-    mask_prompt = (
-        f"{prompt}\n\n"
-        "Use Image 1 as the source image. Image 2 is the same image with a translucent RED "
-        "highlight painted over the region to edit. Edit ONLY the red-highlighted region; the "
-        "red highlight is just an annotation marking where to work and must NOT appear in the "
-        "output. Preserve all pixels outside the highlighted region — composition, identity, "
-        "lighting, and texture — as much as possible."
-    ).strip()
+
+    from novelvideo.freezone.mask_utils import (
+        red_highlight_to_binary_mask,
+        provider_supports_latent_mask,
+    )
+
+    requested_mode = str(mask_mode or "auto").strip().lower()
+    supports_latent = provider_supports_latent_mask(provider_name)
+    if requested_mode == "latent" and not supports_latent:
+        raise ValueError(
+            f"mask_mode='latent' is not available for provider {provider_name}: only "
+            "RunPod Qwen models have a latent mask input; use mask_mode='annotation' "
+            "(or 'auto') for this provider"
+        )
+    use_latent = supports_latent and requested_mode in ("auto", "latent")
+
+    latent_mask_path: Optional[Path] = None
+    if use_latent:
+        # The mask the UI uploaded is the source image under a translucent red
+        # overlay; a graph reading `ImageToMask(channel="red")` would treat every
+        # red-dominant pixel in the picture as paint. Recover the binary mask the
+        # user actually drew. A failure here is fatal on purpose — see
+        # `MaskDerivationError`'s docstring.
+        latent_mask_path = out.parent / f"{out.stem}_mask.png"
+        latent_mask_path.write_bytes(
+            red_highlight_to_binary_mask(base_p.read_bytes(), mask_p.read_bytes())
+        )
+        # The prompt stays exactly what the caller built (`build_redraw_prompt` /
+        # `build_erase_prompt`). The "Image 2 is the same image with a red
+        # highlight" wording below is not merely unnecessary here, it is harmful:
+        # there is no Image 2, and describing one invites the model to render it.
+        mask_prompt = prompt.strip()
+        reference_images = [str(base_p)]
+    else:
+        mask_prompt = (
+            f"{prompt}\n\n"
+            "Use Image 1 as the source image. Image 2 is the same image with a translucent RED "
+            "highlight painted over the region to edit. Edit ONLY the red-highlighted region; the "
+            "red highlight is just an annotation marking where to work and must NOT appear in the "
+            "output. Preserve all pixels outside the highlighted region — composition, identity, "
+            "lighting, and texture — as much as possible."
+        ).strip()
+        reference_images = [str(base_p), str(mask_p)]
     try:
         await generate_reference_edit_image(
             prompt=mask_prompt,
-            reference_images=[str(base_p), str(mask_p)],
+            reference_images=reference_images,
             output_path=str(out),
             aspect_ratio=aspect_ratio,
             image_size=image_size,
@@ -222,6 +292,7 @@ async def run_freezone_mask_edit(
             config=cfg,
             egress_context=egress_context,
             egress_capability="freezone.image.generate",
+            mask_image_path=str(latent_mask_path) if latent_mask_path else None,
         )
     except Exception as exc:
         raise RuntimeError(
@@ -323,6 +394,7 @@ async def run_freezone_edit(
     request_schema: Optional[dict[str, Any]] = None,
     output_task_type: str = "freezone_edit",
     egress_context: TrustedEgressContext | None = None,
+    webai_scene_key: str = "",
 ) -> Path:
     """image + reference + prompt → new image.
 
@@ -366,6 +438,9 @@ async def run_freezone_edit(
     # The organization branch must carry them too -- request-scoped credentials only swap the egress identity, not the request body shape.
     cfg["newapi_model_params"] = model_params or {}
     cfg["newapi_request_schema"] = request_schema or {}
+    from novelvideo.freezone.webai_sessions import load_session, save_session
+
+    webai_session = load_session(project_dir, webai_scene_key)
     await generate_reference_edit_image(
         prompt=prompt,
         reference_images=refs,
@@ -377,7 +452,9 @@ async def run_freezone_edit(
         config=cfg,
         egress_context=egress_context,
         egress_capability="freezone.image.generate",
+        webai_session=webai_session,
     )
+    save_session(project_dir, webai_scene_key, webai_session)
     return out
 
 

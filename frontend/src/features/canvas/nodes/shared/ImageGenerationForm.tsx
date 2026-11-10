@@ -7,6 +7,7 @@ import {
   ArrowUp,
   Camera,
   ChevronDown,
+  Clapperboard,
   Languages,
   Library,
   Loader2,
@@ -36,6 +37,10 @@ import {
   CameraPickerPopover,
 } from '@/features/canvas/nodes/CameraPickerPopover';
 import { StylePickerPopover } from '@/features/canvas/nodes/StylePickerPopover';
+import {
+  PrevisTemplatePickerPopover,
+  type PrevisTemplateSelection,
+} from '@/features/canvas/nodes/PrevisTemplatePickerPopover';
 import { NodeContextPromptPaletteButton } from '@/features/canvas/nodes/ContextPromptPaletteButton';
 import {
   contextPromptPaletteInsertionText,
@@ -308,6 +313,73 @@ function StyleChip({ selectedId, selectedLabel, onChange, onOpenChange }: StyleC
   );
 }
 
+interface PrevisChipProps {
+  selected: PrevisTemplateSelection | null;
+  onChange: (next: PrevisTemplateSelection | null) => void;
+  onOpenChange: (open: boolean) => void;
+}
+
+/** Sits next to StyleChip, but means something different: a style template adds a
+ * fragment to the user's prompt, a previs template REPLACES it with one that
+ * carries the measured scale/relight/grounding sentences. */
+function PrevisChip({ selected, onChange, onOpenChange }: PrevisChipProps) {
+  const { t } = useTranslation();
+  const [isOpen, setIsOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const popoverRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    onOpenChange(isOpen);
+  }, [isOpen, onOpenChange]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onPointerDown = (event: MouseEvent) => {
+      if (
+        triggerRef.current?.contains(event.target as Node) ||
+        popoverRef.current?.contains(event.target as Node)
+      ) {
+        return;
+      }
+      setIsOpen(false);
+    };
+    document.addEventListener('mousedown', onPointerDown, true);
+    return () => document.removeEventListener('mousedown', onPointerDown, true);
+  }, [isOpen]);
+
+  const label = t('canvasNodes.imageForm.previs', 'Previs');
+  return (
+    <div className="relative">
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={(event) => {
+          event.stopPropagation();
+          setIsOpen((prev) => !prev);
+        }}
+        title={selected?.templateId ?? label}
+        className={`${NODE_TEXT_CONTROL_TRIGGER_CLASS} max-w-[160px]`}
+      >
+        <Clapperboard className={`${NODE_TEXT_CONTROL_ICON_CLASS} shrink-0`} />
+        <span className="truncate">{selected?.templateId ?? label}</span>
+      </button>
+      {isOpen && (
+        <div
+          ref={popoverRef}
+          className="absolute top-full left-0 z-50 mt-2"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <PrevisTemplatePickerPopover
+            selected={selected}
+            onSelect={onChange}
+            onClose={() => setIsOpen(false)}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
 interface CameraChipProps {
   selection: ImageGenCameraSelection | null;
   summary: string | null;
@@ -486,6 +558,8 @@ export interface ImageGenerationFormProps {
   // ── Reference / style chips row ──
   styleTemplateId: string | null;
   selectedStyleLabel: string | null;
+  /** Previs prompt template selection (plate / sheet / storyboard frame). */
+  previsTemplate: PrevisTemplateSelection | null;
   /** Style popover toggle: the host (ImageGenNode) uses it to temporarily hide the history strip below, avoiding stacked layers. */
   onStylePickerOpenChange: (open: boolean) => void;
   onOpenAssetLibrary: () => void;
@@ -582,6 +656,7 @@ export const ImageGenerationForm = memo((props: ImageGenerationFormProps) => {
     nodeId,
     styleTemplateId,
     selectedStyleLabel,
+    previsTemplate,
     onStylePickerOpenChange,
     onOpenAssetLibrary,
     upstreamTextContents,
@@ -663,6 +738,11 @@ export const ImageGenerationForm = memo((props: ImageGenerationFormProps) => {
           selectedId={styleTemplateId}
           selectedLabel={selectedStyleLabel}
           onChange={(nextId) => updateNodeData(nodeId, { styleTemplateId: nextId })}
+          onOpenChange={onStylePickerOpenChange}
+        />
+        <PrevisChip
+          selected={previsTemplate}
+          onChange={(next) => updateNodeData(nodeId, { previsTemplate: next })}
           onOpenChange={onStylePickerOpenChange}
         />
         <NodeContextPromptPaletteButton

@@ -1194,6 +1194,9 @@ async def _run_freezone_video_multishot_async(
             reference_image_paths=[
                 str(p) for p in (config.get("reference_image_paths") or [])
             ],
+            # Freezone-only: the beat-chain runner above never has voice refs, so
+            # it keeps the parameter's `None` default and its graph is unchanged.
+            voice_ref_paths=[str(p) for p in (config.get("voice_ref_paths") or [])],
             on_log=on_log,
             # Canvas start images can be any aspect ratio — unlike beat
             # first frames, which are already rendered at exactly the

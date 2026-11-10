@@ -2911,6 +2911,7 @@ async def generate_text_to_image(
     config: Optional[dict] = None,
     egress_context: TrustedEgressContext | None = None,
     egress_capability: str = "image.generate",
+    webai_session: dict | None = None,
 ) -> Path:
     """Generate one image from a prompt only — no reference images.
 
@@ -2929,6 +2930,7 @@ async def generate_text_to_image(
         config=config,
         egress_context=egress_context,
         egress_capability=egress_capability,
+        webai_session=webai_session,
     )
 
 
@@ -2944,8 +2946,16 @@ async def generate_reference_edit_image(
     config: Optional[dict] = None,
     egress_context: TrustedEgressContext | None = None,
     egress_capability: str = "image.edit",
+    mask_image_path: str | None = None,
+    webai_session: dict | None = None,
 ) -> Path:
     """Generate one edited image from reference images plus a free-form edit prompt.
+
+    `mask_image_path` is a real binary latent mask (L-mode PNG, 255 = regenerate),
+    honoured only by the two RunPod Qwen providers whose ComfyUI graph has a
+    `SetLatentNoiseMask` input; see `novelvideo.freezone.mask_utils`. It is NOT a
+    reference image and must not be passed in `reference_images` — the Qwen workers
+    count those into the 2 `image2`/`image3` slots, the mask is a separate input.
 
     `config` lets callers override the provider / model selection (passed through
     to `NanoBananaGridGenerator`); when None, falls back to env-var defaults via
@@ -2965,6 +2975,8 @@ async def generate_reference_edit_image(
         config=config,
         egress_context=egress_context,
         egress_capability=egress_capability,
+        mask_image_path=mask_image_path,
+        webai_session=webai_session,
     )
 
 
@@ -2980,9 +2992,24 @@ async def _generate_image(
     config: Optional[dict],
     egress_context: TrustedEgressContext | None,
     egress_capability: str,
+    mask_image_path: str | None = None,
+    webai_session: dict | None = None,
 ) -> Path:
     """Shared body for text-only and image-edit single-image generation."""
     ref_paths = list(reference_image_paths or [])
+    # Read once, here, so every provider branch sees the same tuple shape the
+    # `_call_runpod_*_image_api` helpers expect, and so an unreadable mask fails
+    # before any upstream call is made. Providers without a latent-mask input
+    # ignore this entirely (`mask_utils.LATENT_MASK_PROVIDERS` is the gate, applied
+    # by the caller in `freezone/jobs.py`).
+    mask_tuple: tuple[str, bytes, str] | None = None
+    if mask_image_path:
+        _mask_mime = mimetypes.guess_type(mask_image_path)[0] or "image/png"
+        mask_tuple = (
+            _webai_ref_filename(99, _mask_mime),
+            Path(mask_image_path).read_bytes(),
+            _mask_mime,
+        )
     context = _validate_egress_context(egress_context)
     if context is None:
         # The claim itself does not leak (`_prepare_organization_image_egress` falls back to the scope on its own); what leaks is
@@ -3156,6 +3183,7 @@ async def _generate_image(
             model=generator.model,
             prompt=prompt,
             reference_images=reference_images or None,
+            mask_image=mask_tuple,
         )
         if not image_bytes:
             raise ValueError(
@@ -3188,16 +3216,56 @@ async def _generate_image(
             )
             for i, path in enumerate(ref_paths)
         ]
-        image_bytes, _text, runpod_qwen21_render_error = await _call_runpod_qwen21_render_image_api(
+        # `_qwen21_render_call_image_api_for_multi_character`, not the bare API
+        # caller: when a mask is present it raises cfg to
+        # RUNPOD_QWEN21_RENDER_INPAINT_CFG and adds the inpaint negative prompt.
+        # At the official cfg=1 a masked region drifts toward "generic, consistent
+        # with the surrounding scene" instead of following the prompt — the 2026-10-18
+        # fix. With `mask_image=None` that wrapper is byte-identical to the bare call,
+        # so the existing maskless `/freezone/edit` path is unchanged.
+        image_bytes, _text, runpod_qwen21_render_error = await _qwen21_render_call_image_api_for_multi_character(
             api_key=generator.api_key,
             model=generator.model,
             prompt=prompt,
             reference_images=reference_images or None,
+            mask_image=mask_tuple,
         )
         if not image_bytes:
             raise ValueError(
                 f"RunPod Qwen Image 2.1 (render graph) generation failed: {runpod_qwen21_render_error or 'empty image'}"
             )
+    elif generator.provider == "gemini_webai":
+        # Added 2026-11-10 for Freezone's image nodes. `gemini_webai` has been the
+        # MAIN pipeline's default image provider for a while, but only through
+        # `generate_grid()`'s own dispatch — this function had no branch for it, so
+        # a Freezone job naming it fell into the bare `else:` below and tried the
+        # Google genai SDK with a gateway key. Same reference-image convention as
+        # the three RunPod branches above (`_webai_ref_filename` derives the
+        # extension from the MIME type, which the bridge validates).
+        reference_images = [
+            (
+                _webai_ref_filename(i, mimetypes.guess_type(path)[0] or "image/png"),
+                Path(path).read_bytes(),
+                mimetypes.guess_type(path)[0] or "image/png",
+            )
+            for i, path in enumerate(ref_paths)
+        ]
+        image_bytes, webai_text, webai_error = await _call_webai_chat_image_api(
+            api_key=generator.api_key,
+            model=generator.model,
+            prompt=prompt,
+            reference_images=reference_images or None,
+            base_url=generator.base_url,
+            session=webai_session,
+        )
+        if not image_bytes:
+            # `webai_text` carries the bridge's own words when it answered without
+            # an image — most often the daily image-quota message. Surfacing it is
+            # the difference between "try again later" and an opaque failure.
+            detail = webai_error or "empty image"
+            if webai_text:
+                detail = f"{detail} (model said: {webai_text.strip()[:200]!r})"
+            raise ValueError(f"Gemini WebAI generation failed: {detail}")
     else:
         from google import genai
         from google.genai import types
@@ -4333,79 +4401,17 @@ async def _relay_reference_images_for_newapi(
 _ORIGINAL_RELAY_REFERENCE_IMAGES_FOR_NEWAPI = _relay_reference_images_for_newapi
 
 
-def _download_webai_artifact(url: str, cookie_file: str) -> tuple[bytes | None, str]:
-    """Download a Gemini WebAI-generated image using its Playwright session cookies.
-
-    The artifact URL (from `/chat/completions` → `choices[].artifacts[].url`) is a
-    private googleusercontent link gated by the same Google account session the
-    WebAI server's browser is logged into — a bare request without those cookies
-    gets HTTP 403. `=s0` requests the original resolution instead of Google's
-    default 512px thumbnail (same trick as comfy-trends' gemini_client.py).
-    """
-    import http.cookiejar
-    import urllib.request
-
-    try:
-        raw = json.loads(Path(cookie_file).expanduser().read_text())
-    except OSError as exc:
-        return None, f"cannot read GEMINI_WEBAI_COOKIE_FILE: {exc}"
-    except ValueError as exc:
-        return None, f"GEMINI_WEBAI_COOKIE_FILE is not valid JSON: {exc}"
-
-    jar = http.cookiejar.CookieJar()
-    for cookie in raw.get("cookies", []):
-        expires = cookie.get("expires", -1)
-        jar.set_cookie(
-            http.cookiejar.Cookie(
-                0,
-                cookie["name"],
-                cookie["value"],
-                None,
-                False,
-                cookie["domain"],
-                True,
-                cookie["domain"].startswith("."),
-                cookie.get("path", "/"),
-                True,
-                bool(cookie.get("secure")),
-                None if expires is None or expires <= 0 else int(expires),
-                False,
-                None,
-                None,
-                {},
-            )
-        )
-
-    last_segment = url.rsplit("/", 1)[-1]
-    full_res_url = url.split("=")[0] + "=s0" if "=s" not in last_segment else url
-    opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
-    try:
-        with opener.open(
-            urllib.request.Request(full_res_url, headers={"User-Agent": "Mozilla/5.0"}),
-            timeout=180,
-        ) as resp:
-            data = resp.read()
-    except Exception as exc:
-        return None, f"failed to download webai image artifact: {exc}"
-
-    if not data.startswith((b"\x89PNG", b"\xff\xd8")):
-        return None, "downloaded artifact is not a valid image (cookie expired?)"
-    from novelvideo.llm_call_log import record_artifact
-
-    record_artifact("image", data=data, label="gemini_webai", source_url=url)
-    return data, ""
-
-
-def _webai_ref_filename(index: int, mime: str) -> str:
-    """Build a reference-image filename whose extension matches its MIME type.
-
-    WebAI-to-API (port 6969) validates that the filename extension matches the
-    declared MIME type and returns HTTP 400 ("File extension '.png' is not
-    allowed for MIME type 'image/jpeg'") on a mismatch — so the extension must
-    be derived from `mime`, never hardcoded.
-    """
-    ext = mimetypes.guess_extension(mime or "") or ".png"
-    return f"ref_{index}{ext}"
+# Both helpers moved to `gemini_webai_client` (2026-11-10) so the standalone previs
+# CLI `previs_h3_test/scripts/gemini_webai_images.py` can import them instead of
+# keeping its own hand-copied, already-drifting duplicates. Re-exported under their
+# original private names because this module has 6 internal call sites, including
+# three RunPod branches of `_generate_image`.
+from novelvideo.generators.gemini_webai_client import (  # noqa: E402
+    download_webai_artifact as _download_webai_artifact,
+)
+from novelvideo.generators.gemini_webai_client import (  # noqa: E402
+    webai_ref_filename as _webai_ref_filename,
+)
 
 
 async def _call_webai_chat_image_api(
@@ -4417,8 +4423,20 @@ async def _call_webai_chat_image_api(
     image_config: dict | None = None,
     base_url: str | None = None,
     cookie_file: str = "",
+    session: dict | None = None,
 ) -> tuple[bytes | None, str, str]:
     """Generate an image via a local WebAI-to-API Gemini bridge (dev-only).
+
+    `session` is an optional mutable in/out dict carrying `conversation_id`, the
+    same convention `_call_newapi_image_api` already uses for its `trace` and
+    `delivery_state` params — so the return arity is unchanged and every existing
+    caller (which passes nothing) builds a byte-identical request.
+
+    Why it matters: Gemini keeps character and lighting continuity across turns of
+    ONE conversation, which is what makes a set of storyboard frames look like the
+    same place. It must be scoped per scene, never globally: a conversation shared
+    across scenes was observed putting the Eden background figures on the Moon
+    (previs, 2026-11-09). `novelvideo.freezone.webai_sessions` owns that scoping.
 
     Unlike `_call_newapi_image_api`, this upstream has no OpenAI Images API — it
     only exposes `/chat/completions`, returning the generated image as a
@@ -4457,7 +4475,13 @@ async def _call_webai_chat_image_api(
         endpoint = get_effective_newapi_gateway_config().base_url.rstrip("/")
 
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
-    payload = {"model": model, "messages": [{"role": "user", "content": content}]}
+    payload: dict[str, Any] = {
+        "model": model,
+        "messages": [{"role": "user", "content": content}],
+    }
+    conversation_id = str((session or {}).get("conversation_id") or "")
+    if conversation_id:
+        payload["conversation_id"] = conversation_id
 
     try:
         async with httpx.AsyncClient(timeout=GEMINI_WEBAI_TIMEOUT_SECONDS) as client:
@@ -4474,6 +4498,15 @@ async def _call_webai_chat_image_api(
         data = response.json()
     except ValueError:
         return None, "", "webai chat returned non-JSON response"
+
+    if session is not None:
+        # Written back even on an error turn: the bridge opens the conversation
+        # before it decides it cannot generate (e.g. a daily image-quota reply), and
+        # the next attempt should continue that same conversation rather than start
+        # a fresh one and lose the scene's continuity.
+        returned_id = data.get("conversation_id") or data.get("id")
+        if returned_id:
+            session["conversation_id"] = str(returned_id)
 
     choices = data.get("choices") or []
     first_choice = choices[0] if choices else {}

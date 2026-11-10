@@ -192,6 +192,20 @@ export function useImageGenerationForm(
     typeof data.styleTemplateId === 'string' && data.styleTemplateId.length > 0
       ? data.styleTemplateId
       : null;
+  // Previs template selection, stored on the node so it survives a reload the
+  // same way the style/camera selections do.
+  const previsTemplate =
+    data.previsTemplate &&
+    typeof data.previsTemplate === 'object' &&
+    typeof (data.previsTemplate as { templateId?: unknown }).templateId === 'string' &&
+    (data.previsTemplate as { templateId: string }).templateId.length > 0
+      ? {
+          templateId: (data.previsTemplate as { templateId: string }).templateId,
+          slots:
+            ((data.previsTemplate as { slots?: Record<string, string> }).slots ??
+              {}) as Record<string, string>,
+        }
+      : null;
   const referenceImageUrl =
     typeof data.referenceImageUrl === 'string' && data.referenceImageUrl.length > 0
       ? data.referenceImageUrl
@@ -581,6 +595,7 @@ export function useImageGenerationForm(
           }
         : null,
       style: styleTemplateId ? { templateId: styleTemplateId } : null,
+      previsTemplate,
     };
 
     // The backend no longer supports producing several images at once; instead it calls the endpoint N times concurrently by "generation count", each producing
@@ -832,6 +847,7 @@ export function useImageGenerationForm(
     generationMode,
     supportsImageQuality,
     styleTemplateId,
+    previsTemplate,
     billingRuleMissingSubmitMessage,
     submitDisabled,
     shouldInlineUpstreamTextAsPrompt,
@@ -861,6 +877,7 @@ export function useImageGenerationForm(
       nodeId: id,
       styleTemplateId,
       selectedStyleLabel: selectedStyle?.label ?? null,
+      previsTemplate,
       upstreamTextContents,
       upstreamImageContents,
       onDetachUpstream: handleDetachUpstream,

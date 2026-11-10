@@ -189,6 +189,11 @@ async function submitJob(
       // Dynamic parameters declared by the catalog (model_params). They were not carried here before; the catalog parameters filled in on the node
       // were collected all the way to before submission and then dropped entirely - the user's changes had no effect and no hint either.
       modelParams: payload.modelParams,
+      previsTemplate: payload.previsTemplate ?? null,
+      // One Gemini conversation per node by default: continuity within a node's
+      // own frames, never across unrelated scenes (a shared conversation has been
+      // seen carrying one scene's background figures into another).
+      webaiSceneKey: payload.nodeId ?? null,
       canvasId,
       nodeId: payload.nodeId,
     });

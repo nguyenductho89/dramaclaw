@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
@@ -57,6 +58,13 @@ class MultishotShotInput:
 
     id: str
     description: str
+    #: What the on-screen subject says in this shot, if anything. Only ref2va
+    #: chains with voice references can actually speak it. Non-empty dialogue
+    #: changes three things downstream: the prompt builder is told to expect it
+    #: (`expects_dialogue`), the lint stops flagging the `<d>...</d>` block as
+    #: stray text, and the shot gets the dialogue frame floor so the line is not
+    #: cut off mid-word.
+    dialogue: str = ""
 
 
 @dataclass(frozen=True)
@@ -87,6 +95,9 @@ class FreezoneMultishotPlan:
     start_image_path: str
     start_image_url: str
     references: list[ResolvedReference]
+    #: Local paths of the voice reference clips (`<Audio N>`), in order. Only
+    #: meaningful for `ref2va`; `build_h3_multishot_graph` raises above 3.
+    voice_ref_paths: list[str]
     shots: list[MultishotShotInput]
     director_guidance: str
     aspect_ratio: str
@@ -149,6 +160,57 @@ def resolve_shared_references(
     return resolved
 
 
+MULTISHOT_MAX_VOICE_REFS = 3
+
+
+class TooManyVoiceRefsError(ValueError):
+    """Raised instead of silently dropping a voice: `build_h3_multishot_graph`
+    only wires `voice_ref`, `voice_ref_2` and `voice_ref_3`, so a fourth speaker
+    would vanish without a word and the chain would render in the wrong voice."""
+
+    def __init__(self, names: list[str], limit: int):
+        self.names = names
+        self.limit = limit
+        super().__init__(
+            f"at most {limit} voice reference clips are supported for a multishot "
+            f"chain, got {len(names)}: {', '.join(names) or '(unnamed)'}"
+        )
+
+
+def resolve_voice_refs(
+    *,
+    canvas_voice_paths: list[str],
+    library_voice_paths: list[str],
+) -> list[str]:
+    """Union canvas-connected audio and Character Library audio picks into one
+    ordered, deduped list of voice reference paths, capped at
+    `MULTISHOT_MAX_VOICE_REFS`.
+
+    Order is `<Audio 1>`, `<Audio 2>`, ... and it is load-bearing: a shot's prompt
+    names the speaker by that tag, so reordering the list changes who speaks.
+    Canvas order first, then library picks in request order — the same convention
+    `resolve_shared_references` uses for images.
+
+    This is a SEPARATE budget from `MULTISHOT_MAX_UNION_REFERENCES`: an audio
+    library item must never consume one of the 3 image reference slots.
+    """
+    resolved: list[str] = []
+    seen: set[str] = set()
+    for path in [*canvas_voice_paths, *library_voice_paths]:
+        if not path:
+            continue
+        key = _resolved_path(path)
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        resolved.append(path)
+    if len(resolved) > MULTISHOT_MAX_VOICE_REFS:
+        raise TooManyVoiceRefsError(
+            [Path(p).name for p in resolved], MULTISHOT_MAX_VOICE_REFS
+        )
+    return resolved
+
+
 def _resolved_path(path: str) -> str:
     try:
         return str(Path(path).resolve())
@@ -161,9 +223,12 @@ def build_shot_contexts(plan: FreezoneMultishotPlan) -> list[MiniMaxH3BeatContex
     `agents.minimax_h3_prompt_builder.generate_minimax_h3_prompt_with_fallback`,
     one call per shot.
 
-    No dialogue in v1: `narration_segment`/`dialogue_line` stay at their
-    model defaults (empty strings), so callers must pass
-    `expects_dialogue=False` to the prompt generator.
+    Dialogue is per shot (added 2026-11-10 with voice references): a shot whose
+    `dialogue` is set passes it as `dialogue_line`, and callers must then pass
+    `expects_dialogue=True` to the prompt generator for that chain — otherwise the
+    builder omits the `<d>...</d>` block and the lint treats a hand-written one as
+    stray text. Shots with no dialogue keep the previous behaviour exactly.
+    `narration_segment` is still unused.
 
     Field choice for the user's shot text — `visual_description`, not
     `director_guidance`: `_build_user_prompt` gives `visual_description`
@@ -209,6 +274,7 @@ def build_shot_contexts(plan: FreezoneMultishotPlan) -> list[MiniMaxH3BeatContex
                 director_guidance=plan.director_guidance,
                 first_frame_path=first_frame_path,
                 references=references,
+                dialogue_line=shot.dialogue,
             )
         )
     return contexts
@@ -242,8 +308,117 @@ def multishot_input_fingerprint(plan: FreezoneMultishotPlan) -> str:
     ]
     for ref in plan.references:
         parts.append(f"{ref.path}:{_mtime(ref.path)}:{ref.kind}:{ref.name}")
+    for voice_path in plan.voice_ref_paths:
+        parts.append(f"voice:{voice_path}:{_mtime(voice_path)}")
     for shot in plan.shots:
         parts.append(shot.description.strip())
+        parts.append(f"dialogue:{shot.dialogue.strip()}")
     parts.append(plan.director_guidance.strip())
     digest_input = "\x1f".join(parts)
     return hashlib.sha1(digest_input.encode("utf-8")).hexdigest()
+
+
+# ── chain JSON import (2026-11-10) ───────────────────────────────────────
+
+
+#: Keys a previs chain JSON is expected to carry. Written by
+#: `previs_h3_test/scripts/skits/science_humor/gravity_test/gen_chains.py` and
+#: already the interchange format between the authoring scripts, the local bench
+#: and the review skills — so Freezone reads it rather than inventing a second one.
+CHAIN_JSON_KEYS = (
+    "scene",
+    "aspect_ratio",
+    "frames",
+    "checkpoint",
+    "voice_refs",
+    "storyboard_prompts",
+    "name",
+    "start_image",
+    "reference_images",
+    "shots",
+)
+
+_DIALOGUE_RE = re.compile(r"<d>(?:\[[^\]]*\]\s*)?(.*?)</d>", re.DOTALL)
+
+
+class ChainImportError(ValueError):
+    """The JSON is not a usable H3 chain."""
+
+
+def extract_chain_dialogue(shot_text: str) -> str:
+    """Pull the spoken line(s) out of a shot's H3 prompt block.
+
+    A chain's shot text already contains the finished prompt, dialogue included
+    (`<d>[English] ...</d>`). Freezone does not need to parse it to RENDER — the
+    text is passed through verbatim — but it does need to know whether a shot
+    speaks, because that drives the dialogue frame floor and `expects_dialogue`.
+    Returning the words themselves (not just a flag) also lets the review UI show
+    what is said per shot.
+    """
+    lines = [m.group(1).strip() for m in _DIALOGUE_RE.finditer(shot_text or "")]
+    return "\n".join(line for line in lines if line)
+
+
+def chain_json_to_multishot_request(chain: dict) -> dict:
+    """Map a previs chain JSON onto the `/freezone/video/multishot` request shape.
+
+    Pure: no filesystem access, no URL resolution. Paths come back exactly as the
+    chain wrote them (repo-relative) — the caller uploads the files and swaps in
+    static URLs, because only it knows the project.
+
+    `turbo_lora`/`turbo_steps` are deliberately NOT carried over: sampling is
+    resolved server-side by `multishot_sampling_plan()` from config, and letting a
+    JSON file override it would reintroduce exactly the env-mutation-by-input
+    pattern the local bench uses and that must not reach the app.
+    """
+    if not isinstance(chain, dict):
+        raise ChainImportError("chain JSON must be an object")
+
+    shots = chain.get("shots")
+    if not isinstance(shots, list) or not shots:
+        raise ChainImportError("chain JSON has no shots")
+    if not all(isinstance(s, str) and s.strip() for s in shots):
+        raise ChainImportError("every shot must be a non-empty prompt string")
+
+    start_image = str(chain.get("start_image") or "")
+    if not start_image:
+        raise ChainImportError(
+            "chain JSON has no start_image — a `_refs_only` variant cannot be "
+            "imported, Freezone's multishot node always needs a start frame"
+        )
+
+    aspect_ratio = str(chain.get("aspect_ratio") or "9:16")
+    if aspect_ratio not in ("16:9", "9:16"):
+        raise ChainImportError(f"unsupported aspect_ratio {aspect_ratio!r}")
+
+    frames = int(chain.get("frames") or 0)
+    shot_seconds = round(frames / 24.0) if frames else 8
+
+    shot_entries = []
+    for index, text in enumerate(shots, start=1):
+        shot_entries.append(
+            {
+                "id": f"shot{index}",
+                # The chain's shot text IS the final H3 prompt. It goes into
+                # `description` so the review route can show and re-lint it, and is
+                # echoed as `final_prompt` so an unedited import renders verbatim.
+                "description": text.strip(),
+                "dialogue": extract_chain_dialogue(text),
+                "final_prompt": text.strip(),
+            }
+        )
+
+    return {
+        "name": str(chain.get("name") or ""),
+        "scene": str(chain.get("scene") or ""),
+        "aspect_ratio": aspect_ratio,
+        "shot_duration_seconds": max(5, min(12, shot_seconds)),
+        "start_image": start_image,
+        "reference_images": [str(p) for p in (chain.get("reference_images") or [])],
+        "voice_refs": [str(p) for p in (chain.get("voice_refs") or [])],
+        "storyboard_prompts": [str(p) for p in (chain.get("storyboard_prompts") or [])],
+        "storyboard_prompts_qwen": [
+            str(p) for p in (chain.get("storyboard_prompts_qwen") or [])
+        ],
+        "shots": shot_entries,
+    }

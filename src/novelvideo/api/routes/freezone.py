@@ -316,6 +316,12 @@ from novelvideo.freezone.route_helpers import (
     load_video_character_items_by_ids as _load_video_character_items_by_ids,
 )
 from novelvideo.freezone.route_helpers import (
+    build_previs_template_prompt as _build_previs_template_prompt,
+)
+from novelvideo.freezone.route_helpers import (
+    merge_prompt_with_previs_template as _merge_prompt_with_previs_template,
+)
+from novelvideo.freezone.route_helpers import (
     merge_prompt_with_style_and_camera as _merge_prompt_with_style_and_camera,
 )
 from novelvideo.freezone.route_helpers import (
@@ -1041,6 +1047,7 @@ async def _start_or_enqueue_freezone_gen_job(
     task_display: dict[str, str] | None = None,
     model_params: dict[str, Any] | None = None,
     request_schema: dict[str, Any] | None = None,
+    webai_scene_key: str = "",
 ) -> dict:
     if ctx is not None:
         await _require_scoped_media_model(
@@ -1114,6 +1121,7 @@ async def _start_or_enqueue_freezone_gen_job(
                 "gen_mode": gen_mode or "",
                 "model_params": model_params or {},
                 "request_schema": request_schema or {},
+                "webai_scene_key": webai_scene_key or "",
                 **display_payload,
             },
         )
@@ -2810,6 +2818,7 @@ async def _start_or_enqueue_freezone_edit_job(
     task_display: dict[str, str] | None = None,
     billing_feature_key: str = "",
     billing_operation: str = "",
+    webai_scene_key: str = "",
 ) -> dict:
     if ctx is not None:
         await _require_scoped_media_model(
@@ -2889,6 +2898,7 @@ async def _start_or_enqueue_freezone_edit_job(
                 # only basis for writing the parameters into the gateway request body (requestPath), and values alone are useless.
                 **({"model_params": model_params} if model_params else {}),
                 **({"request_schema": request_schema} if request_schema else {}),
+                **({"webai_scene_key": webai_scene_key} if webai_scene_key else {}),
                 **({"billing": billing} if billing else {}),
                 **display_payload,
             },
@@ -3036,6 +3046,7 @@ async def _start_or_enqueue_freezone_mask_edit_path(
     provider: str,
     model: str | None,
     billing_operation: str,
+    mask_mode: str = "auto",
 ) -> dict:
     task_type = "freezone_mask_edit"
     if ctx is not None:
@@ -3078,6 +3089,7 @@ async def _start_or_enqueue_freezone_mask_edit_path(
                 "quality": quality,
                 "provider": provider,
                 "model": model,
+                "mask_mode": mask_mode,
                 "billing": billing,
             },
         )
@@ -6257,13 +6269,21 @@ async def freezone_gen(
         raise HTTPException(
             400, detail={"code": "REFERENCE_MEDIA_INVALID", "errors": reference_errors}
         )
+    # The template is rendered for the RESOLVED provider, not `body.provider`:
+    # a catalog entry's providerId is authoritative, and Gemini vs RunPod Qwen
+    # need genuinely different prompt forms.
+    previs_prompt = _build_previs_template_prompt(
+        body.previs_template,
+        execution_provider,
+        reference_count=len(body.reference_urls or []) + 1,
+    )
     return await _start_or_enqueue_freezone_gen_job(
         ctx=ctx,
         username=username,
         project=project_name,
         project_dir=project_dir,
         output_dir=output_dir,
-        prompt=body.prompt,
+        prompt=_merge_prompt_with_previs_template(body.prompt, previs_prompt),
         aspect_ratio=body.aspect_ratio,
         image_size=body.image_size,
         reference_urls=list(body.reference_urls or []),
@@ -6281,6 +6301,7 @@ async def freezone_gen(
         gen_mode=body.gen_mode or None,
         model_params=model_params,
         request_schema=request_schema,
+        webai_scene_key=body.webai_scene_key,
     )
 
 
@@ -7138,6 +7159,39 @@ async def freezone_image_style_templates(
     }
 
 
+@router.get(
+    "/projects/{project}/freezone/image/previs-templates", tags=[TAG_FREEZONE_IMAGE]
+)
+async def freezone_image_previs_templates(
+    project: str,
+    user: dict = Depends(get_api_user),
+):
+    """Image processing: previs prompt templates (plate / character sheet / storyboard frame).
+
+    Same envelope shape as `/freezone/image/style-templates`: `data` stays a bare
+    list for the same reason given there (callers unwrap one layer and would throw
+    on `templates.find(...)` if it became an object), with list metadata at the
+    envelope level.
+
+    Each entry carries BOTH prompt flavours and its slot defaults, so the UI can
+    preview what will be sent before picking a model; the server still re-renders
+    for whichever provider actually runs.
+    """
+    from novelvideo.freezone.previs_templates import (
+        PREVIS_PROMPT_FRAGMENTS,
+        get_previs_manifest_version,
+        load_previs_templates,
+    )
+
+    await _resolve_freezone_project(project, user, required_role="viewer")
+    return {
+        "ok": True,
+        "data": load_previs_templates(),
+        "fragments": PREVIS_PROMPT_FRAGMENTS,
+        "version": get_previs_manifest_version(),
+    }
+
+
 def _freezone_not_implemented(endpoint: str) -> None:
     raise HTTPException(
         status_code=501,
@@ -7325,7 +7379,16 @@ async def freezone_outpaint(
         None,
         body.model or FREEZONE_DEFAULT_IMAGE_MODEL,
     )
-    provider = _resolve_freezone_image_provider(resolved_provider, strict=False)
+    # strict=True when the request actually named a provider: `strict=False`
+    # silently rewrote an unsupported provider to "newapi", so a redraw/outpaint
+    # aimed at e.g. a RunPod Qwen model rendered somewhere else entirely and the
+    # mask_mode='latent' path would look like it simply did nothing. An empty
+    # provider still falls back to the default, which is what /gen and /edit do.
+    # (`freezone_upscale` above still passes strict=False — same latent bug, left
+    # alone deliberately: it is outside this change's scope and has no mask path.)
+    provider = _resolve_freezone_image_provider(
+        resolved_provider, strict=bool(resolved_provider)
+    )
 
     try:
         return await _start_or_enqueue_freezone_edit_path(
@@ -7385,7 +7448,16 @@ async def freezone_redraw(
         None,
         body.model or FREEZONE_DEFAULT_IMAGE_MODEL,
     )
-    provider = _resolve_freezone_image_provider(resolved_provider, strict=False)
+    # strict=True when the request actually named a provider: `strict=False`
+    # silently rewrote an unsupported provider to "newapi", so a redraw/outpaint
+    # aimed at e.g. a RunPod Qwen model rendered somewhere else entirely and the
+    # mask_mode='latent' path would look like it simply did nothing. An empty
+    # provider still falls back to the default, which is what /gen and /edit do.
+    # (`freezone_upscale` above still passes strict=False — same latent bug, left
+    # alone deliberately: it is outside this change's scope and has no mask path.)
+    provider = _resolve_freezone_image_provider(
+        resolved_provider, strict=bool(resolved_provider)
+    )
 
     if body.mask_url:
         try:
@@ -7420,6 +7492,7 @@ async def freezone_redraw(
                 provider=provider,
                 model=resolved_model,
                 billing_operation=("erase" if not body.prompt.strip() else "redraw"),
+                mask_mode=body.mask_mode,
             )
         except RuntimeError as e:
             _handle_task_start_runtime_error("failed to start masked redraw task", e)
@@ -9480,6 +9553,8 @@ def _freezone_dev_media_model_catalog_entries(media_type: str) -> list[dict[str,
     is what makes it actually show up as a choice. See
     `.claude/CLAUDE.md`."""
     from novelvideo.config import (
+        GEMINI_WEBAI_COOKIE_FILE,
+        GEMINI_WEBAI_MODEL,
         _runpod_qwen21_render_configured,
         _runpod_qwen_edit_configured,
         _runpod_qwen_image_configured,
@@ -9505,6 +9580,33 @@ def _freezone_dev_media_model_catalog_entries(media_type: str) -> list[dict[str,
                     "request": {"endpoint": "images/generations", "parameters": []},
                     "ratioOptions": ["1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3"],
                     "resolutionOptions": ["1k", "2k"],
+                }
+            )
+        if GEMINI_WEBAI_COOKIE_FILE:
+            # Dev-only row for the local Gemini WebAI bridge, same shape as the
+            # RunPod rows above. `apiModel` MUST be GEMINI_WEBAI_MODEL, not the
+            # selection key: `_start_or_enqueue_freezone_*` call
+            # `_require_scoped_media_model("image", model)` with the RESOLVED
+            # model, so a row keyed only on "gemini_webai" would 409 every edit.
+            # No `resolutionOptions`: the bridge has no size parameter at all
+            # (it drives a browser session, not an Images API), and the aspect
+            # ratio is only ever a hint inside the prompt.
+            entries.append(
+                {
+                    "catalogId": "gemini_webai",
+                    "catalog_id": "gemini_webai",
+                    "id": "gemini_webai",
+                    "providerId": "gemini_webai",
+                    "provider": "gemini_webai",
+                    "apiModel": GEMINI_WEBAI_MODEL,
+                    "api_model": GEMINI_WEBAI_MODEL,
+                    "gatewayModel": GEMINI_WEBAI_MODEL,
+                    "gateway_model": GEMINI_WEBAI_MODEL,
+                    "aliases": ["gemini_webai"],
+                    "label": "Gemini WebAI (local dev)",
+                    "sortOrder": 503,
+                    "request": {"endpoint": "images/generations", "parameters": []},
+                    "ratioOptions": ["1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3"],
                 }
             )
         if _runpod_qwen_edit_configured():
@@ -11830,8 +11932,10 @@ async def _prepare_freezone_multishot(
         MultishotShotInput,
         ResolvedReference,
         TooManyReferencesError,
+        TooManyVoiceRefsError,
         library_category_to_h3_kind,
         resolve_shared_references,
+        resolve_voice_refs,
     )
     from novelvideo.freezone.video_node import (
         FREEZONE_RUNPOD_H3_MULTISHOT_BACKEND,
@@ -11900,10 +12004,31 @@ async def _prepare_freezone_multishot(
             ResolvedReference(path=paths[0], url=ref.url, name=ref.name, kind=ref.kind, source="canvas")
         )
 
+    canvas_voice_paths: list[str] = []
+    for voice in body.voice_refs:
+        paths = _resolve_url_list(project_dir, [voice.url])
+        if not paths or not Path(paths[0]).is_file():
+            raise HTTPException(400, f"voice_refs url could not be resolved: {voice.url}")
+        canvas_voice_paths.append(paths[0])
+
     library_refs: list[ResolvedReference] = []
+    library_voice_paths: list[str] = []
     if body.character_ids:
         library_items = _load_video_character_items_by_ids(project_dir, body.character_ids)
         for item in library_items:
+            # An audio library entry carries `audio_url`, not `image_urls`
+            # (`freezone/video_node.py`'s item shape). Routing it to voice refs
+            # rather than image references matters twice: it would otherwise be
+            # skipped entirely for having no images, and if it did land in
+            # `references` it would eat one of the 3 image slots.
+            if str(item.get("category") or "").strip() == "audio":
+                audio_url = str(item.get("audio_url") or "")
+                if not audio_url:
+                    continue
+                paths = _resolve_url_list(project_dir, [audio_url])
+                if paths and Path(paths[0]).is_file():
+                    library_voice_paths.append(paths[0])
+                continue
             urls = item.get("image_urls") or []
             if not urls:
                 continue
@@ -11921,6 +12046,14 @@ async def _prepare_freezone_multishot(
             )
 
     try:
+        voice_ref_paths = resolve_voice_refs(
+            canvas_voice_paths=canvas_voice_paths,
+            library_voice_paths=library_voice_paths,
+        )
+    except TooManyVoiceRefsError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+    try:
         references = resolve_shared_references(
             canvas_refs=canvas_refs,
             library_refs=library_refs,
@@ -11931,12 +12064,17 @@ async def _prepare_freezone_multishot(
 
     from novelvideo.freezone.reference_validation import validate_reference_media
 
-    reference_items = [
-        {"type": "image", "path": start_image_path, "role": "multishot start frame"}
-    ] + [
-        {"type": "image", "path": ref.path, "role": f"multishot reference ({ref.kind})"}
-        for ref in references
-    ]
+    reference_items = (
+        [{"type": "image", "path": start_image_path, "role": "multishot start frame"}]
+        + [
+            {"type": "image", "path": ref.path, "role": f"multishot reference ({ref.kind})"}
+            for ref in references
+        ]
+        + [
+            {"type": "audio", "path": path, "role": f"multishot voice reference {i + 1}"}
+            for i, path in enumerate(voice_ref_paths)
+        ]
+    )
     reference_errors = await asyncio.to_thread(
         validate_reference_media, reference_items, capabilities or {}, project_dir
     )
@@ -11945,7 +12083,10 @@ async def _prepare_freezone_multishot(
             400, detail={"code": "REFERENCE_MEDIA_INVALID", "errors": reference_errors}
         )
 
-    checkpoint = "ref2va" if references else "fl2va"
+    # Voice refs alone are enough to require ref2va: `build_h3_multishot_graph`
+    # only wires LoadAudio into the ref2va branch and raises for any other
+    # checkpoint, so a voice-only chain on fl2va would fail at graph build.
+    checkpoint = "ref2va" if (references or voice_ref_paths) else "fl2va"
     sampling = multishot_sampling_plan(checkpoint)
     width, height = dims_for_multishot(body.aspect_ratio, "formal")
     shot_min, shot_max = video_duration_bounds_for_backend(FREEZONE_RUNPOD_H3_MULTISHOT_BACKEND)
@@ -11954,10 +12095,19 @@ async def _prepare_freezone_multishot(
         requested_seconds = max(float(shot_min), requested_seconds)
     if shot_max is not None:
         requested_seconds = min(float(shot_max), requested_seconds)
-    frames_per_shot = frames_for_shot(requested_seconds, is_dialogue=False)
+    # One frame count for the whole chain (every shot shares it), so any shot
+    # carrying dialogue lifts the floor for all of them — a spoken line clipped
+    # mid-word is worse than a slightly long silent shot.
+    has_dialogue = any(s.dialogue.strip() for s in body.shots)
+    frames_per_shot = frames_for_shot(requested_seconds, is_dialogue=has_dialogue)
     shot_seconds = frames_per_shot / 24.0
 
-    shots = [MultishotShotInput(id=s.id, description=s.description.strip()) for s in body.shots]
+    shots = [
+        MultishotShotInput(
+            id=s.id, description=s.description.strip(), dialogue=s.dialogue.strip()
+        )
+        for s in body.shots
+    ]
 
     plan = FreezoneMultishotPlan(
         backend=backend,
@@ -11970,6 +12120,7 @@ async def _prepare_freezone_multishot(
         start_image_path=start_image_path,
         start_image_url=body.start_image_url,
         references=references,
+        voice_ref_paths=voice_ref_paths,
         shots=shots,
         director_guidance=director_guidance,
         aspect_ratio=body.aspect_ratio,
@@ -12012,7 +12163,9 @@ async def freezone_video_multishot_review(
                 shot_context,
                 reference_count=len(plan.references) + 1,
                 duration_seconds=plan.shot_seconds,
-                expects_dialogue=False,
+                # Per shot, not per chain: a silent shot in a chain that also has
+                # spoken ones must still be written (and later linted) as silent.
+                expects_dialogue=bool(shot_context.dialogue_line.strip()),
             )
             for shot_context in contexts
         )
@@ -12141,7 +12294,9 @@ async def freezone_video_multishot(
             mode=plan.checkpoint,
             reference_count=len(plan.references) + 1,
             duration_seconds=plan.shot_seconds,
-            expects_dialogue=False,
+            # Matches the review call above. Without this, a shot whose prompt
+            # legitimately carries a <d>...</d> block is rejected as stray text.
+            expects_dialogue=bool(shot.dialogue.strip()),
         )
         lint_errors.extend(
             {"shot_id": shot.id, "severity": i.severity, "code": i.code, "message": i.message}
@@ -12163,6 +12318,7 @@ async def freezone_video_multishot(
         "seed": new_seed(),
         "start_image_path": plan.start_image_path,
         "reference_image_paths": [ref.path for ref in plan.references],
+        "voice_ref_paths": list(plan.voice_ref_paths),
         "sampling": plan.sampling,
     }
 
@@ -13003,6 +13159,7 @@ async def freezone_edit(
         request_schema=request_schema,
         billing_feature_key="freezone.image_edit",
         billing_operation=body.gen_mode or "edit",
+        webai_scene_key=body.webai_scene_key,
     )
 
 

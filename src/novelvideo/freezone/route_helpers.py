@@ -18,10 +18,12 @@ from novelvideo.api.schemas import (
     FreezoneCharacterMultiViewRequest,
     FreezoneImageCameraConfig,
     FreezoneImageStyleConfig,
+    FreezonePrevisTemplateConfig,
     FreezoneRelightRequest,
     FreezoneTemplateEditRequest,
 )
 from novelvideo.config import (
+    GEMINI_WEBAI_COOKIE_FILE,
     IMAGE_GENERATION_SELECTIONS,
     _runpod_qwen21_render_configured,
     _runpod_qwen_edit_configured,
@@ -82,6 +84,20 @@ if _runpod_qwen_edit_configured():
 if _runpod_qwen21_render_configured():
     SUPPORTED_FREEZONE_IMAGE_PROVIDERS = SUPPORTED_FREEZONE_IMAGE_PROVIDERS | {
         "runpod_qwen21_render"
+    }
+# Dev-only, same shape of gate again: the local Gemini WebAI bridge
+# (WebAI-to-API on :6969, Playwright-driven). It has been the MAIN pipeline's
+# default image provider for a while (`IMAGE_GENERATION_SELECTIONS["gemini_webai"]`
+# in config.py) but was never reachable from Freezone — this allowlist rejected
+# the provider string before any selection/catalog logic ran, and
+# `_generate_image()` had no branch for it either, so it would have fallen into
+# the bare `else:` and tried the Google genai SDK with a gateway key.
+# `gemini_webai_compose` is deliberately NOT added: it lives in
+# RENDER_ONLY_SELECTION_KEYS and `generate_grid()` rejects it outright without a
+# beat `compose_plan`, which Freezone has no concept of.
+if GEMINI_WEBAI_COOKIE_FILE:
+    SUPPORTED_FREEZONE_IMAGE_PROVIDERS = SUPPORTED_FREEZONE_IMAGE_PROVIDERS | {
+        "gemini_webai"
     }
 FREEZONE_IMAGE_CAMERA_OPTIONS = {
     "camera_bodies": [
@@ -257,6 +273,56 @@ def build_style_prompt(style: Optional[FreezoneImageStyleConfig]) -> str:
         f"- {template['label']}\n"
         f"- {template['style_prompt']}"
     )
+
+
+def build_previs_template_prompt(
+    previs: Optional["FreezonePrevisTemplateConfig"],
+    provider: str | None,
+    reference_count: int = 0,
+) -> str:
+    """Render a selected previs template for the provider's prompt flavour.
+
+    Returns "" when nothing is selected. A bad template id or a missing slot is a
+    400, not a silently dropped template: the scale and relight sentences are the
+    whole reason to pick one, and losing them quietly produces a frame that looks
+    plausible and measures wrong.
+    """
+    if previs is None:
+        return ""
+    from novelvideo.freezone.previs_templates import (
+        PrevisManifestError,
+        PrevisTemplateNotFound,
+        build_previs_prompt,
+        previs_flavor_for_provider,
+    )
+
+    try:
+        return build_previs_prompt(
+            previs.template_id,
+            flavor=previs_flavor_for_provider(provider),
+            slots=dict(previs.slots or {}),
+            reference_count=reference_count,
+        )
+    except PrevisTemplateNotFound as exc:
+        raise HTTPException(400, f"unknown previs template: {previs.template_id}") from exc
+    except PrevisManifestError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+def merge_prompt_with_previs_template(prompt: str, previs_prompt: str) -> str:
+    """The template text comes FIRST, the user's own note after it.
+
+    Order matters for the Qwen flavour especially: its `<imageN>` role sentences
+    have to lead, and the trailing note reads as an extra instruction rather than
+    displacing the template's measured sentences.
+    """
+    base = (prompt or "").strip()
+    template = (previs_prompt or "").strip()
+    if not template:
+        return base
+    if not base:
+        return template
+    return f"{template} {base}"
 
 
 def merge_prompt_with_style_and_camera(

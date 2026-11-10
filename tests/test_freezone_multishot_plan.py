@@ -37,6 +37,7 @@ def _plan(tmp_path, **overrides) -> m.FreezoneMultishotPlan:
         start_image_path=start,
         start_image_url="/static/p/start.png",
         references=[],
+        voice_ref_paths=[],
         shots=[
             m.MultishotShotInput(id="s1", description="A red phone rings on the table"),
             m.MultishotShotInput(id="s2", description="She picks it up and frowns"),
@@ -143,11 +144,32 @@ def test_shot_text_goes_into_visual_description_not_director_guidance(tmp_path):
         assert ctx.director_guidance == plan.director_guidance
 
 
-def test_no_dialogue_in_v1(tmp_path):
+def test_shots_without_dialogue_stay_silent(tmp_path):
+    """Default behaviour, unchanged since v1: no dialogue field set means both
+    narration and dialogue stay empty, so the prompt builder is told to expect
+    neither."""
     plan = _plan(tmp_path)
     for ctx in m.build_shot_contexts(plan):
         assert ctx.narration_segment == ""
         assert ctx.dialogue_line == ""
+
+
+def test_dialogue_reaches_the_shot_context(tmp_path):
+    """Added with voice references (2026-11-10): a shot's spoken line must reach
+    `dialogue_line`, per shot — a silent shot in a chain that also has spoken ones
+    must still be written and linted as silent."""
+    plan = _plan(
+        tmp_path,
+        shots=[
+            m.MultishotShotInput(
+                id="s1", description="Barnaby looks up", dialogue="Better view."
+            ),
+            m.MultishotShotInput(id="s2", description="Ambrose frowns"),
+        ],
+    )
+    contexts = m.build_shot_contexts(plan)
+    assert contexts[0].dialogue_line == "Better view."
+    assert contexts[1].dialogue_line == ""
 
 
 def test_references_tagged_starting_at_picture_2(tmp_path):

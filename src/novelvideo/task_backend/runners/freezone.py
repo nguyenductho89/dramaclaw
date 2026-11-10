@@ -745,6 +745,7 @@ async def _run_freezone_gen_async(
             model_params=payload.get("model_params") or None,
             request_schema=payload.get("request_schema") or None,
             output_task_type=task_type,
+            webai_scene_key=str(payload.get("webai_scene_key") or ""),
         ),
         project_id=ctx.project_id,
         task_type=task_type,
@@ -804,6 +805,7 @@ async def _run_freezone_edit_async(
             model_params=payload.get("model_params") or None,
             request_schema=payload.get("request_schema") or None,
             output_task_type=task_type,
+            webai_scene_key=str(payload.get("webai_scene_key") or ""),
         ),
         project_id=ctx.project_id,
         task_type=task_type,
@@ -859,6 +861,10 @@ async def _run_freezone_mask_edit_async(
         quality=str(payload.get("quality") or "medium"),
         provider=provider,
         model=str(payload.get("model") or ""),
+        # "auto" for any job enqueued before mask_mode existed, which is also the
+        # value that reproduces the old annotation behaviour on every provider
+        # except the two RunPod Qwen ones.
+        mask_mode=str(payload.get("mask_mode") or "auto"),
     )
     rel = out_path.relative_to(project_dir).as_posix()
     return {

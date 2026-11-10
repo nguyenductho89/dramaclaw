@@ -788,6 +788,7 @@ async def run_multishot_from_files(
     sampling: dict[str, Any],
     start_image_path: str,
     reference_image_paths: list[str],
+    voice_ref_paths: list[str] | None = None,
     on_log: Any = None,
     fit_start_image: bool = False,
 ) -> tuple[bytes | None, dict[str, Any], str]:
@@ -809,6 +810,12 @@ async def run_multishot_from_files(
     `sampling` is the dict `multishot_sampling_plan()` returns — this
     function does not call that itself so the caller can log/display the
     exact plan it resolved before spending the RunPod call.
+
+    `voice_ref_paths` are the `<Audio N>` voice clips, in order. Only passed on
+    for `ref2va` (`build_h3_multishot_graph` raises for any other checkpoint, the
+    same guard already applied to `reference_image_paths` below). Default `None`
+    keeps the main beat-chain caller's graph byte-identical to before this
+    parameter existed.
     """
     import mimetypes
     from pathlib import Path
@@ -844,6 +851,21 @@ async def run_multishot_from_files(
         upload_payloads.append((name, await asyncio.to_thread(_read, ref_path), _mime_for(name)))
         reference_names.append(name)
 
+    # Same `ms_voice_{k}` naming the local bench already uses
+    # (`previs_h3_test/scripts/bench_multishot30_local.py`), so a chain behaves the
+    # same whether it is rendered through the bench or through Freezone.
+    # Skipped entirely outside ref2va: only that branch of the graph has voice
+    # inputs, so uploading the clips anywhere else would just ship unused bytes.
+    voice_names: list[str] = []
+    for k, voice_path in enumerate(
+        (voice_ref_paths or []) if checkpoint == "ref2va" else []
+    ):
+        name = f"ms_voice_{k}" + (Path(voice_path).suffix or ".wav")
+        upload_payloads.append(
+            (name, await asyncio.to_thread(_read, voice_path), _mime_for(name))
+        )
+        voice_names.append(name)
+
     graph = build_h3_multishot_graph(
         script=script,
         shot_count=shot_count,
@@ -855,6 +877,7 @@ async def run_multishot_from_files(
         checkpoint=checkpoint,
         start_image_name=start_name,
         reference_image_names=reference_names if checkpoint == "ref2va" else None,
+        voice_ref_names=voice_names or None,
         pdd_nfe=str(sampling.get("pdd_nfe") or ""),
         pdd_file=str(sampling.get("pdd_file") or ""),
         output_scale=float(sampling.get("output_scale") or 1.0),

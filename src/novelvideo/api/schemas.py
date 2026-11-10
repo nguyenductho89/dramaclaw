@@ -605,6 +605,23 @@ class FreezoneImageStyleConfig(BaseModel):
     template_id: str = Field(description="Style template id")
 
 
+class FreezonePrevisTemplateConfig(BaseModel):
+    """Previs prompt template selection for an image node.
+
+    The template supplies the whole prompt (scale/relight/grounding sentences
+    included), rendered in the flavour the chosen image model needs — prose for
+    Gemini, `<imageN>` tags for RunPod Qwen. `slots` fills its placeholders:
+    location, appearance, subject names, and the real metre figures that stop a
+    metre-scale object being shrunk to fit the frame.
+    """
+
+    template_id: str = Field(max_length=120, description="Previs template id, from /freezone/image/previs-templates")
+    slots: dict[str, str] = Field(
+        default_factory=dict,
+        description="Values for the template's {placeholders}; unknown keys are ignored, missing ones are an error",
+    )
+
+
 class FreezoneWorkflowMediaLink(BaseModel):
     canvas_id: str = Field(default="", max_length=200)
     node_id: str = Field(default="", max_length=200)
@@ -633,6 +650,15 @@ class FreezoneGenRequest(FreezoneWorkflowMediaLink):
         default=None,
         description="Optional style template parameters, used to inject a built-in style template into the image prompt",
     )
+    previs_template: Optional[FreezonePrevisTemplateConfig] = Field(
+        default=None,
+        description=(
+            "Optional previs prompt template (plate / character sheet / storyboard frame). "
+            "Its rendered text REPLACES `prompt` when `prompt` is empty, and is prepended to it "
+            "otherwise, so a user can add a note without losing the template's measured scale "
+            "and relight sentences."
+        ),
+    )
     provider: Optional[str] = None
     model: Optional[str] = None
     quality: Optional[str] = Field(default="medium", description="Image quality tier, default medium")
@@ -641,6 +667,17 @@ class FreezoneGenRequest(FreezoneWorkflowMediaLink):
     )
     gen_mode: Optional[str] = Field(default=None, description="Optional: generation mode, used to backfill genMode when restoring the node")
     model_params: dict[str, Any] = Field(default_factory=dict)
+    webai_scene_key: str = Field(
+        default="",
+        max_length=200,
+        description=(
+            "Gemini WebAI only: groups generations into one Gemini conversation so a "
+            "scene keeps its characters and lighting across frames. Scope it per SCENE "
+            "(a location), not per project — one conversation shared across scenes has "
+            "been observed carrying one scene's background figures into another. Empty "
+            "(default) starts a fresh conversation every time."
+        ),
+    )
 
 
 class FreezoneEditRequest(BaseModel):
@@ -677,6 +714,15 @@ class FreezoneEditRequest(BaseModel):
         description=(
             "Dynamic parameter values declared by the media model catalog. Same semantics as /freezone/gen -- "
             "image edits with reference images go through this route, and without this field the catalog parameters have no effect on the image-edit side"
+        ),
+    )
+    webai_scene_key: str = Field(
+        default="",
+        max_length=200,
+        description=(
+            "Gemini WebAI only: groups edits into one Gemini conversation so a scene "
+            "keeps its look. Scope per SCENE, not per project. Empty (default) starts "
+            "a fresh conversation."
         ),
     )
 
@@ -1208,6 +1254,16 @@ class FreezoneRedrawRequest(BaseModel):
         description=f"Image model name, default {FREEZONE_DEFAULT_IMAGE_MODEL}",
     )
     quality: Optional[str] = Field(default="medium", description="Image quality tier, default medium")
+    mask_mode: Literal["auto", "annotation", "latent"] = Field(
+        default="auto",
+        description=(
+            "How mask_url is used. 'annotation' sends the red-highlight image as a second "
+            "reference and asks the model to edit only that region (every provider). 'latent' "
+            "converts it back to a binary mask and feeds the model's real inpaint input, so "
+            "pixels outside the mask are untouched — available only on RunPod Qwen models, and "
+            "an error on any other. 'auto' (default) picks latent where supported."
+        ),
+    )
 
 
 class FreezoneRelightRequest(BaseModel):
@@ -1538,6 +1594,25 @@ class FreezoneMultishotShot(BaseModel):
 
     id: str = Field(default="", max_length=64)
     description: str = Field(min_length=1, max_length=2000)
+    dialogue: str = Field(
+        default="",
+        max_length=2000,
+        description=(
+            "Optional line the on-screen subject speaks in this shot. Needs a ref2va "
+            "chain with at least one voice reference to be heard. Use "
+            "'Name: line' per speaker, one per line, when more than one character "
+            "speaks. A shot with dialogue also gets H3's longer dialogue frame floor "
+            "so the line is not cut off mid-word."
+        ),
+    )
+
+
+class FreezoneMultishotVoiceRef(BaseModel):
+    """One voice reference clip (`<Audio N>`). Order is load-bearing: a shot's
+    prompt names its speaker by that tag, so reordering changes who speaks."""
+
+    url: str = Field(min_length=1, max_length=2048, description="Static URL of the audio clip")
+    name: str = Field(default="", max_length=120, description="Display name, e.g. the character's name")
 
 
 class FreezoneMultishotReferenceImage(BaseModel):
@@ -1578,6 +1653,16 @@ class FreezoneVideoMultishotReviewRequest(FreezoneWorkflowMediaLink):
         default_factory=list,
         max_length=3,
         description="Video character library entry ids, used as additional shared reference images",
+    )
+    voice_refs: list[FreezoneMultishotVoiceRef] = Field(
+        default_factory=list,
+        max_length=3,
+        description=(
+            "Canvas-connected voice reference clips (<Audio 1..3>). Supplying any of "
+            "these forces the ref2va checkpoint, the only one whose graph has voice "
+            "inputs. A separate budget from reference_images — audio never consumes "
+            "an image reference slot."
+        ),
     )
     shots: list[FreezoneMultishotShot] = Field(
         min_length=2,

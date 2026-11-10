@@ -376,6 +376,19 @@ export interface FreezoneGenPayload extends FreezoneNodeContext {
   genMode?: string | null;
   /** Only honored by openai gpt-image-2 (low / medium / high / auto). */
   quality?: string | null;
+  /**
+   * Previs prompt template (plate / character sheet / storyboard frame). The
+   * server renders it for whichever provider actually runs — Gemini reads prose,
+   * RunPod Qwen needs `<imageN>` tags — and merges it ahead of `prompt`.
+   */
+  previsTemplate?: { templateId: string; slots: Record<string, string> } | null;
+  /**
+   * Gemini WebAI only: groups generations into one conversation so a scene keeps
+   * its look across frames. Scope it per SCENE, never globally — one shared
+   * conversation has been observed carrying one scene's background figures into
+   * another.
+   */
+  webaiSceneKey?: string | null;
 }
 
 export interface FreezoneJobRef {
@@ -1085,6 +1098,15 @@ export async function submitFreezoneGen(
         ...(payload.modelId ? { model_id: payload.modelId } : {}),
         ...(payload.genMode ? { gen_mode: payload.genMode } : {}),
         quality: payload.quality ?? null,
+        ...(payload.previsTemplate?.templateId
+          ? {
+              previs_template: {
+                template_id: payload.previsTemplate.templateId,
+                slots: payload.previsTemplate.slots ?? {},
+              },
+            }
+          : {}),
+        ...(payload.webaiSceneKey ? { webai_scene_key: payload.webaiSceneKey } : {}),
         ...nodeContextBody(payload),
       },
     },
@@ -1385,6 +1407,56 @@ export async function listFreezoneStyleTemplates(
     assetBase: meta("asset_base"),
     version: meta("version"),
     templates: coerceStyleTemplateList(envelope.data),
+  };
+}
+
+// /freezone/image/previs-templates --------------------------------------- //
+
+/**
+ * Previs prompt templates: empty plates, character sheets, in-scene storyboard
+ * frames. Unlike style templates (a prompt fragment appended to the user's own
+ * prompt), a previs template supplies the WHOLE prompt, including the measured
+ * camera-height / subject-height / relight sentences that stop a metre-scale
+ * object being shrunk to fit the frame.
+ *
+ * Both flavours ship so the UI can preview what will be sent; the server still
+ * re-renders for whichever provider actually runs the job, because Gemini reads
+ * prose ("Image 1 ...") and RunPod Qwen needs `<imageN>` tags.
+ */
+export interface FreezonePrevisTemplateReferenceSlot {
+  tag: string;
+  role: string;
+  optional?: boolean;
+}
+
+export interface FreezonePrevisTemplate {
+  id: string;
+  label: string;
+  category: "plate" | "sheet" | "storyboard";
+  description: string;
+  reference_slots: FreezonePrevisTemplateReferenceSlot[];
+  fragments: string[];
+  slots: Record<string, string>;
+  prompt: { gemini: string; qwen: string };
+}
+
+export interface FreezonePrevisTemplateList {
+  version: string;
+  templates: FreezonePrevisTemplate[];
+}
+
+export async function listFreezonePrevisTemplates(
+  project: string,
+): Promise<FreezonePrevisTemplateList> {
+  const envelope = await apiCallEnvelope<unknown>(
+    `projects/${encodeURIComponent(project)}/freezone/image/previs-templates`,
+  );
+  const templates = Array.isArray(envelope.data)
+    ? (envelope.data as FreezonePrevisTemplate[])
+    : [];
+  return {
+    version: pickString(envelope, "version") ?? "",
+    templates,
   };
 }
 

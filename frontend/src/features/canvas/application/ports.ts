@@ -78,6 +78,13 @@ export interface GenerateImagePayload {
    */
   modelParams?: Record<string, unknown>;
   capabilityId?: string;
+  /**
+   * Previs prompt template (plate / character sheet / storyboard frame) plus the
+   * values for its placeholders. The server renders it in the flavour the chosen
+   * image model needs and merges it ahead of `prompt` — so the measured
+   * camera-height / subject-height sentences cannot be lost by editing the box.
+   */
+  previsTemplate?: { templateId: string; slots: Record<string, string> } | null;
   /** Triggering node id, forwarded so the backend records per-node history. */
   nodeId?: string;
   capabilityParams?: Record<string, unknown>;

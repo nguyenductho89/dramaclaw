@@ -1,0 +1,95 @@
+{
+ "version": "2026-11-10",
+ "templates": [
+  {
+   "id": "plate_empty_location",
+   "label": "Empty location plate",
+   "category": "plate",
+   "description": "A location with no cast in it yet, to be used later as the start frame or compose target. Name real sizes for anything metre-scale: both models shrink what does not fit the frame.",
+   "reference_slots": [],
+   "fragments": ["photoreal_finish"],
+   "slots": {
+    "camera_height_m": "1.6",
+    "subject_height_m": "1.75"
+   },
+   "prompt": {
+    "gemini": "Photorealistic horizontal 16:9 film still of {location}. {camera}. {scale_notes} No people in the frame except any small distant background figures described above. {light}, soft gentle contrast, natural colours, natural film look. A calm, empty foreground.",
+    "qwen": "Generate a photorealistic horizontal film still of {location}. {camera}. {scale_notes} No people in the frame except any small distant background figures described above. {light}, soft gentle contrast, natural colours, natural film look, with a calm empty foreground."
+   }
+  },
+  {
+   "id": "sheet_character_two_view",
+   "label": "Character sheet (two views)",
+   "category": "sheet",
+   "description": "One person shown twice at the same size, front and turned, on a plain studio background — the identity reference every compose prompt cites. Full length with both feet visible so the body proportions are readable.",
+   "reference_slots": [
+    {"tag": "Image 1", "role": "real photograph of the person to resemble", "optional": true}
+   ],
+   "fragments": [],
+   "slots": {},
+   "prompt": {
+    "gemini": "Photorealistic horizontal character reference photograph of one person, shown twice side by side at the same size, full length from head to foot with both feet visible: facing the lens on the left half, and turned toward the right of the frame on the right half. The person: {appearance}. {expression} Plain light grey studio background with nothing else in the image, the two views separated only by empty grey space, soft even studio light, natural skin.",
+    "qwen": "Generate a photorealistic horizontal character reference photograph of one person shown twice side by side at the same size, full length from head to foot with both feet visible, facing the lens on the left half and turned toward the right of the frame on the right half. The person: {appearance}. {expression} Use a plain light grey studio background with nothing else in the image, the two views separated only by empty grey space, soft even studio light and natural skin."
+   }
+  },
+  {
+   "id": "storyboard_two_subjects_in_location",
+   "label": "Storyboard frame (two subjects in a location)",
+   "category": "storyboard",
+   "description": "The opening frame of one shot: an empty plate plus two identity sheets composed into one photograph. Carries the measured scale, relight and grounding sentences — a frame built without them reads as cut-and-pasted and sits on the wrong ground plane.",
+   "reference_slots": [
+    {"tag": "Image 1", "role": "the empty location plate; also sets the output size"},
+    {"tag": "Image 2", "role": "identity sheet for the left-hand subject"},
+    {"tag": "Image 3", "role": "identity sheet for the right-hand subject"}
+   ],
+   "fragments": [
+    "keep_plate_contents",
+    "one_camera_one_ground_plane",
+    "subject_height_scale",
+    "relight_to_plate",
+    "contact_shadow",
+    "foreground_overlap",
+    "photoreal_finish"
+   ],
+   "slots": {
+    "camera_height_m": "1.6",
+    "subject_height_m": "1.75",
+    "framing": "each seen full-length from head to foot with both feet clearly on the ground, the same size, the same distance from the camera, at life-size scale with the location, with clear space above their heads and below their feet",
+    "pose": "Both stand still and turn three-quarters toward each other and toward the camera so both faces stay clearly visible"
+   },
+   "prompt": {
+    "gemini": "Compose a new photorealistic horizontal 16:9 film still, the opening frame of one shot in a two-character series. Image 1 is the location and camera, with neither subject in it yet. Image 2 shows {subject_a}, one person in two views, not two people: keep their face, hair and clothing unchanged. Image 3 shows {subject_b}, one person in two views, not two people: keep their face, hair and clothing unchanged. {subject_a} stands in the left third of the frame and {subject_b} stands in the right third, {framing}. {pose}. Show exactly 2 people, each appearing once.",
+    "qwen": "<image1> is a reference photo of the location and camera. <image2> is one or more reference views of {subject_a} (the same single person, not different people); match their face, hair and clothing exactly and render them as one person in the scene, not a copy of the reference sheet itself. <image3> is one or more reference views of {subject_b} (the same single person, not different people); match their face, hair and clothing exactly and render them as one person in the scene. Compose a new photorealistic photograph, the opening frame of one shot in a two-character series, set in the location from <image1> and matching its lighting and background elements. {subject_a} stands in the left third of the frame and {subject_b} stands in the right third, {framing}. {pose}. Show exactly 2 people, each appearing once."
+   }
+  },
+  {
+   "id": "storyboard_subject_under_large_object",
+   "label": "Storyboard frame (subject beside something huge)",
+   "category": "storyboard",
+   "description": "For frames where one object is many times a person's height — a lander, a ship, a building. Measurement on 2026-11-09 showed adjectives alone do not fix this: put the subjects close to the object and let it run out of frame, so the size difference is carried by the composition rather than by the model's judgement.",
+   "reference_slots": [
+    {"tag": "Image 1", "role": "the location plate, framed close to the large object"},
+    {"tag": "Image 2", "role": "identity sheet for the left-hand subject"},
+    {"tag": "Image 3", "role": "identity sheet for the right-hand subject", "optional": true}
+   ],
+   "fragments": [
+    "keep_plate_contents",
+    "one_camera_one_ground_plane",
+    "subject_height_scale",
+    "relight_to_plate",
+    "contact_shadow",
+    "photoreal_finish"
+   ],
+   "slots": {
+    "camera_height_m": "1.5",
+    "subject_height_m": "1.75",
+    "framing": "each seen from the knees up with head, torso and hands fully in frame, standing side by side at the same distance from the camera, with clear space above their heads",
+    "pose": "They stand still and turn three-quarters toward each other and toward the camera so both faces stay clearly visible"
+   },
+   "prompt": {
+    "gemini": "Compose a new photorealistic horizontal 16:9 film still, the opening frame of one shot. Image 1 is the location and camera, with neither subject in it yet; {large_object} in it is about {large_object_height_m} metres tall, roughly {large_object_multiple} times the height of a standing person, and must stay that size. The subjects stand directly in front of it, {framing}, so it towers behind and above them and its top runs out of the top of the frame. Image 2 and Image 3 are identity sheets, each one person in two views, not two people: keep their faces, hair and clothing unchanged. {pose}.",
+    "qwen": "<image1> is a reference photo of the location and camera; {large_object} in it is about {large_object_height_m} metres tall, roughly {large_object_multiple} times the height of a standing person, and keeps that size. <image2> and <image3> are reference views of the subjects, each the same single person seen more than once, not different people; match their faces, hair and clothing exactly and render each as one person in the scene. Compose a new photorealistic photograph in which the subjects stand directly in front of {large_object}, {framing}, so it towers behind and above them and its top runs out of the top of the frame. {pose}."
+   }
+  }
+ ]
+}

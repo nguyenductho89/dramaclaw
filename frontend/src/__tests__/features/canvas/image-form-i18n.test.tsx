@@ -20,6 +20,15 @@ vi.mock('@/features/canvas/nodes/ContextPromptPaletteButton', () => ({ NodeConte
 vi.mock('@/features/canvas/hooks/useFreezoneStyleTemplates', () => ({
   useFreezoneStyleTemplates: () => ({ templates: [], isLoading: false }),
 }));
+vi.mock('@/features/canvas/hooks/useFreezonePrevisTemplates', () => ({
+  useFreezonePrevisTemplates: () => ({
+    templates: [],
+    version: '',
+    isLoading: false,
+    error: null,
+    retry: vi.fn(),
+  }),
+}));
 vi.mock('@/features/canvas/nodes/PromptMentionEditor', () => ({
   PromptMentionEditor: ({ value, placeholder }: { value: string; placeholder: string }) =>
     <textarea aria-label="Prompt" value={value} placeholder={placeholder} readOnly />,
@@ -30,6 +39,7 @@ function formProps(patch: Partial<ImageGenerationFormProps> = {}): ImageGenerati
     nodeId: 'image-16',
     styleTemplateId: null,
     selectedStyleLabel: null,
+    previsTemplate: null,
     onStylePickerOpenChange: vi.fn(),
     onOpenAssetLibrary: vi.fn(),
     upstreamTextContents: [],

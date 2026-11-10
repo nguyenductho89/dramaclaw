@@ -313,3 +313,10 @@ Theo yêu cầu: "camera luôn tĩnh à? hãy sửa lại script để camera li
 - Verified: dry-run builds the graphs, and the repo's `lint_qwen21_compose_prompt` passes on all 8 storyboard prompts. NOT verified: any real generation — no GPU was rented, so image quality, identity (SFace), scale and the sheet-from-real-photo edit are all untested.
 - Licence: Qwen-Image 2.1 is research/evaluation only (see `qwen21_character_local.py`); this series is meant for YouTube, so Qwen output is test-only unless the licence is cleared.
 - `QWEN_API_KEY` in `.env` is empty, so the DashScope Qwen-VL second opinion in `image-scale-review` is not usable yet.
+
+### Video dài từ storyboard, giữ identity (2026-11-10, goal) — xong
+
+Render 8 shot theo **V2** (mỗi shot một chain 1-shot, `start_image` = khung storyboard của shot đó, sampler cũ `H3MultishotSampler`, turbo 12 bước, 1344x768, 8 giây/shot) trên Vast.ai RTX 4090 (Sweden, host khác host lần trước nên `apt` chỉ 32 giây, tải HF 82 MB/s): cài ~15 phút + render ~48 phút (~6,7 phút/shot). Chi phí thật ~$0,97 (credit $3,25 → $2,29). Ghép bằng ffmpeg (mỗi chain 32 giây) rồi `make_ken_burns_transition.py` với `wormhole_flight.png`: **`runs/_science_humor_gravity_long/full_long_v2.mp4`, 66,1 giây** (không commit; kèm `contact_sheet.png`, `check_report_{garden,moon}.json`).
+- **Phải dùng sampler cũ cho đường storyboard**: ở `H3MultishotMemorySampler` `start_image` là identity reference row, KHÔNG phải first frame (README pack), nên `run_batch.sh` chọn sampler theo chain (có `start_image` → cũ; không có → memory). Commit 2057c7ee.
+- **Identity (SFace, ngưỡng 0,363) ở 3,5 giây mỗi shot**: vườn Barnaby 0,47–0,63 / Ambrose 0,42–0,77; Mặt Trăng Barnaby 0,38–0,52 / Ambrose 0,38–0,60 (hai mức 0,38 sát ngưỡng: shot 02_2 Barnaby, 02_3 Ambrose). Không nhầm người ở shot nào; xem 16 khung thấy trang phục/tóc nhất quán cả hai cảnh.
+- **Còn lỗi**: lời thoại tràn qua mốc 6,7 giây ở vài shot (shot 01_1, 01_2, 02_1, 02_3, 02_4), nhận dạng giọng tự động vẫn không đáng tin; cây ở vườn đổi hình nhẹ giữa các shot (lỗi V2 đã biết, chưa sửa).

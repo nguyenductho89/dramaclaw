@@ -4,12 +4,10 @@
 #       3 American candidates for Barnaby and 3 British candidates for Ambrose.
 #   bash previs_h3_test/scripts/skits/science_humor/gravity_test/run_batch.sh videos chain_01 chain_01_refs_only ...
 #       H3 chains one after the other; a finished chain is skipped on a rerun.
-#   bash previs_h3_test/scripts/skits/science_humor/gravity_test/run_batch.sh images storyboard --n 2 [--only chain_02_shot3]
-#       Qwen-Image 2.1 on the pod (qwen_images.py; modes plate | sheet | storyboard; needs pod_up.sh ... --with-qwen).
-#       Candidates are written to the usual candidates/ folders: pull them back, pick one per name, copy it to its final
-#       name, run check_chains.py --storyboard and the image-scale-review skill locally, then upload and run `videos`.
-# Without that stage the character sheets, empty backgrounds and storyboard frames are made on the LOCAL machine by
-# gemini_webai_images.py (Gemini needs a Google login, so it cannot run on the pod). Qwen-Image 2.1 is
+#   bash previs_h3_test/scripts/skits/science_humor/gravity_test/run_batch.sh images --n 3 [--only chain_01] [--until 0]
+#       Qwen-Image 2.1 storyboard keyframes on the pod (qwen_images.py keyframes; needs pod_up.sh ... --images-only). Every
+#       prompt must already be reviewed with the qwen-image-prompting skill and recorded by qwen_prompt_gate.py.
+# Character sheets and empty backgrounds are made on the LOCAL machine by gemini_webai_images.py. Qwen-Image 2.1 is
 # research/evaluation-licensed only: use it for test output, not for a monetised release.
 # Writes /opt/bench/gravity_<stage>.done or .failed.
 set -uo pipefail
@@ -44,19 +42,12 @@ fi
 
 if [ "$STAGE" = images ]; then
   for n in QwenImage21Cache TextEncodeQwenImage21; do
-    curl -s 127.0.0.1:8188/object_info | grep -q "\"$n\"" || fail "node $n missing (pod_up.sh needs --with-qwen)"
+    curl -s 127.0.0.1:8188/object_info | grep -q "\"$n\"" || fail "node $n missing (pod_up.sh needs --images-only or --with-qwen)"
   done
-  MODE=${1:?images mode: plate, sheet or storyboard}; shift
   stamp free_vram
   curl -s -X POST 127.0.0.1:8188/free -H 'Content-Type: application/json' -d '{"unload_models":true,"free_memory":true}' >/dev/null
-  stamp "qwen_$MODE"
-  case $MODE in
-    plate) OUT=$G/backgrounds ;;
-    sheet) OUT=$D/character ;;
-    storyboard) OUT=$G ;;
-    *) fail "unknown images mode $MODE" ;;
-  esac
-  timeout 3600 $PY $S/qwen_images.py "$MODE" "$OUT" "$@" || fail "qwen_images $MODE"
+  stamp qwen_keyframes
+  timeout 3600 $PY $S/qwen_images.py keyframes "$G" "$@" || fail "qwen_images keyframes"
   touch /opt/bench/gravity_images.done; stamp done; exit 0
 fi
 
@@ -79,6 +70,16 @@ for f in $D/voice/barnaby.wav $D/voice/ambrose.wav $D/character/barnaby_sheet.pn
 done
 stamp free_vram
 curl -s -X POST 127.0.0.1:8188/free -H 'Content-Type: application/json' -d '{"unload_models":true,"free_memory":true}' >/dev/null
+# Storyboard review gate: a chain whose start_image is a storyboard frame renders only if a human approved it
+# (approve_storyboard.py approve, after looking at the contact sheet). STORYBOARD_GATE=0 skips it (not for real runs).
+gate_ok() {
+  [ "${STORYBOARD_GATE:-1}" = 0 ] && return 0
+  local img; img=$($PY -c "import json,sys; print(json.load(open(sys.argv[1])).get('start_image') or '')" "$G/$1.json")
+  case "$img" in */storyboard/*) $PY $G/approve_storyboard.py check "$img" ;; *) return 0 ;; esac
+}
+for c in "$@"; do
+  gate_ok "$c" || fail "storyboard of $c not approved (see approve_storyboard.py) — no GPU time spent on unreviewed frames"
+done
 for c in "$@"; do
   stamp "$c"
   SAMPLER=$(sampler_for "$c")

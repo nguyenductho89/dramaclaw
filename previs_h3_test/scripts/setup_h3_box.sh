@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Dựng ComfyUI 0.37.2 + H3 multishot trên máy thuê (Ubuntu 22.04, 1x RTX 4090) giống runpod/multishot/Dockerfile,
-# tải model fl2va về NVMe cục bộ. Chạy bằng root: bash setup_h3_box.sh [--with-ref2va] [--with-qwen] [--with-seedvr2] [--with-latent-refine]
+# tải model fl2va về NVMe cục bộ. Chạy bằng root: bash setup_h3_box.sh [--with-ref2va] [--with-qwen] [--with-seedvr2] [--with-latent-refine] [--images-only]
+# --images-only: chỉ để SINH ẢNH bằng Qwen-Image 2.1 (qwen_images.py): chỉ ComfyUI + torch + 3 file Qwen (~30 GB), không tải model H3,
+# không clone custom node H3 (đồ thị Qwen chỉ dùng node lõi ComfyUI). Ngầm bật --with-qwen.
 # --with-latent-refine: upscaler latent LBH + LoRA turbo/LMS cho latent_refine_local.py (ý tưởng Open-H3-Regenerate-2K).
 set -euo pipefail
 # Thời gian từng bước cài đặt -> $ROOT/bench/setup_timing.csv (step,start_utc,seconds) để cải tiến sau này.
@@ -22,8 +24,8 @@ H3_PDD_ACC_COMMIT=311a65dd53832d8a5f8177a9d5fb923c09e35a90
 GGUF_COMMIT=6ea2651e7df66d7585f6ffee804b20e92fb38b8a
 H3_MULTISHOT_COMMIT=d7d197709fc93c1afb125e3db1dfd4ac0ae28c60
 LBH_UPSCALER_COMMIT=40316cf008b2fd8663263270669eb4da23f89d2c
-WITH_REF2VA=0; WITH_LATENT_REFINE=0; WITH_QWEN=0; WITH_SEEDVR2=0
-for a in "$@"; do case $a in --with-ref2va) WITH_REF2VA=1;; --with-latent-refine) WITH_LATENT_REFINE=1;; --with-qwen) WITH_QWEN=1;; --with-seedvr2) WITH_SEEDVR2=1;; *) echo "cờ lạ: $a"; exit 2;; esac; done
+WITH_REF2VA=0; WITH_LATENT_REFINE=0; WITH_QWEN=0; WITH_SEEDVR2=0; IMAGES_ONLY=0
+for a in "$@"; do case $a in --with-ref2va) WITH_REF2VA=1;; --with-latent-refine) WITH_LATENT_REFINE=1;; --with-qwen) WITH_QWEN=1;; --with-seedvr2) WITH_SEEDVR2=1;; --images-only) IMAGES_ONLY=1; WITH_QWEN=1;; *) echo "cờ lạ: $a"; exit 2;; esac; done
 
 mark check_box; echo "== 1. kiểm máy"; nvidia-smi --query-gpu=name,driver_version,memory.total --format=csv; free -g | head -2; df -h $ROOT | tail -1
 DRV=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader | head -1 | cut -d. -f1)
@@ -48,11 +50,13 @@ hf_get() { # repo, tên, thư mục đích; ghi giây/byte/MB/s vào download_ti
   aria2c -c -x16 -s16 -k4M --dir="$MODELS/$3" -o "$2.safetensors" "https://huggingface.co/$1/resolve/main/$p"; ls -l "$MODELS/$3/$2.safetensors"
   t1=$(date +%s); sz=$(stat -c %s "$MODELS/$3/$2.safetensors")
   echo "$2,$(date -u -d @$t0 +%FT%TZ),$((t1-t0)),$sz,$(awk -v b=$sz -v s=$((t1-t0)) 'BEGIN{printf "%.0f", b/1048576/(s>0?s:1)}')" >> $DLTIMING; }
+if [ $IMAGES_ONLY = 0 ]; then
 hf_get Comfy-Org/MiniMax-H3 minimax_h3_fl2va_pruned_int8_convrot diffusion_models
 hf_get Comfy-Org/MiniMax-H3 qwen3vl_32b_minimax_h3_nvfp4_awq text_encoders
 hf_get Comfy-Org/MiniMax-H3 minimax_h3_video_vae_fp16 vae
 hf_get Comfy-Org/MiniMax-H3 minimax_h3_audio_vae_fp32 vae
 hf_get alibaba-pai/MiniMax-H3-Acc-LoRAs MiniMax-H3-FL2VA-Acc-8Step pdd_acc
+fi
 if [ $WITH_REF2VA = 1 ]; then
   hf_get Comfy-Org/MiniMax-H3 minimax_h3_ref2va_pruned_int8_convrot diffusion_models
   hf_get Comfy-Org/MiniMax-H3 minimax_h3_ref2v_turbo_4step_v0.1_comfyui_bf16 loras || true
@@ -88,9 +92,11 @@ uv pip install comfy-cli==1.13.0 pip setuptools wheel
 
 mark custom_nodes_clone; echo "== 4. custom node (ghim commit)"
 clone() { [ -d "$COMFY/custom_nodes/$2" ] || git clone "$1" "$COMFY/custom_nodes/$2"; git -C "$COMFY/custom_nodes/$2" checkout "$3"; }
+if [ $IMAGES_ONLY = 0 ]; then
 clone https://github.com/Jalen-Brunson/ComfyUI-MiniMax-H3-PDD-Acc ComfyUI-MiniMax-H3-PDD-Acc $H3_PDD_ACC_COMMIT
 clone https://github.com/city96/ComfyUI-GGUF ComfyUI-GGUF $GGUF_COMMIT
 clone https://github.com/jlucasmcrell/ComfyUI-H3-Multishot ComfyUI-H3-Multishot $H3_MULTISHOT_COMMIT
+fi
 [ $WITH_LATENT_REFINE = 1 ] && clone https://github.com/LBH-123-AI/Comfyui_Minimax_h3_latent_Upscaler Comfyui_Minimax_h3_latent_Upscaler $LBH_UPSCALER_COMMIT
 
 mark torch_sage_pip; echo "== 5. torch $TIDX + sage"

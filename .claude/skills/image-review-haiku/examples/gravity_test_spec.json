@@ -1,0 +1,26 @@
+{
+  "name": "science-humor gravity test — Qwen keyframes (v1 set, for calibration and as a template)",
+  "images_dir": "previs_h3_test/scripts/skits/science_humor/gravity_test/storyboard/keyframes_qwen_v1",
+  "glob": "chain_*_k*.png",
+  "sequence_pattern": "^(?P<seq>.+)_k(?P<i>\\d+)$",
+  "min_push_in_growth": 1.4,
+  "cast": [
+    {"id": "barnaby", "describe": "older man with wild white hair and round glasses, yellow mustard cardigan over a blue checked shirt, brown trousers", "count": 1},
+    {"id": "ambrose", "describe": "man with long grey hair, long dark-brown 18th-century coat, white cravat/scarf", "count": 1}
+  ],
+  "props": [
+    {"id": "apple", "describe": "small red apple", "holder": "ambrose", "required_visible": true}
+  ],
+  "scene": {"forbidden": ["text", "logo", "watermark", "a third large foreground person"]},
+  "sequences": {
+    "chain_01": {
+      "framings": ["wide", "wide", "medium", "medium", "close"],
+      "must_persist": ["a single apple tree with a twisted trunk", "green wooded hills in the background", "tall green grass in the foreground"]
+    },
+    "chain_02": {
+      "framings": ["wide", "wide", "wide", "medium", "medium"],
+      "must_persist": ["a lunar lander with gold foil", "a small blue Earth in the black sky", "grey lunar ground with shadows"],
+      "known_issues": ["lander top cropped", "top of the lander"]
+    }
+  }
+}

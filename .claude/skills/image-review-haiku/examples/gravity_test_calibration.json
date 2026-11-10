@@ -1,0 +1,11 @@
+[
+  {"item": "chain_01_k0", "expect": [{"dimension": "props", "contains": "held by barnaby"}, {"dimension": "forbidden", "contains": "watermark"}]},
+  {"item": "chain_01_k2", "expect": [{"dimension": "props", "contains": "held by barnaby"}]},
+  {"item": "chain_01_k3", "expect": [{"dimension": "props", "contains": "not visible"}]},
+  {"item": "chain_02_k0", "expect": [{"dimension": "continuity", "contains": "blue earth"}]},
+  {"item": "chain_02_k1", "expect": [{"dimension": "props", "contains": "not visible"}]},
+  {"item": "chain_02_k3", "expect": [{"dimension": "props", "contains": "not visible"}]},
+  {"item": "chain_02_k0->chain_02_k1", "expect": [{"dimension": "continuity", "contains": "earth"}, {"dimension": "continuity", "contains": "apple"}]},
+  {"item": "chain_01_k2->chain_01_k3", "expect": [{"dimension": "continuity", "contains": "apple"}]},
+  {"item": "chain_02_k2->chain_02_k3", "clean": true}
+]

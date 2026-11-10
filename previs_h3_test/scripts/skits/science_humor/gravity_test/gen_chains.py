@@ -13,6 +13,10 @@ background are written out:
                              already composed into the scene) instead of the bare plate
   shot_NN_M_sb.json         one isolated shot as its own 1-shot H3 chain, start_image is that shot's own
                              storyboard frame — meant to be rendered individually and joined by ffmpeg afterwards
+Pipeline order (2026-11-10): gen_chains.py -> gemini_webai_images.py keyframes (continuous storyboard K0..K4 per chain,
+see keyframe_prompts) -> check_chains.py --storyboard + image-scale-review -> USER REVIEWS THE STORYBOARD CONTACT SHEET ->
+approve_storyboard.py approve (records SHA-256 of the approved frames) -> run_batch.sh videos (refuses chains whose
+storyboard start_image is not approved or changed since). No video is rendered from an unreviewed storyboard.
 <Picture N> numbering is the same across variants: 1 background/storyboard, 2 Barnaby, 3 Ambrose. <Audio 1> is
 Barnaby, <Audio 2> is Ambrose. The prompt layout follows the ref2va branch of assemble_minimax_h3_prompt
 (agents/minimax_h3_prompt_builder.py). Syllable counts are hand-counted in LINES; the review skill recounts them.
@@ -269,31 +273,6 @@ def storyboard_prompt(index: int, line: tuple) -> str:
     )
 
 
-def storyboard_prompt_qwen(index: int, line: tuple) -> str:
-    """Qwen-Image 2.1 compose twin of `storyboard_prompt`, for qwen_images.py storyboard mode (image_1 = the empty
-    plate = the edit target, image_2/3 = the two sheets). Follows the layout of `build_qwen21_compose_prompt`
-    (generators/prompt_builder.py), the form verified on a real GPU: <imageN> tags, one paragraph, no double quotes,
-    the word "photorealistic", no aspect-ratio token (the output size comes from image_1), identity sheets described
-    as views of ONE person. The relight / contact-shadow / foreground-overlap sentences are the same fix as in
-    `storyboard_prompt`, worded as instructions to do something rather than a list of things to avoid."""
-    _, scene, speaker, text, _, _, _, start, opening, mid, listener, end, summary = line
-    pose = _static_opening(index, opening).replace(B, "Barnaby").replace(A, "Ambrose").replace('"', "")
-    return (
-        "<image1> is a reference photo of the location and camera; keep its background, framing, static eye-level camera, lighting and any small distant background figures exactly as they are. "
-        "<image2> is one or more reference views of Barnaby (the same single person, not different people); match Barnaby's face, hair, glasses, cardigan and pencil exactly as shown, and render Barnaby as one person in the scene, not a copy of the reference sheet itself. "
-        "<image3> is one or more reference views of Ambrose (the same single person, not different people); match Ambrose's face, wig, coat and cravat exactly as shown, and render Ambrose as one person in the scene, not a copy of the reference sheet itself. "
-        "Compose a new photorealistic photograph, the opening frame of one shot in a two-man science-comedy series, set in the location from <image1>, matching its lighting and background elements. "
-        "Barnaby (matching <image2> exactly) stands in the left third of the frame and Ambrose (matching <image3> exactly) stands in the right third, each seen full-length from head to foot with both feet on the ground, at the same distance from the camera, at life-size scale with the location, "
-        "both turned three-quarters toward each other and toward the camera so both faces are clearly visible, with clear space above their heads and below their feet. "
-        "Relight both men to the sunlight of <image1>: its direction, warm colour temperature and contrast replace the even studio lighting of <image2> and <image3>, while their clothing, hair and face keep their own colours. "
-        "Each man casts a soft, visible contact shadow on the ground directly beneath his own feet, matching the shadows already in <image1>, and a little of the nearest foreground terrain overlaps the lowest part of his legs or feet, so each man stands inside the scene. "
-        f"{pose}. "
-        "Show exactly 2 people, Barnaby and Ambrose, each appearing once. "
-        "Render the people and the scene as a real photograph with natural skin texture, soft gentle contrast and a natural film look, not as a sketch, illustration, painting or 3D render. "
-        "Do not add any object, furniture or prop that is not already visible in <image1>."
-    )
-
-
 def shot(index: int, line: tuple, first_frame: bool, single: bool = False, storyboard: bool = False, force_first: bool = False) -> str:
     """Each shot's prompt stands alone and is labelled [Shot 1], as in the official layout and its lint.
     `storyboard`: start_image is a Gemini storyboard frame that already shows both men in place (chain_NN_sb), so
@@ -336,6 +315,55 @@ def shot(index: int, line: tuple, first_frame: bool, single: bool = False, story
     )
 
 
+# 2026-11-10: continuous storyboard. The old storyboard_prompt() made one independent "opening frame" per shot, always a
+# wide two-shot with both men standing apart, so shot N+1 always restarted wide even when shot N ended in a push-in
+# (user review of full_long_v2.mp4: "sau khi 2 nguoi lai gan, sang canh tiep theo lai dung xa roi tien lai gan").
+# Here a chain is ONE camera take cut into shots: keyframes K0..K4, K(i) is the end of shot i AND the start of shot
+# i+1, framing follows CAMERA (a move only changes framing inside its own shot, never resets between shots), and every
+# keyframe after K0 is an edit of the previous one so location, positions and light carry over.
+_FRAMING_TEXT = {
+    "wide": "a horizontal wide two-shot at eye level, both men seen full-length from head to foot, Barnaby in the left third and Ambrose in the right third",
+    "medium_Barnaby": "a medium two-shot at eye level, both men seen from the knees up, the frame centred slightly on Barnaby",
+    "medium_Ambrose": "a medium two-shot at eye level, both men seen from the knees up, the frame centred slightly on Ambrose",
+    "close": "a closer two-shot at eye level, both men seen from the waist up",
+}
+
+
+def keyframe_framings(chain_num: int, n_shots: int) -> list[str]:
+    """Framing of K0..K(n_shots): the camera only changes inside a shot that has a CAMERA move."""
+    framings = ["wide"]
+    for pos in range(1, n_shots + 1):
+        move = CAMERA.get((chain_num, pos))
+        if move is None:
+            framings.append(framings[-1])
+        elif move[0] == "push_one":
+            framings.append(f"medium_{move[1]}")
+        else:
+            framings.append("close")
+    return framings
+
+
+def keyframe_prompts(chain_num: int, lines: list[tuple]) -> list[dict]:
+    """K0 composes plate + both sheets (same recipe as storyboard_prompt, wide, shot-1 pose). K1.. edit the previous
+    keyframe (Image 1) with both sheets as identity references (Image 2 = Barnaby, Image 3 = Ambrose)."""
+    framings = keyframe_framings(chain_num, len(lines))
+    out = [{"framing": framings[0], "from": "plate", "prompt": storyboard_prompt(1, lines[0])}]
+    for k in range(1, len(framings)):
+        end = lines[k - 1][11].replace(B, "Barnaby").replace(A, "Ambrose")
+        same = framings[k] == framings[k - 1]
+        camera = ("The camera has not moved: keep Image 1's framing, lens and camera position exactly."
+                  if same else f"The camera has slowly pushed in from the framing of Image 1 to {_FRAMING_TEXT[framings[k]]}.")
+        out.append({"framing": framings[k], "from": f"keyframe_{k - 1}", "prompt": (
+            "Image 1 is the previous frame of one continuous camera take of a two-man science-comedy series; make the very next moment of the same take as a new photorealistic horizontal 16:9 film still. "
+            "Keep the same location, the same background objects, the same time of day and lighting, and the same two men wearing the same clothes, standing at the same places on the ground relative to each other and to the background: nobody walks, jumps or teleports between the two frames. "
+            f"{camera} "
+            "Image 2 shows Barnaby, one man in two views, not two people: keep his face, hair, glasses, cardigan and pencil unchanged. "
+            "Image 3 shows Ambrose, one man in two views, not two people: keep his face, wig, coat and cravat unchanged. "
+            f"Only their poses and expressions change, to this final pose of the shot: {end}. "
+            "Keep each man life-size with the location, with natural skin texture, soft gentle contrast and a natural film look. Show each man once. No text, logos or watermarks.")})
+    return out
+
+
 def main() -> None:
     chains: dict[int, list[tuple]] = {}
     for line in LINES:
@@ -360,7 +388,8 @@ def main() -> None:
             # Kept on every variant below (bench_multishot30_local.py ignores keys it does not read) so one
             # gen_chains.py run keeps the H3 prompt and the storyboard prompt in sync.
             "storyboard_prompts": [storyboard_prompt(i, line) for i, line in enumerate(lines, start=1)],
-            "storyboard_prompts_qwen": [storyboard_prompt_qwen(i, line) for i, line in enumerate(lines, start=1)],
+            # Continuous storyboard (K0..K4), see keyframe_prompts(): gemini_webai_images.py keyframes mode.
+            "keyframe_prompts": keyframe_prompts(num, lines),
         }
         storyboard = f"{SKIT}/gravity_test/storyboard"
         # Each reference is ONE view cropped from the sheet (front views), so the reference can never be read as a
@@ -386,7 +415,6 @@ def main() -> None:
             one_shot = {**base, "name": f"science_humor_gravity_test_shot_{num:02d}_{i}_sb",
                         "start_image": f"{storyboard}/chain_{num:02d}_shot{i}.png", "reference_images": singles,
                         "storyboard_prompts": [base["storyboard_prompts"][i - 1]],
-                        "storyboard_prompts_qwen": [base["storyboard_prompts_qwen"][i - 1]],
                         "shots": [shot(i, line, True, single=True, storyboard=True, force_first=True)]}
             (OUT_DIR / f"shot_{num:02d}_{i}_sb.json").write_text(json.dumps(one_shot, ensure_ascii=False, indent=1) + "\n")
         # Same as the first-frame variant, but with the `singles` references defined above.

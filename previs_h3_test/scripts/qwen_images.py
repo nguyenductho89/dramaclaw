@@ -1,24 +1,15 @@
-"""Character sheets, empty backgrounds and composed storyboard frames with Qwen-Image 2.1 on a LOCAL ComfyUI — the
-Qwen counterpart of gemini_webai_images.py (same prompt files, same output folders), so it can run on the rented GPU
-box with no Google login, cookie or browser.
+"""Continuous storyboard keyframes with Qwen-Image 2.1 on a LOCAL ComfyUI (rented GPU box).
 
-  python previs_h3_test/scripts/qwen_images.py plate      <out_dir> [--n 3] [--only moon] [--dry-run]
-  python previs_h3_test/scripts/qwen_images.py sheet      <out_dir> [--n 3] [--only barnaby] [--dry-run]
-  python previs_h3_test/scripts/qwen_images.py storyboard <gravity_test_dir> [--n 2] [--only chain_02_shot3] [--dry-run]
+  python previs_h3_test/scripts/qwen_images.py keyframes <gravity_test_dir> [--n 2] [--only chain_01] [--until 0] [--redo] [--dry-run]
 
-plate / sheet: text-to-image from gravity_test/image_prompts.json (the same prompts Gemini uses), 1344x768.
-  A sheet entry with a real-photo `ref` is made as an edit: a grey 1344x768 canvas is image_1 (it fixes the frame),
-  the photo is image_2 — NOT yet checked on a GPU.
-storyboard: reads `storyboard_prompts_qwen` from each chain_NN.json (gen_chains.py `storyboard_prompt_qwen`). image_1 =
-  the chain's empty plate (the edit target), image_2/3 = the two sheets, in the order the prompt's <imageN> tags use.
-Candidates go to <out_dir>/candidates/<name>_sK.png plus contact_sheet.jpg. Pick one per name, copy it to the final name,
-then run check_chains.py --storyboard on it (identity) and the image-scale-review skill (scale) BEFORE any H3 render.
-Stateless: every call is independent, so nothing leaks between scenes the way a shared Gemini conversation did.
+Prompts and image lists come from <gravity_test_dir>/qwen_keyframe_prompts.json (written with the script-to-qwen-storyboard skill).
+Every prompt must pass qwen_prompt_gate.py: the machine checks of the qwen-image-prompting skill and a recorded skill review;
+anything else stops before GPU work. `images` is the exact order sent to the node; "@prev" is the keyframe chosen just before.
+The node sizes the output to <image1> (skill N4), so ratio_follow must be <image1>.
 
 Qwen-Image 2.1 is licensed for research and evaluation only: test output only, not for a monetised release.
 """
 import argparse
-import importlib.util
 import io
 import json
 import sys
@@ -30,18 +21,10 @@ from PIL import Image
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import qwen21_character_local as q  # noqa: E402  (ComfyUI helpers: loaders, sampler, upload, render)
+import qwen_prompt_gate as gate  # noqa: E402
 
 R = HERE.parents[1]
-MAX_IMAGES = 16
-CANVAS_NAME = "qwen_images_grey_canvas.png"
-
-
-def _load_lint():
-    path = R / "src/novelvideo/agents/qwen21_compose_prompt_lint.py"
-    spec = importlib.util.spec_from_file_location("qwen21_compose_prompt_lint", path)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod.lint_qwen21_compose_prompt
+MAX_IMAGES = gate.MAX_REFERENCE_IMAGES
 
 
 def compose_graph(prompt: str, image_names: list[str], seed: int, steps: int = q.EDIT_STEPS) -> dict:
@@ -73,12 +56,6 @@ def finish(data: bytes) -> bytes:
     return buf.getvalue()
 
 
-def grey_canvas() -> Path:
-    path = Path("/tmp") / CANVAS_NAME
-    Image.new("RGB", (q.WIDTH, q.HEIGHT), (128, 128, 128)).save(path)
-    return path
-
-
 def contact_sheet(rows: list[list[Path]], out: Path, thumb_w: int = 240) -> None:
     rows = [r for r in rows if r]
     if not rows:
@@ -94,14 +71,10 @@ def contact_sheet(rows: list[list[Path]], out: Path, thumb_w: int = 240) -> None
 
 
 def run_jobs(jobs: list[dict], dest_dir: Path, dry: bool) -> list[list[Path]]:
-    """job: name, graph(seed) -> graph, files (paths to upload, in image order, or []), seeds, prompt, n_images."""
+    """job: name, graph(seed) -> graph, files (paths to upload, in image order), seeds."""
     rows, timing = [], []
-    lint = _load_lint()
     for job in jobs:
         paths = []
-        if job["n_images"] >= 2:
-            for issue in lint(job["prompt"], job["n_images"]):
-                print(f"LINT {job['name']}: {issue}", flush=True)
         names = [] if dry else [q.upload(f) for f in job["files"]]
         for k, seed in enumerate(job["seeds"], start=1):
             graph = job["graph"](names or [f.name for f in job["files"]], seed)
@@ -131,69 +104,125 @@ def seeds_for(base: int, n: int, salt: int = 0) -> list[int]:
     return [base + salt * 100 + k for k in range(n)]
 
 
-def jobs_plate_or_sheet(mode: str, prompts_file: Path, n: int, seed: int, only: str | None) -> list[dict]:
-    spec = json.loads(prompts_file.read_text())[{"sheet": "sheets", "plate": "backgrounds"}[mode]]
-    jobs = []
-    for salt, (name, entry) in enumerate(spec.items()):
-        if only and name != only:
-            continue
-        prompt, ref = (entry["prompt"], entry.get("ref")) if isinstance(entry, dict) else (entry, None)
-        if ref:
-            prompt = ("<image1> is a blank grey canvas that sets the frame; <image2> is a reference photo of the real man whose likeness "
-                      "the character sheet must match, his face, hair and age exactly as shown. " + prompt)
-            files = [grey_canvas(), R / ref]
-            graph = lambda names, s, p=prompt: compose_graph(p, names, s)  # noqa: E731
-        else:
-            files = []
-            graph = lambda names, s, p=prompt: q.t2i_graph(p, s)  # noqa: E731
-        jobs.append({"name": name, "prompt": prompt, "files": files, "n_images": len(files), "seeds": seeds_for(seed, n, salt), "graph": graph})
-    return jobs
+def _kf_score(path: Path, cc, sheets, prev_px: float | None, mode: str, expect_order: tuple | None) -> tuple[float, float, str, tuple]:
+    """Score one keyframe candidate: min over the two characters of the best SFace cosine among the big faces (>= 35 px),
+    minus 1 unless exactly two big faces; for a `reframe` keyframe also minus 1 unless the faces grew at least 1.25x
+    against the previous keyframe (the camera really pushed in); and minus 1 when the two characters stand on the other
+    sides than in the previous keyframe (2026-11-10: Qwen swapped Barnaby and Ambrose between consecutive frames and the
+    identity score alone could not see it). Returns (score, mean face px, note, left-to-right character order)."""
+    import cv2
+    img = cv2.imread(str(path))
+    if img is None:
+        return -9.0, 0.0, "unreadable", ()
+    _cv2, _fs, _det, rec = cc.face_tools()
+    big = sorted([(x, h, e) for x, h, e in cc.faces_in(img) if h >= 35], key=lambda t: t[0])
+    cos = lambda e, n: max((float(rec.match(e, r, cv2.FaceRecognizerSF_FR_COSINE)) for r in sheets[n]), default=-1.0)  # noqa: E731
+    best = {n: max((cos(e, n) for _x, _h, e in big), default=-1.0) for n in sheets}
+    order = tuple(max(sheets, key=lambda n: cos(e, n)) for _x, _h, e in big)
+    px = sum(h for _x, h, _e in big) / len(big) if big else 0.0
+    score = min(best.values()) - (0 if len(big) == 2 else 1)
+    grow = f", faces {px:.0f}px" + (f" ({px / prev_px:.2f}x prev)" if prev_px else "")
+    if mode == "reframe" and prev_px and px < 1.25 * prev_px:  # hard gate; image-review-haiku warns below 1.4x
+        score -= 1
+    if len(big) == 2 and expect_order and len(set(order)) == 2 and order != tuple(expect_order):
+        score -= 1
+        grow += f", SIDES SWAPPED (left-to-right {'/'.join(order)}, expected {'/'.join(expect_order)})"
+    return score, px, f"{len(big)} big face(s), barnaby {best['barnaby']:.2f} ambrose {best['ambrose']:.2f}{grow}", order
 
 
-def jobs_storyboard(gravity_dir: Path, n: int, seed: int, only: str | None) -> list[dict]:
-    jobs = []
-    for chain_file in sorted(gravity_dir.glob("chain_[0-9][0-9].json")):
-        chain = json.loads(chain_file.read_text())
-        if "storyboard_prompts_qwen" not in chain:
-            print(f"skip {chain_file.name}: no storyboard_prompts_qwen (rerun gen_chains.py)")
+def _order_of(path: Path, cc, sheets) -> tuple:
+    import cv2
+    _cv2, _fs, _det, rec = cc.face_tools()
+    big = sorted([(x, h, e) for x, h, e in cc.faces_in(cv2.imread(str(path))) if h >= 35], key=lambda t: t[0])
+    return tuple(max(sheets, key=lambda n: max((float(rec.match(e, r, cv2.FaceRecognizerSF_FR_COSINE)) for r in sheets[n]), default=-1.0)) for _x, _h, e in big)
+
+
+def cmd_keyframes(gravity_dir: Path, n: int, seed: int, only: str | None, dry: bool, redo: bool, rounds: int = 3, until: int | None = None) -> None:
+    """K0..K4 per chain go to storyboard/keyframes_qwen/chain_NN_kK.png; each keyframe's n candidates are scored (identity,
+    a real push-in for `reframe`, unchanged left/right order), the best is kept, and below 0.45 more rounds of new seeds are
+    tried before the next keyframe is built on it. Resumes from keyframes already chosen unless --redo."""
+    sys.path.insert(0, str(gravity_dir))
+    import check_chains as cc
+    prompts_file = gravity_dir / "qwen_keyframe_prompts.json"
+    scenes = json.loads(prompts_file.read_text())
+    for scene, items in scenes.items():
+        for rec in items:
+            gate.require(rec, f"{scene}_k{rec['k']}", prompts_file)
+            if rec["ratio_follow"] != "<image1>":
+                raise SystemExit(f"{scene}_k{rec['k']}: ratio_follow {rec['ratio_follow']!r} — the node sizes the output to <image1> only")
+    sheets = {} if dry else cc.sheet_embeddings()
+    out_dir = gravity_dir / "storyboard" / "keyframes_qwen"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    report, rows = {}, []
+    for num, (scene, items) in enumerate(sorted(scenes.items()), start=1):
+        if only and scene != only:
             continue
-        num = chain_file.stem.split("_")[1]
-        files = [R / chain["start_image"], *[R / p for p in chain["reference_images"]]]
-        for shot_idx, prompt in enumerate(chain["storyboard_prompts_qwen"], start=1):
-            name = f"chain_{num}_shot{shot_idx}"
-            if only and name != only:
+        prev: Path | None = None
+        prev_px: float | None = None
+        prev_order: tuple = ("barnaby", "ambrose")  # left person first: the storyboard puts Barnaby on the left
+        for kf in items:
+            k = kf["k"]
+            if until is not None and k > until:
+                print(f"STOP-GATE {scene}: generated up to K{until}. Review these keyframes (image-review-haiku skill) BEFORE continuing: every later keyframe is built on them. Rerun without --until (or with a larger one) to resume.", flush=True)
+                break
+            chosen = out_dir / f"{scene}_k{k}.png"
+            if chosen.exists() and not redo and not dry:
+                prev = chosen
+                print(f"KEEP {chosen.name}", flush=True)
+                big = [h for _x, h, _e in cc.faces_in(__import__("cv2").imread(str(chosen))) if h >= 35]
+                prev_px = sum(big) / len(big) if big else None
+                prev_order = _order_of(chosen, cc, sheets) or prev_order
                 continue
-            jobs.append({"name": name, "prompt": prompt, "files": files, "n_images": len(files),
-                         "seeds": seeds_for(seed, n, int(num) * 10 + shot_idx),
-                         "graph": lambda names, s, p=prompt: compose_graph(p, names, s)})
-    return jobs
+            mode = kf["mode"]
+            files = [prev if img == "@prev" else R / img for img in kf["images"]]
+            if any(f is None for f in files):
+                raise SystemExit(f"{scene}_k{k}: '@prev' but no keyframe was chosen before it")
+            name = f"{scene}_k{k}"
+            scored: list[tuple[float, float, str, tuple, Path]] = []
+            for attempt in range(rounds):
+                job = {"name": f"{name}_r{attempt}", "files": files,
+                       "seeds": seeds_for(seed, n, num * 100 + k * 10 + attempt),
+                       "graph": lambda names, sd, pr=kf["rewritten_prompt"]: compose_graph(pr, names, sd)}
+                paths = run_jobs([job], out_dir / "candidates", dry)[0]
+                rows.append(paths)
+                if dry:
+                    break
+                scored += [(*_kf_score(pth, cc, sheets, prev_px, mode, prev_order), pth) for pth in paths]
+                if scored and max(scored, key=lambda t: t[0])[0] >= 0.45:
+                    break
+            if dry:
+                prev = chosen  # placeholder so the next keyframe's image list is the real one
+                continue
+            if not scored:
+                raise SystemExit(f"{name}: every generation failed, stopping (the next keyframe is built on this one)")
+            score, px, note, order, best = max(scored, key=lambda t: t[0])
+            if score < 0.2:
+                raise SystemExit(f"{name}: best candidate scores {score:.2f} ({note}, {best.name}) — stopping so no keyframe is built on it; look at the candidates and rewrite the prompt")
+            chosen.write_bytes(best.read_bytes())
+            prev, prev_px, prev_order = chosen, px or prev_px, order or prev_order
+            report[name] = {"framing": kf["framing"], "mode": mode, "score": round(score, 3), "note": note, "candidate": best.name}
+            print(f"CHOSEN {name} [{kf['framing']}/{mode}] score {score:.2f} ({note}) <- {best.name}", flush=True)
+    if not dry:
+        (out_dir / "keyframes_report.json").write_text(json.dumps(report, indent=1, ensure_ascii=False) + "\n")
+        flat = [[out_dir / f"{sc}_k{kf['k']}.png" for kf in its if (out_dir / f"{sc}_k{kf['k']}.png").exists()]
+                for sc, its in sorted(scenes.items()) if not only or sc == only]
+        contact_sheet([r for r in flat if r], out_dir / "contact_sheet.jpg", thumb_w=400)
+        print(f"contact sheet at {out_dir / 'contact_sheet.jpg'}")
 
 
 def main() -> None:
     p = argparse.ArgumentParser()
-    p.add_argument("mode", choices=["plate", "sheet", "storyboard"])
-    p.add_argument("out", help="plate/sheet: output dir; storyboard: the gravity_test dir")
+    p.add_argument("mode", choices=["keyframes"])
+    p.add_argument("out", help="the directory holding qwen_keyframe_prompts.json (gravity_test dir)")
     p.add_argument("--n", type=int, default=3)
     p.add_argument("--seed", type=int, default=2000)
-    p.add_argument("--only", help="a single name (moon, barnaby, chain_02_shot3, ...)")
-    p.add_argument("--prompts", default=str(R / "previs_h3_test/scripts/skits/science_humor/gravity_test/image_prompts.json"))
-    p.add_argument("--dry-run", action="store_true", help="build graphs and lint prompts; no ComfyUI call")
+    p.add_argument("--only", help="a single scene key of the prompts file (chain_01, ...)")
+    p.add_argument("--until", type=int, default=None, help="stop each chain after this keyframe index (e.g. 0 = only K0) so it can be reviewed before the rest is built on it")
+    p.add_argument("--rounds", type=int, default=3, help="max rounds of --n candidates per keyframe")
+    p.add_argument("--redo", action="store_true", help="regenerate keyframes that were already chosen")
+    p.add_argument("--dry-run", action="store_true", help="gate the prompts and build graphs; no ComfyUI call")
     o = p.parse_args()
-    out = Path(o.out)
-    if o.mode == "storyboard":
-        jobs, dest = jobs_storyboard(out, o.n, o.seed, o.only), out / "storyboard" / "candidates"
-    else:
-        jobs, dest = jobs_plate_or_sheet(o.mode, Path(o.prompts), o.n, o.seed, o.only), out / "candidates"
-    if not jobs:
-        sys.exit("nothing to do (check --only and that gen_chains.py has been run)")
-    rows = run_jobs(jobs, dest, o.dry_run)
-    if not o.dry_run:
-        total = sum(len(r) for r in rows)
-        if total:
-            contact_sheet(rows, dest.parent / "contact_sheet.jpg")
-            print(f"wrote {total} candidates, contact sheet at {dest.parent / 'contact_sheet.jpg'}")
-        else:
-            print("wrote 0 candidates — every generation failed above")
+    cmd_keyframes(Path(o.out), o.n, o.seed, o.only, o.dry_run, o.redo, o.rounds, o.until)
 
 
 if __name__ == "__main__":

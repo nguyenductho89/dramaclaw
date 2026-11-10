@@ -34,3 +34,30 @@ Không có con số tính ra. Tốc độ thoại theo prompt: cao nhất 2.83 �
 - "Better view. Also, there's no air, so talk fast."
 - "Apollo Fifteen: hammer and feather, landed together."
 - "Of course. Galileo told you so. You're welcome."
+
+## Storyboard
+
+Viết bằng skill `script-to-qwen-storyboard` từ bảng kịch bản ở trên và `series-bible.md`.
+
+**Chung**
+- Ảnh nền: cảnh 01 `previs_h3_test/scripts/skits/science_humor/gravity_test/backgrounds/orchard.png`; cảnh 02 `previs_h3_test/scripts/skits/science_humor/gravity_test/backgrounds/moon.png`. (bible, mục Bối cảnh)
+- Ảnh tham chiếu nhân vật, theo thứ tự cố định cho mọi keyframe: (1) Barnaby `previs_h3_test/scripts/skits/science_humor/character/barnaby_sheet.png`, (2) Ambrose `previs_h3_test/scripts/skits/science_humor/character/ambrose_sheet.png`. (bible, mục Nhân vật)
+- Vị trí: Barnaby ở phần ba bên trái, Ambrose ở phần ba bên phải, cùng cỡ và cùng độ sâu, quay ba phần tư về phía nhau và về phía máy. Không đổi chỗ. (bible, mục Bối cảnh)
+- Vật cầm: Ambrose luôn cầm một quả táo đỏ bằng tay trái; Barnaby không cầm gì. (bible, mục Nhân vật: Ambrose)
+- Vật nền phải giữ: cảnh 01 cây táo, hai bóng người nhỏ ở xa; cảnh 02 mô-đun đổ bộ, Trái Đất nhỏ, phi hành gia và cờ ở xa. (ảnh nền; bible, mục Bối cảnh)
+- Cỡ khung: `wide` = thấy trọn từ đầu tới chân; `medium` = từ giữa đùi trở lên; `close` = từ dưới eo trở lên. (cỡ khung "toàn thân" theo bible, mục Bối cảnh; hai cỡ gần hơn do skill đặt để nhấn nội dung)
+
+**Bảng shot** (tư thế đầu shot i+1 bằng tư thế cuối shot i; cỡ khung đầu shot i+1 bằng cỡ khung cuối shot i)
+
+| Cảnh, shot | Người nói, lời | Tư thế đầu shot | Tư thế cuối shot | Vật cầm | Cỡ khung đầu | Cỡ khung cuối | Căn cứ |
+|---|---|---|---|---|---|---|---|
+| 01, 1 | Ambrose: "The Earth pulls the apple down. Newton settled this." | Cả hai đứng sẵn: Barnaby tay trong túi áo, thoải mái; Ambrose cầm táo | Ambrose giơ quả táo lên, ngẩng cằm đắc thắng; Barnaby lắng nghe, tay trong túi | Ambrose cầm táo tay trái | wide | wide | Trò đùa: "Ambrose tưởng đã xong chuyện"; bible: Barnaby "thoải mái" |
+| 01, 2 | Barnaby: "Nice. But to Einstein, gravity isn't a pull." | Như cuối shot 01,1 | Barnaby chỉ vào quả táo; Ambrose nhìn Barnaby, chau mày | Ambrose cầm táo tay trái | wide | medium | Trò đùa: "Một câu làm hỏng cả vườn táo" |
+| 01, 3 | Ambrose: "Not a pull? Newton's laws still work for a great many things." | Như cuối shot 01,2 | Ambrose giơ một ngón tay phản đối; Barnaby nghiêng đầu lắng nghe | Ambrose cầm táo tay trái | medium | medium | Lời của Ambrose; bible: Barnaby "thua cãi mà vẫn vui" |
+| 01, 4 | Barnaby: "Sure. But mass bends spacetime. The apple just takes the straightest path." | Như cuối shot 01,3 | Barnaby đưa bàn tay phải duỗi phẳng ngang eo; Ambrose nhìn xuống quả táo | Ambrose cầm táo tay trái | medium | close | Trò đùa: "Nghe vô lý mà đúng trong lý thuyết"; lời nói về "straightest path" |
+| 02, 1 | Ambrose: "Where is the orchard? And why am I on the Moon?" | Cả hai đứng sẵn: Barnaby tay trong túi áo, nhìn quanh; Ambrose ôm quả táo vào ngực | Ambrose giơ tay phải ngửa lòng bàn tay, nhìn Barnaby, bối rối; Barnaby nhìn quanh thản nhiên, tay trong túi | Ambrose ôm táo vào ngực bằng tay trái | wide | wide | Trò đùa: Ambrose rơi xuống từ từ, Barnaby thấy bình thường; bible: Barnaby "đãng trí" |
+| 02, 2 | Barnaby: "Better view. Also, there's no air, so talk fast." | Như cuối shot 02,1 | Barnaby đứng thản nhiên, tay trong túi, quay về phía Ambrose; Ambrose mở to mắt nhìn Barnaby | Ambrose ôm táo vào ngực | wide | wide | Trò đùa: "Đùa về việc không có không khí" |
+| 02, 3 | Barnaby: "Apollo Fifteen: hammer and feather, landed together." | Như cuối shot 02,2 | Barnaby chỉ xuống mặt đất; Ambrose nhìn xuống đất | Ambrose ôm táo vào ngực | wide | medium | Lời nói về búa và lông vũ rơi |
+| 02, 4 | Ambrose: "Of course. Galileo told you so. You're welcome." | Như cuối shot 02,3 | Ambrose ngẩng cằm cao, giơ quả táo lên ngang vai đắc ý; Barnaby nhướn lông mày nhìn Ambrose | Ambrose giơ táo bằng tay trái | medium | medium | Trò đùa: "Ambrose giành công cho khoa học cổ điển"; bible: Ambrose "luôn giành phần công" |
+
+**Kiểm tra liền mạch:** mọi cặp shot liên tiếp trong cùng cảnh khớp (tư thế, cỡ khung, vật cầm, vị trí); không shot nào bắt đầu ở cỡ khung rộng hơn cỡ khung kết thúc của shot trước.

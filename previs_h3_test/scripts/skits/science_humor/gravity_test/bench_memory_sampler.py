@@ -11,7 +11,10 @@ continuity=latent_handoff (the only memory-sampler mode that needs no extra Comf
 setup_h3_box.sh --with-ref2va already installs — see PLAN_h3_memory_sampler_antidrift.md for why first_frame and
 context_pin are not options here).
 
-  python3 previs_h3_test/scripts/skits/science_humor/gravity_test/bench_memory_sampler.py
+  python3 previs_h3_test/scripts/skits/science_humor/gravity_test/bench_memory_sampler.py [chain_NN_refs_only]
+
+This is now the gravity test's default video renderer (run_batch.sh videos); the chain name is the JSON in gravity_test/
+(default chain_01_refs_only).
 
 Env: COMFY_URL (default http://127.0.0.1:8188), BENCH_TIMEOUT_S (default 10800), BENCH_CONTINUITY (default
 latent_handoff — pass "cut" to render the same inputs through the memory sampler's own baseline mode for a 3-way
@@ -30,6 +33,7 @@ URL = os.environ.get("COMFY_URL", "http://127.0.0.1:8188").rstrip("/")
 TIMEOUT = float(os.environ.get("BENCH_TIMEOUT_S", "10800"))
 CONTINUITY = os.environ.get("BENCH_CONTINUITY", "latent_handoff")
 SEED = int(os.environ.get("BENCH_SEED", "1234"))
+CHAIN = sys.argv[1] if len(sys.argv) > 1 else "chain_01_refs_only"
 
 sys.path.insert(0, str(R / "src"))
 from novelvideo.generators.runpod_minimax_h3_multishot_video import (  # noqa: E402
@@ -66,7 +70,7 @@ def crop_turned_half(sheet_path: Path, facing_is_left: bool, out_path: Path) -> 
 
 
 def main():
-    chain = json.loads((GRAVITY / "chain_01_refs_only.json").read_text())
+    chain = json.loads((GRAVITY / f"{CHAIN}.json").read_text())
     shots = chain["shots"]
     frames = int(chain["frames"])
     aspect = chain["aspect_ratio"]
@@ -90,20 +94,27 @@ def main():
     reference_names = [uploaded["barnaby_front"], uploaded["barnaby_turned"], uploaded["ambrose_front"], uploaded["ambrose_turned"]]
     voice_names = [upload_image(R / v, f"ms_voice_{k}{Path(v).suffix}") for k, v in enumerate(voice_refs)]
 
+    # Turbo LoRA from the chain JSON (same 12-step distill the classic path used); BENCH_TURBO=0 renders the base 20 steps.
+    turbo_lora = "" if os.environ.get("BENCH_TURBO") == "0" else str(chain.get("turbo_lora") or "")
+    steps = int(chain.get("turbo_steps") or 12) if turbo_lora else 20
+
     graph = build_h3_multishot_memory_graph(
         script=join_shots_script(shots), shot_count=len(shots), width=w, height=h, frames_per_shot=frames,
-        seed=SEED, steps=20, checkpoint="ref2va", continuity=CONTINUITY,
+        seed=SEED, steps=steps, checkpoint="ref2va", continuity=CONTINUITY, turbo_lora=turbo_lora,
         reference_image_names=reference_names, reference_subjects="2,2", voice_ref_names=voice_names,
         master_normalize="luma+contrast", memory_frames=0, anchor_frames=1, bank_pinned=1)
 
-    run = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime()) + f"_{socket.gethostname()}_memory_sampler_{CONTINUITY}"
+    # run_batch.sh skips a chain when runs/*science_humor_gravity_test_<chain>_ms/video.mp4 exists, so keep that suffix
+    # for the default mode; other continuity modes get their own label.
+    tag = "ms" if CONTINUITY == "latent_handoff" else f"ms_{CONTINUITY}"
+    run = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime()) + f"_{socket.gethostname()}_science_humor_gravity_test_{CHAIN}_{tag}"
     D = R / "previs_h3_test/runs" / run
     D.mkdir(parents=True, exist_ok=True)
     (D / "graph.json").write_text(json.dumps(graph, indent=2, ensure_ascii=False))
 
-    rec = {"label": f"memory_sampler_{CONTINUITY}", "started_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    rec = {"label": f"memory_sampler_{CONTINUITY}", "chain": CHAIN, "started_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
            "run_dir": D.name, "comfy_url": URL, "resolution": f"{w}x{h}", "aspect_ratio": aspect, "shots": len(shots),
-           "frames_per_shot": frames, "continuity": CONTINUITY, "seed": SEED, "logs": []}
+           "frames_per_shot": frames, "continuity": CONTINUITY, "seed": SEED, "turbo_lora": turbo_lora, "steps": steps, "logs": []}
     live = open(D / "live.log", "a")
     t0 = time.time()
 

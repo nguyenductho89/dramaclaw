@@ -61,7 +61,11 @@ if [ "$STAGE" = images ]; then
 fi
 
 # videos
-for n in H3MultishotSampler H3ModelLoaderAny; do
+# Default sampler is H3MultishotMemorySampler (bench_memory_sampler.py, continuity=latent_handoff; see
+# PLAN_h3_memory_sampler_antidrift.md). H3_SAMPLER=classic falls back to H3MultishotSampler (bench_multishot30_local.py).
+SAMPLER=${H3_SAMPLER:-memory}
+NODE=H3MultishotMemorySampler; [ "$SAMPLER" = classic ] && NODE=H3MultishotSampler
+for n in $NODE H3ModelLoaderAny; do
   curl -s 127.0.0.1:8188/object_info | grep -q "\"$n\"" || fail "node $n missing"
 done
 for f in $D/voice/barnaby.wav $D/voice/ambrose.wav $D/character/barnaby_sheet.png $D/character/ambrose_sheet.png \
@@ -72,9 +76,15 @@ stamp free_vram
 curl -s -X POST 127.0.0.1:8188/free -H 'Content-Type: application/json' -d '{"unload_models":true,"free_memory":true}' >/dev/null
 for c in "$@"; do
   stamp "$c"
-  ls previs_h3_test/runs/*science_humor_gravity_test_$c/video.mp4 >/dev/null 2>&1 && continue
-  BENCH_SCRIPT_FILE="$G/$c.json" BENCH_NOTE="science humor gravity test $c, 16:9 ref2va turbo12 two voice_refs, Gemini WebAI sheets+backgrounds/storyboard" \
-    $PY $S/bench_multishot30_local.py "science_humor_gravity_test_$c" || fail "chain $c"
-  ls previs_h3_test/runs/*science_humor_gravity_test_$c/video.mp4 >/dev/null 2>&1 || fail "chain $c made no video"
+  if [ "$SAMPLER" = classic ]; then
+    ls previs_h3_test/runs/*science_humor_gravity_test_$c/video.mp4 >/dev/null 2>&1 && continue
+    BENCH_SCRIPT_FILE="$G/$c.json" BENCH_NOTE="science humor gravity test $c, 16:9 ref2va turbo12 two voice_refs, Gemini WebAI sheets+backgrounds/storyboard" \
+      $PY $S/bench_multishot30_local.py "science_humor_gravity_test_$c" || fail "chain $c"
+    ls previs_h3_test/runs/*science_humor_gravity_test_$c/video.mp4 >/dev/null 2>&1 || fail "chain $c made no video"
+  else
+    ls previs_h3_test/runs/*science_humor_gravity_test_${c}_ms/video.mp4 >/dev/null 2>&1 && continue
+    $PY $G/bench_memory_sampler.py "$c" || fail "chain $c (memory sampler)"
+    ls previs_h3_test/runs/*science_humor_gravity_test_${c}_ms/video.mp4 >/dev/null 2>&1 || fail "chain $c made no video"
+  fi
 done
 touch /opt/bench/gravity_videos.done; stamp done

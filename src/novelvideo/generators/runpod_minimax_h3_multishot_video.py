@@ -466,6 +466,7 @@ def build_h3_multishot_memory_graph(
     memory_frames: int = 0,
     anchor_frames: int = 1,
     bank_pinned: int = 1,
+    turbo_lora: str = "",
 ) -> dict[str, Any]:
     """Build the `H3MultishotMemorySampler` API graph — PLAN_h3_memory_sampler_antidrift.md's Phase 1 (no extra
     pack install): an experiment to see whether this node's anti-drift dials fix the gravity test's two unsolved
@@ -480,6 +481,9 @@ def build_h3_multishot_memory_graph(
     reference rows, not first-frame hand-off"), which also disables the reference-image bank — so it cannot be
     combined with `reference_image_names`/`voice_ref_names`. `continuity="context_pin"` needs the
     `ComfyUI-H3-Motion-Context` pack, not installed by `setup_h3_box.sh` yet (Phase 2 of the plan).
+    `turbo_lora` is the ref2v distill (same as `build_h3_multishot_graph`): it needs `checkpoint="ref2va"`, goes
+    through `H3LoraStack` in front of the sampler, and switches the sampler to euler + beta (pass the LoRA's own
+    step count as `steps`, e.g. 12).
     `reference_subjects` groups `reference_image_names` into people, comma-counts in picture order (e.g. "2,2" for
     2 refs each of 2 people) — leave empty only for a single character's references, since empty means "all one
     person" and averages multiple people's faces together.
@@ -511,6 +515,8 @@ def build_h3_multishot_memory_graph(
         raise ValueError("reference_images/voice_ref need checkpoint='ref2va' (fl2va was not trained with reference rows)")
     if len(voice_ref_names) > 3:
         raise ValueError("at most 3 voice_ref slots (voice_ref, voice_ref_2, voice_ref_3)")
+    if turbo_lora and checkpoint != "ref2va":
+        raise ValueError("turbo_lora is the ref2v distill: it needs checkpoint='ref2va'")
     if not (0 <= memory_frames <= 3):
         raise ValueError(f"memory_frames must be 0-3, got {memory_frames}")
     if not (0 <= anchor_frames <= 9):
@@ -585,6 +591,18 @@ def build_h3_multishot_memory_graph(
             },
         },
     }
+
+    if turbo_lora:
+        # Same wiring as build_h3_multishot_graph: H3LoraStack (unused slots "None") feeds the sampler, which keeps
+        # euler + beta at `steps` — what the distill LoRA was trained on.
+        stack_inputs: dict[str, Any] = {"model": ["1", 0]}
+        for i in range(1, 5):
+            stack_inputs[f"lora_{i}"] = turbo_lora if i == 1 else "None"
+            stack_inputs[f"strength_{i}"] = 1.0
+        graph["7"] = {"class_type": "H3LoraStack", "inputs": stack_inputs}
+        graph["10"]["inputs"]["model"] = ["7", 0]
+        graph["10"]["inputs"]["sampler_name"] = "euler"
+        graph["10"]["inputs"]["scheduler"] = "beta"
 
     if start_image_name:
         graph["100"] = {"class_type": "LoadImage", "inputs": {"image": start_image_name}}

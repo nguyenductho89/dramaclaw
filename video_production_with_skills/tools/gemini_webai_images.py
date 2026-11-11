@@ -34,7 +34,7 @@ from SynthID (invisible, not touched by this script) — landing consistently in
 across sheet/plate/storyboard/transition images alike (empirically confirmed 2026-11-09 across 14 real generations:
 position varies only slightly, always within roughly x=1080-1310, y=500-730 of the final 1344x768 canvas). `fit_16x9`
 calls the app's `remove_gemini_watermark()` on every image for exactly this reason — template-match + inpaint, not a crop (cropping
-would eat into Ambrose's body, which sits in the right third of frame per series-bible.md and can overlap this same
+would eat into Newton's body, which sits in the right third of frame per series-bible.md and can overlap this same
 screen region). A low-confidence match leaves the image untouched and prints a warning rather than guessing wrong;
 `clean <image.png> ...` re-runs this on images already saved to disk (no new Gemini call) for one-off cleanup.
 
@@ -51,7 +51,7 @@ from pathlib import Path
 
 import httpx
 
-R = Path(__file__).resolve().parents[1]
+R = Path(__file__).resolve().parents[2]
 BASE_URL = os.environ.get("WEBAI_BASE_URL", "http://127.0.0.1:6969/v1").rstrip("/")
 MODEL = os.environ.get("WEBAI_IMAGE_MODEL") or "gemini-auto"
 COOKIE_FILE = Path(os.environ.get("GEMINI_WEBAI_COOKIE_FILE_HOST", str(R / "../WebAI-to-API/runtime/auth/gemini.json")))

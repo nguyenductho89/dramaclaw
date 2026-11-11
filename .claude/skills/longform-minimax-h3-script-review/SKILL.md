@@ -1,6 +1,6 @@
 ---
 name: longform-minimax-h3-script-review
-description: Review kịch bản YouTube long-form 16:9 ("Science explained with humor", Barnaby và Ambrose đối thoại) gồm file kịch bản `script.md` của tập trong video_production_with_skills/series/science_humor/<tập>/ và các chain MiniMax H3 trong video_production_with_skills/series/science_humor/. Dùng khi user nhờ review một tập long-form, hoặc ngay sau khi viết bằng longform-minimax-h3-script-writer. Chỉ báo lỗi, không tự sửa trừ khi được yêu cầu. Không dùng cho short 9:16.
+description: Review kịch bản YouTube long-form 16:9 ("Science explained with humor", Einstein và Newton đối thoại) gồm file kịch bản `script.md` của tập trong video_production_with_skills/series/science_humor/<tập>/ và các chain MiniMax H3 trong video_production_with_skills/series/science_humor/. Dùng khi user nhờ review một tập long-form, hoặc ngay sau khi viết bằng longform-minimax-h3-script-writer. Chỉ báo lỗi, không tự sửa trừ khi được yêu cầu.
 ---
 
 # Review kịch bản long-form 16:9 cho MiniMax H3
@@ -24,7 +24,7 @@ Tự đếm và tính lại, không tin số ghi trong file: số từ, âm ti�
 5. **CHẶN**: thoại trong chain khác lời trong file kịch bản.
 6. **CẢNH BÁO**: `<d>` trong chain hơn 3 âm tiết/giây, thoại bắt đầu trước 1.0 s, hoặc kết thúc cách cuối shot ngoài khoảng 1,2-2,0 s; thiếu câu lip-close chính thức sau `<d>`. Ghi phép tính.
 7. **CHẶN**: một shot có hai người nói. **CẢNH BÁO**: không ghi người còn lại im lặng và đang làm gì; sau mốc "finishes" không ghi cả hai im lặng, ngậm miệng tới khung cuối (H3 từng tự nói thêm ở đoạn trống).
-8. **CHẶN**: `<Audio N>` gán sai người (`<Audio 1>` là Barnaby, `<Audio 2>` là Ambrose). **CẢNH BÁO**: chain thiếu `voice_refs` hoặc sai thứ tự; giọng mô tả lệch giữa các shot mà không có lý do; hai giọng cùng giọng vùng (Barnaby phải Mỹ, Ambrose phải Anh) hoặc chưa đo cosine giữa hai giọng mẫu.
+8. **CHẶN**: `<Audio N>` gán sai người (`<Audio 1>` là Einstein, `<Audio 2>` là Newton). **CẢNH BÁO**: chain thiếu `voice_refs` hoặc sai thứ tự; giọng mô tả lệch giữa các shot mà không có lý do; hai giọng cùng giọng vùng (Einstein phải Mỹ, Newton phải Anh) hoặc chưa đo cosine giữa hai giọng mẫu.
 
 ## B. Nhất quán giữa các shot và chain
 
@@ -44,14 +44,14 @@ Tự đếm và tính lại, không tin số ghi trong file: số từ, âm ti�
 19. **CHẶN**: thiếu một trong 6 mục `subject_definitions`, `summary`, `retention_analysis`, `detailed_description`, `overall_soundscape`, `non_diegetic_music`; thiếu câu giữ khung, dòng real-time hoặc dòng cấm chữ/logo.
 20. **CHẶN**: yêu cầu H3 vẽ chữ, phương trình, đồ thị, sơ đồ hoặc số; yêu cầu H3 diễn thí nghiệm hay chuyển động cần đúng vật lý.
 21. **CHẶN**: chain thiếu `reference_images` hoặc khung đầu; tư thế, vật cầm hay cỡ khung của một shot lệch dòng Storyboard trong file kịch bản; `start_image` chưa được duyệt (`tools/approve_keyframes.py check`); số `<Picture N>`, `<Subject N>` lệch thứ tự ảnh gửi đi; nền làm khung đầu mà shot 1 không cho hai người đi vào khung. **CẢNH BÁO**: prompt Qwen dùng từ đẩy độ nét ("ultra detailed", "sharp", "realistic detail") hoặc từ phủ định ("no moustache", "no labels"), ảnh nền có người, hoặc sheet có chữ, ô viền, hay 3 người; `subject_definitions` không nói sheet là một người ở nhiều góc; prompt ghép ảnh storyboard (compose nhiều ảnh tham chiếu thành 1 cảnh) không yêu cầu chiếu sáng lại nhân vật theo đúng ảnh nền và không có bóng đổ dưới chân — dễ ra ảnh kiểu nhân vật bị "dán cắt" lên nền (giữ nguyên ánh sáng phẳng của ảnh sheet thay vì khớp môi trường mới). Prompt Qwen-Image (`qwen_keyframe_prompts.json`): **CHẶN** nếu chưa được soạn và review bằng skill `qwen-image-prompting` hoặc `qwen_prompt_gate.py check` báo lỗi. **CHẶN**: nền vừa là `start_image` vừa nằm cùng ảnh sheet hai góc trên nền xám (đã gặp: H3 vẽ lại sheet trong khung). Mặc định `start_image` là keyframe K0 đã duyệt, `reference_images` là hai sheet.
-22. **CHẶN**: camera chuyển động.
+22. **CHẶN**: một shot có hơn một chuyển động camera, chuyển động không ghi điểm cuối (cỡ khung, ai ở giữa khung), hoặc dùng handheld, whip pan, zoom nhanh, dolly-zoom. Chuyển động đơn (push-in, pull-out, pan, arc) hợp lệ theo skill `longform-camera-angles`, trừ khi nó cắt một người ra khỏi khung (push-in hoặc pan trên khung hai người hai phần ba trái/phải): CHẶN.
 23. **CẢNH BÁO**: `non_diegetic_music` không phải `N/A`.
 24. **CẢNH BÁO**: không ghi vị trí theo phần ngang của khung; hai người chỉ "face each other" mà không ghi quay ba phần tư về máy, nên mặt dễ nghiêng; người đang nói quay đi chỗ khác; đồ cần thấy nằm ở phía xa máy; mặt người ngược nắng; thiếu cỡ và độ sâu của hai người; đỉnh đầu hay vật quan trọng sát mép trên/dưới (bản 1344×768 bị cắt khoảng 1% mỗi phía).
 25. **CẢNH BÁO**: cảm xúc chỉ có tính từ trần; hơn một lần đổi cảm xúc trong shot; kết shot bằng "continues/keeps"; có "slowly" hoặc "same ... as before".
 
 ## D. Long-form
 
-26. **CẢNH BÁO**: tổng ngoài 6-7 phút hoặc ngoài 550-700 từ (mức tạm, chưa đo).
+26. **CẢNH BÁO**: tổng (cả các đoạn wormhole) ngoài 6-7 phút hoặc ngoài 420-520 từ (mức tạm, chưa đo).
 27. **CẢNH BÁO**: một người nói quá 2 shot liền mà không có lý do; hai người lệch quá 70/30 số từ. Ghi tỉ lệ đã tính.
 28. **CẢNH BÁO**: một shot 8 s quá 18 âm tiết.
 29. **CẢNH BÁO**: không có câu hỏi và lời hứa trong 30 giây đầu; khoảng trống trên 90 giây không có cú kéo mới; kết bằng tóm tắt khô.
@@ -64,7 +64,7 @@ Tự đếm và tính lại, không tin số ghi trong file: số từ, âm ti�
 33. **CHẶN**: tuyên bố hoặc con số không có mã nguồn; mã nguồn không tồn tại trong mục Nguồn.
 34. **CHẶN**: nguồn không nói điều kịch bản nói. Mở nguồn để đối chiếu nếu đọc được; không đọc được thì ghi rõ "chưa đối chiếu".
 35. **CHẶN**: con số tính ra không có phép tính, hoặc tính lại ra kết quả khác.
-36. **CHẶN**: ghi công sai; nhân vật tự nhận là tác giả của phát hiện; câu trong ngoặc kép không có nguồn.
+36. **CHẶN**: ghi công sai; nhân vật nhận công của người khác hoặc nói về công trình của chính mình sai với nguồn; câu trong ngoặc kép không có nguồn.
 37. **CHẶN**: phóng đại mà người xem có thể tin là thật, không được đính chính trong tập.
 38. **CHẶN**: hình trong prompt trái với điều lời thoại nói là đúng; chi tiết nguy hiểm thật trong bối cảnh (không khí, nhiệt độ) mà thoại không đùa tới, khiến người xem có thể tưởng thật.
 39. **CẢNH BÁO**: điều còn tranh cãi nói như đã chắc chắn; khoa học cổ điển bị nói như sai hoàn toàn thay vì nêu đúng phạm vi.
@@ -80,12 +80,22 @@ Tự đếm và tính lại, không tin số ghi trong file: số từ, âm ti�
 
 ## G. Nhân vật và chính sách
 
-46. **CHẶN**: bất kỳ liên hệ nào với Einstein hay Newton trong truyện: nhận là ông, người quen của ông, nhắc hoặc đùa về sự giống nhau. **CHẶN**: Barnaby giảng khoa học cổ điển như của mình, hoặc Ambrose giảng kiến thức hiện đại, trừ khi đang trích lời bên kia để cãi.
-47. **CHẶN**: dấu hiệu gắn với Einstein trong prompt, keyframe, bối cảnh hay giọng: lè lưỡi, phòng cấp bằng sáng chế, bảng E=mc², tẩu thuốc, giọng Đức.
-48. **CHẶN**: tên hoặc ảnh Einstein ở tiêu đề, thumbnail, tên kênh. Chỉ được nói tên ông khi ghi công trong nội dung khoa học.
+46. **CHẶN**: đặt vào miệng người thật chuyện đời tư, quan điểm chính trị, tôn giáo hoặc phát ngôn ngoài khoa học; bịa lời có ngoặc kép; chế giễu họ theo cách xúc phạm. **CHẶN**: Einstein giảng khoa học cổ điển như của mình, hoặc Newton giảng kiến thức hiện đại như của mình, trừ khi đang trích lời bên kia để cãi.
+47. **CẢNH BÁO**: hình ảnh sáo gắn với Einstein trong prompt, keyframe hay bối cảnh: lè lưỡi, tẩu thuốc, bảng E=mc².
+48. **CẢNH BÁO**: tên hoặc ảnh người thật ở tiêu đề, thumbnail, tên kênh, merch hay quảng cáo khi chưa rà quyền (Einstein: xem `risks.md`). Tên trong nội dung khoa học thì được.
 49. **CHẶN**: nhân vật AI đưa ra nội dung y tế, pháp lý, tài chính hoặc chính trị dưới dạng tư vấn.
 50. **CHẶN**: thí nghiệm có thể gây hại khi bắt chước mà không có cảnh báo rõ.
-51. **CHẶN**: tên người thật hoặc thương hiệu trong phần tả cảnh của prompt H3. Tên trong `<d>` để ghi công khoa học thì được.
+51. **CẢNH BÁO**: tên người thật hoặc thương hiệu trong phần tả cảnh của prompt H3 mà chưa chạy thử một chain xác nhận H3 không lọc; ưu tiên mô tả ngoại hình và sheet. Tên trong `<d>` thì được.
+
+## H. Góc quay và phông (skill `longform-camera-angles`)
+
+52. **CHẶN**: chain đổi góc hay vị trí máy giữa chừng (cắt trong chain) khi nhóm "cắt góc trong chain" chưa được ghi là đạt ở mục "Trạng thái kiểm chứng" của skill góc quay.
+53. **CHẶN**: shot không ghi góc, cỡ khung đầu, chuyển động hoặc phông trong Storyboard; hoặc chain dùng phông không đúng loại (`front`/`low`/`high`) của góc K0.
+54. **CHẶN**: vi phạm hướng màn hình: Einstein không ở nửa trái hoặc không nhìn sang phải, Newton không ở nửa phải hoặc không nhìn sang trái, đổi trục trong cùng địa điểm, người cầm táo đổi tay.
+55. **CẢNH BÁO**: tập có dưới 6 setup khác nhau hoặc dưới 3 kiểu chuyển động; hai chain liền nhau cùng góc và cỡ khung đầu; quá 2 chain `low`/`high` liền nhau. Ghi số đã đếm.
+56. **CẢNH BÁO**: shot không có lý do góc theo lời hoặc trò đùa, hoặc góc không khớp chức năng của đoạn lời (xem bảng chọn trong skill góc quay).
+57. **CẢNH BÁO**: địa điểm không khớp điều đang nói mà bible hay `image_prompts.json` chưa có địa điểm phù hợp; địa điểm thiếu phông cho một góc đang dùng; góc một người mà người nói không có trong khung.
+58. **CẢNH BÁO**: nhóm góc hoặc chuyển động chưa được chạy thử (mục "Trạng thái kiểm chứng") mà chain đã đưa vào lịch render; ghi nhóm nào.
 
 ## Định dạng báo cáo
 

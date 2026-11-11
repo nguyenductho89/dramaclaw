@@ -104,11 +104,12 @@ def seeds_for(base: int, n: int, salt: int = 0) -> list[int]:
     return [base + salt * 100 + k for k in range(n)]
 
 
-def _kf_score(path: Path, cc, sheets, prev_px: float | None, mode: str, expect_order: tuple | None) -> tuple[float, float, str, tuple]:
+def _kf_score(path: Path, cc, sheets, prev_px: float | None, mode: str, expect_order: tuple | None,
+              present: list[str] | None = None) -> tuple[float, float, str, tuple]:
     """Score one keyframe candidate: min over the two characters of the best SFace cosine among the big faces (>= 35 px),
     minus 1 unless exactly two big faces; for a `reframe` keyframe also minus 1 unless the faces grew at least 1.25x
     against the previous keyframe (the camera really pushed in); and minus 1 when the two characters stand on the other
-    sides than in the previous keyframe (2026-11-10: Qwen swapped Barnaby and Ambrose between consecutive frames and the
+    sides than in the previous keyframe (2026-11-10: Qwen swapped Einstein and Newton between consecutive frames and the
     identity score alone could not see it). Returns (score, mean face px, note, left-to-right character order)."""
     import cv2
     img = cv2.imread(str(path))
@@ -120,14 +121,15 @@ def _kf_score(path: Path, cc, sheets, prev_px: float | None, mode: str, expect_o
     best = {n: max((cos(e, n) for _x, _h, e in big), default=-1.0) for n in sheets}
     order = tuple(max(sheets, key=lambda n: cos(e, n)) for _x, _h, e in big)
     px = sum(h for _x, h, _e in big) / len(big) if big else 0.0
-    score = min(best.values()) - (0 if len(big) == 2 else 1)
+    who = [n for n in sheets if n in present] if present else list(sheets)  # `present`: the characters in frame (a single-person angle names one)
+    score = min(best[n] for n in who) - (0 if len(big) == len(who) else 1)
     grow = f", faces {px:.0f}px" + (f" ({px / prev_px:.2f}x prev)" if prev_px else "")
     if mode == "reframe" and prev_px and px < 1.25 * prev_px:  # hard gate; image-review-haiku warns below 1.4x
         score -= 1
     if len(big) == 2 and expect_order and len(set(order)) == 2 and order != tuple(expect_order):
         score -= 1
         grow += f", SIDES SWAPPED (left-to-right {'/'.join(order)}, expected {'/'.join(expect_order)})"
-    return score, px, f"{len(big)} big face(s), barnaby {best['barnaby']:.2f} ambrose {best['ambrose']:.2f}{grow}", order
+    return score, px, f"{len(big)} big face(s), einstein {best['einstein']:.2f} newton {best['newton']:.2f}{grow}", order
 
 
 def _order_of(path: Path, cc, sheets) -> tuple:
@@ -158,7 +160,7 @@ def cmd_keyframes(episode_dir: Path, n: int, seed: int, only: str | None, dry: b
             continue
         prev: Path | None = None
         prev_px: float | None = None
-        prev_order: tuple = ("barnaby", "ambrose")  # left person first: the storyboard puts Barnaby on the left
+        prev_order: tuple = ("einstein", "newton")  # left person first: the storyboard puts Einstein on the left
         for kf in items:
             k = kf["k"]
             if until is not None and k > until:
@@ -186,7 +188,7 @@ def cmd_keyframes(episode_dir: Path, n: int, seed: int, only: str | None, dry: b
                 rows.append(paths)
                 if dry:
                     break
-                scored += [(*_kf_score(pth, cc, sheets, prev_px, mode, prev_order), pth) for pth in paths]
+                scored += [(*_kf_score(pth, cc, sheets, prev_px, mode, prev_order, kf.get("present")), pth) for pth in paths]
                 if scored and max(scored, key=lambda t: t[0])[0] >= 0.45:
                     break
             if dry:

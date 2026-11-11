@@ -4,6 +4,8 @@
 
 ## Context
 
+> Lưu ý (2026-11-11): các chain gravity-test được nhắc bên dưới (kể cả `chain_01_refs_only`) đã bị xoá ở commit `cb691d3e`; xem lịch sử git nếu cần dựng lại.
+
 Bài test gravity (xem lịch sử git (commit trước khi dọn `science_humor_gravity_test_run.md`)) gặp 2 lỗi chưa giải quyết triệt để:
 1. **Trôi nền**: dùng `start_image` (nền làm khung đầu), vườn đổi sang cảnh khác ở shot 4. Đã né được bằng cách chuyển sang `_refs_only` (nền làm ảnh tham chiếu lặp lại mỗi shot) — hoạt động tốt cho chain 4-shot ngắn, nhưng đây là cách lách, không phải sửa cơ chế gốc.
 2. **Sheet lọt khung**: khi dùng ảnh sheet 2 góc nhìn (ghép 2-up trên nền xám) làm `reference_images`, H3 đôi khi vẽ lại chính cái sheet vào khung hình. Đã né bằng cách cắt chỉ còn 1 góc nhìn (`*_front.png`) — nhưng mất thông tin góc nhìn phụ, có rủi ro giữ identity kém hơn ở các góc máy khác nhau trong câu chuyện dài hơn.

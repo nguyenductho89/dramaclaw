@@ -28,22 +28,25 @@ Cập nhật 2026-11-11. Đây không phải tư vấn pháp lý. Nên hỏi lu�
 
 ## Einstein
 
-Hebrew University/GreenLight giữ và thực thi quyền về tên và hình ảnh Einstein. Nhân vật hư cấu giảm rủi ro, không xoá hết.
+Hebrew University/GreenLight giữ và thực thi quyền về tên và hình ảnh Einstein.
 
-Barnaby cố tình giống hẳn Einstein, dùng ảnh thật năm 1921 (Ferdinand Schmutzer, Wikimedia Commons, public domain do tác giả mất 1928) làm identity reference. Quyền hình ảnh của Hebrew University/GreenLight tách biệt với bản quyền ảnh, nên ảnh public domain không xoá rủi ro này. Người dùng đã được nêu rõ rủi ro và chấp nhận. Các lớp giảm rủi ro luôn giữ:
-- nhân vật hư cấu, không tự nhận là Einstein;
-- không dùng tên hay ảnh thật ở tiêu đề, thumbnail, tên kênh, merch, quảng cáo, logo;
-- không đùa về sự giống nhau;
+Từ 2026-11-11 nhân vật là **Albert Einstein thật** (theo yêu cầu của người dùng), không còn là nhân vật hư cấu giống ông. Việc này bỏ hai lớp giảm rủi ro cũ: nhân vật không còn là người hư cấu, và tên Einstein nằm trong nội dung chứ không chỉ khi ghi công. Hình ảnh không đổi: ảnh thật năm 1921 (Ferdinand Schmutzer, Wikimedia Commons, public domain do tác giả mất 1928) làm identity reference. Quyền hình ảnh và nhãn hiệu của Hebrew University/GreenLight tách biệt với bản quyền ảnh, nên ảnh public domain không xoá rủi ro này. Rủi ro lớn hơn trước và chưa kiểm; cần hỏi luật sư trước khi đăng hay kiếm tiền. Các lớp giảm rủi ro còn giữ:
+- nội dung hư cấu rõ ràng (hai người thật gặp nhau qua wormhole), ghi trong mô tả mỗi tập;
+- không dùng tên hay ảnh thật ở tiêu đề, thumbnail, tên kênh, merch, quảng cáo, logo cho tới khi rà quyền;
+- không bịa đời tư, quan điểm chính trị, tôn giáo hay phát ngôn ngoài khoa học; ngoặc kép chỉ cho câu có nguồn;
+- giọng sinh bằng Qwen3-TTS, không nhái hay clone giọng thu âm thật;
 - bật nhãn "AI-generated" cho mọi tập (mục YouTube).
+
+Chưa kiểm: H3 có lọc nội dung khi tên người thật nằm trong prompt hay không (skill giữ tên ngoài phần tả cảnh cho tới khi chạy thử).
 
 Ảnh nguồn và ghi chú: `assets/characters/real_refs/SOURCES.md`.
 
 ## Newton
 
-Ambrose giống hẳn Newton, dùng chân dung Godfrey Kneller 1689 (public domain, tác giả mất 1723) làm identity reference. Newton mất năm 1727; chưa thấy ai thực thi quyền hình ảnh cho ông, và chưa kiểm luật hay thương hiệu nào liên quan tới tên ông. Rủi ro thấp hơn Einstein rõ rệt. Nhân vật hư cấu, không đặt tên Newton ở tên kênh.
+Nhân vật là **Isaac Newton thật**, dùng chân dung Godfrey Kneller 1689 (public domain, tác giả mất 1723) làm identity reference. Newton mất năm 1727; chưa thấy ai thực thi quyền hình ảnh cho ông, và chưa kiểm luật hay thương hiệu nào liên quan tới tên ông. Rủi ro thấp hơn Einstein rõ rệt nhưng cùng nguyên tắc: nội dung hư cấu rõ ràng, không bịa lời và quan điểm ngoài khoa học.
 
 ## YouTube
 
-- **Nhãn altered/synthetic:** bật cho mọi tập. [Trang trợ giúp](https://support.google.com/youtube/answer/14328491) yêu cầu công bố cảnh thực tế không có thật. Không có ví dụ về người dẫn AI hư cấu; bật là cách đọc an toàn.
-- **Mô tả mọi tập:** "AI-generated fictional characters. Made with MiniMax H3. Sources below."
+- **Nhãn altered/synthetic:** bật cho mọi tập. [Trang trợ giúp](https://support.google.com/youtube/answer/14328491) yêu cầu công bố cảnh thực tế không có thật. Nhân vật là người thật được dựng bằng AI nên bật nhãn là bắt buộc trong cách đọc an toàn.
+- **Mô tả mọi tập:** "AI-generated fictional conversation between historical figures. Made with MiniMax H3. Sources below."
 - **Nội dung lặp lại:** toàn bộ hình là AI. Mỗi tập phải đổi câu hỏi, bối cảnh, cấu trúc và trò đùa; có kịch bản viết riêng và nguồn rõ. [TechCrunch](https://techcrunch.com/2026/07/20/youtube-clarifies-policies-around-ai-slop-and-upsetting-videos/) mô tả chính sách tháng 7/2026; chưa đọc đủ văn bản chính thức.

@@ -20,7 +20,7 @@ python3 -c "import sys; sys.exit(0 if float('${SPEED:-0}') > 20e6 else 1)" || { 
 T0=$(date +%s); head -c 5000000 /dev/urandom | $SSH 'cat >/dev/null'; echo "mac upload 5 MB: $(( $(date +%s) - T0 )) s"
 $SSH 'mkdir -p /opt/dramaclaw /opt/bench; nvidia-smi --query-gpu=name,driver_version,memory.total --format=csv,noheader; free -g | sed -n 2p; df -h /opt | tail -1'
 cd "$R" && COPYFILE_DISABLE=1 tar czf - --exclude='__pycache__' --exclude='*.pyc' --exclude='video_production_with_skills/runs' \
-  --exclude='*/candidates' --exclude='*/shorts/*/keyframes' --exclude='*/contact_sheet*' \
+  --exclude='*/candidates' --exclude='*/contact_sheet*' \
   src pyproject.toml scripts/face_similarity.py video_production_with_skills | $SSH 'tar xzf - -C /opt/dramaclaw' || { echo "UPLOAD FAILED"; exit 1; }
 echo "upload ok $(date -u +%T)"
 if [ "$QWEN" = "--images-only" ]; then SETUP_FLAGS="--images-only"; else SETUP_FLAGS="--with-ref2va $QWEN"; fi

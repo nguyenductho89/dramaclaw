@@ -14,7 +14,7 @@ its output fields changes its hash, so it has to be reviewed again.
 import argparse, hashlib, json, re, sys, time
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 MAX_REFERENCE_IMAGES = 10  # skill N1
 _TAG = re.compile(r"<image(\d+)>")
 _SIZE = re.compile(r"\b\d+\s*:\s*\d+\b|\b\d{3,5}\s*[x×]\s*\d{3,5}\b|\b[2-8]K\b|\b\d{3,4}p\b")
@@ -94,6 +94,8 @@ def main() -> int:
     ap.add_argument("prompts")
     ap.add_argument("--review", help="record: the skill review report that found no violation")
     a = ap.parse_args()
+    if not Path(a.prompts).exists():
+        raise SystemExit(f"no prompts file at {a.prompts}: write the keyframe prompts (script-to-qwen-storyboard) first")
     reviews, bad = _reviews(a.prompts), 0
     if a.cmd == "record" and (not a.review or not Path(a.review).exists()):
         raise SystemExit("record needs --review <file>: the qwen-image-prompting review of these prompts")

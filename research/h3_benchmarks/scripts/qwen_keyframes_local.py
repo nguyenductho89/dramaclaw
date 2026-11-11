@@ -1,6 +1,6 @@
 """Batch Qwen-Image 2.1 keyframes against a LOCAL ComfyUI, one candidate set per skit chain.
 
-  python research/h3_benchmarks/scripts/qwen_keyframes_local.py video_production_with_skills/shorts/newton_pov
+  python research/h3_benchmarks/scripts/qwen_keyframes_local.py video_production_with_skills/series/science_humor/assets/characters
   python research/h3_benchmarks/scripts/qwen_keyframes_local.py <dir> --dry-run   # validate and print one graph, no server
 
 Reads `keyframe_prompt` and `aspect_ratio` from every chain_*.json in <dir>. Writes

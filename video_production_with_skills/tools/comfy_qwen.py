@@ -15,7 +15,7 @@ import urllib.request
 import uuid
 from pathlib import Path
 
-R = Path(__file__).resolve().parents[1]
+R = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(R / "src"))
 from novelvideo.config import RUNPOD_QWEN_IMAGE_TEXT_ENCODER, RUNPOD_QWEN_IMAGE_UNET, RUNPOD_QWEN_IMAGE_VAE  # noqa: E402
 

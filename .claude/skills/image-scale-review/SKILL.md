@@ -51,7 +51,7 @@ Với vật đứng trên cùng một mặt đất phẳng, chiều cao px tỉ 
 7. **Vật bị cắt khỏi khung** (tán cây vượt mép trên): chỉ có **cận dưới** của chiều cao — vẫn kết luận được nếu cận dưới đã vượt khoảng kỳ vọng (vd "≥7 m-tương-đương, vượt 3-5 m"), ghi rõ là cận dưới.
 8. **Giới hạn**: mặt đất phải gần phẳng (đồi dốc, bậc thang làm sai công thức — ghi chú); chân vật bị cỏ/đá che làm y chân lệch vài chục px, nhất là vật ở gần chân trời (mẫu số `y_chân − y_ct` nhỏ → sai số lớn, hạ mức kết luận xuống CẢNH BÁO); và phải đo đúng *chân chạm đất*, không phải bóng.
 
-Ví dụ làm tay thật (`chain_02_shot3.png`, Mặt Trăng): chân trời y≈233 (đo cột sáng); Barnaby 628px chân y735 → K=0,736; Ambrose 617px chân y725 → K=0,738 (khớp 0,2%, camera ~1,36 m). Kỳ vọng vs đo: module 7 m → 1006 vs 340px (**0,34×**); phi hành gia 1,8 m → 194 vs 61px (**0,32×**); cột cờ ~2,4 m → 384 vs 148px (**0,39×**). Cả ba lệch cùng hệ số ~0,3-0,4 → **lỗi cả lớp nền (nhỏ ~3× so với hai người)**, không phải lỗi từng vật.
+Ví dụ làm tay thật (`chain_02_shot3.png`, Mặt Trăng): chân trời y≈233 (đo cột sáng); Einstein 628px chân y735 → K=0,736; Newton 617px chân y725 → K=0,738 (khớp 0,2%, camera ~1,36 m). Kỳ vọng vs đo: module 7 m → 1006 vs 340px (**0,34×**); phi hành gia 1,8 m → 194 vs 61px (**0,32×**); cột cờ ~2,4 m → 384 vs 148px (**0,39×**). Cả ba lệch cùng hệ số ~0,3-0,4 → **lỗi cả lớp nền (nhỏ ~3× so với hai người)**, không phải lỗi từng vật.
 
 ## Thêm khi ảnh do Qwen-Image 2.1 sinh (qwen_images.py)
 

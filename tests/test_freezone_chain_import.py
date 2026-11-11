@@ -3,7 +3,7 @@
 `chain_NN.json` (written with the `longform-minimax-h3-script-writer` skill) is
 already the interchange format between the authoring scripts, the local bench and
 the review skills — so Freezone reads it rather than inventing a second one, and
-the gravity-test chains in the repo are used here as the fixture, which also
+`tests/fixtures/freezone_chain_16x9_two_voices.json` is used here as the fixture, which also
 catches the format drifting away from the importer.
 
 `chain_json_to_multishot_request` is pure: no filesystem, no URL resolution. The

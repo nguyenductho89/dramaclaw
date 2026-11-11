@@ -4,7 +4,7 @@
 # ///
 """Design narrator voices with the open Qwen3-TTS VoiceDesign model; each clip is a candidate H3 voice_ref.
 
-  uv run video_production_with_skills/tools/qwen_voice_design.py video_production_with_skills/shorts/newton_pov/voice [voices_config.json]
+  uv run video_production_with_skills/tools/qwen_voice_design.py video_production_with_skills/series/science_humor/assets/voices [voices_config.json]
 
 The hosted Voice Design API answered "Model not exist" on this account (2026-11-04), so this runs the Apache-2.0 model
 `Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign` locally. Device: cuda if present, otherwise cpu (override with TTS_DEVICE).

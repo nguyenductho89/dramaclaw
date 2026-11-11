@@ -19,7 +19,7 @@ Assumes both chain videos and both background stills share the same resolution/f
 import argparse, json, random, subprocess, sys, tempfile
 from pathlib import Path
 
-R = Path(__file__).resolve().parents[1]
+R = Path(__file__).resolve().parents[2]
 
 
 def ffprobe_json(path: Path) -> dict:

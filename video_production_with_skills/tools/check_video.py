@@ -12,7 +12,7 @@ speech, and each face.
 <chain_name> is the JSON name in <episode>/chains/ (chain_01, chain_02, ...). The episode is picked with SERIES and EP
 (default science_humor and ep01). Per shot it reports:
 - the words H3 spoke (faster-whisper base.en) against the script line, as a 0-1 match;
-- which voice spoke each segment (Resemblyzer cosine to assets/voices/barnaby.wav and ambrose.wav) against the expected speaker;
+- which voice spoke each segment (Resemblyzer cosine to assets/voices/einstein.wav and newton.wav) against the expected speaker;
 - speech that starts after the line should have ended (the extra-speech defect);
 - from frames in the shot, how many faces YuNet finds and the SFace cosine of each face to both character sheets.
 
@@ -33,7 +33,7 @@ from pathlib import Path
 
 import numpy as np
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 SERIES_DIR = ROOT / "video_production_with_skills/series" / os.environ.get("SERIES", "science_humor")
 EP_DIR = SERIES_DIR / os.environ.get("EP", "ep01")
 REPORTS = EP_DIR / "reports"
@@ -49,7 +49,7 @@ def expected_shots(chain: dict) -> list[dict]:
         m = re.search(r"At ([\d.]+) seconds <Subject (\d)> \(S\d\) says it .*?<d>\[English\] (.*?)</d>", shot)
         end = re.search(r"At ([\d.]+) seconds <Subject \d> finishes", shot)
         out.append({"index": i + 1, "start_s": i * frames / FPS, "length_s": frames / FPS,
-                    "speaker": "barnaby" if m.group(2) == "1" else "ambrose", "text": m.group(3),
+                    "speaker": "einstein" if m.group(2) == "1" else "newton", "text": m.group(3),
                     "line_start": float(m.group(1)), "line_end": float(end.group(1))})
     return out
 
@@ -94,7 +94,7 @@ def sheet_embeddings():
     """Per character, embeddings of every face found in its sheet (three views)."""
     cv2, fs, det, rec = face_tools()
     refs = {}
-    for name in ("barnaby", "ambrose"):
+    for name in ("einstein", "newton"):
         img = cv2.imread(str(SERIES_DIR / "assets" / "characters" / f"{name}_sheet.png"))
         refs[name] = [e for _x, _h, e in faces_in(img)] if img is not None else []
     return refs
@@ -142,8 +142,8 @@ def main() -> int:
     cv2, fs, det, rec = face_tools()
     whisper = WhisperModel("base.en", device="cpu", compute_type="int8")
     enc = VoiceEncoder("cpu")
-    voices = {n: enc.embed_utterance(preprocess_wav(SERIES_DIR / "assets" / "voices" / f"{n}.wav")) for n in ("barnaby", "ambrose")}
-    print("voice refs cosine between the two characters:", round(float(np.dot(voices["barnaby"], voices["ambrose"])), 2))
+    voices = {n: enc.embed_utterance(preprocess_wav(SERIES_DIR / "assets" / "voices" / f"{n}.wav")) for n in ("einstein", "newton")}
+    print("voice refs cosine between the two characters:", round(float(np.dot(voices["einstein"], voices["newton"])), 2))
     sheets = sheet_embeddings()
     print("faces found in sheets:", {k: len(v) for k, v in sheets.items()})
     report = {}

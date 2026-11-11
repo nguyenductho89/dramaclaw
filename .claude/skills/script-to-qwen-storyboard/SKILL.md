@@ -8,7 +8,7 @@ description: Chuyển kịch bản text thường thành storyboard (gồm tư t
 ## Nguyên tắc
 - Chỉ dựa vào kịch bản và các tài liệu đi kèm trong cùng bộ kịch bản (ví dụ series bible).
 - Mỗi ý trong storyboard ghi căn cứ: cột nào của kịch bản (người nói, lời, trò đùa, bối cảnh) hoặc mục nào của tài liệu đi kèm.
-- Camera và cỡ khung từng shot do skill viết theo nội dung kịch bản (lời, trò đùa, ai đang được nhấn). Cỡ khung chỉ đổi bên trong một shot; ở chỗ nối hai shot không cắt khung: khung đầu shot i+1 đúng bằng khung cuối shot i.
+- Góc, cỡ khung và chuyển động camera từng shot do skill `longform-camera-angles` chọn theo nội dung kịch bản (lời, trò đùa, ai đang được nhấn), kèm lý do. Trong cùng chain, camera đầu shot i+1 đúng bằng camera cuối shot i; đổi góc là chain mới (một K0 mới).
 - Điều không suy ra được từ kịch bản thì hỏi user, không tự chọn.
 - Prompt Qwen không do code viết: soạn và review bằng skill `qwen-image-prompting`.
 - **Không có tiếng Việt trong prompt và trong file prompt.** `rewritten_prompt` viết bằng tiếng Anh (`qwen-image-prompting` E15: yêu cầu không phải tiếng Trung hay tiếng Anh thì mô tả bằng tiếng Anh); mọi trường khác của file prompt cũng bằng tiếng Anh. Storyboard trong kịch bản có thể viết bằng ngôn ngữ của kịch bản, nhưng khi soạn prompt phải chuyển nội dung sang tiếng Anh.
@@ -25,23 +25,20 @@ Thêm mục `## Storyboard` vào cuối file kịch bản, gồm:
 
 **Bảng shot** (một dòng mỗi shot):
 
-| Cảnh, shot | Người nói, lời | Tư thế đầu shot | Tư thế cuối shot | Vật cầm | Cỡ khung đầu | Cỡ khung cuối | Căn cứ |
-|---|---|---|---|---|---|---|---|
+| Chain, shot | Người nói, lời | Tư thế đầu shot | Tư thế cuối shot | Vật cầm | Góc | Cỡ khung đầu | Chuyển động | Phông | Căn cứ và lý do góc |
+|---|---|---|---|---|---|---|---|---|---|
 
-Cỡ khung ghi bằng mã tiếng Anh, định nghĩa một lần trong mục "Chung" bằng điều nhìn thấy được: `wide` (thấy trọn từ đầu tới chân), `medium` (từ giữa đùi trở lên), `close` (từ dưới eo trở lên).
+Góc và chuyển động ghi bằng mã của skill `longform-camera-angles`; cỡ khung bằng mã tiếng Anh, định nghĩa một lần trong mục "Chung" bằng điều nhìn thấy được: `wide` (thấy trọn từ đầu tới chân), `medium` (từ giữa đùi trở lên), `close` (từ dưới eo trở lên). Với shot có chuyển động, ghi điểm cuối của chuyển động trong cột Chuyển động. Góc một người: nêu người ngoài khung đang làm gì trong cột tư thế.
 
-**Kiểm tra liền mạch:** với mọi shot i+1 trong cùng cảnh, tư thế đầu = tư thế cuối shot i, cỡ khung đầu = cỡ khung cuối shot i, vật cầm và vị trí không đổi giữa hai dòng. Sai ở đâu thì sửa trước khi đi tiếp.
+**Kiểm tra liền mạch:** với mọi shot i+1 trong cùng chain, tư thế đầu = tư thế cuối shot i, camera đầu shot i+1 (góc và cỡ khung) = camera cuối shot i (sau chuyển động của shot i), vật cầm và vị trí không đổi giữa hai dòng. Qua cú cắt giữa hai chain: tư thế, vật cầm và vị trí màn hình giữ nguyên, chỉ góc, cỡ khung và phông đổi. Sai ở đâu thì sửa trước khi đi tiếp.
 
 ### 3. Hỏi và duyệt
 Hỏi user các điều không suy ra được, ghi câu trả lời vào mục Storyboard. User duyệt storyboard trước khi soạn prompt.
 
-### 4. Lập danh sách keyframe (theo từng cảnh)
-- K0 = khung đầu shot đầu tiên của cảnh; K(i) = khung cuối shot i (cũng là khung đầu shot i+1).
-- **Ảnh đầu vào**, đúng thứ tự gửi đi: `<image1>` là canvas (ảnh nền của cảnh cho K0; keyframe vừa chọn của khung trước, ghi là `@prev`, cho K1 trở đi), rồi ảnh tham chiếu từng nhân vật theo thứ tự cố định ở bước 2. Tổng số ảnh mỗi khung tối đa 10 (`qwen-image-prompting` N1).
-- **Chế độ:**
-  - K0 → `compose`: ảnh mới của các chủ thể, đặt nhân vật vào cảnh; canvas là ảnh cảnh (E2, E12).
-  - K(i), cỡ khung K(i) bằng cỡ khung K(i−1) → `edit`: sửa chính ảnh, chỉ đổi tư thế và biểu cảm; canvas là `<image1>` (E2).
-  - K(i), cỡ khung khác K(i−1) → `reframe`: sửa chính ảnh, đổi khoảng cách camera và tư thế; canvas là `<image1>` (E2).
+### 4. Lập danh sách keyframe (chỉ K0, một khung mỗi chain)
+- H3 chỉ nhận một khung đầu cho cả chain, nên chỉ làm **K0** = khung đầu shot đầu tiên của chain. Không làm khung cuối từng shot.
+- **Ảnh đầu vào**, đúng thứ tự gửi đi: `<image1>` là canvas = ảnh phông của setup chain (đúng địa điểm và loại phông `front`/`low`/`high`), rồi ảnh tham chiếu từng nhân vật theo thứ tự cố định ở bước 2. Góc một người: vẫn gửi cả hai sheet nhưng prompt chỉ nêu người trong khung. Tổng số ảnh mỗi khung tối đa 10 (`qwen-image-prompting` N1).
+- **Chế độ:** K0 → `compose`: ảnh mới của các chủ thể, đặt nhân vật vào cảnh; canvas là ảnh phông (E2, E12).
 
 ### 5. Soạn prompt
 Mỗi keyframe một prompt bằng tiếng Anh, bằng skill `qwen-image-prompting` (loại E). Đọc các ảnh đầu vào đã có; cỡ khung viết thành mô tả nhìn thấy được (E6); nhân vật trỏ bằng vị trí và thẻ ảnh tham chiếu của họ (E5, E9); nội dung khung lấy đúng từ dòng storyboard tương ứng.
@@ -50,13 +47,12 @@ Mỗi keyframe một prompt bằng tiếng Anh, bằng skill `qwen-image-prompti
 `video_production_with_skills/series/<series>/<tập>/keyframes/qwen_keyframe_prompts.json` (thư mục của tập; kịch bản là `video_production_with_skills/series/<series>/<tập>/script.md`):
 ```json
 {"<cảnh>": [
-  {"k": 0, "mode": "compose", "framing": "wide", "storyboard_ref": "scene 01, shot 1, start",
+  {"k": 0, "mode": "compose", "framing": "wide", "storyboard_ref": "chain 01, shot 1, start",
    "images": ["<ảnh nền>", "<ảnh nhân vật 1>", "<ảnh nhân vật 2>"],
-   "rewritten_prompt": "...", "wh_ratio": "", "ratio_follow": "<image1>"},
-  {"k": 1, "mode": "edit", "framing": "wide", "storyboard_ref": "scene 01, shot 1, end",
-   "images": ["@prev", "<ảnh nhân vật 1>", "<ảnh nhân vật 2>"],
+   "present": ["einstein", "newton"],
    "rewritten_prompt": "...", "wh_ratio": "", "ratio_follow": "<image1>"}]}
 ```
+`present` (tuỳ chọn, mặc định cả hai): các nhân vật có trong khung; góc một người ghi một tên (`"newton"` hoặc `"einstein"`) để cổng chấm ảnh không trừ điểm vì thiếu người. Khoá của file là `chain_NN` (một K0 mỗi chain).
 
 ### 7. Review và ghi sổ
 - Review từng prompt bằng skill `qwen-image-prompting` (mục "Review prompt"); biên bản lưu ở `video_production_with_skills/series/<series>/<tập>/keyframes/reviews/<ngày>.md`.
@@ -65,6 +61,6 @@ Mỗi keyframe một prompt bằng tiếng Anh, bằng skill `qwen-image-prompti
 - Kiểm: `python3 video_production_with_skills/tools/qwen_prompt_gate.py check video_production_with_skills/series/<series>/<tập>/keyframes/qwen_keyframe_prompts.json` → mọi prompt `reviewed`. Cổng chặn prompt có chữ tiếng Việt.
 
 ## Sau khi sinh ảnh
-- Sinh từng khung: `python video_production_with_skills/tools/qwen_images.py keyframes video_production_with_skills/series/<series>/<tập> --until <k>`.
-- Trước khi sinh khung kế tiếp, kiểm ảnh vừa chọn có khớp dòng storyboard không bằng skill `image-review-haiku` và xem bằng mắt.
-- Ảnh lệch storyboard: soạn lại prompt của khung kế tiếp bằng `qwen-image-prompting` dựa trên ảnh thật, review và ghi sổ lại (prompt đổi thì phải review lại mới chạy được).
+- Sinh từng khung: `python video_production_with_skills/tools/qwen_images.py keyframes video_production_with_skills/series/<series>/<tập> --until 0` (chỉ K0).
+- Kiểm từng K0 có khớp dòng storyboard không bằng skill `image-review-haiku` và xem bằng mắt.
+- Ảnh lệch storyboard: soạn lại prompt K0 đó bằng `qwen-image-prompting` dựa trên ảnh thật, review và ghi sổ lại (prompt đổi thì phải review lại mới chạy được).

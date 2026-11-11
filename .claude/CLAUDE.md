@@ -141,7 +141,7 @@ Log chi tiết từng phiên làm việc (thử nghiệm, debug, benchmark) đã
 - Yui: đổi pipeline — bỏ ghép ảnh tĩnh, dùng H3 trực tiếp (2026-10-27) — quyết định kiến trúc hiện hành cho project Yui.
 - H3 extend (nối tiếp clip) (2026-10-31) — A/B sheet nhân vật + video đuôi cho nút Smart extend.
 - Qwen 2.1 render: sketch riêng, chọn ảnh identity theo beat, Turbo LoRA (2026-10-31) — fix bug chọn nhầm ảnh identity khi render nhiều beat.
-- Series Science humor (Barnaby và Ambrose): sản xuất video bằng skill nằm ở `video_production_with_skills/` (xem `pipeline.html` trong đó); benchmark và thử nghiệm H3 cũ ở `research/h3_benchmarks/` (trước đây là `previs_h3_test/`).
+- Series Science humor (Einstein và Newton): sản xuất video bằng skill nằm ở `video_production_with_skills/` (xem `pipeline.html` trong đó); benchmark và thử nghiệm H3 cũ ở `research/h3_benchmarks/` (trước đây là `previs_h3_test/`).
 - Freezone: mẫu prompt H3 dựng sẵn cho RunPod (2026-10-28) — 16 template prompt H3 trong UI node Video.
 - Worker H3 nhanh hơn: torch cu130 + Sage (2026-10-28) — đổi image worker, benchmark tốc độ.
 - SeedVR2: 2x hallucinate chi tiết (nhẫn mũi) trên mặt nhỏ (2026-10-29) — fix bằng 1.5x + Lanczos finish.

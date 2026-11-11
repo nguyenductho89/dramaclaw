@@ -16,7 +16,7 @@ so — the agent must not approve on its own.
 import argparse, hashlib, json, os, sys, time
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 EP_DIR = ROOT / "video_production_with_skills/series" / os.environ.get("SERIES", "science_humor") / os.environ.get("EP", "ep01")
 KF = EP_DIR / "keyframes"
 IMAGES = KF / "images"

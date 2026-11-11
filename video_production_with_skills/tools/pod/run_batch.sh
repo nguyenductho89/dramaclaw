@@ -2,8 +2,8 @@
 # Pod-side steps of one episode, run from /opt/dramaclaw (start them in tmux so a dropped SSH link does not kill them).
 # The episode is picked with SERIES and EP (default science_humor and ep01).
 #   bash video_production_with_skills/tools/pod/run_batch.sh voices
-#       3 American candidates for Barnaby and 3 British candidates for Ambrose, written to assets/voices/candidates/.
-#       Pick one of each with tools/pick_voices.py (copies assets/voices/barnaby.wav and ambrose.wav).
+#       3 American candidates for Einstein and 3 British candidates for Newton, written to assets/voices/candidates/.
+#       Pick one of each with tools/pick_voices.py (copies assets/voices/einstein.wav and newton.wav).
 #   bash video_production_with_skills/tools/pod/run_batch.sh images --n 3 [--only chain_01] [--until 0]
 #       Qwen-Image 2.1 keyframes on the pod (tools/qwen_images.py keyframes; needs pod_up.sh ... --images-only). Every
 #       prompt must already be reviewed with the qwen-image-prompting skill and recorded by tools/qwen_prompt_gate.py.
@@ -38,10 +38,10 @@ curl -sf 127.0.0.1:8188/system_stats >/dev/null || fail "ComfyUI is not answerin
 
 if [ "$STAGE" = voices ]; then
   stamp free_vram; free_vram
-  stamp voice_barnaby_us
-  timeout 1200 uv run $T/qwen_voice_design.py "$SD/assets/voices/candidates/barnaby" "$SD/assets/voices/barnaby_us_config.json" || fail "voice design barnaby"
-  stamp voice_ambrose_uk
-  timeout 1200 uv run $T/qwen_voice_design.py "$SD/assets/voices/candidates/ambrose" "$SD/assets/voices/ambrose_candidates.json" || fail "voice design ambrose"
+  stamp voice_einstein_us
+  timeout 1200 uv run $T/qwen_voice_design.py "$SD/assets/voices/candidates/einstein" "$SD/assets/voices/einstein_us_config.json" || fail "voice design einstein"
+  stamp voice_newton_uk
+  timeout 1200 uv run $T/qwen_voice_design.py "$SD/assets/voices/candidates/newton" "$SD/assets/voices/newton_candidates.json" || fail "voice design newton"
   touch /opt/bench/${EP}_voices.done; stamp done; exit 0
 fi
 
@@ -59,7 +59,7 @@ fi
 for n in H3MultishotSampler H3ModelLoaderAny; do
   curl -s 127.0.0.1:8188/object_info | grep -q "\"$n\"" || fail "node $n missing"
 done
-for f in $SD/assets/voices/barnaby.wav $SD/assets/voices/ambrose.wav $SD/assets/characters/barnaby_sheet.png $SD/assets/characters/ambrose_sheet.png; do
+for f in $SD/assets/voices/einstein.wav $SD/assets/voices/newton.wav $SD/assets/characters/einstein_sheet.png $SD/assets/characters/newton_sheet.png; do
   test -s "$f" || fail "missing input $f (make it first: tools/gemini_webai_images.py sheet, or run_batch.sh voices)"
 done
 stamp free_vram; free_vram

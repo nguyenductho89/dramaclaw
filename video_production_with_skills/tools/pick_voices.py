@@ -3,10 +3,10 @@
 # requires-python = ">=3.12,<3.13"
 # dependencies = ["resemblyzer", "setuptools<81", "numpy<2.3"]
 # ///
-"""Score every Barnaby-candidate x Ambrose-candidate pair by Resemblyzer cross-cosine, pick the lowest
-(most different-sounding) pair, and copy those two files to <voice_dir>/barnaby.wav and <voice_dir>/ambrose.wav.
+"""Score every Einstein-candidate x Newton-candidate pair by Resemblyzer cross-cosine, pick the lowest
+(most different-sounding) pair, and copy those two files to <voice_dir>/einstein.wav and <voice_dir>/newton.wav.
 
-  uv run video_production_with_skills/tools/pick_voices.py <barnaby_cands_dir> <ambrose_cands_dir> <voice_dir>
+  uv run video_production_with_skills/tools/pick_voices.py <einstein_cands_dir> <newton_cands_dir> <voice_dir>
 
 Writes <voice_dir>/voice_pick_report.json with the full cosine matrix so the pick can be reviewed/overridden later.
 """
@@ -36,9 +36,9 @@ def main() -> int:
                 best_cos, best_pair = cos, (bn, an)
     bn, an = best_pair
     voice_dir.mkdir(parents=True, exist_ok=True)
-    shutil.copy(bdir / f"{bn}.wav", voice_dir / "barnaby.wav")
-    shutil.copy(adir / f"{an}.wav", voice_dir / "ambrose.wav")
-    report = {"matrix": matrix, "chosen": {"barnaby": bn, "ambrose": an, "cross_cosine": round(best_cos, 3)}}
+    shutil.copy(bdir / f"{bn}.wav", voice_dir / "einstein.wav")
+    shutil.copy(adir / f"{an}.wav", voice_dir / "newton.wav")
+    report = {"matrix": matrix, "chosen": {"einstein": bn, "newton": an, "cross_cosine": round(best_cos, 3)}}
     (voice_dir / "voice_pick_report.json").write_text(json.dumps(report, indent=1) + "\n")
     print(json.dumps(report, indent=1))
     return 0

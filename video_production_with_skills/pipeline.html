@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Pipeline Science Humor</title>
+<title>Pipeline sản xuất video</title>
 <style>
 :root{
   --bg:#f6f5f1; --card:#ffffff; --ink:#1d1c1a; --muted:#6b675f; --line:#dedbd2;
@@ -81,8 +81,8 @@ footer{margin-top:40px;color:var(--muted);font-size:13px}
 </head>
 <body>
 <main>
-  <h1>Pipeline Science Humor: từ kịch bản đến video</h1>
-  <p class="sub">Bài thử gravity test (Barnaby và Ambrose, 16:9). Mỗi bước ghi rõ ai làm, đầu vào, đầu ra và cổng chặn. Không có code nào viết kịch bản, storyboard hay prompt: những thứ đó do skill viết, code chỉ chạy máy và kiểm tra.</p>
+  <h1>Pipeline sản xuất video bằng skill</h1>
+  <p class="sub">Từ kịch bản đến video cho series Science humor (Barnaby và Ambrose, 16:9). Mỗi bước ghi ai làm, đầu vào, đầu ra và cổng chặn. Kịch bản, storyboard và prompt do skill viết; code chỉ chạy máy và kiểm tra. Đường dẫn tính từ <code>video_production_with_skills/</code>, <code>EP</code> là <code>series/science_humor/ep01</code>.</p>
 
   <div class="legend">
     <span class="tag skill">Skill viết / review</span>
@@ -96,37 +96,50 @@ footer{margin-top:40px;color:var(--muted);font-size:13px}
     <table>
       <thead><tr><th>Bước</th><th>Skill</th><th>File</th></tr></thead>
       <tbody>
-        <tr><td>Kịch bản</td><td><code>longform-minimax-h3-script-writer</code></td><td><span class="path">video_production_with_skills/series/science_humor/ep01/script.md</span></td></tr>
-        <tr><td>Storyboard</td><td><code>script-to-qwen-storyboard</code></td><td>mục <code>## Storyboard</code> trong file kịch bản</td></tr>
-        <tr><td>Prompt keyframe</td><td><code>script-to-qwen-storyboard</code> + <code>qwen-image-prompting</code></td><td><span class="path">gravity_test/qwen_keyframe_prompts.json</span></td></tr>
-        <tr><td>Chain H3 (video)</td><td><code>longform-minimax-h3-script-writer</code>, sau khi bạn duyệt ảnh keyframe</td><td><span class="path">gravity_test/chain_NN.json</span></td></tr>
+        <tr><td>Kịch bản</td><td><code>longform-minimax-h3-script-writer</code></td><td><span class="path">EP/script.md</span></td></tr>
+        <tr><td>Storyboard</td><td><code>script-to-qwen-storyboard</code></td><td>mục <code>## Storyboard</code> trong <span class="path">EP/script.md</span></td></tr>
+        <tr><td>Prompt keyframe</td><td><code>script-to-qwen-storyboard</code> + <code>qwen-image-prompting</code></td><td><span class="path">EP/keyframes/qwen_keyframe_prompts.json</span></td></tr>
+        <tr><td>Chain H3 (video)</td><td><code>longform-minimax-h3-script-writer</code>, sau khi bạn duyệt ảnh keyframe</td><td><span class="path">EP/chains/chain_NN.json</span></td></tr>
       </tbody>
     </table>
   </div>
-  <p class="note">Đường dẫn <code>gravity_test/</code> là <code>video_production_with_skills/series/science_humor/ep01/</code>. Bên dưới là toàn bộ chuỗi, gồm cả bước chuẩn bị tài sản, sinh ảnh, review, render và kiểm video.</p>
+
+  <h2>Trạng thái tập 1 (What is gravity, really?)</h2>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Bước</th><th>Trạng thái</th></tr></thead>
+      <tbody>
+        <tr><td>0 Tài sản</td><td>Có sheet hai nhân vật, hai ảnh nền (vườn, Mặt Trăng), hai giọng, ảnh wormhole</td></tr>
+        <tr><td>1 Kịch bản</td><td>Xong: 51 shot, 6:48, 9 chain. Review không có lỗi CHẶN; còn hai CẢNH BÁO (479 từ, dưới mức 550-700; chain 06 và 07 nói về quỹ đạo và sóng hấp dẫn ở Mặt Trăng)</td></tr>
+        <tr><td>2 Storyboard</td><td>Đã viết, chờ bạn duyệt (ba câu hỏi ở cuối mục Storyboard)</td></tr>
+        <tr><td>3 Prompt keyframe</td><td>Chưa soạn (chờ duyệt Storyboard)</td></tr>
+        <tr><td>4 đến 8</td><td>Chưa chạy</td></tr>
+      </tbody>
+    </table>
+  </div>
 
   <h2>Các bước</h2>
   <div class="flow">
 
     <section class="step">
       <div class="head">
-        <div class="num">0</div><h3>Chuẩn bị tài sản (một lần cho cả series)</h3>
-        <div class="who"><span class="tag code">gemini_webai_images.py</span><span class="tag code">run_batch.sh voices</span><span class="tag human">bạn chọn ảnh, giọng</span></div>
+        <div class="num">0</div><h3>Chuẩn bị tài sản</h3>
+        <div class="who"><span class="tag code">tools/gemini_webai_images.py</span><span class="tag code">tools/pod/run_batch.sh voices</span><span class="tag human">bạn chọn ảnh, giọng</span></div>
       </div>
       <div class="io">
         <div class="box"><h4>Đầu vào</h4><ul>
-          <li><code>video_production_with_skills/series/science_humor/series-bible.md</code> (nhân vật, bối cảnh, luật truyện)</li>
-          <li><code>gravity_test/image_prompts.json</code> (prompt tĩnh cho sheet và nền, không do code sinh lại)</li>
-          <li>Ảnh thật làm tham chiếu danh tính: <code>character/real_refs/</code></li>
+          <li><code>series/science_humor/series-bible.md</code> (nhân vật, bối cảnh, luật truyện)</li>
+          <li><code>series/science_humor/assets/image_prompts.json</code> (prompt sheet) và <code>EP/image_prompts.json</code> (prompt nền)</li>
+          <li>Ảnh thật làm tham chiếu danh tính: <code>assets/characters/real_refs/</code></li>
         </ul></div>
         <div class="box out"><h4>Đầu ra</h4><ul>
-          <li><code>character/barnaby_sheet.png</code>, <code>ambrose_sheet.png</code> (một người, hai góc, nền xám)</li>
-          <li><code>character/barnaby_front.png</code>, <code>ambrose_front.png</code></li>
-          <li><code>gravity_test/backgrounds/orchard.png</code>, <code>moon.png</code> (nền trống)</li>
-          <li><code>voice/barnaby.wav</code> (giọng Mỹ), <code>voice/ambrose.wav</code> (giọng Anh)</li>
+          <li><code>assets/characters/barnaby_sheet.png</code>, <code>ambrose_sheet.png</code> (một người, hai góc, nền xám), <code>*_front.png</code></li>
+          <li><code>EP/backgrounds/orchard.png</code>, <code>moon.png</code> (nền trống)</li>
+          <li><code>assets/voices/barnaby.wav</code> (giọng Mỹ), <code>ambrose.wav</code> (giọng Anh)</li>
+          <li><code>assets/transition/wormhole_flight.png</code> (ảnh cho đoạn chuyển cảnh)</li>
         </ul></div>
       </div>
-      <p class="how"><b>Cách chạy:</b> <code>gemini_webai_images.py sheet|plate</code> chạy trên máy này qua WebAI-to-API (không cần GPU); giọng sinh trên pod bằng <code>run_batch.sh voices</code>. Bạn chọn ảnh và giọng tốt nhất, chép vào đúng đường dẫn.</p>
+      <p class="how"><b>Cách chạy:</b> <code>gemini_webai_images.py sheet|plate</code> chạy trên máy này qua WebAI-to-API, không cần GPU; giọng sinh trên pod bằng <code>run_batch.sh voices</code> rồi <code>pick_voices.py</code> chọn cặp khác nhau nhất. Bạn chọn ảnh và giọng tốt nhất.</p>
     </section>
 
     <section class="step">
@@ -137,15 +150,15 @@ footer{margin-top:40px;color:var(--muted);font-size:13px}
       <div class="io">
         <div class="box"><h4>Đầu vào</h4><ul>
           <li><code>series-bible.md</code></li>
-          <li>Các tập đã viết trong <code>examples/science-humor/</code> (tránh trùng cấu trúc, trò đùa)</li>
+          <li>Các tập đã viết (<code>series/science_humor/&lt;tập&gt;/script.md</code>), để tránh trùng cấu trúc và trò đùa</li>
           <li><code>src/novelvideo/agents/prompts/minimax_h3_rules.md</code></li>
-          <li>Nguồn khoa học (NASA, Einstein Online…)</li>
+          <li>Nguồn khoa học đọc trực tiếp (NASA, Einstein Online, Newton Project, LIGO…)</li>
         </ul></div>
         <div class="box out"><h4>Đầu ra</h4><ul>
-          <li><code>video_production_with_skills/series/science_humor/ep01/script.md</code>: bảng mốc, chain và shot, bối cảnh, người nói, lời, trò đùa, nguồn; mục Nguồn, Tính lại, Cần người bản ngữ đọc</li>
+          <li><code>EP/script.md</code>: bảng mốc, chain và shot, bối cảnh, người nói, lời, trò đùa, nguồn; mục Nguồn, Tính lại, Cần người bản ngữ đọc</li>
         </ul></div>
       </div>
-      <p class="gateline">Cổng: <code>longform-minimax-h3-script-review</code> phải sạch mục CHẶN và CẢNH BÁO (tốc độ thoại ≤ 3 âm tiết/giây, nguồn, phân vai).</p>
+      <p class="gateline">Cổng: <code>longform-minimax-h3-script-review</code> sạch mục CHẶN và CẢNH BÁO (tốc độ thoại ≤ 3 âm tiết/giây, nguồn, phân vai).</p>
     </section>
 
     <section class="step">
@@ -155,14 +168,13 @@ footer{margin-top:40px;color:var(--muted);font-size:13px}
       </div>
       <div class="io">
         <div class="box"><h4>Đầu vào</h4><ul>
-          <li><code>gravity-test-script.md</code> (bảng kịch bản)</li>
-          <li><code>series-bible.md</code></li>
+          <li>Bảng kịch bản trong <code>EP/script.md</code> và <code>series-bible.md</code></li>
           <li>Ảnh nền và sheet nhân vật có sẵn (bước 0)</li>
           <li>Câu trả lời của bạn cho điều không suy ra được</li>
         </ul></div>
         <div class="box out"><h4>Đầu ra</h4><ul>
-          <li>Mục <code>## Storyboard</code> ở cuối <code>gravity-test-script.md</code>:</li>
-          <li><b>Chung:</b> ảnh nền từng cảnh, ảnh tham chiếu theo thứ tự cố định, vị trí trái/phải, vật cầm, vật nền phải giữ, định nghĩa cỡ khung <code>wide</code>/<code>medium</code>/<code>close</code></li>
+          <li>Mục <code>## Storyboard</code> ở cuối <code>EP/script.md</code>:</li>
+          <li><b>Chung:</b> ảnh nền từng cảnh, ảnh tham chiếu theo thứ tự cố định, vị trí trái/phải, vật cầm, vật nền phải giữ, định nghĩa cỡ khung <code>wide</code>/<code>medium</code>/<code>close</code>, quy tắc chỗ nối chain</li>
           <li><b>Bảng shot:</b> tư thế đầu và cuối, vật cầm, cỡ khung đầu và cuối, căn cứ</li>
           <li><b>Kiểm tra liền mạch:</b> cuối shot i bằng đầu shot i+1</li>
         </ul></div>
@@ -174,7 +186,7 @@ footer{margin-top:40px;color:var(--muted);font-size:13px}
     <section class="step">
       <div class="head">
         <div class="num">3</div><h3>Prompt keyframe</h3>
-        <div class="who"><span class="tag skill">script-to-qwen-storyboard</span><span class="tag skill">qwen-image-prompting</span><span class="tag code">qwen_prompt_gate.py</span></div>
+        <div class="who"><span class="tag skill">script-to-qwen-storyboard</span><span class="tag skill">qwen-image-prompting</span><span class="tag code">tools/qwen_prompt_gate.py</span></div>
       </div>
       <div class="io">
         <div class="box"><h4>Đầu vào</h4><ul>
@@ -183,19 +195,19 @@ footer{margin-top:40px;color:var(--muted);font-size:13px}
           <li>Quy tắc T/E/N trong <code>qwen-image-prompting</code> (theo tài liệu Qwen-Image 2.1)</li>
         </ul></div>
         <div class="box out"><h4>Đầu ra</h4><ul>
-          <li><code>gravity_test/qwen_keyframe_prompts.json</code>: mỗi cảnh K0 đến K4, mỗi khung có <code>mode</code> (compose, edit, reframe), <code>framing</code>, <code>storyboard_ref</code>, <code>images</code> (đúng thứ tự gửi, <code>@prev</code> là khung trước), <code>rewritten_prompt</code> tiếng Anh, <code>wh_ratio</code>, <code>ratio_follow</code></li>
-          <li>Biên bản review <code>gravity_test/qwen_prompt_reviews/&lt;ngày&gt;.md</code></li>
-          <li>Sổ <code>gravity_test/qwen_prompt_review.json</code> (SHA-256 của từng prompt đã review)</li>
+          <li><code>EP/keyframes/qwen_keyframe_prompts.json</code>: mỗi chain K0 đến K(n), mỗi khung có <code>mode</code>, <code>framing</code>, <code>storyboard_ref</code>, <code>images</code> (đúng thứ tự gửi, <code>@prev</code> là khung trước), <code>rewritten_prompt</code> tiếng Anh, <code>wh_ratio</code>, <code>ratio_follow</code></li>
+          <li>Biên bản review <code>EP/keyframes/reviews/&lt;ngày&gt;.md</code></li>
+          <li>Sổ <code>EP/keyframes/review.json</code> (SHA-256 của từng prompt đã review)</li>
         </ul></div>
       </div>
       <p class="how"><b>Chế độ:</b> K0 là <code>compose</code> (đặt người vào ảnh nền); K(i) cùng cỡ khung với khung trước là <code>edit</code> (chỉ đổi tư thế); khác cỡ khung là <code>reframe</code> (đổi khoảng cách camera).</p>
-      <p class="gateline">Cổng: <code>qwen_prompt_gate.py check</code> báo 10/10 <code>reviewed</code>. Cổng chặn prompt có chữ tiếng Việt, token tỉ lệ hoặc độ phân giải, nháy kép, thẻ <code>&lt;imageN&gt;</code> sai, quá 10 ảnh. Sửa một chữ thì mã băm đổi và phải review lại.</p>
+      <p class="gateline">Cổng: <code>qwen_prompt_gate.py check</code> báo mọi prompt <code>reviewed</code>. Cổng chặn prompt có chữ tiếng Việt, token tỉ lệ hoặc độ phân giải, nháy kép, thẻ <code>&lt;imageN&gt;</code> sai, quá 10 ảnh. Sửa một chữ hoặc đổi đường dẫn ảnh thì mã băm đổi và phải review lại.</p>
     </section>
 
     <section class="step">
       <div class="head">
         <div class="num">4</div><h3>Sinh keyframe bằng Qwen-Image 2.1</h3>
-        <div class="who"><span class="tag code">pod_up.sh --images-only</span><span class="tag code">run_batch.sh images</span><span class="tag code">qwen_images.py keyframes</span></div>
+        <div class="who"><span class="tag code">tools/pod/pod_up.sh --images-only</span><span class="tag code">tools/pod/run_batch.sh images</span><span class="tag code">tools/qwen_images.py keyframes</span></div>
       </div>
       <div class="io">
         <div class="box"><h4>Đầu vào</h4><ul>
@@ -204,34 +216,34 @@ footer{margin-top:40px;color:var(--muted);font-size:13px}
           <li>Máy GPU thuê (RTX 4090 hoặc 5090) cài ComfyUI và Qwen-Image 2.1, khoảng 17 GB</li>
         </ul></div>
         <div class="box out"><h4>Đầu ra</h4><ul>
-          <li><code>storyboard/keyframes_qwen/chain_NN_kK.png</code> (khung được chọn)</li>
-          <li><code>storyboard/keyframes_qwen/candidates/</code> (các ứng viên)</li>
-          <li><code>keyframes_report.json</code> (điểm, ghi chú từng khung) và contact sheet</li>
+          <li><code>EP/keyframes/images/chain_NN_kK.png</code> (khung được chọn)</li>
+          <li><code>EP/keyframes/images/candidates/</code> (các ứng viên, không commit)</li>
+          <li>Báo cáo điểm từng khung và contact sheet</li>
         </ul></div>
       </div>
       <p class="how"><b>Cách chạy:</b> mỗi khung sinh nhiều ứng viên, tự chấm theo danh tính khuôn mặt, độ tiến máy ở <code>reframe</code> và thứ tự trái/phải; chọn khung điểm cao nhất, điểm thấp quá thì dừng. Chạy từng khung bằng <code>--until k</code>: khung sau dựng trên khung trước nên phải xem khung trước đã.</p>
-      <p class="note">Qwen-Image 2.1 chỉ có giấy phép nghiên cứu và đánh giá: dùng cho bản thử, không dùng cho bản thương mại.</p>
+      <p class="note">Qwen-Image 2.1 chỉ có giấy phép nghiên cứu và đánh giá: ảnh và video dựng từ nó là bản thử (xem <code>risks.md</code>).</p>
     </section>
 
     <section class="step">
       <div class="head">
-        <div class="num">5</div><h3>Review ảnh và duyệt storyboard</h3>
-        <div class="who"><span class="tag skill">image-review-haiku</span><span class="tag code">check_chains.py --storyboard</span><span class="tag human">bạn duyệt</span></div>
+        <div class="num">5</div><h3>Review ảnh và duyệt keyframe</h3>
+        <div class="who"><span class="tag skill">image-review-haiku</span><span class="tag code">tools/check_video.py --storyboard</span><span class="tag human">bạn duyệt</span></div>
       </div>
       <div class="io">
         <div class="box"><h4>Đầu vào</h4><ul>
           <li>Các keyframe vừa sinh và contact sheet</li>
-          <li>File spec của tập (dàn nhân vật, vật cầm, nền phải giữ, khung từng bước), mẫu ở <code>.claude/skills/image-review-haiku/examples/</code></li>
+          <li>File spec của tập (dàn nhân vật, vật cầm, nền phải giữ, khung từng bước), mẫu <code>.claude/skills/image-review-haiku/examples/episode_spec.json</code></li>
           <li>Mục Storyboard để đối chiếu</li>
         </ul></div>
         <div class="box out"><h4>Đầu ra</h4><ul>
           <li>Kết luận <code>PASS</code>, <code>WARN</code>, <code>MANUAL</code> hoặc <code>FAIL</code> từng ảnh (luật cố định chấm, Haiku chỉ trả JSON checklist)</li>
           <li>Khung lệch thì quay lại bước 3 viết lại prompt khung kế tiếp từ ảnh thật, review và ghi sổ lại</li>
-          <li><code>storyboard/approved.json</code> (SHA-256 của từng ảnh đã duyệt) sau khi bạn nói đạt</li>
+          <li><code>EP/keyframes/approved.json</code> (SHA-256 của từng ảnh đã duyệt) sau khi bạn nói đạt</li>
         </ul></div>
       </div>
-      <p class="how"><b>Cách làm:</b> Haiku là vòng lọc đầu; mọi <code>FAIL</code> và <code>MANUAL</code> được xem lại bằng mắt. Bạn xem contact sheet rồi chạy <code>approve_storyboard.py approve</code>. Agent không được tự duyệt.</p>
-      <p class="gateline">Cổng: ảnh nào đổi sau khi duyệt (sinh lại, sửa, làm sạch watermark) thì mã băm lệch và phải duyệt lại.</p>
+      <p class="how"><b>Cách làm:</b> Haiku là vòng lọc đầu; mọi <code>FAIL</code> và <code>MANUAL</code> được xem lại bằng mắt. Bạn xem các keyframe rồi chạy <code>tools/approve_keyframes.py approve</code>. Agent không được tự duyệt.</p>
+      <p class="gateline">Cổng: ảnh nào đổi sau khi duyệt thì mã băm lệch và phải duyệt lại.</p>
     </section>
 
     <section class="step">
@@ -242,12 +254,12 @@ footer{margin-top:40px;color:var(--muted);font-size:13px}
       <div class="io">
         <div class="box"><h4>Đầu vào</h4><ul>
           <li>Mục Storyboard (tư thế đầu và cuối, vật cầm, cỡ khung từng shot)</li>
-          <li>Keyframe K0 đã duyệt của từng cảnh</li>
-          <li>Hai sheet nhân vật, <code>voice/barnaby.wav</code>, <code>voice/ambrose.wav</code></li>
+          <li>Keyframe K0 đã duyệt của từng chain</li>
+          <li>Hai sheet nhân vật, <code>assets/voices/barnaby.wav</code>, <code>ambrose.wav</code></li>
           <li>Lời và mốc thời gian trong kịch bản</li>
         </ul></div>
         <div class="box out"><h4>Đầu ra</h4><ul>
-          <li><code>gravity_test/chain_NN.json</code>: <code>start_image</code> là K0 đã duyệt, <code>reference_images</code> là hai sheet, <code>voice_refs</code>, <code>frames</code> 192, mỗi shot đủ 6 mục ref2va</li>
+          <li><code>EP/chains/chain_NN.json</code>: <code>start_image</code> là K0 đã duyệt, <code>reference_images</code> là hai sheet, <code>voice_refs</code>, <code>frames</code> 192, mỗi shot đủ 6 mục ref2va</li>
         </ul></div>
       </div>
       <p class="gateline">Cổng: review kịch bản chặn chain có shot lệch dòng Storyboard, hoặc khung đầu chưa được duyệt.</p>
@@ -256,7 +268,7 @@ footer{margin-top:40px;color:var(--muted);font-size:13px}
     <section class="step">
       <div class="head">
         <div class="num">7</div><h3>Render video</h3>
-        <div class="who"><span class="tag code">pod_up.sh</span><span class="tag code">run_batch.sh videos</span><span class="tag code">bench_multishot30_local.py</span></div>
+        <div class="who"><span class="tag code">tools/pod/pod_up.sh</span><span class="tag code">tools/pod/run_batch.sh videos</span><span class="tag code">tools/render_chain.py</span></div>
       </div>
       <div class="io">
         <div class="box"><h4>Đầu vào</h4><ul>
@@ -265,31 +277,32 @@ footer{margin-top:40px;color:var(--muted);font-size:13px}
           <li>Máy GPU thuê cài ComfyUI, H3 và turbo LoRA</li>
         </ul></div>
         <div class="box out"><h4>Đầu ra</h4><ul>
-          <li><code>research/h3_benchmarks/runs/&lt;thời gian&gt;_science_humor_gravity_test_chain_NN/video.mp4</code></li>
+          <li><code>runs/&lt;thời gian&gt;_science_humor_ep01_chain_NN/video.mp4</code></li>
           <li>Số đo thời gian, VRAM, RAM của lần chạy</li>
         </ul></div>
       </div>
-      <p class="how"><b>Cách chạy:</b> chain có <code>start_image</code> chạy bằng <code>H3MultishotSampler</code>: K0 là khung đầu thật, các shot sau nối từ khung cuối của shot trước. Chain không có <code>start_image</code> chạy bằng <code>H3MultishotMemorySampler</code>.</p>
-      <p class="gateline">Cổng: <code>run_batch.sh videos</code> từ chối chạy nếu <code>start_image</code> nằm trong <code>storyboard/</code> mà chưa có trong <code>approved.json</code> hoặc đã bị đổi sau khi duyệt, nên không tốn GPU cho ảnh chưa duyệt.</p>
-      <p class="note">K1 đến K4 hiện không phải đầu vào của H3: chúng dùng để bạn duyệt trước tư thế và cỡ khung cuối mỗi shot, và để đối chiếu với khung cuối của video.</p>
+      <p class="how"><b>Cách chạy:</b> <code>H3MultishotSampler</code> cổ điển: K0 là khung đầu thật, các shot sau nối từ khung cuối của shot trước. Một chain 4 shot mất khoảng 27 phút trên RTX 4090.</p>
+      <p class="gateline">Cổng: <code>run_batch.sh videos</code> từ chối chạy nếu <code>start_image</code> nằm trong <code>keyframes/images/</code> mà chưa có trong <code>approved.json</code> hoặc đã bị đổi sau khi duyệt, nên không tốn GPU cho ảnh chưa duyệt.</p>
+      <p class="note">Chỉ K0 là đầu vào của H3. K1 trở đi dùng để bạn duyệt trước tư thế và cỡ khung cuối mỗi shot, và để đối chiếu với khung cuối của video.</p>
     </section>
 
     <section class="step">
       <div class="head">
         <div class="num">8</div><h3>Kiểm video và ghép</h3>
-        <div class="who"><span class="tag code">check_chains.py</span><span class="tag code">ffmpeg</span><span class="tag human">bạn nghe và xem</span></div>
+        <div class="who"><span class="tag code">tools/check_video.py</span><span class="tag code">tools/make_ken_burns_transition.py</span><span class="tag code">ffmpeg</span><span class="tag human">bạn nghe và xem</span></div>
       </div>
       <div class="io">
         <div class="box"><h4>Đầu vào</h4><ul>
           <li><code>video.mp4</code> của từng chain</li>
-          <li>Lời và người nói trong kịch bản, hai sheet</li>
+          <li>Lời và người nói trong kịch bản, hai sheet, hai giọng mẫu</li>
+          <li>Hai ảnh nền và <code>assets/transition/wormhole_flight.png</code></li>
         </ul></div>
         <div class="box out"><h4>Đầu ra</h4><ul>
-          <li>Báo cáo từng shot: ai nói, nói đúng lời không, có lời thừa không, khuôn mặt khớp danh tính không</li>
-          <li>Video dài ghép các chain, ví dụ <code>runs/_science_humor_gravity_long/full_long_v2.mp4</code></li>
+          <li>Báo cáo từng shot: ai nói, nói đúng lời không, có lời thừa không, khuôn mặt khớp danh tính không (<code>EP/reports/</code>, không commit)</li>
+          <li>Bản ghép các chain, kèm đoạn chuyển cảnh wormhole dựng bằng ffmpeg giữa hai bối cảnh</li>
         </ul></div>
       </div>
-      <p class="how"><b>Cách làm:</b> <code>check_chains.py &lt;chain&gt; &lt;video.mp4&gt;</code> đo bằng máy; bạn nghe lại giọng và xem mối nối giữa các cảnh.</p>
+      <p class="how"><b>Cách làm:</b> <code>check_video.py &lt;chain&gt; &lt;video.mp4&gt;</code> đo bằng máy; bạn nghe lại giọng và xem mối nối giữa các chain.</p>
     </section>
   </div>
 
@@ -300,9 +313,9 @@ footer{margin-top:40px;color:var(--muted);font-size:13px}
       <tbody>
         <tr><td>Review kịch bản</td><td>Kịch bản và chain lỗi</td><td><code>longform-minimax-h3-script-review</code></td></tr>
         <tr><td>Duyệt storyboard bằng chữ</td><td>Soạn prompt khi storyboard chưa duyệt</td><td>Bạn</td></tr>
-        <tr><td>Cổng prompt Qwen</td><td>Sinh ảnh từ prompt chưa review hoặc sai quy tắc đo được</td><td><code>qwen_prompt_gate.py</code> (mã băm + kiểm tra máy)</td></tr>
-        <tr><td>Dừng sau mỗi keyframe</td><td>Dựng khung sau trên khung trước chưa xem</td><td><code>qwen_images.py --until k</code>, review ảnh</td></tr>
-        <tr><td>Duyệt ảnh</td><td>Render video từ ảnh chưa duyệt hoặc đã đổi</td><td>Bạn + <code>approve_storyboard.py</code> + <code>run_batch.sh</code></td></tr>
+        <tr><td>Cổng prompt Qwen</td><td>Sinh ảnh từ prompt chưa review hoặc sai quy tắc đo được</td><td><code>tools/qwen_prompt_gate.py</code> (mã băm + kiểm tra máy)</td></tr>
+        <tr><td>Dừng sau mỗi keyframe</td><td>Dựng khung sau trên khung trước chưa xem</td><td><code>tools/qwen_images.py --until k</code>, review ảnh</td></tr>
+        <tr><td>Duyệt ảnh</td><td>Render video từ ảnh chưa duyệt hoặc đã đổi</td><td>Bạn + <code>tools/approve_keyframes.py</code> + <code>run_batch.sh</code></td></tr>
       </tbody>
     </table>
   </div>
@@ -310,35 +323,44 @@ footer{margin-top:40px;color:var(--muted);font-size:13px}
   <h2>Bản đồ file</h2>
   <div class="map">
     <div class="box"><h4>Viết bằng skill (sửa trực tiếp)</h4><ul>
-      <li><code>video_production_with_skills/series/science_humor/ep01/script.md</code> (kịch bản và Storyboard)</li>
-      <li><code>gravity_test/qwen_keyframe_prompts.json</code></li>
-      <li><code>gravity_test/chain_NN.json</code></li>
+      <li><code>series/science_humor/series-bible.md</code>, <code>risks.md</code></li>
+      <li><code>EP/script.md</code> (kịch bản và Storyboard)</li>
+      <li><code>EP/keyframes/qwen_keyframe_prompts.json</code></li>
+      <li><code>EP/chains/chain_NN.json</code></li>
     </ul></div>
     <div class="box"><h4>Ghi sổ và duyệt</h4><ul>
-      <li><code>gravity_test/qwen_prompt_review.json</code></li>
-      <li><code>gravity_test/qwen_prompt_reviews/&lt;ngày&gt;.md</code></li>
-      <li><code>gravity_test/storyboard/approved.json</code></li>
+      <li><code>EP/keyframes/review.json</code></li>
+      <li><code>EP/keyframes/reviews/&lt;ngày&gt;.md</code></li>
+      <li><code>EP/keyframes/approved.json</code></li>
     </ul></div>
-    <div class="box"><h4>Sinh ra</h4><ul>
-      <li><code>gravity_test/storyboard/keyframes_qwen/</code></li>
-      <li><code>character/*_sheet.png</code>, <code>gravity_test/backgrounds/*.png</code>, <code>voice/*.wav</code></li>
-      <li><code>research/h3_benchmarks/runs/…/video.mp4</code></li>
+    <div class="box"><h4>Tài sản và sản phẩm</h4><ul>
+      <li><code>series/science_humor/assets/</code> (characters, voices, transition, image_prompts.json)</li>
+      <li><code>EP/backgrounds/</code>, <code>EP/keyframes/images/</code></li>
+      <li><code>runs/…/video.mp4</code> (không commit)</li>
     </ul></div>
-    <div class="box"><h4>Code chạy máy</h4><ul>
-      <li><code>scripts/gemini_webai_images.py</code> (sheet, plate)</li>
-      <li><code>scripts/qwen_prompt_gate.py</code>, <code>scripts/qwen_images.py</code></li>
-      <li><code>gravity_test/pod_up.sh</code>, <code>run_batch.sh</code>, <code>approve_storyboard.py</code>, <code>check_chains.py</code></li>
+    <div class="box"><h4>Code chạy máy (<code>tools/</code>)</h4><ul>
+      <li><code>qwen_prompt_gate.py</code>, <code>qwen_images.py</code>, <code>comfy_qwen.py</code>, <code>gemini_webai_images.py</code></li>
+      <li><code>approve_keyframes.py</code>, <code>check_video.py</code>, <code>render_chain.py</code>, <code>pick_voices.py</code>, <code>qwen_voice_design.py</code>, <code>make_ken_burns_transition.py</code></li>
+      <li><code>pod/</code>: <code>pod_up.sh</code>, <code>run_batch.sh</code>, <code>setup_h3_box.sh</code> và các script đo máy</li>
+    </ul></div>
+    <div class="box"><h4>Khác</h4><ul>
+      <li><code>shorts/</code>: skit short 9:16 (skill <code>short-minimax-h3-script-writer</code>)</li>
+      <li>Benchmark và thử nghiệm H3 nằm ngoài thư mục này: <code>research/h3_benchmarks/</code></li>
     </ul></div>
   </div>
 
-  <h2>Trạng thái hiện tại</h2>
+  <h2>Lưu ý vận hành</h2>
   <div class="box state"><ul>
-    <li>Bước 1 đến 3 xong: kịch bản, Storyboard và 10 prompt đã review, ghi sổ (10/10 <code>reviewed</code>).</li>
-    <li>Bước 4 chưa chạy trên GPU với bộ prompt mới. Bước 5 đến 7 chờ ảnh keyframe được duyệt.</li>
-    <li>Các <code>chain_NN.json</code> hiện có viết theo storyboard cũ (khung đầu là ảnh nền hoặc ảnh Gemini cũ, vài shot có push-in khác Storyboard mới) và sẽ được viết lại ở bước 6.</li>
+    <li>Viết lệnh nhiều bước thành file <code>.sh</code> chạy bằng bash: zsh không tách biến chứa nhiều đối số và báo lỗi khi glob không khớp. Chạy lệnh dò một lần ngoài vòng lặp rồi mới lặp.</li>
+    <li>Trước khi tạo pod, so khoá <code>~/.ssh/*.pub</code> với khoá SSH của tài khoản RunPod. Sau mỗi lần restart pod, đọc lại cổng SSH vì cổng công khai đổi.</li>
+    <li>Khi kéo kết quả về, chỉ kéo thư mục run mới; không kéo <code>tools/</code> hay <code>runs/index.csv</code> về đè bản cục bộ.</li>
+    <li>RAM thật của pod đọc bằng <code>free -g</code> qua SSH, không đọc từ <code>/system_stats</code> của ComfyUI (bị giới hạn bởi cgroup). Hết 5090 Secure thì dùng 4090 Secure.</li>
+    <li><code>check_video.py</code> import <code>scripts/face_similarity.py</code> ở gốc repo; <code>pod_up.sh</code> đã tải file này lên pod.</li>
+    <li>Sau mỗi video, nghe lại và đo: H3 từng đọc to câu lip-close, từng tự nói thêm ở đoạn trống cuối shot, và từng vẽ lại sheet hai góc trong khung hình. Thấy sheet lọt vào khung thì thử tham chiếu bằng ảnh một góc (<code>*_front.png</code>).</li>
+    <li>Hai giọng phải khác giọng vùng (Barnaby Mỹ, Ambrose Anh): đo cosine giữa hai giọng mẫu và nghe thật trước khi sinh video.</li>
   </ul></div>
 
-  <footer>Skill nằm trong <code>.claude/skills/</code>. Cập nhật lần cuối 2026-11-10.</footer>
+  <footer>Skill nằm trong <code>.claude/skills/</code>. Cập nhật lần cuối 2026-11-11.</footer>
 </main>
 </body>
 </html>

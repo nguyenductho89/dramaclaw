@@ -13,8 +13,8 @@ description: Viết kịch bản video YouTube long-form 16:9 (6-7 phút, "Scien
 ## File đầu ra
 
 1. `video_production_with_skills/series/<series>/<tập>/script.md`: kịch bản đầy đủ, viết bằng skill này.
-2. Mục `## Storyboard` trong file kịch bản và file prompt keyframe `<tập>/qwen_keyframe_prompts.json`: viết bằng skill `script-to-qwen-storyboard` (prompt soạn và review bằng `qwen-image-prompting`).
-3. `video_production_with_skills/series/science_humor/<tập>/chain_NN.json`: mỗi đoạn H3 liên tục một file, viết bằng skill này sau khi user duyệt ảnh keyframe storyboard.
+2. Mục `## Storyboard` trong file kịch bản và file prompt keyframe `<tập>/keyframes/qwen_keyframe_prompts.json`: viết bằng skill `script-to-qwen-storyboard` (prompt soạn và review bằng `qwen-image-prompting`).
+3. `video_production_with_skills/series/<series>/<tập>/chains/chain_NN.json`: mỗi đoạn H3 liên tục một file, viết bằng skill này sau khi user duyệt ảnh keyframe storyboard.
 
 Không có code nào viết hoặc sinh lại kịch bản, storyboard hay prompt: mọi thay đổi sửa thẳng vào các file trên bằng skill tương ứng.
 
@@ -61,7 +61,7 @@ Tổng: <phút:giây>, <số từ> từ. Barnaby <x> từ, Ambrose <y> từ.
 - Mỗi shot gồm 6 mục của ref2va: `subject_definitions:`, `summary:`, `retention_analysis:`, `detailed_description:`, `overall_soundscape:`, `non_diegetic_music:`, theo nhánh ref2va của `assemble_minimax_h3_prompt`.
 - Số thứ tự ảnh cố định: `<Picture 1>` khung đầu (keyframe K0), `<Picture 2>` sheet Barnaby, `<Picture 3>` sheet Ambrose; `<Subject 1>` Barnaby, `<Subject 2>` Ambrose.
 - `voice_refs` theo thứ tự cố định: `<Audio 1>` là Barnaby, `<Audio 2>` là Ambrose. Giữ giống nhau ở mọi chain, kể cả chain chỉ một người nói.
-- **Khung đầu là keyframe đã duyệt:** `start_image` = keyframe K0 của cảnh (`<tập>/keyframes/images/chain_NN_k0.png`), `reference_images` = [sheet Barnaby, sheet Ambrose]. Hai người đứng sẵn ở khung đầu, không đi vào khung. Tư thế đầu và cuối, vật cầm và cỡ khung của từng shot lấy đúng từ dòng tương ứng của mục Storyboard. Chỉ render video từ keyframe đã duyệt (`approve_storyboard.py`).
+- **Khung đầu là keyframe đã duyệt:** `start_image` = keyframe K0 của cảnh (`<tập>/keyframes/images/chain_NN_k0.png`), `reference_images` = [sheet Barnaby, sheet Ambrose]. Hai người đứng sẵn ở khung đầu, không đi vào khung. Tư thế đầu và cuối, vật cầm và cỡ khung của từng shot lấy đúng từ dòng tương ứng của mục Storyboard. Chỉ render video từ keyframe đã duyệt (`video_production_with_skills/tools/approve_keyframes.py`).
 - **Hai giọng phải khác giọng vùng, không chỉ khác tính cách:** Barnaby giọng Mỹ, Ambrose giọng Anh. Hai giọng cùng "English accent" nghe như một (Resemblyzer: cùng người 0,90, khác người 0,88). Sau khi thiết kế, kiểm cosine giữa hai giọng mẫu và nghe thật trước khi sinh video. Lời của Barnaby dùng cách nói Mỹ ("Nice", "Sure"), không dùng "Lovely", "Quite".
 - Mọi shot đều ghi nhãn `[Shot 1]`, theo khuôn chính thức và lint của repo.
 

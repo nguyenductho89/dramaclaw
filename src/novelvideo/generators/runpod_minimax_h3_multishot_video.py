@@ -474,8 +474,8 @@ def build_h3_multishot_memory_graph(
     current `_refs_only`/`_single` workarounds around `build_h3_multishot_graph`'s plain `H3MultishotSampler`.
 
     Deliberately separate from `build_h3_multishot_graph`: that one stays untouched and is still what production
-    uses. This function is for the standalone test in `gravity_test/` only, until real render results justify
-    switching `run_batch.sh` over (see the plan's step 4).
+    uses. This function is for the benchmark `research/h3_benchmarks/scripts/bench_memory_sampler.py` only; video
+    production (`video_production_with_skills/tools/render_chain.py`) uses the classic sampler.
 
     `continuity="first_frame"` needs `checkpoint="fl2va"` per the node's own tooltip ("ref2va is trained for
     reference rows, not first-frame hand-off"), which also disables the reference-image bank — so it cannot be
@@ -870,7 +870,7 @@ async def run_multishot_from_files(
         reference_names.append(name)
 
     # Same `ms_voice_{k}` naming the local bench already uses
-    # (`previs_h3_test/scripts/bench_multishot30_local.py`), so a chain behaves the
+    # (`research/h3_benchmarks/scripts/bench_multishot30_local.py`), so a chain behaves the
     # same whether it is rendered through the bench or through Freezone.
     # Skipped entirely outside ref2va: only that branch of the graph has voice
     # inputs, so uploading the clips anywhere else would just ship unused bytes.

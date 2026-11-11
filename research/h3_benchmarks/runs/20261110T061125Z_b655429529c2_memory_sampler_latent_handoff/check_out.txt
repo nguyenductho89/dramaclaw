@@ -1,0 +1,81 @@
+/Users/nguyenductho/.cache/uv/environments-v2/check-chains-597c8c4b780c0a20/lib/python3.12/site-packages/webrtcvad.py:1: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  import pkg_resources
+objc[39026]: Class AVFFrameReceiver is implemented in both /Users/nguyenductho/.cache/uv/environments-v2/check-chains-597c8c4b780c0a20/lib/python3.12/site-packages/av/.dylibs/libavdevice.63.1.102.dylib (0x1039583a8) and /Users/nguyenductho/.cache/uv/environments-v2/check-chains-597c8c4b780c0a20/lib/python3.12/site-packages/cv2/.dylibs/libavdevice.61.3.100.dylib (0x10f5103a8). This may cause spurious casting failures and mysterious crashes. One of the duplicates must be removed or renamed.
+objc[39026]: Class AVFAudioReceiver is implemented in both /Users/nguyenductho/.cache/uv/environments-v2/check-chains-597c8c4b780c0a20/lib/python3.12/site-packages/av/.dylibs/libavdevice.63.1.102.dylib (0x1039583f8) and /Users/nguyenductho/.cache/uv/environments-v2/check-chains-597c8c4b780c0a20/lib/python3.12/site-packages/cv2/.dylibs/libavdevice.61.3.100.dylib (0x10f5103f8). This may cause spurious casting failures and mysterious crashes. One of the duplicates must be removed or renamed.
+[ WARN:0@0.033] global net_impl_backend.cpp:345 setPreferableTarget Targets are not supported by the new graph engine for now
+[ WARN:0@0.072] global net_impl_backend.cpp:345 setPreferableTarget Targets are not supported by the new graph engine for now
+/Users/nguyenductho/.cache/uv/environments-v2/check-chains-597c8c4b780c0a20/lib/python3.12/site-packages/faster_whisper/feature_extractor.py:224: RuntimeWarning: divide by zero encountered in matmul
+  mel_spec = self.mel_filters @ magnitudes
+/Users/nguyenductho/.cache/uv/environments-v2/check-chains-597c8c4b780c0a20/lib/python3.12/site-packages/faster_whisper/feature_extractor.py:224: RuntimeWarning: overflow encountered in matmul
+  mel_spec = self.mel_filters @ magnitudes
+/Users/nguyenductho/.cache/uv/environments-v2/check-chains-597c8c4b780c0a20/lib/python3.12/site-packages/faster_whisper/feature_extractor.py:224: RuntimeWarning: invalid value encountered in matmul
+  mel_spec = self.mel_filters @ magnitudes
+/Users/nguyenductho/.cache/uv/environments-v2/check-chains-597c8c4b780c0a20/lib/python3.12/site-packages/faster_whisper/feature_extractor.py:224: RuntimeWarning: divide by zero encountered in matmul
+  mel_spec = self.mel_filters @ magnitudes
+/Users/nguyenductho/.cache/uv/environments-v2/check-chains-597c8c4b780c0a20/lib/python3.12/site-packages/faster_whisper/feature_extractor.py:224: RuntimeWarning: overflow encountered in matmul
+  mel_spec = self.mel_filters @ magnitudes
+/Users/nguyenductho/.cache/uv/environments-v2/check-chains-597c8c4b780c0a20/lib/python3.12/site-packages/faster_whisper/feature_extractor.py:224: RuntimeWarning: invalid value encountered in matmul
+  mel_spec = self.mel_filters @ magnitudes
+Loaded the voice encoder model on cpu in 0.01 seconds.
+voice refs cosine between the two characters: 0.66
+faces found in sheets: {'barnaby': 2, 'ambrose': 2}
+
+=== chain_01_refs_only (previs_h3_test/runs/20261106T035010Z_a0722bf62ac3_science_humor_gravity_test_chain_01_refs_only/video.mp4)
+shot 1: speaker ambrose  voice->barnaby {'barnaby': 0.84, 'ambrose': 0.72}  match 0.72
+   said : The Earth pulls the apple down. Newton settled this. It can't seem for you to unprincipe in
+   want : The Earth pulls the apple down. Newton settled this.
+   EXTRA SPEECH after 6.7s: that tromopies.
+   t=1.5s faces left->right: [{'x': 285, 'px': 162, 'barnaby': 0.18, 'ambrose': 0.09}, {'x': 856, 'px': 161, 'barnaby': 0.17, 'ambrose': 0.42}]
+   t=3.5s faces left->right: [{'x': 298, 'px': 157, 'barnaby': 0.13, 'ambrose': 0.06}, {'x': 851, 'px': 166, 'barnaby': 0.13, 'ambrose': 0.4}]
+   t=5.0s faces left->right: [{'x': 296, 'px': 162, 'barnaby': 0.14, 'ambrose': 0.07}, {'x': 856, 'px': 160, 'barnaby': 0.1, 'ambrose': 0.41}]
+shot 2: speaker barnaby  voice->barnaby {'barnaby': 0.85, 'ambrose': 0.72}  match 0.73
+   said : Nice. But to Einstein, gravity isn't a pull. Andre Dislis is the friendiri
+   want : Nice. But to Einstein, gravity isn't a pull.
+   EXTRA SPEECH after 6.7s: of a beerite.
+   t=1.5s faces left->right: [{'x': 283, 'px': 172, 'barnaby': 0.15, 'ambrose': 0.13}, {'x': 848, 'px': 150, 'barnaby': 0.21, 'ambrose': 0.49}]
+   t=3.5s faces left->right: [{'x': 272, 'px': 157, 'barnaby': 0.18, 'ambrose': 0.17}, {'x': 833, 'px': 148, 'barnaby': 0.23, 'ambrose': 0.42}]
+   t=5.0s faces left->right: [{'x': 296, 'px': 165, 'barnaby': 0.16, 'ambrose': 0.2}, {'x': 827, 'px': 146, 'barnaby': 0.2, 'ambrose': 0.4}]
+shot 3: speaker ambrose  voice->barnaby {'barnaby': 0.83, 'ambrose': 0.78}  match 0.76
+   said : Not a pull? Tiki -tune -tune -tune -tune. Newton's laws still work for a great many
+   want : Not a pull? Newton's laws still work for a great many things.
+   EXTRA SPEECH after 6.7s: things. Sure.
+   t=1.5s faces left->right: [{'x': 308, 'px': 158, 'barnaby': 0.17, 'ambrose': 0.12}, {'x': 840, 'px': 163, 'barnaby': 0.18, 'ambrose': 0.47}]
+   t=3.5s faces left->right: [{'x': 293, 'px': 169, 'barnaby': 0.16, 'ambrose': 0.13}, {'x': 824, 'px': 156, 'barnaby': 0.16, 'ambrose': 0.47}]
+   t=5.0s faces left->right: [{'x': 298, 'px': 164, 'barnaby': 0.15, 'ambrose': 0.12}, {'x': 831, 'px': 152, 'barnaby': 0.16, 'ambrose': 0.46}]
+shot 4: speaker barnaby  voice->barnaby {'barnaby': 0.85, 'ambrose': 0.74}  match 0.92
+   said : But mass bends space -time. The apple just takes the straightest
+   want : Sure. But mass bends spacetime. The apple just takes the straightest path.
+   EXTRA SPEECH after 6.7s: path.
+   t=1.5s faces left->right: [{'x': 285, 'px': 166, 'barnaby': 0.14, 'ambrose': 0.1}, {'x': 827, 'px': 150, 'barnaby': 0.19, 'ambrose': 0.41}]
+   t=3.5s faces left->right: [{'x': 300, 'px': 162, 'barnaby': 0.12, 'ambrose': 0.07}, {'x': 825, 'px': 155, 'barnaby': 0.19, 'ambrose': 0.43}]
+   t=5.0s faces left->right: [{'x': 291, 'px': 165, 'barnaby': 0.09, 'ambrose': 0.08}, {'x': 828, 'px': 157, 'barnaby': 0.18, 'ambrose': 0.44}]
+
+=== chain_01_refs_only (previs_h3_test/runs/20261110T061125Z_b655429529c2_memory_sampler_latent_handoff/video.mp4)
+shot 1: speaker ambrose  voice->barnaby {'barnaby': 0.81, 'ambrose': 0.81}  match 0.73
+   said : The Earth pulls the apple down. Newton settled this. Yeah, fish in the Eucharist of Dinnia
+   want : The Earth pulls the apple down. Newton settled this.
+   EXTRA SPEECH after 6.7s: dropsh.
+   t=1.5s faces left->right: [{'x': 414, 'px': 85, 'barnaby': 0.64, 'ambrose': 0.29}, {'x': 642, 'px': 17, 'barnaby': 0.05, 'ambrose': 0.13}, {'x': 716, 'px': 25, 'barnaby': 0.07, 'ambrose': -0.04}, {'x': 788, 'px': 75, 'barnaby': 0.22, 'ambrose': 0.6}]
+   t=3.5s faces left->right: [{'x': 410, 'px': 84, 'barnaby': 0.63, 'ambrose': 0.28}, {'x': 645, 'px': 17, 'barnaby': 0.03, 'ambrose': 0.06}, {'x': 786, 'px': 75, 'barnaby': 0.25, 'ambrose': 0.59}]
+   t=5.0s faces left->right: [{'x': 406, 'px': 83, 'barnaby': 0.62, 'ambrose': 0.18}, {'x': 643, 'px': 16, 'barnaby': 0.14, 'ambrose': -0.01}, {'x': 711, 'px': 29, 'barnaby': 0.13, 'ambrose': 0.15}, {'x': 786, 'px': 73, 'barnaby': 0.24, 'ambrose': 0.61}]
+shot 2: speaker barnaby  voice->barnaby {'barnaby': 0.81, 'ambrose': 0.67}  match 0.94
+   said : But to Einstein, gravity isn't a pull.
+   want : Nice. But to Einstein, gravity isn't a pull.
+   t=1.5s faces left->right: [{'x': 403, 'px': 87, 'barnaby': 0.55, 'ambrose': 0.3}, {'x': 645, 'px': 16, 'barnaby': 0.1, 'ambrose': -0.05}, {'x': 793, 'px': 81, 'barnaby': 0.18, 'ambrose': 0.59}]
+   t=3.5s faces left->right: [{'x': 387, 'px': 104, 'barnaby': 0.58, 'ambrose': 0.25}, {'x': 593, 'px': 15, 'barnaby': 0.2, 'ambrose': 0.09}, {'x': 645, 'px': 17, 'barnaby': 0.07, 'ambrose': -0.03}, {'x': 799, 'px': 93, 'barnaby': 0.21, 'ambrose': 0.62}]
+   t=5.0s faces left->right: [{'x': 328, 'px': 121, 'barnaby': 0.48, 'ambrose': 0.19}, {'x': 641, 'px': 14, 'barnaby': 0.18, 'ambrose': -0.08}, {'x': 829, 'px': 115, 'barnaby': 0.22, 'ambrose': 0.61}]
+shot 3: speaker ambrose  voice->barnaby {'barnaby': 0.81, 'ambrose': 0.72}  match 1.00
+   said : Not a pull? Newton's laws still work for a great many things.
+   want : Not a pull? Newton's laws still work for a great many things.
+   EXTRA SPEECH after 6.7s: But mass
+   t=1.5s faces left->right: [{'x': 379, 'px': 91, 'barnaby': 0.54, 'ambrose': 0.26}, {'x': 644, 'px': 16, 'barnaby': 0.12, 'ambrose': 0.19}, {'x': 798, 'px': 88, 'barnaby': 0.23, 'ambrose': 0.64}]
+   t=3.5s faces left->right: [{'x': 326, 'px': 113, 'barnaby': 0.58, 'ambrose': 0.27}, {'x': 595, 'px': 15, 'barnaby': 0.1, 'ambrose': 0.04}, {'x': 644, 'px': 17, 'barnaby': 0.03, 'ambrose': -0.09}, {'x': 817, 'px': 108, 'barnaby': 0.21, 'ambrose': 0.63}]
+   t=5.0s faces left->right: [{'x': 269, 'px': 140, 'barnaby': 0.64, 'ambrose': 0.3}, {'x': 595, 'px': 15, 'barnaby': 0.16, 'ambrose': 0.02}, {'x': 641, 'px': 16, 'barnaby': 0.21, 'ambrose': -0.06}, {'x': 842, 'px': 113, 'barnaby': 0.18, 'ambrose': 0.7}]
+shot 4: speaker barnaby  voice->barnaby {'barnaby': 0.84, 'ambrose': 0.75}  match 0.88
+   said : bends space -time. The apple just takes the straightest path.
+   want : Sure. But mass bends spacetime. The apple just takes the straightest path.
+   t=1.5s faces left->right: [{'x': 352, 'px': 105, 'barnaby': 0.58, 'ambrose': 0.21}, {'x': 594, 'px': 16, 'barnaby': -0.0, 'ambrose': 0.12}, {'x': 644, 'px': 16, 'barnaby': 0.12, 'ambrose': 0.06}, {'x': 794, 'px': 92, 'barnaby': 0.21, 'ambrose': 0.66}, {'x': 981, 'px': 23, 'barnaby': 0.13, 'ambrose': 0.07}]
+   t=3.5s faces left->right: [{'x': 291, 'px': 124, 'barnaby': 0.64, 'ambrose': 0.27}, {'x': 640, 'px': 18, 'barnaby': 0.2, 'ambrose': 0.02}, {'x': 819, 'px': 109, 'barnaby': 0.24, 'ambrose': 0.64}]
+   t=5.0s faces left->right: [{'x': 245, 'px': 141, 'barnaby': 0.67, 'ambrose': 0.27}, {'x': 643, 'px': 17, 'barnaby': 0.13, 'ambrose': 0.0}, {'x': 848, 'px': 115, 'barnaby': 0.15, 'ambrose': 0.63}]
+
+written /Users/nguyenductho/XuongPhim/dramaclaw/previs_h3_test/scripts/skits/science_humor/gravity_test/check_report.json

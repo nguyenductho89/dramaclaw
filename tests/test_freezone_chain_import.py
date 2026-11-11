@@ -24,21 +24,18 @@ from novelvideo.freezone.multishot import (
     extract_chain_dialogue,
 )
 
-GRAVITY_TEST = (
-    Path(__file__).resolve().parents[1]
-    / "previs_h3_test/scripts/skits/science_humor/gravity_test"
-)
+FIXTURES = Path(__file__).resolve().parent / "fixtures"
 
 
 def _chain(name: str) -> dict:
-    path = GRAVITY_TEST / name
+    path = FIXTURES / name
     if not path.is_file():
         pytest.skip(f"previs fixture missing: {path}")
     return json.loads(path.read_text(encoding="utf-8"))
 
 
 def test_imports_a_real_chain():
-    request = chain_json_to_multishot_request(_chain("chain_02.json"))
+    request = chain_json_to_multishot_request(_chain("freezone_chain_16x9_two_voices.json"))
 
     assert request["aspect_ratio"] == "16:9"
     # 192 frames at 24fps — the dialogue floor the chain was authored against.
@@ -52,7 +49,7 @@ def test_imports_a_real_chain():
 def test_every_shot_keeps_its_prompt_verbatim():
     """The chain's shot text IS the final H3 prompt — rewriting it would discard
     the lint-clean prompt the authoring skills produced."""
-    chain = _chain("chain_02.json")
+    chain = _chain("freezone_chain_16x9_two_voices.json")
     request = chain_json_to_multishot_request(chain)
     for original, shot in zip(chain["shots"], request["shots"]):
         assert shot["description"] == original.strip()
@@ -62,7 +59,7 @@ def test_every_shot_keeps_its_prompt_verbatim():
 def test_dialogue_is_extracted_per_shot():
     """Not for rendering — the prompt already carries it — but because dialogue
     drives the frame floor and `expects_dialogue`, both of which are per shot."""
-    request = chain_json_to_multishot_request(_chain("chain_02.json"))
+    request = chain_json_to_multishot_request(_chain("freezone_chain_16x9_two_voices.json"))
     dialogues = [shot["dialogue"] for shot in request["shots"]]
     assert all(dialogues), "every shot of this chain speaks"
     assert "why am I on the Moon" in dialogues[0]
@@ -88,7 +85,7 @@ def test_sampling_overrides_are_not_carried_over():
     resolved server-side from config by `multishot_sampling_plan()`, and letting a
     JSON file override it would reintroduce the env-mutation-by-input pattern the
     local bench uses and that must not reach the app."""
-    chain = _chain("chain_02.json")
+    chain = _chain("freezone_chain_16x9_two_voices.json")
     assert "turbo_lora" in chain, "fixture should still carry it"
     request = chain_json_to_multishot_request(chain)
     assert "turbo_lora" not in request
@@ -97,18 +94,17 @@ def test_sampling_overrides_are_not_carried_over():
 
 def test_chain_without_image_prompts_imports_with_empty_lists():
     """Keyframe prompts live in qwen_keyframe_prompts.json, not in the chain file."""
-    chain = _chain("chain_02.json")
+    chain = _chain("freezone_chain_16x9_two_voices.json")
     assert "storyboard_prompts" not in chain
     request = chain_json_to_multishot_request(chain)
     assert request["storyboard_prompts"] == []
     assert request["storyboard_prompts_qwen"] == []
 
 
-def test_refs_only_variant_is_rejected_with_a_reason():
-    """A `_refs_only` chain has no start frame, which Freezone's multishot node
-    always requires — say so rather than failing later with a path error."""
-    chain = _chain("chain_02_refs_only.json")
-    assert chain.get("start_image") in (None, "")
+def test_chain_without_a_start_image_is_rejected_with_a_reason():
+    """A chain with no start frame, which Freezone's multishot node always requires —
+    say so rather than failing later with a path error."""
+    chain = {**_chain("freezone_chain_16x9_two_voices.json"), "start_image": None}
     with pytest.raises(ChainImportError, match="start_image"):
         chain_json_to_multishot_request(chain)
 

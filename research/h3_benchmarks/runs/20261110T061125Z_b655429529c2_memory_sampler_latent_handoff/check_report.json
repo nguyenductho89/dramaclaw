@@ -1,0 +1,382 @@
+{
+ "chain_01_refs_only": [
+  {
+   "shot": 1,
+   "expected_speaker": "ambrose",
+   "voice_cosines": {
+    "barnaby": 0.81,
+    "ambrose": 0.81
+   },
+   "voice_best": "barnaby",
+   "voice_ok": false,
+   "words_match": 0.73,
+   "said": "The Earth pulls the apple down. Newton settled this. Yeah, fish in the Eucharist of Dinnia",
+   "extra_speech": "dropsh.",
+   "faces": [
+    {
+     "t": 1.5,
+     "faces": [
+      {
+       "x": 414,
+       "px": 85,
+       "barnaby": 0.64,
+       "ambrose": 0.29
+      },
+      {
+       "x": 642,
+       "px": 17,
+       "barnaby": 0.05,
+       "ambrose": 0.13
+      },
+      {
+       "x": 716,
+       "px": 25,
+       "barnaby": 0.07,
+       "ambrose": -0.04
+      },
+      {
+       "x": 788,
+       "px": 75,
+       "barnaby": 0.22,
+       "ambrose": 0.6
+      }
+     ]
+    },
+    {
+     "t": 3.5,
+     "faces": [
+      {
+       "x": 410,
+       "px": 84,
+       "barnaby": 0.63,
+       "ambrose": 0.28
+      },
+      {
+       "x": 645,
+       "px": 17,
+       "barnaby": 0.03,
+       "ambrose": 0.06
+      },
+      {
+       "x": 786,
+       "px": 75,
+       "barnaby": 0.25,
+       "ambrose": 0.59
+      }
+     ]
+    },
+    {
+     "t": 5.0,
+     "faces": [
+      {
+       "x": 406,
+       "px": 83,
+       "barnaby": 0.62,
+       "ambrose": 0.18
+      },
+      {
+       "x": 643,
+       "px": 16,
+       "barnaby": 0.14,
+       "ambrose": -0.01
+      },
+      {
+       "x": 711,
+       "px": 29,
+       "barnaby": 0.13,
+       "ambrose": 0.15
+      },
+      {
+       "x": 786,
+       "px": 73,
+       "barnaby": 0.24,
+       "ambrose": 0.61
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "shot": 2,
+   "expected_speaker": "barnaby",
+   "voice_cosines": {
+    "barnaby": 0.81,
+    "ambrose": 0.67
+   },
+   "voice_best": "barnaby",
+   "voice_ok": true,
+   "words_match": 0.94,
+   "said": "But to Einstein, gravity isn't a pull.",
+   "extra_speech": "",
+   "faces": [
+    {
+     "t": 1.5,
+     "faces": [
+      {
+       "x": 403,
+       "px": 87,
+       "barnaby": 0.55,
+       "ambrose": 0.3
+      },
+      {
+       "x": 645,
+       "px": 16,
+       "barnaby": 0.1,
+       "ambrose": -0.05
+      },
+      {
+       "x": 793,
+       "px": 81,
+       "barnaby": 0.18,
+       "ambrose": 0.59
+      }
+     ]
+    },
+    {
+     "t": 3.5,
+     "faces": [
+      {
+       "x": 387,
+       "px": 104,
+       "barnaby": 0.58,
+       "ambrose": 0.25
+      },
+      {
+       "x": 593,
+       "px": 15,
+       "barnaby": 0.2,
+       "ambrose": 0.09
+      },
+      {
+       "x": 645,
+       "px": 17,
+       "barnaby": 0.07,
+       "ambrose": -0.03
+      },
+      {
+       "x": 799,
+       "px": 93,
+       "barnaby": 0.21,
+       "ambrose": 0.62
+      }
+     ]
+    },
+    {
+     "t": 5.0,
+     "faces": [
+      {
+       "x": 328,
+       "px": 121,
+       "barnaby": 0.48,
+       "ambrose": 0.19
+      },
+      {
+       "x": 641,
+       "px": 14,
+       "barnaby": 0.18,
+       "ambrose": -0.08
+      },
+      {
+       "x": 829,
+       "px": 115,
+       "barnaby": 0.22,
+       "ambrose": 0.61
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "shot": 3,
+   "expected_speaker": "ambrose",
+   "voice_cosines": {
+    "barnaby": 0.81,
+    "ambrose": 0.72
+   },
+   "voice_best": "barnaby",
+   "voice_ok": false,
+   "words_match": 1.0,
+   "said": "Not a pull? Newton's laws still work for a great many things.",
+   "extra_speech": "But mass",
+   "faces": [
+    {
+     "t": 1.5,
+     "faces": [
+      {
+       "x": 379,
+       "px": 91,
+       "barnaby": 0.54,
+       "ambrose": 0.26
+      },
+      {
+       "x": 644,
+       "px": 16,
+       "barnaby": 0.12,
+       "ambrose": 0.19
+      },
+      {
+       "x": 798,
+       "px": 88,
+       "barnaby": 0.23,
+       "ambrose": 0.64
+      }
+     ]
+    },
+    {
+     "t": 3.5,
+     "faces": [
+      {
+       "x": 326,
+       "px": 113,
+       "barnaby": 0.58,
+       "ambrose": 0.27
+      },
+      {
+       "x": 595,
+       "px": 15,
+       "barnaby": 0.1,
+       "ambrose": 0.04
+      },
+      {
+       "x": 644,
+       "px": 17,
+       "barnaby": 0.03,
+       "ambrose": -0.09
+      },
+      {
+       "x": 817,
+       "px": 108,
+       "barnaby": 0.21,
+       "ambrose": 0.63
+      }
+     ]
+    },
+    {
+     "t": 5.0,
+     "faces": [
+      {
+       "x": 269,
+       "px": 140,
+       "barnaby": 0.64,
+       "ambrose": 0.3
+      },
+      {
+       "x": 595,
+       "px": 15,
+       "barnaby": 0.16,
+       "ambrose": 0.02
+      },
+      {
+       "x": 641,
+       "px": 16,
+       "barnaby": 0.21,
+       "ambrose": -0.06
+      },
+      {
+       "x": 842,
+       "px": 113,
+       "barnaby": 0.18,
+       "ambrose": 0.7
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "shot": 4,
+   "expected_speaker": "barnaby",
+   "voice_cosines": {
+    "barnaby": 0.84,
+    "ambrose": 0.75
+   },
+   "voice_best": "barnaby",
+   "voice_ok": true,
+   "words_match": 0.88,
+   "said": "bends space -time. The apple just takes the straightest path.",
+   "extra_speech": "",
+   "faces": [
+    {
+     "t": 1.5,
+     "faces": [
+      {
+       "x": 352,
+       "px": 105,
+       "barnaby": 0.58,
+       "ambrose": 0.21
+      },
+      {
+       "x": 594,
+       "px": 16,
+       "barnaby": -0.0,
+       "ambrose": 0.12
+      },
+      {
+       "x": 644,
+       "px": 16,
+       "barnaby": 0.12,
+       "ambrose": 0.06
+      },
+      {
+       "x": 794,
+       "px": 92,
+       "barnaby": 0.21,
+       "ambrose": 0.66
+      },
+      {
+       "x": 981,
+       "px": 23,
+       "barnaby": 0.13,
+       "ambrose": 0.07
+      }
+     ]
+    },
+    {
+     "t": 3.5,
+     "faces": [
+      {
+       "x": 291,
+       "px": 124,
+       "barnaby": 0.64,
+       "ambrose": 0.27
+      },
+      {
+       "x": 640,
+       "px": 18,
+       "barnaby": 0.2,
+       "ambrose": 0.02
+      },
+      {
+       "x": 819,
+       "px": 109,
+       "barnaby": 0.24,
+       "ambrose": 0.64
+      }
+     ]
+    },
+    {
+     "t": 5.0,
+     "faces": [
+      {
+       "x": 245,
+       "px": 141,
+       "barnaby": 0.67,
+       "ambrose": 0.27
+      },
+      {
+       "x": 643,
+       "px": 17,
+       "barnaby": 0.13,
+       "ambrose": 0.0
+      },
+      {
+       "x": 848,
+       "px": 115,
+       "barnaby": 0.15,
+       "ambrose": 0.63
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

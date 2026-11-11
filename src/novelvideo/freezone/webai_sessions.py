@@ -10,7 +10,7 @@ persisting between jobs instead of starting fresh every time.
 **Scope it per scene, never globally.** The previs CLI shared one conversation
 across every scene and Gemini carried the Garden of Eden's background figures
 into the Moon shots — Adam and Eve, unsuited, standing on the regolith
-(2026-11-09). `cmd_storyboard` in `previs_h3_test/scripts/gemini_webai_images.py`
+(2026-11-09). `cmd_storyboard` in `video_production_with_skills/tools/gemini_webai_images.py`
 was reworked to one conversation per chain for exactly this reason, and this
 module is the app-side equivalent: a `{scene_key: conversation_id}` map, where
 the caller chooses the key (the canvas node id is a reasonable default, a shared

@@ -1,8 +1,8 @@
 # Newton POV: YouTube Short 9:16, ~60s
 
-**Lời đọc:** tiếng Anh, Newton ngôi thứ nhất, do H3 tự sinh, thong thả, accent Anh. Âm sắc được ghim bằng một clip mẫu từ Qwen3-TTS VoiceDesign (`voice_ref`), xem `previs_h3_test/scripts/qwen_voice_design.py`. **Góc máy:** camera là mắt Newton, chỉ thấy tay và tay áo. Trong hình không ai nói.
+**Lời đọc:** tiếng Anh, Newton ngôi thứ nhất, do H3 tự sinh, thong thả, accent Anh. Âm sắc được ghim bằng một clip mẫu từ Qwen3-TTS VoiceDesign (`voice_ref`), xem `video_production_with_skills/tools/qwen_voice_design.py`. **Góc máy:** camera là mắt Newton, chỉ thấy tay và tay áo. Trong hình không ai nói.
 
-**Cấu trúc:** 4 chain × 2 shot × 192 khung (8,0 s), checkpoint ref2va, turbo LoRA 12 bước. Mỗi chain có một keyframe Qwen làm `start_image` và dùng chung một `voice_ref`; giữa các chain là hard cut. Prompt: `previs_h3_test/scripts/skits/newton_pov/chain_0N.json`.
+**Cấu trúc:** 4 chain × 2 shot × 192 khung (8,0 s), checkpoint ref2va, turbo LoRA 12 bước. Mỗi chain có một keyframe Qwen làm `start_image` và dùng chung một `voice_ref`; giữa các chain là hard cut. Prompt: `video_production_with_skills/shorts/newton_pov/chain_0N.json`.
 
 | Chain | Thời kỳ | Hình | Shot | Lời đọc |
 |---|---|---|---|---|

@@ -1,3 +1,0 @@
-0::/
-/sys/fs/cgroup/memory.max 59999997952
-(failed: sh -c cat /proc/self/cgroup; for f in /sys/fs/cgroup/memory.max /sys/fs/cgroup/memory/memory.limit_in_bytes; do [ -f $f ] && echo "$f $(cat $f)"; done)

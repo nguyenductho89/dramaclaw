@@ -6,15 +6,15 @@ description: Viết kịch bản video YouTube long-form 16:9 (6-7 phút, "Scien
 # Viết kịch bản long-form 16:9 cho MiniMax H3
 
 Đọc trước khi viết:
-- `examples/science-humor/series-bible.md`: nhân vật, phân vai, bối cảnh, luật truyện, danh sách tập.
-- Các tập đã viết trong `examples/science-humor/`: tránh trùng cấu trúc và trò đùa.
+- `video_production_with_skills/series/science_humor/series-bible.md`: nhân vật, phân vai, bối cảnh, luật truyện, danh sách tập.
+- Các tập đã viết (`video_production_with_skills/series/science_humor/<tập>/script.md`): tránh trùng cấu trúc và trò đùa.
 - `src/novelvideo/agents/prompts/minimax_h3_rules.md`: quy tắc gốc của H3.
 
 ## File đầu ra
 
-1. `examples/science-humor/<tập>-script.md`: kịch bản đầy đủ, viết bằng skill này.
+1. `video_production_with_skills/series/<series>/<tập>/script.md`: kịch bản đầy đủ, viết bằng skill này.
 2. Mục `## Storyboard` trong file kịch bản và file prompt keyframe `<tập>/qwen_keyframe_prompts.json`: viết bằng skill `script-to-qwen-storyboard` (prompt soạn và review bằng `qwen-image-prompting`).
-3. `previs_h3_test/scripts/skits/science_humor/<tập>/chain_NN.json`: mỗi đoạn H3 liên tục một file, viết bằng skill này sau khi user duyệt ảnh keyframe storyboard.
+3. `video_production_with_skills/series/science_humor/<tập>/chain_NN.json`: mỗi đoạn H3 liên tục một file, viết bằng skill này sau khi user duyệt ảnh keyframe storyboard.
 
 Không có code nào viết hoặc sinh lại kịch bản, storyboard hay prompt: mọi thay đổi sửa thẳng vào các file trên bằng skill tương ứng.
 
@@ -42,16 +42,16 @@ Tổng: <phút:giây>, <số từ> từ. Barnaby <x> từ, Ambrose <y> từ.
 
 ```json
 {
- "name": "science_humor_gravity_test_chain_01",
+ "name": "science_humor_ep01_chain_01",
  "scene": "orchard",
  "aspect_ratio": "16:9",
  "frames": 192,
  "checkpoint": "ref2va",
- "voice_refs": ["previs_h3_test/scripts/skits/science_humor/voice/barnaby.wav", "previs_h3_test/scripts/skits/science_humor/voice/ambrose.wav"],
+ "voice_refs": ["video_production_with_skills/series/science_humor/assets/voices/barnaby.wav", "video_production_with_skills/series/science_humor/assets/voices/ambrose.wav"],
  "turbo_lora": "minimax_h3_ref2v_turbo_4step_v0.1_comfyui_bf16.safetensors",
  "turbo_steps": 12,
- "start_image": "previs_h3_test/scripts/skits/science_humor/gravity_test/storyboard/keyframes_qwen/chain_01_k0.png",
- "reference_images": ["previs_h3_test/scripts/skits/science_humor/character/barnaby_sheet.png", "previs_h3_test/scripts/skits/science_humor/character/ambrose_sheet.png"],
+ "start_image": "video_production_with_skills/series/science_humor/ep01/keyframes/images/chain_01_k0.png",
+ "reference_images": ["video_production_with_skills/series/science_humor/assets/characters/barnaby_sheet.png", "video_production_with_skills/series/science_humor/assets/characters/ambrose_sheet.png"],
  "shots": ["..."]
 }
 ```
@@ -61,7 +61,7 @@ Tổng: <phút:giây>, <số từ> từ. Barnaby <x> từ, Ambrose <y> từ.
 - Mỗi shot gồm 6 mục của ref2va: `subject_definitions:`, `summary:`, `retention_analysis:`, `detailed_description:`, `overall_soundscape:`, `non_diegetic_music:`, theo nhánh ref2va của `assemble_minimax_h3_prompt`.
 - Số thứ tự ảnh cố định: `<Picture 1>` khung đầu (keyframe K0), `<Picture 2>` sheet Barnaby, `<Picture 3>` sheet Ambrose; `<Subject 1>` Barnaby, `<Subject 2>` Ambrose.
 - `voice_refs` theo thứ tự cố định: `<Audio 1>` là Barnaby, `<Audio 2>` là Ambrose. Giữ giống nhau ở mọi chain, kể cả chain chỉ một người nói.
-- **Khung đầu là keyframe đã duyệt:** `start_image` = keyframe K0 của cảnh (`storyboard/keyframes_qwen/chain_NN_k0.png`), `reference_images` = [sheet Barnaby, sheet Ambrose]. Hai người đứng sẵn ở khung đầu, không đi vào khung. Tư thế đầu và cuối, vật cầm và cỡ khung của từng shot lấy đúng từ dòng tương ứng của mục Storyboard. Chỉ render video từ keyframe đã duyệt (`approve_storyboard.py`).
+- **Khung đầu là keyframe đã duyệt:** `start_image` = keyframe K0 của cảnh (`<tập>/keyframes/images/chain_NN_k0.png`), `reference_images` = [sheet Barnaby, sheet Ambrose]. Hai người đứng sẵn ở khung đầu, không đi vào khung. Tư thế đầu và cuối, vật cầm và cỡ khung của từng shot lấy đúng từ dòng tương ứng của mục Storyboard. Chỉ render video từ keyframe đã duyệt (`approve_storyboard.py`).
 - **Hai giọng phải khác giọng vùng, không chỉ khác tính cách:** Barnaby giọng Mỹ, Ambrose giọng Anh. Hai giọng cùng "English accent" nghe như một (Resemblyzer: cùng người 0,90, khác người 0,88). Sau khi thiết kế, kiểm cosine giữa hai giọng mẫu và nghe thật trước khi sinh video. Lời của Barnaby dùng cách nói Mỹ ("Nice", "Sure"), không dùng "Lovely", "Quite".
 - Mọi shot đều ghi nhãn `[Shot 1]`, theo khuôn chính thức và lint của repo.
 

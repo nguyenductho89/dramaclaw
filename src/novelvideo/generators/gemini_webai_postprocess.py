@@ -2,7 +2,7 @@
 # Copyright (c) 2026 ClaymoreLab
 """Remove Gemini's visible sparkle watermark from a WebAI-generated image.
 
-Ported from `previs_h3_test/scripts/gemini_webai_images.py` (2026-11-09) so the
+Ported from `video_production_with_skills/tools/gemini_webai_images.py` (2026-11-09) so the
 app's Freezone image path can reuse the exact detector the previs CLI validated
 against 14 real generations. SynthID (Google's invisible watermark) is
 deliberately untouched — only the visible UI overlay is inpainted.
@@ -15,8 +15,7 @@ are): the app only calls this when `GEMINI_WEBAI_REMOVE_WATERMARK` is on, and
 that flag defaults to off precisely so a missing OpenCV can never break image
 generation.
 
-Empirical reasoning behind every constant below, from the 2026-11-09 watermark
-entry of `previs_h3_test/science_humor_gravity_test_run.md`:
+Empirical reasoning behind every constant below (2026-11-09 watermark measurements):
 
 - The watermark lands at a near-FIXED absolute position on a 1344x768 canvas
   regardless of image content (hand-measured in 6+ unrelated images, all within

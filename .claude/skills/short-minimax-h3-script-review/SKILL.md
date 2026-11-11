@@ -1,6 +1,6 @@
 ---
 name: short-minimax-h3-script-review
-description: Review kịch bản short 9:16 viết cho video model MiniMax H3 (skit JSON multishot trong previs_h3_test/scripts/skits/). Dùng khi user nhờ review/kiểm tra kịch bản, hoặc ngay sau khi viết xong bằng short-minimax-h3-script-writer. Chỉ báo lỗi, không tự sửa trừ khi được yêu cầu.
+description: Review kịch bản short 9:16 viết cho video model MiniMax H3 (skit JSON multishot trong video_production_with_skills/shorts/). Dùng khi user nhờ review/kiểm tra kịch bản, hoặc ngay sau khi viết xong bằng short-minimax-h3-script-writer. Chỉ báo lỗi, không tự sửa trừ khi được yêu cầu.
 ---
 
 # Review kịch bản short 9:16 cho MiniMax H3

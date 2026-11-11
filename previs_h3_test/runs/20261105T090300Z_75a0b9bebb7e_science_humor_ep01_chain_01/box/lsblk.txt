@@ -1,6 +1,0 @@
-NAME        MODEL                                    ROTA TRAN     SIZE TYPE FSTYPE MOUNTPOINT
-sda         KINGSTON SKC6002                            0 sata   238.5G disk        
-├─sda1                                                  0            1G part        
-└─sda2                                                  0        237.4G part        /usr/lib/x86_64-linux-gnu/nvidia/xorg/nvidia_drv.so
-nvme0n1     Samsung SSD 9100 PRO 4TB                    0 nvme     3.6T disk        
-└─nvme0n1p1                                             0 nvme     3.3T part        /etc/resolv.conf

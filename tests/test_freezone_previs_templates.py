@@ -1,7 +1,7 @@
 """Unit tests for the previs prompt templates (2026-11-10).
 
 These prompts were ported out of
-the former `previs_h3_test/scripts/skits/science_humor/gravity_test/gen_chains.py` so they
+the former `video_production_with_skills/series/science_humor/ep01/gen_chains.py` so they
 can be run from a Freezone image node. They carry MEASURED constants — camera
 height, subject height, "the horizon passes through the subjects' chests" — that
 came from measuring real generated frames, so the two flavours must say the same

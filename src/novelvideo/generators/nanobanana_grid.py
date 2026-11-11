@@ -4402,7 +4402,7 @@ _ORIGINAL_RELAY_REFERENCE_IMAGES_FOR_NEWAPI = _relay_reference_images_for_newapi
 
 
 # Both helpers moved to `gemini_webai_client` (2026-11-10) so the standalone previs
-# CLI `previs_h3_test/scripts/gemini_webai_images.py` can import them instead of
+# CLI `video_production_with_skills/tools/gemini_webai_images.py` can import them instead of
 # keeping its own hand-copied, already-drifting duplicates. Re-exported under their
 # original private names because this module has 6 internal call sites, including
 # three RunPod branches of `_generate_image`.

@@ -6,13 +6,13 @@ Extracted from `nanobanana_grid.py` so BOTH callers use one copy:
 
 - the app (`nanobanana_grid.py`'s `_call_webai_chat_image_api`, which re-exports
   these two under their original private names);
-- the standalone previs CLI `previs_h3_test/scripts/gemini_webai_images.py`,
+- the standalone previs CLI `video_production_with_skills/tools/gemini_webai_images.py`,
   which had hand-copied both (its own docstring said so) and drifted.
 
 Deliberately has **no top-level `novelvideo` import**: the previs script runs
 under `uv run` with its own dependency set and loads this file by path with
 `importlib.util.spec_from_file_location`, the same way
-`previs_h3_test/scripts/qwen_images.py:_load_lint()` loads the Qwen prompt
+`video_production_with_skills/tools/qwen_images.py:_load_lint()` loads the Qwen prompt
 linter. Keep it that way — `record_artifact` is imported lazily and its absence
 is not an error.
 """

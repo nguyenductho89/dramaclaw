@@ -7,7 +7,7 @@ description: Review hàng loạt ảnh do AI sinh (storyboard/keyframe, plate n�
 
 Haiku (rẻ, nhanh, đọc được ảnh) làm **vòng lọc đầu**: nó trả JSON theo checklist sinh từ spec; `review.py` chấm bằng **luật cố định** (không để model tự phán PASS/FAIL). Mọi `FAIL`/`MANUAL` được model chính xem lại ảnh thật. **Chỉ user duyệt** (`approve_storyboard.py approve` không bao giờ được tự chạy).
 
-Không có gì trong skill này gắn với một tập cụ thể: mọi thứ riêng của tập (ai là nhân vật, ai cầm gì, nền phải giữ gì, khung hình từng bước) nằm trong **file spec**. Mẫu: `examples/gravity_test_spec.json`.
+Không có gì trong skill này gắn với một tập cụ thể: mọi thứ riêng của tập (ai là nhân vật, ai cầm gì, nền phải giữ gì, khung hình từng bước) nằm trong **file spec**. Mẫu: `examples/episode_spec.json`.
 
 ## Các góc độ review
 
@@ -50,7 +50,7 @@ Soạn spec từ nguồn có sẵn của tập (kịch bản, `LINES`, `CAMERA`,
 
 ## Hiệu chuẩn (bắt buộc với loại lỗi/loại ảnh mới)
 
-Lập `calibration.json`: `[{"item": "<stem hoặc A->B>", "expect": [{"dimension": "props", "contains": "held by"}], "clean": true/false}]` gồm ảnh **đã biết có lỗi** và ảnh **đã biết sạch**; chạy `review.py calibrate spec.json calibration.json --frames ... [--pairs ...]`. Bảng cho biết mỗi góc độ bắt được/bỏ sót bao nhiêu lỗi đã biết và báo oan bao nhiêu trên ảnh sạch. Chỉ tin một góc độ khi bắt đủ và không báo oan; nếu không, hạ nó thành WARN hoặc xem tay. Mẫu: `examples/gravity_test_calibration.json`.
+Lập `calibration.json`: `[{"item": "<stem hoặc A->B>", "expect": [{"dimension": "props", "contains": "held by"}], "clean": true/false}]` gồm ảnh **đã biết có lỗi** và ảnh **đã biết sạch**; chạy `review.py calibrate spec.json calibration.json --frames ... [--pairs ...]`. Bảng cho biết mỗi góc độ bắt được/bỏ sót bao nhiêu lỗi đã biết và báo oan bao nhiêu trên ảnh sạch. Chỉ tin một góc độ khi bắt đủ và không báo oan; nếu không, hạ nó thành WARN hoặc xem tay. Mẫu: `examples/episode_calibration.json`.
 
 ## Mở rộng
 

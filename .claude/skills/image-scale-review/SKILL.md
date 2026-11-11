@@ -24,7 +24,7 @@ Tự đo và tính lại, **không tin cảm giác bằng mắt thường** — 
    im = Image.open("<ảnh>"); print(im.size)
    # crop quanh người, xem bằng mắt để xác định đỉnh đầu/gót chân, rồi tính px
    ```
-   Neo xác định thêm (tùy chọn): `faces_in()` trong `previs_h3_test/scripts/skits/science_humor/gravity_test/check_chains.py` trả `px` = chiều cao khuôn mặt; chiều cao người ≈ 7,5 × chiều cao mặt — dùng để cross-check số đo tay.
+   Neo xác định thêm (tùy chọn): `faces_in()` trong `video_production_with_skills/tools/check_video.py` trả `px` = chiều cao khuôn mặt; chiều cao người ≈ 7,5 × chiều cao mặt — dùng để cross-check số đo tay.
 3. **Đo từng vật khác ở CÙNG độ sâu với người**: crop, đọc chiều cao pixel, tính `tỷ lệ_đo = cao_px_vật / cao_px_người`, so với `tỷ lệ_kỳ_vọng = cao_thật_vật / 1,7m`. Lệch % = |đo − kỳ vọng| / kỳ vọng.
 4. **Vật ở độ sâu khác** (xa hơn thì nhỏ hơn trên ảnh): KHÔNG so thẳng với người (so thẳng sẽ sai — vật xa phải nhỏ hơn). Dùng mục **"Đo định lượng nhiều độ sâu"** bên dưới để tính chiều cao px *kỳ vọng* tại đúng vị trí mặt đất của vật đó rồi so với số đo. Chỉ rơi về phán định tính khi vật không đứng trên mặt đất (bay, treo) hoặc không xác định được chân vật.
 5. **Kiểm thêm, không chỉ tỷ lệ**:
@@ -56,9 +56,9 @@ Ví dụ làm tay thật (`chain_02_shot3.png`, Mặt Trăng): chân trời y≈
 ## Thêm khi ảnh do Qwen-Image 2.1 sinh (qwen_images.py)
 
 Quy trình đo giữ nguyên. Ngoài ra kiểm các lỗi riêng của Qwen compose:
-- **Kết cấu "tranh sơn" và quầng sáng quanh người** (edit ~1 megapixel để lại halo, ghi trong docstring `qwen21_character_local.py`): phóng to viền quanh nhân vật, nếu thấy quầng thì ghi CẢNH BÁO.
+- **Kết cấu "tranh sơn" và quầng sáng quanh người** (edit ~1 megapixel để lại halo, ghi trong docstring `comfy_qwen.py`): phóng to viền quanh nhân vật, nếu thấy quầng thì ghi CẢNH BÁO.
 - **Sheet bị chép nguyên vào khung** (hai-ba góc nhìn cùng một người xuất hiện như hai-ba người): đếm người, ghi CHẶN nếu nhiều hơn số trong prompt. (H3 từng vẽ lại sheet vào khung; Qwen có thể sao chép sheet tương tự, chưa kiểm trên GPU.)
-- **Danh tính trôi**: chạy `check_chains.py --storyboard <ảnh>` (SFace, ngưỡng 0,363) như với Gemini; không có bước nào thay được.
+- **Danh tính trôi**: chạy `tools/check_video.py --storyboard <ảnh>` (SFace, ngưỡng 0,363) như với Gemini; không có bước nào thay được.
 - **Kích thước**: `finish()` ép ảnh về 1344x768; nếu log có dòng WARNING "not 16:9" thì nền (`<image1>`) không phải 16:9 và ảnh bị kéo giãn — đo tỷ lệ trên ảnh đó vô nghĩa, sinh lại với nền đúng khổ.
 - **Ý kiến thứ hai từ Qwen-VL** (tùy chọn): cần `QWEN_API_KEY` trong `.env` (hiện để trống nên chưa dùng được). Vẫn chỉ tham khảo, số đo PIL là căn cứ chính.
 
@@ -78,6 +78,6 @@ Quy trình đo giữ nguyên. Ngoài ra kiểm các lỗi riêng của Qwen comp
 
 ## Tùy chọn: ý kiến thứ hai từ vision model (KHÔNG bắt buộc)
 
-Có thể gửi ảnh + số thật cho vision bridge local để ước lượng chéo: `generate()` trong `previs_h3_test/scripts/gemini_webai_images.py` nhận ảnh + text, đọc nhánh text `choices[0].message.content` (thay vì tải artifact ảnh). Hỏi kiểu "đo chiều cao module theo số lần chiều cao người, có đúng ~4 lần không". **Cảnh báo**: bridge cùng lớp model vừa sinh ảnh, có thể sai y như lúc sinh — chỉ dùng tham khảo, **số đo PIL ở bước 2-3 vẫn là căn cứ chính**.
+Có thể gửi ảnh + số thật cho vision bridge local để ước lượng chéo: `generate()` trong `video_production_with_skills/tools/gemini_webai_images.py` nhận ảnh + text, đọc nhánh text `choices[0].message.content` (thay vì tải artifact ảnh). Hỏi kiểu "đo chiều cao module theo số lần chiều cao người, có đúng ~4 lần không". **Cảnh báo**: bridge cùng lớp model vừa sinh ảnh, có thể sai y như lúc sinh — chỉ dùng tham khảo, **số đo PIL ở bước 2-3 vẫn là căn cứ chính**.
 
 Đừng sửa prompt/ảnh khi chưa được yêu cầu. Nếu user bảo sửa: sửa prompt (theo `image-scale-prompt`), sinh lại ảnh, rồi chạy lại review này từ đầu.

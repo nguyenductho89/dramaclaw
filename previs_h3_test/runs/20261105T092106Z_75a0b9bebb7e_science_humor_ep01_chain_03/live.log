@@ -1,5 +1,0 @@
-    0.0s submitted prompt eba0693a-524d-4ab3-9134-e283aaca724b
-    5.0s running=1 pending=0
-  537.5s event execution_start {"prompt_id": "eba0693a-524d-4ab3-9134-e283aaca724b", "timestamp": 1793870470666}
-  537.5s event execution_cached {"nodes": ["1", "2", "3", "4", "7", "200"], "prompt_id": "eba0693a-524d-4ab3-9134-e283aaca724b", "timestamp": 1793870470667}
-  537.5s event execution_success {"prompt_id": "eba0693a-524d-4ab3-9134-e283aaca724b", "timestamp": 1793871006593}

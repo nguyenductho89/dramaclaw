@@ -119,4 +119,10 @@ docs/h3-templates/media/*/
 frontend/public/h3-templates/
 
 # Video outputs of rented-box benchmark runs (large; kept locally only)
-previs_h3_test/runs/**/*.mp4
+research/h3_benchmarks/runs/**/*.mp4
+
+# Video production with skills: render outputs and derived files (never commit)
+video_production_with_skills/runs/
+video_production_with_skills/series/*/ep*/reports/
+video_production_with_skills/series/*/ep*/keyframes/images/candidates/
+video_production_with_skills/series/*/assets/voices/candidates/

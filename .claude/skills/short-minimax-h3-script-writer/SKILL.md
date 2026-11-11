@@ -1,12 +1,12 @@
 ---
 name: short-minimax-h3-script-writer
-description: Viết kịch bản short 9:16 (YouTube Shorts/TikTok) dạng multishot, CHỈ cho video model MiniMax H3 (fl2va/ref2va) trong previs_h3_test/scripts/skits/*.json. Dùng khi user nhờ viết skit/kịch bản short, thêm shot, hoặc đổi lời thoại. Sau khi viết xong luôn chạy skill short-minimax-h3-script-review.
+description: Viết kịch bản short 9:16 (YouTube Shorts/TikTok) dạng multishot, CHỈ cho video model MiniMax H3 (fl2va/ref2va) trong video_production_with_skills/shorts/*.json. Dùng khi user nhờ viết skit/kịch bản short, thêm shot, hoặc đổi lời thoại. Sau khi viết xong luôn chạy skill short-minimax-h3-script-review.
 ---
 
 # Viết kịch bản short 9:16 cho MiniMax H3 (multishot)
 
 ## File đầu ra
-`previs_h3_test/scripts/skits/<ten>.json`, theo mẫu `who_has_it_worse.json`:
+`video_production_with_skills/shorts/<ten>.json`, theo mẫu `who_has_it_worse.json`:
 `{"name", "aspect_ratio": "9:16", "frames", "start_image", "shots": [<chuỗi prompt mỗi shot>]}`. `aspect_ratio` bắt buộc là `"9:16"`; script sinh video đọc trường này để chọn 768×1344, thiếu thì skit vẫn mặc định 9:16.
 Mỗi shot là một chuỗi gồm 3 mục: `integrated_multimodal_description:`, `overall_soundscape:`, `non_diegetic_music:`.
 

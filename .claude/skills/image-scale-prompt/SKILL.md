@@ -11,7 +11,7 @@ Mục tiêu: khi prompt đặt cạnh nhau nhiều vật có kích thước th�
 
 Model sinh ảnh dạng compose/multi-reference (Gemini qua WebAI, Qwen-Image 2.1) **không suy luận không gian 3D thật**. Nó ghép từ nhiều ảnh nguồn có scale/góc khác nhau bằng cách đọc mô tả chữ, và mặc định **co mọi vật cho vừa khung** — nên vật to (tàu vũ trụ, nhà, cây) bị thu nhỏ lại, còn vật nhỏ hoặc nhân vật nền bị phóng to/kéo gần/nhân đôi. Đây là lỗi chung của cả hai model, không phải hỏng ngẫu nhiên:
 - Qwen-Image từng render trẻ nhỏ thành người lớn vì prompt không có tín hiệu tỷ lệ cơ thể; fix bằng cách nhồi `subject_hints` body-type tường minh + câu "keep body proportions and size" (xem `docs/archive/claude-md-history.md`).
-- Gemini từng vẽ lunar module (thật ~7m, phải cao gấp ~4 lần người) chỉ bằng ~57% chiều cao người; cải thiện rõ sau khi thêm số thật vào prompt — xem mẫu `backgrounds.moon` trong `previs_h3_test/scripts/skits/science_humor/gravity_test/image_prompts.json`.
+- Gemini từng vẽ lunar module (thật ~7m, phải cao gấp ~4 lần người) chỉ bằng ~57% chiều cao người; cải thiện rõ sau khi thêm số thật vào prompt — xem mẫu `backgrounds.moon` trong `video_production_with_skills/series/science_humor/ep01/image_prompts.json`.
 
 Đòn bẩy duy nhất không đổi model là **viết số thật và bội số vào prompt**. Đừng tin model tự suy ra tỷ lệ đúng từ tên vật ("a lunar module", "an apple tree") — phải nói rõ nó cao bao nhiêu và cao gấp mấy lần người.
 
@@ -68,14 +68,14 @@ Mẫu prompt đầy đủ cho cảnh phố (người lớn 1,85 m + bé + chó +
 ## Khi model là Qwen-Image 2.1
 
 - Soạn và review prompt bằng skill `qwen-image-prompting` (chuẩn duy nhất cho prompt Qwen). Các câu số thật, bội số, đường chân trời ở trên đưa vào phần mô tả theo quy tắc E6 của skill (cụ thể, nhìn thấy được).
-- Prompt chỉ chạy được qua `previs_h3_test/scripts/qwen_images.py keyframes` sau khi qua `qwen_prompt_gate.py` (kiểm tra máy theo skill và review đã ghi nhận); prompt nằm trong `qwen_keyframe_prompts.json`, soạn bằng skill `script-to-qwen-storyboard`.
+- Prompt chỉ chạy được qua `video_production_with_skills/tools/qwen_images.py keyframes` sau khi qua `qwen_prompt_gate.py` (kiểm tra máy theo skill và review đã ghi nhận); prompt nằm trong `qwen_keyframe_prompts.json`, soạn bằng skill `script-to-qwen-storyboard`.
 - Sau khi sinh vẫn kiểm tỷ lệ bằng `image-scale-review`.
 
 ## Bẫy & anti-pattern cần né
 
 - **Chỉ nói "life-size" / "at the correct scale" chung chung** mà không neo số thật → vô dụng, model vẫn co vừa khung. Luôn kèm mét + bội số.
 - **Vật/nhân vật nền bị phóng to, quá rõ, quá gần** thay vì nhỏ-xa-mờ. Với mọi thứ ở hậu cảnh: nêu rõ *"small, distant and out of focus, too far to read detail"* và cấm nó to/gần/rõ hơn thế.
-- **Đếm sai hoặc nhân đôi vật nền** (ví dụ phi hành gia lúc 0 lúc 1 lúc 2). Nêu số lượng chính xác (*"a single astronaut", "no one else in the frame"*). Nếu sinh nhiều ảnh cùng một bối cảnh qua Gemini, dùng **conversation riêng cho mỗi bối cảnh** (xem `cmd_storyboard` trong `previs_h3_test/scripts/gemini_webai_images.py`) — hội thoại dùng chung giữa các cảnh khác nhau làm model lẫn vật/nhân vật nền từ cảnh này sang cảnh kia.
+- **Đếm sai hoặc nhân đôi vật nền** (ví dụ phi hành gia lúc 0 lúc 1 lúc 2). Nêu số lượng chính xác (*"a single astronaut", "no one else in the frame"*). Nếu sinh nhiều ảnh cùng một bối cảnh qua Gemini, dùng **conversation riêng cho mỗi bối cảnh** (xem `cmd_storyboard` trong `video_production_with_skills/tools/gemini_webai_images.py`) — hội thoại dùng chung giữa các cảnh khác nhau làm model lẫn vật/nhân vật nền từ cảnh này sang cảnh kia.
 - **Nhân vật nền lẫn từ cảnh khác** (Adam/Eve từ vườn lọt sang mặt trăng, không mặc đồ phi hành gia). Cùng nguyên nhân hội thoại dùng chung ở trên.
 - **Ảnh ghép nhiều ref trông "dán cắt"** (sai ánh sáng/bóng đổ) là lỗi anh em nhưng KHÁC tỷ lệ — xử lý ở skill khác (luật chiếu sáng storyboard trong `series-bible.md`), đừng lẫn hai thứ.
 

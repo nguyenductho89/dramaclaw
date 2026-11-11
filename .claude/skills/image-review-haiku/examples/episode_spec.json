@@ -1,0 +1,26 @@
+{
+  "name": "science-humor ep01 — Qwen keyframes (template)",
+  "images_dir": "video_production_with_skills/series/science_humor/ep01/keyframes/images",
+  "glob": "chain_*_k*.png",
+  "sequence_pattern": "^(?P<seq>.+)_k(?P<i>\\d+)$",
+  "min_push_in_growth": 1.4,
+  "cast": [
+    {"id": "barnaby", "describe": "older man with wild white hair and round glasses, yellow mustard cardigan over a blue checked shirt, brown trousers", "count": 1},
+    {"id": "ambrose", "describe": "man with long grey hair, long dark-brown 18th-century coat, white cravat/scarf", "count": 1}
+  ],
+  "props": [
+    {"id": "apple", "describe": "small red apple", "holder": "ambrose", "required_visible": true}
+  ],
+  "scene": {"forbidden": ["text", "logo", "watermark", "a third large foreground person"]},
+  "sequences": {
+    "chain_01": {
+      "framings": ["wide", "wide", "medium", "medium", "close"],
+      "must_persist": ["a single apple tree with a twisted trunk", "green wooded hills in the background", "tall green grass in the foreground"]
+    },
+    "chain_02": {
+      "framings": ["wide", "wide", "wide", "medium", "medium"],
+      "must_persist": ["a lunar lander with gold foil", "a small blue Earth in the black sky", "grey lunar ground with shadows"],
+      "known_issues": ["lander top cropped", "top of the lander"]
+    }
+  }
+}

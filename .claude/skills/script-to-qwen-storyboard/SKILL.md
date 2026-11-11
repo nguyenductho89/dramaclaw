@@ -47,7 +47,7 @@ Hỏi user các điều không suy ra được, ghi câu trả lời vào mục 
 Mỗi keyframe một prompt bằng tiếng Anh, bằng skill `qwen-image-prompting` (loại E). Đọc các ảnh đầu vào đã có; cỡ khung viết thành mô tả nhìn thấy được (E6); nhân vật trỏ bằng vị trí và thẻ ảnh tham chiếu của họ (E5, E9); nội dung khung lấy đúng từ dòng storyboard tương ứng.
 
 ### 6. Ghi file prompt
-`<thư mục dựng của tập>/qwen_keyframe_prompts.json` (thư mục chứa các chain JSON của tập):
+`video_production_with_skills/series/<series>/<tập>/keyframes/qwen_keyframe_prompts.json` (thư mục của tập; kịch bản là `video_production_with_skills/series/<series>/<tập>/script.md`):
 ```json
 {"<cảnh>": [
   {"k": 0, "mode": "compose", "framing": "wide", "storyboard_ref": "scene 01, shot 1, start",
@@ -59,12 +59,12 @@ Mỗi keyframe một prompt bằng tiếng Anh, bằng skill `qwen-image-prompti
 ```
 
 ### 7. Review và ghi sổ
-- Review từng prompt bằng skill `qwen-image-prompting` (mục "Review prompt"); biên bản lưu ở `<thư mục dựng của tập>/qwen_prompt_reviews/<ngày>.md`.
+- Review từng prompt bằng skill `qwen-image-prompting` (mục "Review prompt"); biên bản lưu ở `video_production_with_skills/series/<series>/<tập>/keyframes/reviews/<ngày>.md`.
 - Sửa đến khi không còn vi phạm, rồi ghi sổ:
-  `python3 previs_h3_test/scripts/qwen_prompt_gate.py record <thư mục dựng của tập>/qwen_keyframe_prompts.json --review <biên bản>`
-- Kiểm: `python3 previs_h3_test/scripts/qwen_prompt_gate.py check <thư mục dựng của tập>/qwen_keyframe_prompts.json` → mọi prompt `reviewed`. Cổng chặn prompt có chữ tiếng Việt.
+  `python3 video_production_with_skills/tools/qwen_prompt_gate.py record video_production_with_skills/series/<series>/<tập>/keyframes/qwen_keyframe_prompts.json --review <biên bản>`
+- Kiểm: `python3 video_production_with_skills/tools/qwen_prompt_gate.py check video_production_with_skills/series/<series>/<tập>/keyframes/qwen_keyframe_prompts.json` → mọi prompt `reviewed`. Cổng chặn prompt có chữ tiếng Việt.
 
 ## Sau khi sinh ảnh
-- Sinh từng khung: `python previs_h3_test/scripts/qwen_images.py keyframes <thư mục dựng của tập> --until <k>`.
+- Sinh từng khung: `python video_production_with_skills/tools/qwen_images.py keyframes video_production_with_skills/series/<series>/<tập> --until <k>`.
 - Trước khi sinh khung kế tiếp, kiểm ảnh vừa chọn có khớp dòng storyboard không bằng skill `image-review-haiku` và xem bằng mắt.
 - Ảnh lệch storyboard: soạn lại prompt của khung kế tiếp bằng `qwen-image-prompting` dựa trên ảnh thật, review và ghi sổ lại (prompt đổi thì phải review lại mới chạy được).

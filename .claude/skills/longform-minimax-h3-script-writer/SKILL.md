@@ -12,8 +12,11 @@ description: Viết kịch bản video YouTube long-form 16:9 (6-7 phút, "Scien
 
 ## File đầu ra
 
-1. `examples/science-humor/<tập>-script.md`: kịch bản đầy đủ.
-2. `previs_h3_test/scripts/skits/science_humor/<tập>/chain_NN.json`: mỗi đoạn H3 liên tục một file.
+1. `examples/science-humor/<tập>-script.md`: kịch bản đầy đủ, viết bằng skill này.
+2. Mục `## Storyboard` trong file kịch bản và file prompt keyframe `<tập>/qwen_keyframe_prompts.json`: viết bằng skill `script-to-qwen-storyboard` (prompt soạn và review bằng `qwen-image-prompting`).
+3. `previs_h3_test/scripts/skits/science_humor/<tập>/chain_NN.json`: mỗi đoạn H3 liên tục một file, viết bằng skill này sau khi user duyệt ảnh keyframe storyboard.
+
+Không có code nào viết hoặc sinh lại kịch bản, storyboard hay prompt: mọi thay đổi sửa thẳng vào các file trên bằng skill tương ứng.
 
 ### Khuôn file kịch bản
 
@@ -47,7 +50,7 @@ Tổng: <phút:giây>, <số từ> từ. Barnaby <x> từ, Ambrose <y> từ.
  "voice_refs": ["previs_h3_test/scripts/skits/science_humor/voice/barnaby.wav", "previs_h3_test/scripts/skits/science_humor/voice/ambrose.wav"],
  "turbo_lora": "minimax_h3_ref2v_turbo_4step_v0.1_comfyui_bf16.safetensors",
  "turbo_steps": 12,
- "start_image": "previs_h3_test/scripts/skits/science_humor/gravity_test/backgrounds/orchard.png",
+ "start_image": "previs_h3_test/scripts/skits/science_humor/gravity_test/storyboard/keyframes_qwen/chain_01_k0.png",
  "reference_images": ["previs_h3_test/scripts/skits/science_humor/character/barnaby_sheet.png", "previs_h3_test/scripts/skits/science_humor/character/ambrose_sheet.png"],
  "shots": ["..."]
 }
@@ -56,9 +59,9 @@ Tổng: <phút:giây>, <số từ> từ. Barnaby <x> từ, Ambrose <y> từ.
 - `frames` phải có dạng 17k+5 ở 24 khung/giây: 192 = 8 s, 209 ≈ 8,7 s. Shot có thoại tối thiểu 192 khung. Mỗi shot tối đa 12 s. Các shot trong một chain có cùng độ dài, nên gom những câu dài gần bằng nhau.
 - **Gom các shot cùng bối cảnh vào một chain:** H3 nối shot sau từ khung cuối thật của shot trước, nên mặt và vị trí ít lệch hơn so với hai keyframe sinh riêng. Tư thế đầu mỗi shot phải khớp tư thế cuối shot trước. Đã chạy được tới 6 shot mỗi chain.
 - Mỗi shot gồm 6 mục của ref2va: `subject_definitions:`, `summary:`, `retention_analysis:`, `detailed_description:`, `overall_soundscape:`, `non_diegetic_music:`, theo nhánh ref2va của `assemble_minimax_h3_prompt`.
-- Số thứ tự ảnh cố định: `<Picture 1>` nền, `<Picture 2>` sheet Barnaby, `<Picture 3>` sheet Ambrose; `<Subject 1>` Barnaby, `<Subject 2>` Ambrose.
+- Số thứ tự ảnh cố định: `<Picture 1>` khung đầu (keyframe K0), `<Picture 2>` sheet Barnaby, `<Picture 3>` sheet Ambrose; `<Subject 1>` Barnaby, `<Subject 2>` Ambrose.
 - `voice_refs` theo thứ tự cố định: `<Audio 1>` là Barnaby, `<Audio 2>` là Ambrose. Giữ giống nhau ở mọi chain, kể cả chain chỉ một người nói.
-- **Không ghép ảnh trước.** Qwen-Image chỉ tạo sheet nhân vật và ảnh nền trống; H3 đưa hai người vào cảnh. **Mặc định: nền chỉ làm ảnh tham chiếu** (`chain_NN_refs_only.json`): `start_image` là null, `reference_images` = [nền, sheet Barnaby, sheet Ambrose], hai người đứng sẵn từ khung đầu. Bài thử trọng lực (2026-11-05) cho thấy cách này giữ một bối cảnh xuyên 4 shot và không lọt sheet vào khung. Nền làm khung đầu (`start_image`, `reference_images` chỉ 2 sheet, shot 1 cho hai người đi vào khung) đã gặp hai lỗi: shot 3 vẽ lại chính cái sheet (nền xám, hai Ambrose, mất Barnaby) và các shot sau đổi sang vườn khác. Sheet cắt một góc (`chain_NN_single.json`) chưa thử. Khi nền là khung đầu, chỉ shot 1 có `<Picture 1>`; các shot sau không còn ảnh nền, nên tả bối cảnh bằng chữ, còn sheet vẫn là `<Picture 2>`, `<Picture 3>` (đã đo: không bị tráo).
+- **Khung đầu là keyframe đã duyệt:** `start_image` = keyframe K0 của cảnh (`storyboard/keyframes_qwen/chain_NN_k0.png`), `reference_images` = [sheet Barnaby, sheet Ambrose]. Hai người đứng sẵn ở khung đầu, không đi vào khung. Tư thế đầu và cuối, vật cầm và cỡ khung của từng shot lấy đúng từ dòng tương ứng của mục Storyboard. Chỉ render video từ keyframe đã duyệt (`approve_storyboard.py`).
 - **Hai giọng phải khác giọng vùng, không chỉ khác tính cách:** Barnaby giọng Mỹ, Ambrose giọng Anh. Hai giọng cùng "English accent" nghe như một (Resemblyzer: cùng người 0,90, khác người 0,88). Sau khi thiết kế, kiểm cosine giữa hai giọng mẫu và nghe thật trước khi sinh video. Lời của Barnaby dùng cách nói Mỹ ("Nice", "Sure"), không dùng "Lovely", "Quite".
 - Mọi shot đều ghi nhãn `[Shot 1]`, theo khuôn chính thức và lint của repo.
 
@@ -67,9 +70,10 @@ Tổng: <phút:giây>, <số từ> từ. Barnaby <x> từ, Ambrose <y> từ.
 1. Đọc mục tập trong series bible. Đọc nguồn gốc và tính lại mọi con số trước khi viết lời.
 2. Chọn một ý khoa học chính, một cuộc cãi nhau cổ điển và hiện đại, một trò đùa kết.
 3. Chọn bối cảnh minh hoạ cho từng đoạn, viết bảng kịch bản.
-4. Viết chain JSON.
-5. Điền bảng tự kiểm, sửa tới khi đạt.
-6. Chạy `longform-minimax-h3-script-review`, sửa tới khi sạch CHẶN và CẢNH BÁO.
+4. Viết storyboard và prompt keyframe bằng `script-to-qwen-storyboard`; sinh ảnh keyframe; user duyệt.
+5. Viết chain JSON theo storyboard.
+6. Điền bảng tự kiểm, sửa tới khi đạt.
+7. Chạy `longform-minimax-h3-script-review`, sửa tới khi sạch CHẶN và CẢNH BÁO.
 
 ## Cấu trúc long-form
 
@@ -131,23 +135,20 @@ Chép nguyên văn khối mô tả trong series bible vào mọi shot có mặt 
 - **Kết shot** là tư thế tĩnh rõ ràng, không dùng "continues" hay "keeps".
 - **Thoại đang nói không kèm hành động miệng:** "lips pressed", "smiles" chỉ đặt sau mốc "finishes", nếu không dễ hỏng khớp môi.
 - **Thoại nguyên văn** trong `<d>[English] ...</d>`, không dấu nháy kép bọc ngoài.
-- **Dòng cuối phần mô tả:** "The camera holds this framing until the final frame. All motion happens at natural real-time speed, not slow motion. There are no subtitles, captions, on-screen text, logos or watermarks anywhere in frame."
+- **Dòng cuối phần mô tả** (shot có cỡ khung đầu khác cỡ khung cuối thì thay câu giữ khung bằng câu tả máy tiến tới cỡ khung cuối): "The camera holds this framing until the final frame. All motion happens at natural real-time speed, not slow motion. There are no subtitles, captions, on-screen text, logos or watermarks anywhere in frame."
 - **Không nêu** người thật hay thương hiệu trong phần tả cảnh. Tên Newton, Einstein, Galileo chỉ nằm trong `<d>` khi ghi công.
 
 ## Khung 16:9
 
 - Dòng phong cách ghi "horizontal 16:9 framing". `aspect_ratio` bắt buộc là `"16:9"`.
-- **Máy cố định, ngang mắt, cỡ medium two-shot.** Hai người nhìn nhau, không nhìn ống kính, trừ khi trò đùa cần.
+- **Camera ngang mắt, cỡ khung từng shot theo mục Storyboard** (cỡ khung đầu và cuối). Hai người nhìn nhau, không nhìn ống kính, trừ khi trò đùa cần.
 - **Chừa đầu và chân khung:** bản 1344×768 bị cắt khoảng 1% trên và dưới khi về đúng 16:9. Đỉnh đầu, kể cả tóc giả, không sát mép.
-- **Không đổi cỡ cảnh trong chain** nếu không có lý do.
 - **Âm nhạc:** `non_diegetic_music:` luôn là `N/A`. Nhạc thêm lúc dựng, vì nhạc sinh riêng từng shot sẽ lộ khi cắt.
 
-## Prompt Qwen-Image
+## Ảnh
 
-- **Chỉ có hai loại ảnh:** sheet nhân vật (một người, 2 góc cạnh nhau, nền xám) và ảnh nền trống (mặt đất phía trước để trống).
-- **Viết dương, không viết phủ định:** nêu cái cần có ("a clean-shaven upper lip", "untouched grass", "a pure black sky"). Từ như "no moustache", "no labels", "no flags" có thể kéo model vẽ đúng thứ đó.
-- Một nguồn sáng, tương phản dịu. Không dùng từ đẩy độ nét như "ultra detailed", "sharp", "realistic detail".
-- Dùng chung một ảnh nền cho mọi chain ở cùng bối cảnh.
+- Sheet nhân vật (một người, 2 góc cạnh nhau, nền xám) và ảnh nền trống (mặt đất phía trước để trống). Dùng chung một ảnh nền cho mọi chain ở cùng bối cảnh.
+- Keyframe storyboard: skill `script-to-qwen-storyboard`. Mọi prompt Qwen-Image soạn và review bằng `qwen-image-prompting`.
 
 ## Bảng tự kiểm (trả lời từng dòng trước khi báo xong)
 
@@ -162,6 +163,7 @@ Chép nguyên văn khối mô tả trong series bible vào mọi shot có mặt 
 9. Mô tả nhân vật, bối cảnh, vị trí trái/phải giống hệt ở mọi shot cùng bối cảnh? Mỗi shot chỉ một người nói?
 10. Mốc giây tăng dần, trong thời lượng shot?
 11. `aspect_ratio` là `"16:9"`, `non_diegetic_music` là `N/A`, đủ 6 mục và các dòng cuối shot?
-12. Mỗi chain có `voice_refs` đúng thứ tự, `reference_images`, ảnh nền, và số `<Picture N>` khớp?
+12. Mỗi chain có `voice_refs` đúng thứ tự, `reference_images`, khung đầu là keyframe đã duyệt, và số `<Picture N>` khớp?
+13. Tư thế đầu và cuối, vật cầm, cỡ khung của từng shot khớp dòng Storyboard?
 
 Sau đó chạy `longform-minimax-h3-script-review`.

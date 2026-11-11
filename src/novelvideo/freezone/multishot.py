@@ -321,8 +321,8 @@ def multishot_input_fingerprint(plan: FreezoneMultishotPlan) -> str:
 # ── chain JSON import (2026-11-10) ───────────────────────────────────────
 
 
-#: Keys a previs chain JSON is expected to carry. Written by
-#: `previs_h3_test/scripts/skits/science_humor/gravity_test/gen_chains.py` and
+#: Keys a previs chain JSON may carry. Written with the
+#: `longform-minimax-h3-script-writer` skill and
 #: already the interchange format between the authoring scripts, the local bench
 #: and the review skills — so Freezone reads it rather than inventing a second one.
 CHAIN_JSON_KEYS = (

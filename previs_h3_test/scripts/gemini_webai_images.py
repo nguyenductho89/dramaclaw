@@ -2,17 +2,14 @@
 # requires-python = ">=3.12"
 # dependencies = ["httpx", "pillow", "opencv-python-headless", "numpy"]
 # ///
-"""Character sheets, empty plates, and in-scene storyboard frames through a local Gemini WebAI bridge (not Qwen).
+"""Character sheets and empty plates through a local Gemini WebAI bridge. Storyboard keyframes are made with
+Qwen-Image 2.1 (qwen_images.py) from prompts written with skills, not here.
 
   uv run previs_h3_test/scripts/gemini_webai_images.py sheet <out_dir> <image_prompts.json> [--n 3]
   uv run previs_h3_test/scripts/gemini_webai_images.py plate <out_dir> <image_prompts.json> [--n 3]
-  uv run previs_h3_test/scripts/gemini_webai_images.py storyboard <gravity_test_dir> [--n 2]
 
 `sheet`/`plate` read the `sheets`/`backgrounds` dict in <image_prompts.json> (one prompt per key) and write
-<out_dir>/candidates/<key>_sK.png. `storyboard` reads every `chain_NN.json` (not `_refs_only`/`_single`/`_sb`) in
-<gravity_test_dir>, sends its `storyboard_prompts[i]` with 3 references (the plate at `start_image`, then the two
-sheets in `reference_images`), and writes <gravity_test_dir>/storyboard/candidates/chain_NN_shotM_sK.png. Every mode
-also writes a contact_sheet.jpg and a timing.json next to its candidates.
+<out_dir>/candidates/<key>_sK.png. Every mode also writes a contact_sheet.jpg and a timing.json next to its candidates.
 
 Runs entirely on this machine against WebAI-to-API (http://127.0.0.1:6969 by default) — no GPU, no RunPod. This is
 the same bridge `src/novelvideo/generators/nanobanana_grid.py` uses in the app (`_call_webai_chat_image_api`,
@@ -28,10 +25,9 @@ recognize directly),
 GEMINI_WEBAI_COOKIE_FILE_HOST (default matches .env's GEMINI_WEBAI_COOKIE_FILE_HOST, the host path to
 WebAI-to-API's runtime/auth/gemini.json), GEMINI_WEBAI_TIMEOUT_SECONDS (180).
 
-All candidates within one run of this script (all -n candidates of one key, or every shot of one chain in
-`storyboard`) share one WebAI conversation_id so Gemini keeps the character/lighting consistent across them, loaded
-from and saved back to <out_dir>/session.json (or <gravity_test_dir>/storyboard/session.json) so a second run can
-continue the same conversation.
+All candidates within one run of this script (all -n candidates of one key) share one WebAI conversation_id so
+Gemini keeps the character/lighting consistent across them, loaded from and saved back to <out_dir>/session.json so a
+second run can continue the same conversation.
 
 Every image Gemini returns carries a small, visible, semi-transparent white sparkle/diamond watermark — distinct
 from SynthID (invisible, not touched by this script) — landing consistently in roughly the same screen position
@@ -184,7 +180,7 @@ def _generate_candidates(client: httpx.Client, prompt: str, refs: list[tuple[str
             if "cookies not found" in (err or ""):
                 raise SystemExit("WebAI has no valid Gemini cookies — run verify_login.py in WebAI-to-API, then `docker restart web_ai_server`")
             if "limit resets" in (err or "") or "for you today" in (err or ""):
-                raise SystemExit("Gemini image quota exhausted — stopping now instead of burning retries; rerun later (keyframes resumes from the last chosen frame)")
+                raise SystemExit("Gemini image quota exhausted — stopping now instead of burning retries; rerun later")
             continue
         path = dest / f"{name}_s{k}.png"
         path.write_bytes(fit_16x9(image_bytes, label=f"{name}_s{k}"))
@@ -207,7 +203,7 @@ def cmd_sheet_or_plate(mode: str, out_dir: Path, prompts_file: Path, n: int, onl
     with httpx.Client() as client:
         for name, entry in prompts.items():
             # A plain string entry (e.g. every `backgrounds` entry) has no identity reference; a dict entry (e.g.
-            # a `sheets` entry with a real-photo reference, see SHEET_REFS in gen_chains.py) does.
+            # a `sheets` entry with a real-photo reference in image_prompts.json) does.
             prompt, ref_path = (entry["prompt"], entry.get("ref")) if isinstance(entry, dict) else (entry, None)
             refs = []
             if ref_path:
@@ -221,74 +217,6 @@ def cmd_sheet_or_plate(mode: str, out_dir: Path, prompts_file: Path, n: int, onl
     _report_candidates(rows, out_dir)
 
 
-def _keyframe_score(path: Path, cc, sheets) -> tuple[float, str]:
-    """Identity score of one keyframe: min over the two characters of the best SFace cosine among the big faces
-    (>= 35 px, so the tiny background figures do not count); -1 is subtracted unless exactly two big faces are found."""
-    import cv2
-    img = cv2.imread(str(path))
-    if img is None:
-        return -9.0, "unreadable"
-    _cv2, _fs, _det, rec = cc.face_tools()
-    big = [(x, h, e) for x, h, e in cc.faces_in(img) if h >= 35]
-    best = {n: max((float(rec.match(e, r, cv2.FaceRecognizerSF_FR_COSINE)) for _x, _h, e in big for r in sheets[n]), default=-1.0)
-            for n in sheets}
-    score = min(best.values()) - (0 if len(big) == 2 else 1)
-    return score, f"{len(big)} big face(s), barnaby {best['barnaby']:.2f} ambrose {best['ambrose']:.2f}"
-
-
-def cmd_keyframes(gravity_dir: Path, n: int, only: str | None = None) -> None:
-    """2026-11-10: continuous storyboard (see gen_chains.keyframe_prompts). Per chain, K0 = plate + both sheets, then
-    K1.. = an edit of the previous CHOSEN keyframe (Image 1) + both sheets. Each keyframe's n candidates are scored on
-    identity (SFace) and the best is copied to storyboard/keyframes/chain_NN_kK.png; below 0.45 it generates more
-    candidates (twice at most) before moving on, so the next keyframe never edits an identity-broken base."""
-    sys.path.insert(0, str(gravity_dir))
-    import check_chains as cc
-    sheets = cc.sheet_embeddings()
-    out_dir = gravity_dir / "storyboard" / "keyframes"
-    out_dir.mkdir(parents=True, exist_ok=True)
-    timing: list[dict] = []
-    rows = []
-    report: dict[str, dict] = {}
-    with httpx.Client() as client:
-        for chain_file in sorted(gravity_dir.glob("chain_[0-9][0-9].json")):
-            if only and chain_file.stem != only:
-                continue
-            chain = json.loads(chain_file.read_text())
-            if "keyframe_prompts" not in chain:
-                print(f"skip {chain_file.name}: no keyframe_prompts (regenerate with gen_chains.py)")
-                continue
-            sheet_paths = [R / p for p in chain["reference_images"]]
-            conversation_id = None  # one fresh conversation per chain: a shared one bled figures between scenes
-            prev: Path | None = None
-            for k, kf in enumerate(chain["keyframe_prompts"]):
-                chosen = out_dir / f"{chain_file.stem}_k{k}.png"
-                if chosen.exists() and not REDO:  # resume: keep what an earlier run (or the user) already picked
-                    prev = chosen
-                    print(f"KEEP {chosen.name} (already chosen; --redo regenerates)", flush=True)
-                    continue
-                base = R / chain["start_image"] if k == 0 else prev
-                refs = [(_ref_filename(i, _mime_of(pth)), pth.read_bytes(), _mime_of(pth)) for i, pth in enumerate([base, *sheet_paths])]
-                name = f"{chain_file.stem}_k{k}"
-                scored: list[tuple[float, str, Path]] = []
-                for attempt in range(3):
-                    paths, conversation_id = _generate_candidates(client, kf["prompt"], refs, n, conversation_id,
-                                                                  out_dir / "candidates", f"{name}_r{attempt}", timing)
-                    rows.append(paths)
-                    scored += [(*_keyframe_score(pth, cc, sheets), pth) for pth in paths]
-                    if scored and max(scored)[0] >= 0.45:
-                        break
-                if not scored:
-                    raise SystemExit(f"{name}: every generation failed, stopping (next keyframe edits this one)")
-                score, note, best = max(scored, key=lambda t: t[0])
-                chosen.write_bytes(best.read_bytes())
-                prev = chosen
-                report[name] = {"framing": kf["framing"], "from": kf["from"], "score": round(score, 3), "note": note, "candidate": best.name}
-                print(f"CHOSEN {name} [{kf['framing']}] score {score:.2f} ({note}) <- {best.name}", flush=True)
-    (out_dir / "keyframes_report.json").write_text(json.dumps(report, indent=1, ensure_ascii=False) + "\n")
-    (out_dir / "timing.json").write_text(json.dumps(timing, indent=1) + "\n")
-    _report_candidates(rows, out_dir)
-
-
 def _report_candidates(rows: list[list[Path]], out_dir: Path) -> None:
     total = sum(len(r) for r in rows)
     if total:
@@ -296,47 +224,6 @@ def _report_candidates(rows: list[list[Path]], out_dir: Path) -> None:
         print(f"wrote {total} candidates, contact sheet at {out_dir / 'contact_sheet.jpg'}")
     else:
         print("wrote 0 candidates — every generation failed above (e.g. a daily quota message); no contact sheet written")
-
-
-def cmd_storyboard(gravity_dir: Path, n: int, only: str | None = None) -> None:
-    """2026-11-09: one conversation_id PER CHAIN (per scene), not one shared across every chain — a shared
-    conversation was found to bleed background figures between unrelated scenes (Eden's Adam/Eve turned up, bare
-    and unsuited, standing on the Moon in one chain_02 shot) and to make a scene's own background figure
-    inconsistent shot to shot (the Moon's lone astronaut: absent in one shot, oddly duplicated into a pair in
-    another). Each chain's own 4 shots still share ONE conversation (keeps that chain's own continuity benefit),
-    stored per chain_NN key in session.json so a second run can resume each chain's conversation independently."""
-    out_dir = gravity_dir / "storyboard"
-    session_file = out_dir / "session.json"
-    sessions: dict[str, str] = json.loads(session_file.read_text()) if session_file.exists() else {}
-    timing: list[dict] = []
-    rows = []
-    with httpx.Client() as client:
-        for chain_file in sorted(gravity_dir.glob("chain_[0-9][0-9].json")):
-            if only and chain_file.stem != only:
-                continue
-            chain = json.loads(chain_file.read_text())
-            if "storyboard_prompts" not in chain:
-                print(f"skip {chain_file.name}: no storyboard_prompts (regenerate with gen_chains.py)")
-                continue
-            plate_path = R / chain["start_image"]
-            sheet_paths = [R / p for p in chain["reference_images"]]
-            refs = []
-            for idx, p in enumerate([plate_path, *sheet_paths]):
-                mime = _mime_of(p)
-                refs.append((_ref_filename(idx, mime), p.read_bytes(), mime))
-            chain_num = chain_file.stem.split("_")[1]
-            chain_key = f"chain_{chain_num}"
-            conversation_id = sessions.get(chain_key)
-            for shot_idx, prompt in enumerate(chain["storyboard_prompts"], start=1):
-                name = f"chain_{chain_num}_shot{shot_idx}"
-                paths, conversation_id = _generate_candidates(client, prompt, refs, n, conversation_id, out_dir / "candidates", name, timing)
-                rows.append(paths)
-            if conversation_id:
-                sessions[chain_key] = conversation_id
-    session_file.parent.mkdir(parents=True, exist_ok=True)
-    session_file.write_text(json.dumps(sessions, indent=1) + "\n")
-    (out_dir / "timing.json").write_text(json.dumps(timing, indent=1) + "\n")
-    _report_candidates(rows, out_dir)
 
 
 def cmd_clean(image_paths: list[Path]) -> None:
@@ -354,34 +241,24 @@ def cmd_clean(image_paths: list[Path]) -> None:
         im.save(p, "PNG")
 
 
-REDO = False
-
 
 def main() -> None:
     p = argparse.ArgumentParser()
-    p.add_argument("mode", choices=["sheet", "plate", "storyboard", "keyframes", "clean"])
+    p.add_argument("mode", choices=["sheet", "plate", "clean"])
     p.add_argument("target")
     p.add_argument("arg", nargs="?")
     p.add_argument("more", nargs="*", help="clean mode only: additional image paths beyond <target>")
     p.add_argument("--n", type=int, default=3)
-    p.add_argument("--redo", action="store_true", help="keyframes: regenerate keyframes that were already chosen")
-    p.add_argument("--only", help="storyboard: one chain file stem (chain_02); sheet/plate: one prompt key (moon)")
+    p.add_argument("--only", help="one prompt key (moon)")
     a = p.parse_args()
-    global REDO
-    REDO = a.redo
     if a.mode == "clean":
         cmd_clean([Path(a.target), *([Path(a.arg)] if a.arg else []), *(Path(x) for x in a.more)])
         return
     if not COOKIE_FILE.exists():
         raise SystemExit(f"GEMINI_WEBAI_COOKIE_FILE_HOST not found: {COOKIE_FILE} (run verify_login.py on the host)")
-    if a.mode == "storyboard":
-        cmd_storyboard(Path(a.target), a.n, a.only)
-    elif a.mode == "keyframes":
-        cmd_keyframes(Path(a.target), a.n, a.only)
-    else:
-        if not a.arg:
-            raise SystemExit(f"{a.mode} needs <out_dir> <image_prompts.json>")
-        cmd_sheet_or_plate(a.mode, Path(a.target), Path(a.arg), a.n, a.only)
+    if not a.arg:
+        raise SystemExit(f"{a.mode} needs <out_dir> <image_prompts.json>")
+    cmd_sheet_or_plate(a.mode, Path(a.target), Path(a.arg), a.n, a.only)
 
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
 # What is gravity, really? (bản thử)
 Tổng: 1:04.0, 76 từ. Barnaby 36 từ, Ambrose 40 từ.
 
-Bản thử không có mở đầu và lời hứa theo khuôn tập dài: mục tiêu là kiểm hình, khớp môi, hai giọng, độ hài và cú cắt sang bối cảnh mới. Qwen-Image chỉ tạo sheet nhân vật và ảnh nền trống; H3 đưa hai người vào cảnh. File này do `previs_h3_test/scripts/skits/science_humor/gravity_test/gen_chains.py` tạo.
+Bản thử không có mở đầu và lời hứa theo khuôn tập dài: mục tiêu là kiểm hình, khớp môi, hai giọng, độ hài và cú cắt sang bối cảnh mới. File này viết bằng skill `longform-minimax-h3-script-writer`; mục Storyboard viết bằng skill `script-to-qwen-storyboard`.
 
 | Mốc | Chain, shot | Bối cảnh | Người nói | Lời | Trò đùa | Nguồn |
 |---|---|---|---|---|---|---|

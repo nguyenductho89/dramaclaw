@@ -475,7 +475,7 @@ def build_h3_multishot_memory_graph(
 
     Deliberately separate from `build_h3_multishot_graph`: that one stays untouched and is still what production
     uses. This function is for the standalone test in `gravity_test/` only, until real render results justify
-    switching `gen_chains.py`/`run_batch.sh` over (see the plan's step 4).
+    switching `run_batch.sh` over (see the plan's step 4).
 
     `continuity="first_frame"` needs `checkpoint="fl2va"` per the node's own tooltip ("ref2va is trained for
     reference rows, not first-frame hand-off"), which also disables the reference-image bank — so it cannot be

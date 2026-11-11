@@ -1,5 +1,5 @@
 """Standalone test for H3MultishotMemorySampler (PLAN_h3_memory_sampler_antidrift.md, Phase 1) against a LOCAL
-ComfyUI (rented 4090/5090 box), separate from gen_chains.py/run_batch.sh — production keeps using the classic
+ComfyUI (rented 4090/5090 box), separate from run_batch.sh — production keeps using the classic
 H3MultishotSampler (build_h3_multishot_graph) until this is verified with real render results.
 
 Reuses chain_01's 4 orchard shots verbatim from chain_01_refs_only.json (the scene is conveyed by each shot's own
@@ -55,7 +55,7 @@ def upload_image(path: Path, name: str) -> str:
 
 
 def crop_turned_half(sheet_path: Path, facing_is_left: bool, out_path: Path) -> Path:
-    """The sheet is two views side by side at the same size (see gen_chains.py's SHEETS prompts): the half NOT
+    """The sheet is two views side by side at the same size (see the `sheets` prompts in image_prompts.json): the half NOT
     used by *_front.png (the "facing the lens" half) is the "turned toward left/right" half — cut it here rather
     than permanently adding a new character asset, since this is a Phase 1 experiment only."""
     import struct
@@ -79,7 +79,7 @@ def main():
     scratch = GRAVITY / "memory_sampler_scratch"
     scratch.mkdir(exist_ok=True)
     # barnaby_front.png is the LEFT half (facing the lens) per SHEETS["barnaby"]; ambrose_front.png is the RIGHT
-    # half per SHEETS["ambrose"] (order is reversed between the two characters) — see gen_chains.py.
+    # half per SHEETS["ambrose"] (order is reversed between the two characters) — see image_prompts.json.
     barnaby_turned = crop_turned_half(CHAR / "barnaby_sheet.png", facing_is_left=True, out_path=scratch / "barnaby_turned.png")
     ambrose_turned = crop_turned_half(CHAR / "ambrose_sheet.png", facing_is_left=False, out_path=scratch / "ambrose_turned.png")
 

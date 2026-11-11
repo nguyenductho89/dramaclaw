@@ -1,7 +1,6 @@
 """Unit tests for importing a previs H3 chain JSON into a Freezone multishot request.
 
-`chain_NN.json` (written by
-`previs_h3_test/scripts/skits/science_humor/gravity_test/gen_chains.py`) is
+`chain_NN.json` (written with the `longform-minimax-h3-script-writer` skill) is
 already the interchange format between the authoring scripts, the local bench and
 the review skills — so Freezone reads it rather than inventing a second one, and
 the gravity-test chains in the repo are used here as the fixture, which also
@@ -96,10 +95,13 @@ def test_sampling_overrides_are_not_carried_over():
     assert "turbo_steps" not in request
 
 
-def test_storyboard_prompts_come_across_for_the_image_node():
-    request = chain_json_to_multishot_request(_chain("chain_02.json"))
-    assert len(request["storyboard_prompts"]) == 4
-    assert len(request["storyboard_prompts_qwen"]) == 4
+def test_chain_without_image_prompts_imports_with_empty_lists():
+    """Keyframe prompts live in qwen_keyframe_prompts.json, not in the chain file."""
+    chain = _chain("chain_02.json")
+    assert "storyboard_prompts" not in chain
+    request = chain_json_to_multishot_request(chain)
+    assert request["storyboard_prompts"] == []
+    assert request["storyboard_prompts_qwen"] == []
 
 
 def test_refs_only_variant_is_rejected_with_a_reason():

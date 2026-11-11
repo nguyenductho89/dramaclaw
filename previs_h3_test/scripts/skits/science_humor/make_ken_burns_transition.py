@@ -104,7 +104,7 @@ def main() -> None:
 
         if args.wormhole_image:
             # Zoom straight toward the image's own vanishing point (it already reads as a tunnel receding to
-            # its center — see the prompt in gen_chains.py's transition-asset generation note) to read as
+            # its center) to read as
             # "being pulled through", rather than the generic small pan used for the plain starfield.
             zoompan_clip(args.wormhole_image, star, w, h, fps, args.star_dur,
                          zoom_expr="min(1.0+0.09*on,1.9)", x_expr="iw/2-(iw/zoom/2)", y_expr="ih/2-(ih/zoom/2)")

@@ -2,7 +2,7 @@
 # Copyright (c) 2026 ClaymoreLab
 """Previs prompt templates: empty plates, character sheets, in-scene storyboard frames.
 
-Ported from `previs_h3_test/scripts/skits/science_humor/gravity_test/gen_chains.py`
+Ported from the former `previs_h3_test/scripts/skits/science_humor/gravity_test/gen_chains.py`
 (`storyboard_prompt` / `storyboard_prompt_qwen`) so the same prompts can be run
 from a Freezone image node instead of a standalone CLI.
 

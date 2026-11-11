@@ -11,7 +11,7 @@ Mục tiêu: khi prompt đặt cạnh nhau nhiều vật có kích thước th�
 
 Model sinh ảnh dạng compose/multi-reference (Gemini qua WebAI, Qwen-Image 2.1) **không suy luận không gian 3D thật**. Nó ghép từ nhiều ảnh nguồn có scale/góc khác nhau bằng cách đọc mô tả chữ, và mặc định **co mọi vật cho vừa khung** — nên vật to (tàu vũ trụ, nhà, cây) bị thu nhỏ lại, còn vật nhỏ hoặc nhân vật nền bị phóng to/kéo gần/nhân đôi. Đây là lỗi chung của cả hai model, không phải hỏng ngẫu nhiên:
 - Qwen-Image từng render trẻ nhỏ thành người lớn vì prompt không có tín hiệu tỷ lệ cơ thể; fix bằng cách nhồi `subject_hints` body-type tường minh + câu "keep body proportions and size" (xem `docs/archive/claude-md-history.md`).
-- Gemini từng vẽ lunar module (thật ~7m, phải cao gấp ~4 lần người) chỉ bằng ~57% chiều cao người; cải thiện rõ sau khi thêm số thật vào prompt — xem mẫu `SCENES["moon"]["plate"]` trong `previs_h3_test/scripts/skits/science_humor/gravity_test/gen_chains.py`.
+- Gemini từng vẽ lunar module (thật ~7m, phải cao gấp ~4 lần người) chỉ bằng ~57% chiều cao người; cải thiện rõ sau khi thêm số thật vào prompt — xem mẫu `backgrounds.moon` trong `previs_h3_test/scripts/skits/science_humor/gravity_test/image_prompts.json`.
 
 Đòn bẩy duy nhất không đổi model là **viết số thật và bội số vào prompt**. Đừng tin model tự suy ra tỷ lệ đúng từ tên vật ("a lunar module", "an apple tree") — phải nói rõ nó cao bao nhiêu và cao gấp mấy lần người.
 

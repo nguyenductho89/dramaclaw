@@ -475,7 +475,7 @@ def build_h3_multishot_memory_graph(
 
     Deliberately separate from `build_h3_multishot_graph`: that one stays untouched and is still what production
     uses. This function is for the benchmark `research/h3_benchmarks/scripts/bench_memory_sampler.py` only; video
-    production (`video_production_with_skills/tools/render_chain.py`) uses the classic sampler.
+    production (`tools/render_chain.py` of the video_production_with_skills repo) uses the classic sampler.
 
     `continuity="first_frame"` needs `checkpoint="fl2va"` per the node's own tooltip ("ref2va is trained for
     reference rows, not first-frame hand-off"), which also disables the reference-image bank — so it cannot be

@@ -1,0 +1,125 @@
+diff --git a/src/claude_cli.py b/src/claude_cli.py
+index d87057e..0c92342 100644
+--- a/src/claude_cli.py
++++ b/src/claude_cli.py
+@@ -104,6 +104,7 @@ class ClaudeCodeCLI:
+         session_id: Optional[str] = None,
+         continue_session: bool = False,
+         permission_mode: Optional[str] = None,
++        images: Optional[List[Dict[str, Any]]] = None,
+     ) -> AsyncGenerator[Dict[str, Any], None]:
+         """Run Claude Agent using the Python SDK and yield response chunks."""
+ 
+@@ -126,7 +127,9 @@ class ClaudeCodeCLI:
+                 # Set system prompt - CLAUDE AGENT SDK STRUCTURED FORMAT
+                 # Use structured format as per SDK documentation
+                 if system_prompt:
+-                    options.system_prompt = {"type": "text", "text": system_prompt}
++                    # claude-agent-sdk only honors a plain string here; the old
++                    # {"type": "text", ...} shape is silently dropped.
++                    options.system_prompt = system_prompt
+                 else:
+                     # Use Claude Code preset to maintain expected behavior
+                     options.system_prompt = {"type": "preset", "preset": "claude_code"}
+@@ -148,7 +151,24 @@ class ClaudeCodeCLI:
+                     options.resume = session_id
+ 
+                 # Run the query and yield messages
+-                async for message in query(prompt=prompt, options=options):
++                sdk_prompt: Any = prompt
++                if images:
++                    # Images need structured content blocks, so send the prompt as
++                    # a one-message stream instead of a plain string.
++                    async def _prompt_with_images():
++                        yield {
++                            "type": "user",
++                            "message": {
++                                "role": "user",
++                                "content": [*images, {"type": "text", "text": prompt}],
++                            },
++                            "parent_tool_use_id": None,
++                            "session_id": "default",
++                        }
++
++                    sdk_prompt = _prompt_with_images()
++
++                async for message in query(prompt=sdk_prompt, options=options):
+                     # Debug logging
+                     logger.debug(f"Raw SDK message type: {type(message)}")
+                     logger.debug(f"Raw SDK message: {message}")
+diff --git a/src/main.py b/src/main.py
+index f03bbb5..1d30e5d 100644
+--- a/src/main.py
++++ b/src/main.py
+@@ -653,6 +653,7 @@ async def generate_streaming_response(
+             allowed_tools=claude_options.get("allowed_tools"),
+             disallowed_tools=claude_options.get("disallowed_tools"),
+             permission_mode=claude_options.get("permission_mode"),
++            images=[img for m in request.messages for img in m.images],
+             stream=True,
+         ):
+             chunks_buffer.append(chunk)
+@@ -912,6 +913,7 @@ async def chat_completions(
+                 allowed_tools=claude_options.get("allowed_tools"),
+                 disallowed_tools=claude_options.get("disallowed_tools"),
+                 permission_mode=claude_options.get("permission_mode"),
++                images=[img for m in request_body.messages for img in m.images],
+                 stream=False,
+             ):
+                 chunks.append(chunk)
+diff --git a/src/models.py b/src/models.py
+index 0642a47..a2d0563 100644
+--- a/src/models.py
++++ b/src/models.py
+@@ -19,17 +19,37 @@ def get_default_model():
+     return constants.RESOLVED_DEFAULT_MODEL or constants.DEFAULT_MODEL_FALLBACK
+ 
+ 
++class ImageURL(BaseModel):
++    url: str
++    detail: Optional[str] = None
++
++
+ class ContentPart(BaseModel):
+     """Content part for multimodal messages (OpenAI format)."""
+ 
+-    type: Literal["text"]
+-    text: str
++    type: Literal["text", "image_url"]
++    text: Optional[str] = None
++    image_url: Optional[ImageURL] = None
++
++
++def image_part_to_anthropic_block(url: str) -> Dict[str, Any]:
++    """Convert an OpenAI image_url (data URL or http URL) to an Anthropic image block."""
++    if url.startswith("data:"):
++        header, _, data = url.partition(",")
++        media_type = header[len("data:") :].split(";")[0] or "image/png"
++        return {
++            "type": "image",
++            "source": {"type": "base64", "media_type": media_type, "data": data},
++        }
++    return {"type": "image", "source": {"type": "url", "url": url}}
+ 
+ 
+ class Message(BaseModel):
+     role: Literal["system", "user", "assistant"]
+     content: Union[str, List[ContentPart]]
+     name: Optional[str] = None
++    # Anthropic image blocks extracted from image_url parts (never serialized).
++    images: List[Dict[str, Any]] = Field(default_factory=list, exclude=True)
+ 
+     @model_validator(mode="after")
+     def normalize_content(self):
+@@ -39,7 +59,10 @@ class Message(BaseModel):
+             text_parts = []
+             for part in self.content:
+                 if isinstance(part, ContentPart) and part.type == "text":
+-                    text_parts.append(part.text)
++                    text_parts.append(part.text or "")
++                elif isinstance(part, ContentPart) and part.type == "image_url":
++                    if part.image_url:
++                        self.images.append(image_part_to_anthropic_block(part.image_url.url))
+                 elif isinstance(part, dict) and part.get("type") == "text":
+                     text_parts.append(part.get("text", ""))
+ 

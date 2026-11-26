@@ -92,6 +92,68 @@ def _env_bool(name: str, default: bool) -> bool:
     return default
 
 
+# =============================================================================
+# Claude wrapper 文本路由（claude-code-openai-wrapper，本机 Claude 登录态）
+# =============================================================================
+
+CLAUDE_WRAPPER_BACKEND = "claude_wrapper"
+DEFAULT_CLAUDE_WRAPPER_BASE_URL = "http://127.0.0.1:8000/v1"
+DEFAULT_CLAUDE_WRAPPER_MODEL = "opusplan"
+_CLAUDE_MODEL_ALIASES = frozenset({"opus", "sonnet", "haiku", "opusplan"})
+
+
+def claude_wrapper_enabled() -> bool:
+    return (os.environ.get("TEXT_LLM_BACKEND") or "").strip().lower() == (
+        CLAUDE_WRAPPER_BACKEND
+    )
+
+
+def get_claude_wrapper_credentials() -> tuple[str, str]:
+    """Return ``(api_key, base_url)`` for the local Claude wrapper."""
+    base_url = (
+        os.environ.get("CLAUDE_WRAPPER_BASE_URL") or ""
+    ).strip() or DEFAULT_CLAUDE_WRAPPER_BASE_URL
+    # The wrapper only checks the key when it was started with API_KEY set.
+    api_key = (os.environ.get("CLAUDE_WRAPPER_API_KEY") or "").strip() or "claude-wrapper"
+    return api_key, base_url.rstrip("/")
+
+
+def _is_claude_model_name(name: str | None) -> bool:
+    normalized = (name or "").strip().lower()
+    return normalized in _CLAUDE_MODEL_ALIASES or normalized.startswith("claude-")
+
+
+def get_claude_wrapper_model_name(
+    model_env: str, model_name_override: str | None = None
+) -> str:
+    """Pick the Claude model for one task.
+
+    Order: Claude-looking explicit override, ``CLAUDE_<MODEL_ENV>``, then
+    ``CLAUDE_WRAPPER_DEFAULT_MODEL``. Gateway aliases (``DC-*``, ``gemini-*``)
+    from ``*_MODEL`` envs or call-site overrides are not Claude models and are
+    ignored on this route.
+    """
+    if _is_claude_model_name(model_name_override):
+        return str(model_name_override).strip()
+    return (
+        _clean_env_value(f"CLAUDE_{model_env}")
+        or _clean_env_value("CLAUDE_WRAPPER_DEFAULT_MODEL")
+        or DEFAULT_CLAUDE_WRAPPER_MODEL
+    )
+
+
+def _claude_wrapper_model_profile():
+    """The wrapper has no tool calling or response_format: force prompted JSON."""
+    from pydantic_ai.profiles.openai import OpenAIModelProfile
+
+    return OpenAIModelProfile(
+        supports_tools=False,
+        supports_json_schema_output=False,
+        supports_json_object_output=False,
+        default_structured_output_mode="prompted",
+    )
+
+
 def get_pydantic_model(
     provider_override: str | None = None,
     model_name_override: str | None = None,
@@ -166,6 +228,9 @@ def get_effective_newapi_text_model_name(
     model_name_override: str | None = None,
 ) -> str:
     """Resolve one text route without silently falling back across editions."""
+    if claude_wrapper_enabled():
+        return get_claude_wrapper_model_name(model_env, model_name_override)
+
     from novelvideo.model_gateway_settings import get_effective_llm_config
     from novelvideo.official_defaults import ADVANCED_TEXT_MODEL_BY_ENV
 
@@ -403,12 +468,6 @@ def get_newapi_text_pydantic_model(
     from novelvideo.brainclaw_contract import brainclaw_profile_headers
     from novelvideo.model_gateway_settings import get_effective_llm_config
 
-    llm_config = get_effective_llm_config()
-    model_name = get_effective_newapi_text_model_name(
-        model_env,
-        default_model,
-        model_name_override=model_name_override,
-    )
     timeout_seconds = (
         float(timeout_seconds_override)
         if timeout_seconds_override is not None
@@ -416,6 +475,22 @@ def get_newapi_text_pydantic_model(
             f"{model_env}_TIMEOUT_SECONDS",
             _env_float("NEWAPI_TEXT_TIMEOUT_SECONDS", 300.0),
         )
+    )
+    if claude_wrapper_enabled() and credential_override is None:
+        wrapper_key, wrapper_base_url = get_claude_wrapper_credentials()
+        return _newapi_text_openai_model(
+            get_claude_wrapper_model_name(model_env, model_name_override),
+            api_key=wrapper_key,
+            base_url=wrapper_base_url,
+            timeout_seconds=timeout_seconds,
+            profile=_claude_wrapper_model_profile(),
+        )
+
+    llm_config = get_effective_llm_config()
+    model_name = get_effective_newapi_text_model_name(
+        model_env,
+        default_model,
+        model_name_override=model_name_override,
     )
     profile = _get_newapi_text_model_profile(model_name)
     # CE resolves its own route from the settings database, so it knows when
@@ -486,6 +561,8 @@ def get_newapi_structured_output_model_settings() -> dict:
     Use the explicit OpenAI-compatible wire contract that existing deployments
     already send when their task-level thinking setting is ``none``.
     """
+    if claude_wrapper_enabled():
+        return {}
     return {"openai_reasoning_effort": "none"}
 
 

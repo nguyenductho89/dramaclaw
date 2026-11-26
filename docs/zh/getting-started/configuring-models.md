@@ -339,6 +339,16 @@ Bucket 无需公开读；DramaClaw 使用临时签名 URL 授权上游读取。
 | ComfyUI 无法连接 `127.0.0.1:8188` | `127.0.0.1` 指 DramaClaw 后端所在环境。容器或远程部署时改为后端可访问的宿主机名或局域网地址。 |
 | MiniMax H3 Workflow 执行时报节点或模型缺失 | 确认 ComfyUI 已安装推荐 Workflow 使用的自定义节点和模型文件，并按本机安装情况修改 Workflow。 |
 
+## Claude wrapper 文本通道（可选）
+
+如需让文本与视觉 LLM 调用走本机 Claude 登录态而不是网关，用 `scripts/claude_wrapper/setup.sh` 和
+`scripts/claude_wrapper/run.sh` 启动
+[claude-code-openai-wrapper](https://github.com/RichardAtCT/claude-code-openai-wrapper)，然后设置
+`TEXT_LLM_BACKEND=claude_wrapper`（以及 `CLAUDE_WRAPPER_BASE_URL`、`CLAUDE_WRAPPER_API_KEY`、
+`CLAUDE_WRAPPER_DEFAULT_MODEL`）。按任务选模型用 `CLAUDE_<任务模型环境变量名>`，例如
+`CLAUDE_SCENE_BUILD_MODEL=opus`。wrapper 不支持 tool calling，结构化输出使用 prompted JSON。
+Embedding、媒体生成以及 Codex/Hermes 聊天后端仍走网关。详见 `scripts/claude_wrapper/README.md`。
+
 ## 相关文件
 
 - `src/novelvideo/official_media_models.json`：CE 官方媒体模型与能力。

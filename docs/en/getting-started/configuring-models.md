@@ -339,6 +339,17 @@ Enter Cloud name, API Key, API Secret, and an optional folder. Find them under *
 | ComfyUI cannot connect to `127.0.0.1:8188` | `127.0.0.1` means the environment running the DramaClaw backend. For containers or remote deployments, use a host or LAN address reachable from that backend. |
 | A MiniMax H3 workflow reports missing nodes or models | Install the custom nodes and model files referenced by the recommended workflow, then adjust the workflow for local filenames and versions. |
 
+## Claude wrapper text route (optional)
+
+To run text and vision LLM calls on a local Claude login instead of the gateway, start
+[claude-code-openai-wrapper](https://github.com/RichardAtCT/claude-code-openai-wrapper) with
+`scripts/claude_wrapper/setup.sh` and `scripts/claude_wrapper/run.sh`, then set
+`TEXT_LLM_BACKEND=claude_wrapper` (plus `CLAUDE_WRAPPER_BASE_URL`, `CLAUDE_WRAPPER_API_KEY`,
+`CLAUDE_WRAPPER_DEFAULT_MODEL`). Pick a model per task with `CLAUDE_<task model env>`, for example
+`CLAUDE_SCENE_BUILD_MODEL=opus`. Structured output uses prompted JSON because the wrapper has no
+tool calling. Embeddings, media generation and the Codex/Hermes chat backends stay on the gateway.
+See `scripts/claude_wrapper/README.md`.
+
 ## Related files
 
 - `src/novelvideo/official_media_models.json`: CE official media models and capabilities.

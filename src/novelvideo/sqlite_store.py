@@ -1969,6 +1969,9 @@ class SQLiteStore:
             import litellm
 
             from novelvideo.config import (
+                claude_wrapper_enabled,
+                get_claude_wrapper_credentials,
+                get_claude_wrapper_model_name,
                 get_newapi_structured_output_litellm_kwargs,
             )
 
@@ -1991,18 +1994,32 @@ class SQLiteStore:
 
 只返回 JSON，不要有其他内容。"""
 
-            response = await litellm.acompletion(
-                model=os.environ.get("LLM_MODEL", "").strip()
-                or DEFAULT_COGNEE_LLM_MODEL,
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.3,
-                response_format={"type": "json_object"},
-                **get_newapi_structured_output_litellm_kwargs(),
-            )
+            if claude_wrapper_enabled():
+                # The wrapper has no response_format; the prompt asks for JSON only.
+                api_key, base_url = get_claude_wrapper_credentials()
+                response = await litellm.acompletion(
+                    model=f"openai/{get_claude_wrapper_model_name('LLM_MODEL')}",
+                    api_base=base_url,
+                    api_key=api_key,
+                    messages=[{"role": "user", "content": prompt}],
+                    temperature=0.3,
+                )
+            else:
+                response = await litellm.acompletion(
+                    model=os.environ.get("LLM_MODEL", "").strip()
+                    or DEFAULT_COGNEE_LLM_MODEL,
+                    messages=[{"role": "user", "content": prompt}],
+                    temperature=0.3,
+                    response_format={"type": "json_object"},
+                    **get_newapi_structured_output_litellm_kwargs(),
+                )
 
             import json
+            import re
 
-            result = json.loads(response.choices[0].message.content)
+            text = response.choices[0].message.content.strip()
+            fenced = re.match(r"^```(?:json)?\s*(.*?)\s*```$", text, re.DOTALL)
+            result = json.loads(fenced.group(1) if fenced else text)
             return result
 
         except Exception as e:

@@ -33,31 +33,37 @@ def test_credentials_default_and_trailing_slash(wrapper_env):
     assert api_key
 
 
+def test_task_defaults_by_tier(wrapper_env):
+    resolve = config.get_effective_newapi_text_model_name
+    assert resolve("EPISODE_SCENE_PLANNER_MODEL") == "opus"
+    assert resolve("SCENE_BUILD_MODEL") == "sonnet"
+    assert resolve("FREEZONE_TRANSLATION_MODEL") == "haiku"
+    assert all(
+        name in {"opus", "sonnet", "haiku"}
+        for name in config.CLAUDE_WRAPPER_MODEL_BY_ENV.values()
+    )
+
+
 def test_model_name_precedence(wrapper_env, monkeypatch):
-    # Default when nothing is configured.
-    assert config.get_effective_newapi_text_model_name("SCENE_BUILD_MODEL") == "opusplan"
+    resolve = config.get_effective_newapi_text_model_name
 
+    # A task missing from the table falls back to the global default.
+    assert resolve("UNLISTED_TASK_MODEL") == "opusplan"
     monkeypatch.setenv("CLAUDE_WRAPPER_DEFAULT_MODEL", "sonnet")
-    assert config.get_effective_newapi_text_model_name("SCENE_BUILD_MODEL") == "sonnet"
+    assert resolve("UNLISTED_TASK_MODEL") == "sonnet"
 
-    # Per-task env beats the default; the gateway alias env is ignored.
+    # Per-task env beats the table; the gateway alias env is ignored.
     monkeypatch.setenv("SCENE_BUILD_MODEL", "DC-scene-builder-LLM")
+    assert resolve("SCENE_BUILD_MODEL") == "sonnet"
     monkeypatch.setenv("CLAUDE_SCENE_BUILD_MODEL", "opus")
-    assert config.get_effective_newapi_text_model_name("SCENE_BUILD_MODEL") == "opus"
+    assert resolve("SCENE_BUILD_MODEL") == "opus"
 
     # A Claude-looking override wins; a gateway model override is ignored.
     assert (
-        config.get_effective_newapi_text_model_name(
-            "SCENE_BUILD_MODEL", model_name_override="claude-sonnet-4-6"
-        )
+        resolve("SCENE_BUILD_MODEL", model_name_override="claude-sonnet-4-6")
         == "claude-sonnet-4-6"
     )
-    assert (
-        config.get_effective_newapi_text_model_name(
-            "SCENE_BUILD_MODEL", model_name_override="gemini-3.5-flash"
-        )
-        == "opus"
-    )
+    assert resolve("SCENE_BUILD_MODEL", model_name_override="gemini-3.5-flash") == "opus"
 
 
 def test_structured_output_settings_are_empty(wrapper_env):
@@ -123,4 +129,4 @@ async def test_structured_agent_sends_no_tools(wrapper_env, monkeypatch):
     assert result.output == _Plan(title="ok")
     assert "tools" not in seen["body"]
     assert "response_format" not in seen["body"]
-    assert seen["body"]["model"] == "opusplan"
+    assert seen["body"]["model"] == "sonnet"

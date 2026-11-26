@@ -18,12 +18,24 @@ Then start the API with:
 TEXT_LLM_BACKEND=claude_wrapper
 CLAUDE_WRAPPER_BASE_URL=http://127.0.0.1:8000/v1   # host.docker.internal when the API is in docker
 CLAUDE_WRAPPER_API_KEY=claude-wrapper               # must match run.sh's API_KEY
-CLAUDE_WRAPPER_DEFAULT_MODEL=opusplan
-CLAUDE_SCENE_BUILD_MODEL=opus                       # per-task: CLAUDE_<task *_MODEL env name>
+CLAUDE_WRAPPER_DEFAULT_MODEL=opusplan               # only for tasks not in the table below
+CLAUDE_SCENE_BUILD_MODEL=opus                       # per-task override: CLAUDE_<task *_MODEL env name>
 ```
 
 Chat agent (does not use the wrapper): `DRAMACLAW_CHAT_BACKEND=claude`, `CLAUDE_MODEL=opusplan`,
 `CLAUDE_CONFIG_DIR=...`.
+
+## Default model per task
+
+`config.py::CLAUDE_WRAPPER_MODEL_BY_ENV` picks the tier when no `CLAUDE_<task>_MODEL` is set:
+
+| Tier | Tasks |
+|---|---|
+| `opus` | identity analysis, episode scene/prop planners, scene reconcile, scene spatial contract, story script, content rewriter, Seedance2 prompt composer, global video optimizer |
+| `sonnet` | scene/character build, identity cast/appearance, beat meta, screenplay normalizer, narrated scene asset, staging prop, scene overlap, keyframe/video prompts, style analyzer, video identity detector, freezone text writer/recipe/vision, Cognee LLM |
+| `haiku` | freezone translation |
+
+Order: explicit Claude override → `CLAUDE_<task>_MODEL` → this table → `CLAUDE_WRAPPER_DEFAULT_MODEL`.
 
 ## How it works / limits
 

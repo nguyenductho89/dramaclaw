@@ -101,6 +101,43 @@ DEFAULT_CLAUDE_WRAPPER_BASE_URL = "http://127.0.0.1:8000/v1"
 DEFAULT_CLAUDE_WRAPPER_MODEL = "opusplan"
 _CLAUDE_MODEL_ALIASES = frozenset({"opus", "sonnet", "haiku", "opusplan"})
 
+# Default Claude model per task (keyed by the task's *_MODEL env name). Opus for
+# planning and long-form writing, Haiku for mechanical rewrites, Sonnet for the
+# rest. Tasks missing here use CLAUDE_WRAPPER_DEFAULT_MODEL.
+CLAUDE_WRAPPER_MODEL_BY_ENV = {
+    # planning / reconciliation / long-form creative writing
+    "IDENTITY_PLANNER_ANALYSIS_MODEL": "opus",
+    "EPISODE_SCENE_PLANNER_MODEL": "opus",
+    "EPISODE_PROP_PLANNER_MODEL": "opus",
+    "EPISODE_SCENE_RECONCILE_MODEL": "opus",
+    "SCENE_SPATIAL_CONTRACT_MODEL": "opus",
+    "FREEZONE_STORY_SCRIPT_MODEL": "opus",
+    "CONTENT_REWRITER_MODEL": "opus",
+    "SEEDANCE2_PROMPT_COMPOSER_MODEL": "opus",
+    "GLOBAL_VIDEO_OPTIMIZER_MODEL": "opus",
+    # structured extraction, prompt building, vision
+    "SCENE_BUILD_MODEL": "sonnet",
+    "CHARACTER_BUILD_MODEL": "sonnet",
+    "IDENTITY_PLANNER_CAST_MODEL": "sonnet",
+    "IDENTITY_PLANNER_APPEARANCE_MODEL": "sonnet",
+    "LITERAL_BEAT_META_MODEL": "sonnet",
+    "SCREENPLAY_NORMALIZER_MODEL": "sonnet",
+    "NARRATED_SCENE_ASSET_MODEL": "sonnet",
+    "STAGING_PROP_MODEL": "sonnet",
+    "SCENE_OVERLAP_ANALYSIS_MODEL": "sonnet",
+    "KEYFRAME_PROMPT_MODEL": "sonnet",
+    "VIDEO_PROMPT_MODEL": "sonnet",
+    "STYLE_ANALYZER_MODEL": "sonnet",
+    "GLOBAL_VIDEO_IDENTITY_DETECTOR_MODEL": "sonnet",
+    "FREEZONE_TEXT_WRITER_MODEL": "sonnet",
+    "FREEZONE_RECIPE_COMPILER_MODEL": "sonnet",
+    "FREEZONE_VISION_MODEL": "sonnet",
+    "COGNEE_LLM_MODEL": "sonnet",
+    "LLM_MODEL": "sonnet",
+    # mechanical
+    "FREEZONE_TRANSLATION_MODEL": "haiku",
+}
+
 
 def claude_wrapper_enabled() -> bool:
     return (os.environ.get("TEXT_LLM_BACKEND") or "").strip().lower() == (
@@ -128,7 +165,8 @@ def get_claude_wrapper_model_name(
 ) -> str:
     """Pick the Claude model for one task.
 
-    Order: Claude-looking explicit override, ``CLAUDE_<MODEL_ENV>``, then
+    Order: Claude-looking explicit override, ``CLAUDE_<MODEL_ENV>``, the task's
+    entry in ``CLAUDE_WRAPPER_MODEL_BY_ENV``, then
     ``CLAUDE_WRAPPER_DEFAULT_MODEL``. Gateway aliases (``DC-*``, ``gemini-*``)
     from ``*_MODEL`` envs or call-site overrides are not Claude models and are
     ignored on this route.
@@ -137,6 +175,7 @@ def get_claude_wrapper_model_name(
         return str(model_name_override).strip()
     return (
         _clean_env_value(f"CLAUDE_{model_env}")
+        or CLAUDE_WRAPPER_MODEL_BY_ENV.get(model_env)
         or _clean_env_value("CLAUDE_WRAPPER_DEFAULT_MODEL")
         or DEFAULT_CLAUDE_WRAPPER_MODEL
     )

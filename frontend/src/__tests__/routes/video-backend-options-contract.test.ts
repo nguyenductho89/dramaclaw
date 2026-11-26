@@ -31,6 +31,16 @@ describe("video backend options alignment", () => {
     expect(videoPane).toContain("3:2");
   });
 
+  it("supports the MiniMax H3 inspector from backend capabilities", () => {
+    const videoPane = read("src/components/episode/beat-workbench/video-pane.tsx");
+    const videoQueries = read("src/lib/queries/video.ts");
+
+    expect(videoQueries).toContain("is_minimax_h3");
+    expect(videoQueries).toContain("video_backend");
+    expect(videoPane).toContain("showMinimaxH3Config");
+    expect(videoPane).toContain("minimaxH3Inspector");
+  });
+
   it("defaults to Seedance 2.0 Fast", () => {
     const beatsRoute = read("src/routes/_app/projects.$project/episodes.$episode/beats.lazy.tsx");
     const videoQueries = read("src/lib/queries/video.ts");

@@ -114,6 +114,7 @@ CLAUDE_WRAPPER_MODEL_BY_ENV = {
     "FREEZONE_STORY_SCRIPT_MODEL": "opus",
     "CONTENT_REWRITER_MODEL": "opus",
     "SEEDANCE2_PROMPT_COMPOSER_MODEL": "opus",
+    "H3_PROMPT_COMPOSER_MODEL": "opus",
     "GLOBAL_VIDEO_OPTIMIZER_MODEL": "opus",
     # structured extraction, prompt building, vision
     "SCENE_BUILD_MODEL": "sonnet",

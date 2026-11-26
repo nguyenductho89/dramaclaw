@@ -18,6 +18,7 @@ export interface VideoBackendOption {
   is_seedance2: boolean;
   is_happyhorse?: boolean;
   is_grok_video?: boolean;
+  is_minimax_h3?: boolean;
   dialogue_only: boolean;
   min_duration?: number | null;
   max_duration?: number | null;
@@ -636,11 +637,13 @@ export function useGenerateSeedance2Prompt(project: string, episode: number) {
   return useMutation({
     mutationFn: ({
       beatNum,
+      videoBackend,
       manualPromptReference,
       promptGuidance,
       promptGuidanceTemplateKeys,
     }: {
       beatNum: number;
+      videoBackend?: string;
       manualPromptReference?: string;
       promptGuidance?: string;
       promptGuidanceTemplateKeys?: string[];
@@ -650,6 +653,7 @@ export function useGenerateSeedance2Prompt(project: string, episode: number) {
           p`api/v1/projects/${project}/episodes/${episode}/beats/${beatNum}/seedance2-prompt/generate`,
           {
             json: {
+              ...(videoBackend ? { video_backend: videoBackend } : {}),
               manual_prompt_reference: manualPromptReference ?? "",
               prompt_guidance: promptGuidance ?? "",
               prompt_guidance_template_keys: promptGuidanceTemplateKeys ?? [],

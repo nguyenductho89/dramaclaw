@@ -1,6 +1,8 @@
 """scripts/fake_media_gateway against a stub ComfyUI: graph shape, response contract, task lifecycle."""
 from __future__ import annotations
 
+import argparse
+import asyncio
 import base64
 import io
 import json
@@ -200,3 +202,208 @@ def test_api_key_and_unknown_task(stub, tmp_path):
         assert c.get("/video/generations/nope").status_code == 401
         assert c.get("/video/generations/nope", headers={"Authorization": "Bearer secret"}).status_code == 404
         assert c.get("/healthz").json() == {"ok": True}
+
+
+# ── Vast.ai cost ledger ──────────────────────────────────────────────────────
+
+from scripts.fake_media_gateway import __main__ as gateway_cli  # noqa: E402
+from scripts.fake_media_gateway import vast_billing  # noqa: E402
+from scripts.fake_media_gateway.vast_billing import Ledger  # noqa: E402
+
+
+def test_allocate_is_proportional_and_exact():
+    shares = vast_billing.allocate(10.0, [30.0, 10.0, 60.0])
+    assert shares == [3.0, 1.0, 6.0]
+    odd = vast_billing.allocate(1.0, [1.0, 1.0, 1.0])
+    assert sum(odd) == pytest.approx(1.0, abs=1e-9) and len(odd) == 3
+    assert vast_billing.allocate(2.0, [0.0, 0.0]) == [1.0, 1.0]
+    assert vast_billing.allocate(5.0, []) == []
+
+
+def test_ledger_session_lifecycle(tmp_path):
+    ledger = Ledger(tmp_path / "billing")
+    assert ledger.record("t0", 5.0, {}) is False  # no open session: nothing written
+    session = ledger.start(10.0)
+    with pytest.raises(ValueError, match="still open"):
+        ledger.start(9.0)
+    assert ledger.record("t1", 30.0, {"project": "demo", "episode": 1, "beat_num": 2})
+    assert ledger.record("t2", 10.0, {"project": "demo", "episode": 1, "beat_num": 3})
+    assert ledger.task("t1")["usd"] is None and ledger.task("t1")["status"] == "open"
+
+    closed = ledger.close(credit_after=6.0)
+
+    assert closed["total_usd"] == 4.0 and closed["status"] == "closed"
+    assert ledger.task("t1")["usd"] == 3.0 and ledger.task("t2")["usd"] == 1.0
+    assert ledger.task("t1")["session_id"] == session["session_id"]
+    assert ledger.open_session() is None
+    assert ledger.task("missing") is None
+    with pytest.raises(ValueError, match="no open"):
+        ledger.close(credit_after=1.0)
+
+
+def test_ledger_close_rejects_a_credit_increase(tmp_path):
+    ledger = Ledger(tmp_path)
+    ledger.start(5.0)
+    with pytest.raises(ValueError, match="credit rose"):
+        ledger.close(credit_after=8.0)
+    assert ledger.open_session() is not None  # still open: the user can retry
+
+
+def test_fetch_vast_credit_reads_credit_field(monkeypatch):
+    seen = {}
+
+    class Resp:
+        def __init__(self, body):
+            self.body = body
+
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return self.body
+
+    def fake_get(url, headers, timeout):
+        seen.update(url=url, auth=headers["Authorization"])
+        return Resp({"credit": 12.34})
+
+    monkeypatch.setattr(vast_billing.httpx, "get", fake_get)
+    assert vast_billing.fetch_vast_credit("k") == 12.34
+    assert seen == {"url": vast_billing.VAST_USER_URL, "auth": "Bearer k"}
+
+    monkeypatch.setattr(vast_billing.httpx, "get", lambda *a, **k: Resp({"balance": 1}))
+    with pytest.raises(RuntimeError, match="credit"):
+        vast_billing.fetch_vast_credit("k")
+
+
+def _render(client, stub, **extra):
+    created = client.post("/video/generations", json={
+        "prompt": "walk", "duration": 5, "image": f"{stub.url}/ref.png",
+        "metadata": {"dc_context": {"project": "demo", "episode": 2, "beat_num": 7, **extra}}})
+    return _wait(client, created.json()["task_id"])
+
+
+def test_render_time_is_billed_to_the_open_session(stub, tmp_path):
+    billing = tmp_path / "billing"
+    app = create_app(output_dir=tmp_path / "out", billing_dir=billing,
+                     comfy=ComfyClient(stub.url, timeout_s=10, poll_s=0.01))
+    ledger = Ledger(billing)
+    ledger.start(10.0)
+    with TestClient(app) as c:
+        done = _render(c, stub, nested={"drop": "me"}, flag=True)
+        task_id = done["task_id"]
+        assert done["usage"]["gpu_seconds"] > 0
+
+        before = c.get(f"/billing/tasks/{task_id}").json()
+        assert (before["status"], before["usd"]) == ("open", None)
+        assert before["context"] == {"project": "demo", "episode": 2, "beat_num": 7}
+
+        ledger.close(credit_after=8.5)
+        after = c.get(f"/billing/tasks/{task_id}").json()
+
+    assert after["status"] == "closed" and after["usd"] == 1.5
+    assert after["gpu_seconds"] == before["gpu_seconds"]
+
+
+def test_render_without_a_session_reports_gpu_seconds_only(stub, tmp_path):
+    app = create_app(output_dir=tmp_path / "out", comfy=ComfyClient(stub.url, timeout_s=10, poll_s=0.01))
+    with TestClient(app) as c:
+        done = _render(c, stub)
+        body = c.get(f"/billing/tasks/{done['task_id']}").json()
+        assert c.get("/billing/tasks/nope").status_code == 404
+    assert body["status"] == "unbilled" and body["usd"] is None and body["gpu_seconds"] > 0
+    assert not (tmp_path / "out_billing").exists()  # the ledger is written only for an open session
+
+
+def test_failed_render_still_bills_its_gpu_time(stub, tmp_path, monkeypatch):
+    async def boom(self, graph):
+        await asyncio.sleep(0.02)
+        raise RuntimeError("ComfyUI crashed")
+
+    monkeypatch.setattr(ComfyClient, "render_video", boom)
+    billing = tmp_path / "billing"
+    app = create_app(output_dir=tmp_path / "out", billing_dir=billing,
+                     comfy=ComfyClient(stub.url, timeout_s=10, poll_s=0.01))
+    Ledger(billing).start(3.0)
+    with TestClient(app) as c:
+        done = _render(c, stub)
+    assert done["status"] == "failed" and done["usage"]["gpu_seconds"] >= 0.02
+    assert Ledger(billing).task(done["task_id"])["gpu_seconds"] >= 0.02
+
+
+def test_billing_cli_prints_the_per_beat_table(tmp_path, capsys):
+    base = dict(billing_dir=str(tmp_path), session=None, credit_before=None, credit_after=None)
+    gateway_cli._billing(argparse.Namespace(action="start", **{**base, "credit_before": 20.0}))
+    Ledger(tmp_path).record("task_a", 60.0, {"project": "demo", "episode": 1, "beat_num": 4})
+    gateway_cli._billing(argparse.Namespace(action="close", **{**base, "credit_after": 17.5}))
+    out = capsys.readouterr().out
+
+    assert "credit before: 20.0" in out and "total:         $2.5000" in out
+    assert "task_a" in out and "2.5000" in out
+
+    gateway_cli._billing(argparse.Namespace(action="report", **base))
+    assert "closed" in capsys.readouterr().out
+
+
+def test_billing_cli_needs_a_key_or_a_flag(tmp_path, monkeypatch):
+    monkeypatch.delenv("VAST_API_KEY", raising=False)
+    with pytest.raises(SystemExit, match="VAST_API_KEY"):
+        gateway_cli._billing(argparse.Namespace(
+            action="start", billing_dir=str(tmp_path), session=None, credit_before=None, credit_after=None))
+
+
+async def test_generator_payload_for_h3_is_accepted_and_billed_by_the_gateway(stub, tmp_path, monkeypatch):
+    """What NewApiVideoGenerator really sends for a Ref2VA beat becomes the omni_reference graph, in label order."""
+    import urllib.parse
+
+    from novelvideo.generators import video_generator as video_module
+    from novelvideo.generators.video_generator import NewApiVideoGenerator, ShotReference, VideoGenStatus
+
+    billing = tmp_path / "billing"
+    app = create_app(output_dir=tmp_path / "out", billing_dir=billing,
+                     comfy=ComfyClient(stub.url, timeout_s=10, poll_s=0.01))
+    Ledger(billing).start(5.0)
+    generator = NewApiVideoGenerator(api_key="k", endpoint="https://newapi.example", model="MiniMax-H3")
+
+    async def noop(*_a, **_k):
+        return "reservation"
+
+    async def download(_url, output_path):
+        Path(output_path).write_bytes(b"video")
+        return b"video"
+
+    with TestClient(app) as c:
+        seen = {}
+
+        async def post_json(_url, payload):
+            seen["payload"] = payload
+            resp = c.post("/video/generations", json=payload)
+            assert resp.status_code == 200, resp.text
+            return resp.json()
+
+        async def get_json(url):
+            return _wait(c, urllib.parse.urlsplit(url).path.rsplit("/", 1)[1])
+
+        monkeypatch.setattr(video_module, "_reserve_video_model_call", noop)
+        monkeypatch.setattr(video_module, "_confirm_video_model_call", noop)
+        monkeypatch.setattr(video_module, "_refund_video_model_call", noop)
+        monkeypatch.setattr(generator, "_post_json", post_json)
+        monkeypatch.setattr(generator, "_get_json", get_json)
+        monkeypatch.setattr(generator, "_download_video", download)
+
+        result = await generator.generate(
+            image_path=None, prompt="subject_definitions:\n<Picture 1> ...", output_path=str(tmp_path / "v.mp4"),
+            duration=6, aspect_ratio="9:16", poll_interval=0, max_polls=1,
+            project_output_dir=str(tmp_path / "demo"), episode=1, beat_num=3, task_type="single_video",
+            references=[ShotReference("image", f"{stub.url}/ref.png", "<Picture 1>"),
+                        ShotReference("image", f"{stub.url}/ref.png?2", "<Picture 2>"),
+                        ShotReference("audio", f"{stub.url}/ref.png?voice", "<Audio 1>")])
+        assert result.status == VideoGenStatus.DONE, result.error
+        billed = c.get(f"/billing/tasks/{result.task_id}").json()
+
+    unified = stub.prompts[0]["270"]["inputs"]
+    assert "image" not in seen["payload"]
+    assert sorted(k for k in unified if k.startswith(("mode.ref_images.", "mode.ref_audios."))) == [
+        "mode.ref_audios.ref_audio_0", "mode.ref_images.ref_image_0", "mode.ref_images.ref_image_1"]
+    assert (unified["width"], unified["height"]) == h3_graph.resolution("9:16")
+    assert billed["context"] == {"project": "demo", "episode": 1, "beat_num": 3, "task_type": "single_video"}
+    assert billed["status"] == "open" and billed["gpu_seconds"] > 0

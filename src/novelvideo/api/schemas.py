@@ -182,6 +182,7 @@ class BeatUpdate(BaseModel):
 
 
 class Seedance2PromptGenerateRequest(BaseModel):
+    video_backend: Optional[str] = None
     manual_prompt_reference: Optional[str] = None
     prompt_guidance: Optional[str] = None
     prompt_guidance_template_keys: Optional[list[str]] = None
@@ -242,6 +243,7 @@ class VideoBackendOption(BaseModel):
     is_seedance2: bool = False
     is_happyhorse: bool = False
     is_grok_video: bool = False
+    is_minimax_h3: bool = False
     dialogue_only: bool = False
     min_duration: Optional[int] = None
     max_duration: Optional[int] = None

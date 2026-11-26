@@ -30,6 +30,15 @@ from novelvideo.seedance2_i2v.character_voice_storage import (
     voice_resource_lock,
     voice_content_sha256,
 )
+from novelvideo.seedance2_i2v.h3_prompt import (
+    H3_MAX_SECONDS,
+    H3_MIN_SECONDS,
+    H3_RATIO_OPTIONS,
+    H3_SUPPORTED_MODES,
+    generate_h3_prompt,
+    h3_reference_label,
+    select_h3_reference_assets,
+)
 from novelvideo.seedance2_i2v.models import (
     SEEDANCE2_PROMPT_GUIDANCE_TEMPLATE_KEYS,
     Seedance2I2VMode,
@@ -293,7 +302,9 @@ async def generate_seedance2_prompt_for_panel(
     prompt_guidance_template_keys: list[str] | None = None,
     language: AssetLanguage | None = None,
     prop_menu: list[Any] | None = None,
+    video_backend: str | None = None,
 ) -> str:
+    """Generate and persist a panel prompt; ``video_backend`` selects the H3 composer (None = Seedance 2.0)."""
     config = parse_seedance2_config(beat.get("seedance2_config_json"))
     if prompt_guidance is not None:
         config.prompt_guidance = str(prompt_guidance or "").strip()
@@ -330,22 +341,38 @@ async def generate_seedance2_prompt_for_panel(
         assets=assets,
         language=output_language,
     )
-    result = await generate_seedance2_prompt(
-        mode=config.mode,
-        beat=prompt_beat,
-        assets=assets,
-        text_overlay=config.text_overlay,
-        prompt_guidance=config.prompt_guidance,
-        prompt_guidance_template_keys=config.prompt_guidance_template_keys,
-        request_params={
-            "duration": int(config.duration),
-            "resolution": config.resolution,
-            "ratio": config.ratio,
-        },
-        manual_prompt_reference=reference_prompt,
-        composer=composer,
-        language=output_language,
-    )
+    request_params = {
+        "duration": int(config.duration),
+        "resolution": config.resolution,
+        "ratio": config.ratio,
+    }
+    if video_backend:
+        inputs_hash = f"h3:{inputs_hash}"
+        result = await generate_h3_prompt(
+            mode=config.mode,
+            beat=prompt_beat,
+            assets=assets,
+            text_overlay=config.text_overlay,
+            prompt_guidance=config.prompt_guidance,
+            prompt_guidance_template_keys=config.prompt_guidance_template_keys,
+            duration=config.duration,
+            request_params=request_params,
+            manual_prompt_reference=reference_prompt,
+            composer=composer,
+        )
+    else:
+        result = await generate_seedance2_prompt(
+            mode=config.mode,
+            beat=prompt_beat,
+            assets=assets,
+            text_overlay=config.text_overlay,
+            prompt_guidance=config.prompt_guidance,
+            prompt_guidance_template_keys=config.prompt_guidance_template_keys,
+            request_params=request_params,
+            manual_prompt_reference=reference_prompt,
+            composer=composer,
+            language=output_language,
+        )
     config.final_prompt = mark_seedance2_prompt_references_for_editor(result.prompt)
     config.prompt_source = "generated" if result.used_ai else "fallback"
     config.prompt_inputs_hash = inputs_hash
@@ -358,6 +385,63 @@ async def generate_seedance2_prompt_for_panel(
         seedance2_config_json=saved_json,
     )
     return saved_json
+
+
+def prepare_h3_beat_request(
+    *,
+    project_dir: str | Path,
+    state_dir: str | Path,
+    episode: int,
+    beat: dict[str, Any],
+    next_beat: dict[str, Any] | None,
+    prompt: str,
+    duration: float,
+    ratio: str | None,
+    prop_menu: list[Any] | None = None,
+) -> dict[str, Any]:
+    """Prompt, ordered references and saved config for one MiniMax H3 render.
+
+    Rebuilds the asset list exactly as ``generate_seedance2_prompt_for_panel`` did, so the
+    ``<Picture N>``/``<Audio N>`` labels in the prompt match the references sent.
+    """
+    config = parse_seedance2_config(beat.get("seedance2_config_json"))
+    if config.mode not in H3_SUPPORTED_MODES:
+        raise ValueError("MiniMax H3 至少需要一张参考图且不支持尾帧，请改用首帧模式或多参模式")
+    final_prompt = str(config.final_prompt or prompt or "").strip()
+    if not final_prompt:
+        beat_num = int(beat.get("beat_number") or 0)
+        prefix = f"Beat {beat_num} " if beat_num else ""
+        raise ValueError(f"{prefix}缺少视频提示词，请先生成或填写视频提示词")
+    assets = build_seedance2_project_assets(
+        project_output=Path(project_dir),
+        episode=episode,
+        beat=beat,
+        mode=config.mode,
+        state_dir=state_dir,
+        next_beat=next_beat,
+        prop_menu=prop_menu,
+    )
+    _append_seedance2_user_reference_assets(assets, config)
+    images, audios = select_h3_reference_assets(assets, final_prompt)
+    if not images:
+        raise ValueError("MiniMax H3 需要至少一张参考图")
+    config.final_prompt = final_prompt
+    config.duration = min(
+        max(int(math.ceil(float(config.duration or duration or H3_MIN_SECONDS))), H3_MIN_SECONDS),
+        H3_MAX_SECONDS,
+    )
+    chosen_ratio = str(ratio or config.ratio or "").strip()
+    config.ratio = chosen_ratio if chosen_ratio in H3_RATIO_OPTIONS else "16:9"
+    return {
+        "prompt": final_prompt,
+        "duration": config.duration,
+        "ratio": config.ratio,
+        "references": [
+            {"type": asset.media_type, "path": str(asset.path), "role": h3_reference_label(asset.reference_label)}
+            for asset in (*images, *audios)
+        ],
+        "config_json": dump_seedance2_config(config),
+    }
 
 
 async def save_seedance2_uploaded_asset(

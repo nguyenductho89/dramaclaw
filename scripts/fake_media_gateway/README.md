@@ -32,4 +32,23 @@ then `ssh -L 8188:127.0.0.1:8188 ...`. `GET /healthz` checks that ComfyUI answer
 References must be http(s) or `data:` URLs. Local files go through dramaclaw's `MEDIA_RELAY_PROVIDER` first, as with the real gateway.
 Output is written to `output/fake_media_gateway/` (gitignored). Qwen-Image 2.1 is research/evaluation only: test output only.
 
+## GPU cost (Vast.ai)
+
+The cost of a render batch is the Vast account credit before renting minus the credit after the instance is deleted, so boot time,
+idle time and storage are included. It is split over the renders in proportion to their GPU time (`gpu_seconds`, wall time of each render)
+and attributed to beats through `metadata.dc_context` (`project`, `episode`, `beat_num`), which dramaclaw sends for MiniMax-H3.
+Recording only; nothing is charged. Needs `VAST_API_KEY` (or pass the balance by hand with `--credit-before` / `--credit-after`).
+
+```
+uv run python -m scripts.fake_media_gateway billing start    # 1. before renting the instance
+# 2. rent the instance, run the gateway, render, fetch every video, delete the instance
+uv run python -m scripts.fake_media_gateway billing close    # 3. after it is deleted: prints a per-beat cost table
+uv run python -m scripts.fake_media_gateway billing report [SESSION_ID]
+```
+
+- Ledgers are JSON files in `output/fake_media_gateway_billing/` (outside `/files`, gitignored). One session is open at a time; renders finishing while none is open are not billed.
+- A failed render is billed too: it held the GPU. `close` refuses a negative total (a top-up in between): restart the session with the balance after the top-up.
+- `GET /billing/tasks/{id}` gives `gpu_seconds` straight away and `usd` once the session is closed; the task status carries `usage.gpu_seconds`.
+- The `credit` field of `GET https://console.vast.ai/api/v0/users/current/` is the balance read.
+
 Tests: `uv run pytest tests/test_fake_media_gateway.py` (stub ComfyUI, no GPU).

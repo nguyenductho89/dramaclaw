@@ -915,6 +915,122 @@ async def test_happyhorse_single_video_enqueues_prepared_references(
 
 
 @pytest.mark.asyncio
+async def test_minimax_h3_single_video_sends_only_numbered_references(
+    monkeypatch, tmp_path
+):
+    from novelvideo.api.routes import generation
+    from novelvideo.api.schemas import SingleVideoRequest
+    from novelvideo.seedance2_i2v import panel_service
+
+    calls = []
+    prepare_calls = []
+    store = _FakeSeedance2Store(
+        [
+            {
+                "beat_number": 2,
+                "video_mode": "keyframe",
+                "video_prompt": "old prompt",
+                "seedance2_config_json": '{"mode": "first_frame"}',
+            },
+            {"beat_number": 3},
+        ]
+    )
+    for beat in (2, 3):
+        frame = tmp_path / "frames" / "ep003" / f"beat_{beat:02d}.png"
+        frame.parent.mkdir(parents=True, exist_ok=True)
+        frame.write_bytes(b"frame")
+
+    def fake_prepare_h3(**kwargs):
+        prepare_calls.append(kwargs)
+        return {
+            "prompt": "subject_definitions:\n<Picture 1> ...",
+            "duration": 8,
+            "ratio": "16:9",
+            "references": [
+                {"type": "image", "path": "/o/first.png", "role": "<Picture 1>"},
+                {"type": "audio", "path": "/o/voice.mp3", "role": "<Audio 1>"},
+            ],
+            "config_json": '{"final_prompt":"h3 prompt"}',
+        }
+
+    async def fake_audio_duration(*_args, **_kwargs):
+        return None
+
+    _patch_generation_celery(monkeypatch, generation, tmp_path, store)
+    monkeypatch.setattr(
+        generation,
+        "get_task_backend",
+        lambda: SimpleNamespace(enqueue_project_task=_fake_enqueue(calls)),
+    )
+    monkeypatch.setattr(panel_service, "prepare_h3_beat_request", fake_prepare_h3)
+    monkeypatch.setattr(generation, "_api_audio_duration_seconds", fake_audio_duration)
+
+    response = await generation.generate_single_video(
+        project="demo",
+        episode_num=3,
+        beat_num=2,
+        body=SingleVideoRequest(video_backend="newapi_MiniMax-H3", ratio="16:9"),
+        user={"username": "alice"},
+    )
+
+    assert response["ok"] is True
+    assert prepare_calls[0]["ratio"] == "16:9"
+    assert prepare_calls[0]["next_beat"]["beat_number"] == 3
+    config = calls[0]["payload"]["config"]
+    # A first frame sent next to references would make the gateway drop the references.
+    assert config["frame_path"] is None
+    assert config["last_frame_path"] is None
+    assert config["video_mode"] == "first_frame"
+    assert config["video_duration"] == 8
+    assert config["ratio"] == "16:9"
+    assert config["prompt"].startswith("subject_definitions:")
+    assert [r["role"] for r in config["references"]] == ["<Picture 1>", "<Audio 1>"]
+    assert config["seedance2_config"] == '{"final_prompt":"h3 prompt"}'
+    assert store.updated[-1]["seedance2_config_json"] == '{"final_prompt":"h3 prompt"}'
+
+
+@pytest.mark.asyncio
+async def test_minimax_h3_single_video_surfaces_prepare_errors(monkeypatch, tmp_path):
+    from novelvideo.api.routes import generation
+    from novelvideo.api.schemas import SingleVideoRequest
+    from novelvideo.seedance2_i2v import panel_service
+
+    calls = []
+    store = _FakeSeedance2Store(
+        [{"beat_number": 2, "video_mode": "first_frame", "video_prompt": "p"}]
+    )
+    frame = tmp_path / "frames" / "ep003" / "beat_02.png"
+    frame.parent.mkdir(parents=True)
+    frame.write_bytes(b"frame")
+
+    def fail_prepare(**_kwargs):
+        raise ValueError("MiniMax H3 需要至少一张参考图")
+
+    async def fake_audio_duration(*_args, **_kwargs):
+        return None
+
+    _patch_generation_celery(monkeypatch, generation, tmp_path, store)
+    monkeypatch.setattr(
+        generation,
+        "get_task_backend",
+        lambda: SimpleNamespace(enqueue_project_task=_fake_enqueue(calls)),
+    )
+    monkeypatch.setattr(panel_service, "prepare_h3_beat_request", fail_prepare)
+    monkeypatch.setattr(generation, "_api_audio_duration_seconds", fake_audio_duration)
+
+    response = await generation.generate_single_video(
+        project="demo",
+        episode_num=3,
+        beat_num=2,
+        body=SingleVideoRequest(video_backend="newapi_MiniMax-H3"),
+        user={"username": "alice"},
+    )
+
+    assert response == {"ok": False, "error": "MiniMax H3 需要至少一张参考图"}
+    assert calls == []
+
+
+@pytest.mark.asyncio
 async def test_single_video_rejects_empty_legacy_video_prompt(monkeypatch, tmp_path):
     from novelvideo.api.routes import generation
     from novelvideo.api.schemas import SingleVideoRequest

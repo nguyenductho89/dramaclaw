@@ -33,6 +33,7 @@ export const FEATURE_MODEL_GROUPS: readonly FeatureModelGroup[] = [
         requiresVision: true,
       },
       { id: "SEEDANCE2_PROMPT_COMPOSER", defaultModel: "DC-seedance2-prompt-composer-LLM" },
+      { id: "H3_PROMPT_COMPOSER", defaultModel: "DC-h3-prompt-composer-LLM" },
     ],
   },
   {
@@ -155,6 +156,7 @@ export const FEATURE_MODEL_PRODUCT_GROUPS: readonly FeatureModelGroup[] = [
     features: [
       productFeature("GLOBAL_VIDEO_OPTIMIZER"),
       productFeature("SEEDANCE2_PROMPT_COMPOSER"),
+      productFeature("H3_PROMPT_COMPOSER"),
       productFeature("GLOBAL_VIDEO_IDENTITY_DETECTOR"),
       productFeature("IDENTITY_PLANNER_CAST"),
       productFeature("IDENTITY_PLANNER_ANALYSIS"),

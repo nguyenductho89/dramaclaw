@@ -2424,6 +2424,9 @@ class NewApiVideoGenerator(VideoGeneratorBase):
     def _is_grok_video_channel_model(self) -> bool:
         return self.model.strip().lower() == "grok-video-channel"
 
+    def _is_minimax_h3_model(self) -> bool:
+        return self.model.strip().lower().startswith("minimax-h3")
+
     @staticmethod
     def _happyhorse_ratio(value: str | None) -> str:
         text = str(value or "").strip()
@@ -3098,6 +3101,17 @@ class NewApiVideoGenerator(VideoGeneratorBase):
         processing_metadata = kwargs.get("processing_metadata")
         if isinstance(processing_metadata, dict):
             metadata.update(processing_metadata)
+        if self._is_minimax_h3_model():
+            # Lets the gateway's GPU-cost ledger attribute a render to its beat.
+            dc_context = {
+                "project": Path(str(project_output_dir)).name if project_output_dir else None,
+                "episode": tracking_episode,
+                "beat_num": tracking_beat_num,
+                "task_type": tracking_task_type or None,
+            }
+            metadata["dc_context"] = {
+                key: value for key, value in dc_context.items() if value not in (None, "")
+            }
         payload: dict[str, object] = {
             "model": self.model,
             "prompt": prompt,

@@ -86,6 +86,34 @@ describe("Seedance2 prompt generation query", () => {
     expect(result.current.data?.ok).toBe(true);
   });
 
+  it("sends video_backend only when the caller picks one", async () => {
+    const bodies: unknown[] = [];
+    server.use(
+      http.post(
+        "http://localhost:3000/api/v1/projects/demo/episodes/1/beats/2/seedance2-prompt/generate",
+        async ({ request }) => {
+          bodies.push(await request.json());
+          return HttpResponse.json({
+            ok: true,
+            data: {
+              final_prompt: "p",
+              seedance2_config_json: "{}",
+              beat: { beat_number: 2, seedance2_config_json: "{}" },
+            },
+          });
+        },
+      ),
+    );
+
+    const { result } = renderHook(() => useGenerateSeedance2Prompt("demo", 1), {
+      wrapper,
+    });
+    result.current.mutate({ beatNum: 2, videoBackend: "newapi_MiniMax-H3" });
+    await waitFor(() => expect(bodies).toHaveLength(1));
+
+    expect(bodies[0]).toMatchObject({ video_backend: "newapi_MiniMax-H3" });
+  });
+
   it("does not use the current app language to choose the Seedance2 output language", async () => {
     useAppStore.setState({ language: "en" });
     let body: unknown = null;

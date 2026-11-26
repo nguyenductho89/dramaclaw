@@ -67,8 +67,14 @@ from novelvideo.generators.nanobanana_grid import (
 from novelvideo.generators.render_identity_guard import render_ai_detection_error
 from novelvideo.manual_shots import pick_beats_by_number
 from novelvideo.render_plan.ref_image_hash import RefImageHasher
+from novelvideo.seedance2_i2v.h3_prompt import (
+    H3_MAX_SECONDS,
+    H3_MIN_SECONDS,
+    H3_RATIO_OPTIONS,
+)
 from novelvideo.seedance2_i2v.pipeline import (
     is_huimeng_seedance2_backend,
+    is_minimax_h3_backend,
     prepare_seedance2_generation_inputs,
 )
 from novelvideo.seedance2_i2v.voice_clone import normalize_seedance2_audio_type
@@ -781,6 +787,7 @@ HAPPYHORSE_SUPPORTED_MODES = ("first_frame", "multimodal_reference")
 GROK_VIDEO_RESOLUTION_OPTIONS = ("720p", "480p")
 GROK_VIDEO_RATIO_OPTIONS = ("16:9", "9:16", "1:1", "2:3", "3:2")
 GROK_VIDEO_SUPPORTED_MODES = ("first_frame", "multimodal_reference")
+H3_SUPPORTED_MODE_VALUES = ("first_frame", "multimodal_reference")
 
 
 def _seedance2_model_from_backend(video_backend: str | None) -> str:
@@ -1680,6 +1687,9 @@ def _api_video_backend_options() -> list[VideoBackendOption]:
             bounds = (3, 15)
         if model == "grok-video-channel" and not bounds:
             bounds = (6, 30)
+        is_minimax_h3 = is_minimax_h3_backend(value)
+        if is_minimax_h3 and not bounds:
+            bounds = (H3_MIN_SECONDS, H3_MAX_SECONDS)
         is_happyhorse = _is_happyhorse_backend(value)
         is_grok_video = _is_grok_video_backend(value)
         backend_options.append(
@@ -1690,6 +1700,7 @@ def _api_video_backend_options() -> list[VideoBackendOption]:
                 is_seedance2=_is_seedance2_backend(value),
                 is_happyhorse=is_happyhorse,
                 is_grok_video=is_grok_video,
+                is_minimax_h3=is_minimax_h3,
                 min_duration=bounds[0] if bounds else None,
                 max_duration=bounds[1] if bounds else None,
                 resolution_options=(
@@ -1704,6 +1715,8 @@ def _api_video_backend_options() -> list[VideoBackendOption]:
                     if is_happyhorse
                     else list(GROK_VIDEO_RATIO_OPTIONS)
                     if is_grok_video
+                    else list(H3_RATIO_OPTIONS)
+                    if is_minimax_h3
                     else None
                 ),
                 supported_modes=(
@@ -1711,6 +1724,8 @@ def _api_video_backend_options() -> list[VideoBackendOption]:
                     if is_happyhorse
                     else list(GROK_VIDEO_SUPPORTED_MODES)
                     if is_grok_video
+                    else list(H3_SUPPORTED_MODE_VALUES)
+                    if is_minimax_h3
                     else None
                 ),
                 reference_image_max=7 if is_grok_video else 9 if is_happyhorse else None,
@@ -4762,6 +4777,7 @@ async def generate_single_video(
     is_seedance2 = _is_seedance2_backend(video_backend)
     is_happyhorse = _is_happyhorse_backend(video_backend)
     is_grok_video = _is_grok_video_backend(video_backend)
+    is_minimax_h3 = is_minimax_h3_backend(video_backend)
 
     # 首帧路径
     from novelvideo.utils.path_resolver import PathResolver
@@ -4803,6 +4819,8 @@ async def generate_single_video(
     happyhorse_ratio: str | None = None
     grok_video_references: list[dict[str, str]] = []
     grok_video_ratio: str | None = None
+    minimax_h3_references: list[dict[str, str]] = []
+    minimax_h3_ratio: str | None = None
     if is_seedance2:
         try:
             request_config_json = _merge_seedance2_request_config(
@@ -4938,6 +4956,58 @@ async def generate_single_video(
             video_mode = "first_frame"
         except ValueError as exc:
             return {"ok": False, "error": str(exc)}
+    elif is_minimax_h3:
+        try:
+            from novelvideo.seedance2_i2v.panel_service import prepare_h3_beat_request
+
+            request_config_json = _merge_seedance2_request_config(
+                beat,
+                seedance2_config_json=body.seedance2_config_json,
+                config_overrides=_seedance2_request_config_overrides(body),
+            )
+            if request_config_json and hasattr(store, "update_beat_asset"):
+                await store.update_beat_asset(
+                    episode_number=episode_num,
+                    beat_number=beat_num,
+                    seedance2_config_json=request_config_json,
+                )
+                beat["seedance2_config_json"] = request_config_json
+            beat_index = beats.index(beat)
+            episode_obj = _episode_from_store_or_none(store, episode_num)
+            prop_menu = await _runtime_prop_menu_with_global_props(store, episode_obj, beats)
+            prepared = prepare_h3_beat_request(
+                project_dir=output_dir,
+                state_dir=Path(store.state_dir),
+                episode=episode_num,
+                beat=beat,
+                next_beat=beats[beat_index + 1] if beat_index + 1 < len(beats) else None,
+                prompt=prompt,
+                duration=video_duration,
+                ratio=body.ratio if "ratio" in body.model_fields_set else None,
+                prop_menu=prop_menu,
+            )
+            if hasattr(store, "update_beat_asset"):
+                await store.update_beat_asset(
+                    episode_number=episode_num,
+                    beat_number=beat_num,
+                    seedance2_config_json=str(prepared["config_json"]),
+                )
+            prompt = str(prepared["prompt"])
+            video_duration = float(prepared["duration"])
+            # Every image goes out as a numbered reference: the gateway drops
+            # references whenever a first frame is sent alongside them.
+            frame_path = None
+            last_frame_path = None
+            seedance2_config_json = str(prepared["config_json"])
+            minimax_h3_ratio = str(prepared["ratio"])
+            minimax_h3_references = list(prepared["references"])
+            video_mode = "first_frame"
+        except ValueError as exc:
+            return {"ok": False, "error": str(exc)}
+        if "resolution" in body.model_fields_set:
+            single_video_resolution = _seedance2_resolution_for_backend(
+                video_backend, body.resolution
+            )
     else:
         if not prompt.strip():
             return {"ok": False, "error": _missing_video_prompt_error(beat_num)}
@@ -4988,6 +5058,9 @@ async def generate_single_video(
     if is_grok_video:
         config["ratio"] = _grok_video_ratio_for_backend(grok_video_ratio)
         config["references"] = grok_video_references
+    if is_minimax_h3:
+        config["ratio"] = minimax_h3_ratio
+        config["references"] = minimax_h3_references
 
     billing_resolution = single_video_resolution or _seedance2_resolution_for_backend(
         video_backend,

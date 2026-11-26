@@ -315,6 +315,18 @@ vi.mock("@/lib/queries/video", () => ({
           min_duration: 4,
           max_duration: 15,
         },
+        {
+          value: "newapi_MiniMax-H3",
+          label: "MiniMax H3",
+          is_default: false,
+          is_seedance2: false,
+          is_minimax_h3: true,
+          dialogue_only: false,
+          min_duration: 4,
+          max_duration: 15,
+          ratio_options: ["21:9", "16:9", "4:3", "1:1", "3:4", "9:16"],
+          supported_modes: ["first_frame", "multimodal_reference"],
+        },
       ],
     },
   }),
@@ -2017,6 +2029,56 @@ describe("VideoPane Seedance2 inspector", () => {
     expect(screen.getByLabelText("Seedance2.0主体提示词")).toHaveValue(
       "optimized seedance2 prompt",
     );
+  });
+
+  it("shows the MiniMax H3 prompt panel and sends the H3 backend when generating", async () => {
+    const user = userEvent.setup();
+    renderPane(makeBeat(), { defaultBackend: "newapi_MiniMax-H3" });
+
+    expect(screen.getByTestId("seedance2-prompt-panel")).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Seedance2.0主体提示词"), {
+      target: { value: "manual reference prompt" },
+    });
+    await user.click(screen.getByRole("button", { name: "AI 优化" }));
+
+    expect(generateSeedance2PromptMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        beatNum: 1,
+        videoBackend: "newapi_MiniMax-H3",
+        manualPromptReference: "manual reference prompt",
+      }),
+    );
+  });
+
+  it("limits MiniMax H3 to first-frame and multi-reference modes", async () => {
+    const user = userEvent.setup();
+    renderPane(makeBeat(), { defaultBackend: "newapi_MiniMax-H3" });
+
+    await user.click(screen.getByLabelText("生成模式"));
+
+    expect(await screen.findByRole("option", { name: "首帧模式" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "多参模式" })).toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: "首尾帧模式" })).not.toBeInTheDocument();
+  });
+
+  it("regenerates a MiniMax H3 beat with the H3 config and no Seedance audio flags", async () => {
+    const user = userEvent.setup();
+    renderPane(makeBeat(), { defaultBackend: "newapi_MiniMax-H3" });
+
+    await user.click(screen.getAllByRole("button", { name: "重新生成" })[0]);
+    await user.click(screen.getByRole("button", { name: "确认" }));
+    await waitFor(() => expect(regenerateMock).toHaveBeenCalledTimes(1));
+
+    const call = regenerateMock.mock.calls[0][0];
+    expect(call.videoBackend).toBe("newapi_MiniMax-H3");
+    expect(call.mode === "first_frame" || call.mode === "multimodal_reference").toBe(true);
+    const config = JSON.parse(call.seedance2ConfigJson);
+    expect(config).toMatchObject({
+      generate_audio: false,
+      return_last_frame: false,
+      human_review: false,
+    });
+    expect(["21:9", "16:9", "4:3", "1:1", "3:4", "9:16"]).toContain(config.ratio);
   });
 
   it("does not write an AI-optimized prompt onto the beat switched to mid-flight", async () => {

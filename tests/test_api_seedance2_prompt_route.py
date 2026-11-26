@@ -852,3 +852,120 @@ def test_generate_beat_video_prompt_requires_next_beat_for_keyframe(
         "error": "这是最后一个 Beat，无法生成首尾帧过渡提示词",
     }
     assert store.updates == []
+
+
+def _h3_panel_stub(monkeypatch, seen: dict):
+    from novelvideo.seedance2_i2v import panel_service
+
+    saved_json = json.dumps(
+        {
+            "mode": "first_frame",
+            "duration": 5,
+            "resolution": "720p",
+            "ratio": "9:16",
+            "final_prompt": "h3 prompt",
+            "prompt_source": "generated",
+        }
+    )
+
+    async def _generate_for_panel(**kwargs):
+        seen.update(kwargs)
+        beat = kwargs["beat"]
+        beat["seedance2_config_json"] = saved_json
+        await kwargs["store"].update_beat_asset(
+            episode_number=kwargs["episode"],
+            beat_number=int(beat["beat_number"]),
+            seedance2_config_json=saved_json,
+        )
+        return saved_json
+
+    monkeypatch.setattr(
+        panel_service, "generate_seedance2_prompt_for_panel", _generate_for_panel
+    )
+
+
+def _beat_with_mode(mode: str) -> list[dict]:
+    return [
+        {
+            "beat_number": 1,
+            "seedance2_config_json": json.dumps(
+                {"mode": mode, "duration": 5, "resolution": "720p", "ratio": "9:16"}
+            ),
+        },
+        {"beat_number": 2},
+    ]
+
+
+def test_generate_h3_prompt_uses_h3_feature_key_without_price_rule(monkeypatch, tmp_path):
+    seen: dict = {}
+    _h3_panel_stub(monkeypatch, seen)
+    usage_meter = DummyUsageMeter()
+    client, _store = _client(
+        monkeypatch,
+        tmp_path,
+        _beat_with_mode("first_frame"),
+        ctx=_project_ctx(tmp_path),
+        usage_meter=usage_meter,
+    )
+
+    response = client.post(
+        "/projects/demo/episodes/1/beats/1/seedance2-prompt/generate",
+        json={"video_backend": "newapi_MiniMax-H3"},
+    )
+
+    assert response.json()["ok"] is True
+    assert seen["video_backend"] == "newapi_MiniMax-H3"
+    call = usage_meter.reserve_calls[0]
+    assert call["feature_key"] == "mainline.h3_prompt"
+    assert call["metadata"]["target"] == "h3"
+    assert call["require_price_rule"] is False
+    assert call["require_positive_cost"] is False
+    assert usage_meter.contexts[0]["billing_metadata"]["feature_key"] == "mainline.h3_prompt"
+    assert usage_meter.confirm_calls[0][0] == "seedance2-prompt-reservation"
+
+
+@pytest.mark.parametrize("mode", ["text_to_video", "first_last_frame"])
+def test_generate_h3_prompt_rejects_modes_h3_cannot_run(monkeypatch, tmp_path, mode):
+    seen: dict = {}
+    _h3_panel_stub(monkeypatch, seen)
+    usage_meter = DummyUsageMeter()
+    client, _store = _client(
+        monkeypatch,
+        tmp_path,
+        _beat_with_mode(mode),
+        ctx=_project_ctx(tmp_path),
+        usage_meter=usage_meter,
+    )
+
+    response = client.post(
+        "/projects/demo/episodes/1/beats/1/seedance2-prompt/generate",
+        json={"video_backend": "newapi_MiniMax-H3"},
+    )
+
+    body = response.json()
+    assert body["ok"] is False and "MiniMax H3" in body["error"]
+    assert seen == {}
+    assert usage_meter.reserve_calls == []
+
+
+def test_generate_prompt_for_seedance_backend_does_not_select_h3(monkeypatch, tmp_path):
+    seen: dict = {}
+    _h3_panel_stub(monkeypatch, seen)
+    usage_meter = DummyUsageMeter()
+    client, _store = _client(
+        monkeypatch,
+        tmp_path,
+        _beat_with_mode("first_frame"),
+        ctx=_project_ctx(tmp_path),
+        usage_meter=usage_meter,
+    )
+
+    response = client.post(
+        "/projects/demo/episodes/1/beats/1/seedance2-prompt/generate",
+        json={"video_backend": "newapi_seedance-2.0"},
+    )
+
+    assert response.json()["ok"] is True
+    assert seen["video_backend"] is None
+    assert usage_meter.reserve_calls[0]["feature_key"] == "mainline.seedance2_prompt"
+    assert usage_meter.reserve_calls[0]["require_price_rule"] is True

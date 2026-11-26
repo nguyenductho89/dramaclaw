@@ -328,6 +328,7 @@ def _normalize_recorded_model_name(model: str) -> str:
         "GLOBAL_VIDEO_IDENTITY_DETECTOR_MODEL",
         "GLOBAL_VIDEO_OPTIMIZER_MODEL",
         "SEEDANCE2_PROMPT_COMPOSER_MODEL",
+        "H3_PROMPT_COMPOSER_MODEL",
         "NEWAPI_IMAGE_MODEL",
         "NEWAPI_NANOBANANA2_MODEL",
         "PROP_REF_IMAGE_MODEL",

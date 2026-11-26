@@ -40,6 +40,7 @@ router = APIRouter()
 
 SEEDANCE2_PROMPT_FEATURE_KEY = "mainline.seedance2_prompt"
 SEEDANCE2_PROMPT_TASK_TYPE = "seedance2_prompt"
+H3_PROMPT_FEATURE_KEY = "mainline.h3_prompt"
 MODEL_CALL_CREDIT_POLICY_FEATURE_INCLUDED = "feature_included"
 
 
@@ -610,13 +611,22 @@ async def generate_seedance2_prompt(
     mode = getattr(config.mode, "value", str(config.mode))
     if mode == "first_last_frame" and next_beat is None:
         return {"ok": False, "error": "这是最后一个 Beat，无法使用首尾帧模式"}
+    from novelvideo.seedance2_i2v.pipeline import is_minimax_h3_backend
+
+    is_h3 = is_minimax_h3_backend(body.video_backend)
+    if is_h3 and mode not in {"first_frame", "multimodal_reference"}:
+        return {
+            "ok": False,
+            "error": "MiniMax H3 至少需要一张参考图且不支持尾帧，请改用首帧模式或多参模式",
+        }
+    feature_key = H3_PROMPT_FEATURE_KEY if is_h3 else SEEDANCE2_PROMPT_FEATURE_KEY
 
     usage_meter = get_usage_meter()
     ctx = getattr(resolved, "ctx", None)
     project_id = str(getattr(ctx, "project_id", "") or "")
     reservation = await usage_meter.reserve_feature_start_credits(
         user_id=_requester_user_id_for_billing(resolved, user),
-        feature_key=SEEDANCE2_PROMPT_FEATURE_KEY,
+        feature_key=feature_key,
         product_surface="mainline",
         project_id=project_id,
         resource_kind="script",
@@ -627,14 +637,15 @@ async def generate_seedance2_prompt(
             "episode": episode_num,
             "beat_num": beat_num,
             "mode": mode,
+            "target": "h3" if is_h3 else "seedance2",
         },
-        require_price_rule=True,
-        require_positive_cost=True,
+        require_price_rule=not is_h3,
+        require_positive_cost=not is_h3,
     )
     reservation_id = str(reservation.get("id") or "")
     billing_metadata: dict[str, Any] = {
         "model_call_credit_policy": MODEL_CALL_CREDIT_POLICY_FEATURE_INCLUDED,
-        "feature_key": SEEDANCE2_PROMPT_FEATURE_KEY,
+        "feature_key": feature_key,
         "source": "sync_api",
     }
     if reservation_id:
@@ -667,6 +678,7 @@ async def generate_seedance2_prompt(
             prompt_guidance_template_keys=body.prompt_guidance_template_keys,
             language=language,
             prop_menu=list(script_data.get("prop_menu") or []),
+            video_backend=body.video_backend if is_h3 else None,
         )
     except ValueError as exc:
         if reservation_id:

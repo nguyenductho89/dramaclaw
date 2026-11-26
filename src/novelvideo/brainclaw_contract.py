@@ -16,6 +16,7 @@ class BrainClawProfile(StrEnum):
     GLOBAL_VIDEO_MOTION_PLANNING = "global_video_motion_planning"
     KEYFRAME_TRANSITION_PROMPT_GENERATION = "keyframe_transition_prompt_generation"
     SEEDANCE2_PROMPT_COMPOSITION = "seedance2_prompt_composition"
+    H3_PROMPT_COMPOSITION = "h3_prompt_composition"
     GLOBAL_VIDEO_IDENTITY_DETECTION = "global_video_identity_detection"
     IDENTITY_CAST_PLANNING = "identity_cast_planning"
     IDENTITY_DEFAULT_ANALYSIS = "identity_default_analysis"

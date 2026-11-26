@@ -63,6 +63,14 @@ def is_huimeng_seedance2_backend(backend: str | None) -> bool:
     return False
 
 
+def is_minimax_h3_backend(backend: str | None) -> bool:
+    """True for the newapi MiniMax-H3 models (cloud and local ComfyUI)."""
+    value = str(backend or "").strip().lower()
+    if value.startswith("newapi_"):
+        value = value[len("newapi_") :].strip()
+    return value.startswith("minimax-h3")
+
+
 def _unique_paths(paths: list[str]) -> list[str]:
     seen: set[str] = set()
     result: list[str] = []

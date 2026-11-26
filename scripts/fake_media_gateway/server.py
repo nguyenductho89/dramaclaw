@@ -25,6 +25,7 @@ from fastapi.staticfiles import StaticFiles
 
 from . import h3_graph, qwen_graph
 from .comfy_client import ComfyClient
+from .vast_billing import Ledger
 
 DEFAULT_IMAGE_RATIO = "1:1"
 DEFAULT_VIDEO_RATIO = "16:9"
@@ -47,8 +48,10 @@ class VideoTask:
     seed: int
     images: list[str]
     voices: list[str]
+    context: dict = field(default_factory=dict)
     status: str = "queued"
     error: str = ""
+    gpu_seconds: float = 0.0
     created: int = field(default_factory=lambda: int(time.time()))
 
 
@@ -63,6 +66,17 @@ def _ratio_from(payload: dict, default: str) -> str:
     if not re.fullmatch(r"\d{1,2}:\d{1,2}", ratio) or 0 in (int(x) for x in ratio.split(":")):
         raise RequestError(f"invalid ratio {ratio!r}")
     return ratio
+
+
+def _billing_context(value) -> dict:
+    """The caller's `metadata.dc_context` (project/episode/beat), reduced to short scalar values."""
+    if not isinstance(value, dict):
+        return {}
+    return {
+        str(k)[:32]: v if isinstance(v, (int, float)) else str(v)[:64]
+        for k, v in list(value.items())[:8]
+        if isinstance(v, (str, int, float)) and not isinstance(v, bool)
+    }
 
 
 def _str_list(value) -> list[str]:
@@ -115,9 +129,12 @@ def create_app(
     output_dir: str | Path = "output/fake_media_gateway",
     api_key: str | None = None,
     comfy: ComfyClient | None = None,
+    billing_dir: str | Path | None = None,
 ) -> FastAPI:
     out = Path(output_dir)
     out.mkdir(parents=True, exist_ok=True)
+    # Next to the output dir, not inside it: /files serves the output dir.
+    ledger = Ledger(billing_dir if billing_dir is not None else out.with_name(f"{out.name}_billing"))
     comfy = comfy or ComfyClient(
         comfy_url or os.environ.get("COMFY_URL", "http://127.0.0.1:8188"),
         timeout_s=float(os.environ.get("FAKE_GATEWAY_RENDER_TIMEOUT_S", "1800")),
@@ -135,10 +152,17 @@ def create_app(
                 voices = await _upload_refs(comfy, task.voices, f"{task.id}_voice")
                 graph = h3_graph.build_v16_graph(task.prompt, task.frames, task.ratio, names, voices, task.seed)
                 graph, _ = h3_graph.preflight(graph, await comfy.object_info(), len(names), len(voices))
-                (out / f"{task.id}.mp4").write_bytes(await comfy.render_video(graph))
+                started = time.monotonic()
+                try:
+                    video = await comfy.render_video(graph)
+                finally:
+                    task.gpu_seconds = time.monotonic() - started
+                (out / f"{task.id}.mp4").write_bytes(video)
                 task.status = "completed"
             except Exception as exc:  # noqa: BLE001 - any failure is reported through the task status
                 task.status, task.error = "failed", f"{type(exc).__name__}: {exc}"
+            if task.gpu_seconds > 0:  # a failed render still held the GPU
+                ledger.record(task.id, task.gpu_seconds, task.context)
 
     @contextlib.asynccontextmanager
     async def lifespan(_: FastAPI):
@@ -210,7 +234,7 @@ def create_app(
         task = VideoTask(
             id=f"task_{uuid.uuid4().hex[:16]}", prompt=prompt, frames=h3_graph.frames_for(seconds),
             ratio=_ratio_from(payload, DEFAULT_VIDEO_RATIO), seed=int(meta.get("seed") or random.randrange(2**32)),
-            images=images, voices=voices)
+            images=images, voices=voices, context=_billing_context(meta.get("dc_context")))
         tasks[task.id] = task
         queue.put_nowait(task.id)
         return JSONResponse({"task_id": task.id, "id": task.id, "status": task.status, "created_at": task.created})
@@ -221,11 +245,24 @@ def create_app(
         if task is None:
             raise RequestError("task not found", 404)
         body: dict = {"task_id": task.id, "status": task.status}
+        if task.gpu_seconds > 0:
+            body["usage"] = {"gpu_seconds": round(task.gpu_seconds, 3)}
         if task.status == "completed":
             body["result_url"] = f"{str(request.base_url).rstrip('/')}/files/{task.id}.mp4"
         if task.status == "failed":
             body["error"] = task.error
         return JSONResponse(body)
+
+    @app.get("/billing/tasks/{task_id}", dependencies=[Depends(require_key)])
+    async def get_billing(task_id: str) -> JSONResponse:
+        """gpu_seconds right away; usd only once `billing close` has spread the Vast credit drop."""
+        if (billed := ledger.task(task_id)) is not None:
+            return JSONResponse(billed)
+        task = tasks.get(task_id)
+        if task is None:
+            raise RequestError("task not found", 404)
+        return JSONResponse({"task_id": task.id, "session_id": None, "status": "unbilled",
+                             "gpu_seconds": round(task.gpu_seconds, 3), "usd": None, "context": task.context})
 
     @app.get("/healthz")
     async def healthz() -> JSONResponse:

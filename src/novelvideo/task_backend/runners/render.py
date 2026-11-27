@@ -417,6 +417,104 @@ def run_batch_render(envelope: dict[str, Any], ctx: ProjectContext) -> dict[str,
     )
 
 
+async def _render_beats_with_qwen(
+    *,
+    envelope: dict[str, Any],
+    ctx: ProjectContext,
+    output_dir: str,
+    episode: int,
+    mode_key: str,
+    config: dict[str, Any],
+    generator_config: dict[str, Any],
+    beats: list[dict[str, Any]],
+    beat_numbers: list[int],
+    paths: Any,
+    episode_grids_dir: Path,
+    promote_dir: Path,
+    log: Any,
+) -> dict[str, Any]:
+    """Render beats one by one from scene/identity/prop refs, skipping sketches."""
+
+    from novelvideo.generators.nanobanana_grid import REGEN_MODE_CONFIGS
+    from novelvideo.generators.pool_indexer import save_grid_and_split
+    from novelvideo.generators.qwen_beat_render import generate_qwen_beat_render
+
+    aspect_ratio = str(
+        (REGEN_MODE_CONFIGS.get(mode_key) or {}).get("aspect_ratio") or "9:16"
+    )
+    style = config.get("style")
+    style_text = style if isinstance(style, str) else ""
+    egress_context = envelope.get("__trusted_egress_context")
+    ts = datetime.now().strftime("%Y%m%d%H%M%S")
+    updated_beats: list[int] = []
+    grid_paths: dict[int, str] = {}
+    grid_results: list[dict[str, Any]] = []
+    failed_errors: list[str] = []
+    upstream_status: int | None = None
+
+    for index, (beat_num, beat) in enumerate(zip(beat_numbers, beats)):
+        log(  # i18n-exempt
+            f"Qwen 免草图渲染 Beat {beat_num} ({index + 1}/{len(beats)})",  # i18n-exempt
+            progress=0.2 + 0.7 * index / max(len(beats), 1),
+        )
+        try:
+            rendered = await generate_qwen_beat_render(
+                project_output=output_dir,
+                state_dir=ctx.state_dir,
+                episode=episode,
+                beat=beat,
+                generator_config=generator_config,
+                aspect_ratio=aspect_ratio,
+                output_path=paths.render_dir() / f"qwen_beat_{beat_num:02d}_{ts}.png",
+                style=style_text,
+                egress_context=egress_context,
+            )
+        except Exception as exc:  # noqa: BLE001
+            failed_errors.append(str(exc))
+            upstream_status = upstream_status or upstream_status_of(exc)
+            log(f"Beat {beat_num} Qwen 渲染失败: {exc}")  # i18n-exempt
+            continue
+        log(  # i18n-exempt
+            f"Beat {beat_num} 参考图 {len(rendered.references)} 张, "  # i18n-exempt
+            f"AI 提示词={'是' if rendered.used_ai_prompt else '否(规则草稿)'}"  # i18n-exempt
+        )
+        save_result = save_grid_and_split(
+            grid_image_path=rendered.image_path,
+            episode_grids_dir=episode_grids_dir.as_posix(),
+            grid_type="render",
+            mode_key=mode_key,
+            beat_nums=[beat_num],
+            preset="custom",
+            rows=1,
+            cols=1,
+            ts=ts,
+            promote_dir=str(promote_dir),
+            prompt_text=rendered.prompt,
+            force_promote=bool(config.get("promote_selected_regen", True)),
+        )
+        rel_path = os.path.relpath(rendered.image_path, output_dir)
+        grid_paths[beat_num] = rel_path
+        grid_results.append(
+            {"first_beat": beat_num, "beat_nums": [beat_num], "rel_path": rel_path}
+        )
+        updated_beats.append(beat_num)
+        log(f"入池: {save_result['added']} 新增, {save_result['skipped']} 去重跳过")  # i18n-exempt
+
+    if not updated_beats:
+        detail = f"：{'; '.join(failed_errors[:3])}" if failed_errors else ""
+        raise with_upstream_status(
+            RuntimeError(f"Qwen Render 未生成可用图片（beats={beat_numbers}）{detail}"),  # i18n-exempt
+            upstream_status,
+        )
+    log(f"✅ Qwen Render 完成！更新了 {len(updated_beats)} 个 beats", progress=1.0)  # i18n-exempt
+    return {
+        "mode_key": mode_key,
+        "updated_beats": updated_beats,
+        "grid_paths": grid_paths,
+        "grid_results": grid_results,
+    }
+
+
 async def _run_selected_regen_async(
     envelope: dict[str, Any],
     ctx: ProjectContext,
@@ -442,6 +540,7 @@ async def _run_selected_regen_async(
     else:
         from novelvideo.config import (
             DEFAULT_RENDER_IMAGE_SELECTION as default_selection,
+            QWEN_IMAGE_GENERATION_SELECTION,
             get_render_generation_config as get_generation_config,
             normalize_image_generation_selection,
         )
@@ -618,6 +717,23 @@ async def _run_selected_regen_async(
         f"director_world_refs={scene_ref_stats.get('director_refs', 0)}",
         progress=0.15,
     )
+
+    if not is_sketch and image_selection == QWEN_IMAGE_GENERATION_SELECTION:
+        return await _render_beats_with_qwen(
+            envelope=envelope,
+            ctx=ctx,
+            output_dir=output_dir,
+            episode=episode,
+            mode_key=mode_key,
+            config=config,
+            generator_config=generator_config,
+            beats=selected_beats,
+            beat_numbers=selected_beat_numbers,
+            paths=paths,
+            episode_grids_dir=episode_grids_dir,
+            promote_dir=promote_dir,
+            log=log,
+        )
 
     log(f"生成 {mode_key} {'草图' if is_sketch else '网格'}...", progress=0.2)
 

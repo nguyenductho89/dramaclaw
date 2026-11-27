@@ -112,6 +112,12 @@ AI_IDENTITY_DETECTION_FEATURE_KEY = "mainline.ai_identity_detection"
 MODEL_CALL_CREDIT_POLICY_FEATURE_INCLUDED = "feature_included"
 
 
+def _is_sketchless_render(image_selection: str) -> bool:
+    from novelvideo.config import QWEN_IMAGE_GENERATION_SELECTION
+
+    return image_selection == QWEN_IMAGE_GENERATION_SELECTION
+
+
 def _single_render_mode_from_sketch(
     output_dir: str,
     episode: int,
@@ -3383,11 +3389,13 @@ async def regenerate_beats(
     if detection_error:
         return {"ok": False, "error": detection_error}
 
+    # Qwen renders straight from scene/identity/prop refs, so no sketch is needed.
+    sketchless_render = _is_sketchless_render(render_image_selection)
     sketch_paths = PathResolver(output_dir, episode_num)
     missing_sketches = [
         beat_num
         for beat_num in body.beat_indices
-        if not sketch_paths.sketch(beat_num).is_file()
+        if not sketchless_render and not sketch_paths.sketch(beat_num).is_file()
     ]
     if missing_sketches:
         missing_labels = ", ".join(f"#{beat_num}" for beat_num in missing_sketches)
@@ -3408,7 +3416,9 @@ async def regenerate_beats(
     # The selected sketch is the source of truth for a single Render. The
     # client mode remains a compatibility fallback for missing legacy assets.
     mode_key = (
-        _single_render_mode_from_sketch(output_dir, episode_num, body.beat_indices)
+        body.mode_key
+        if sketchless_render
+        else _single_render_mode_from_sketch(output_dir, episode_num, body.beat_indices)
         or body.mode_key
     )
     episode_obj = _episode_from_store_or_none(store, episode_num)

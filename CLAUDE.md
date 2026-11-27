@@ -14,6 +14,7 @@ uv run novelvideo api --port 8780                     # REST API only
 scripts/start-ce.sh                                   # API :8780 + frontend :5173 (downloads pinned Codex runtime on first run)
 uv run pytest                                         # default suite; `ee` and `e2e` markers are excluded via addopts
 uv run pytest tests/test_api_assets.py::test_name     # single test
+scripts/acceptance/run.sh                             # broader API acceptance checks
 uv run ruff check .                                   # lint (rules frozen to E4/E7/E9/F; legacy per-file ignores live in pyproject.toml)
 pre-commit run --all-files                            # gitleaks + banned-words lint
 ```
@@ -39,5 +40,7 @@ CI also runs guard scripts you should run when touching the relevant area: `scri
 **Series pipeline order.** Ingest → knowledge graph → characters (`POST /projects/{id}/characters/build`) → per-episode scene plan (`/episodes/{n}/scenes/plan`) and prop plan (`/props/plan`) → identity plan (`/identities/plan-async`, refuses with `IDENTITY_CHARACTERS_REQUIRED` until characters exist) → scripts, sketches, video. Projects are addressed by ULID in the API, not by name. Project state lives under `state/<owner>/<project>/` (`project_config.json`, SQLite).
 
 **Output language.** Generated asset text follows the source text's language via `utils/source_language.py` (`detect_asset_language` + `asset_language_instruction`, zh/en only; ties and unknown default to zh). Agent prompts are written in Chinese, so every agent call that produces names or labels must append this instruction — and short labels (e.g. identity `visual_state`) need their own explicit rule because they are not "prose". A new agent without it will answer in Chinese for English scripts.
+
+**Local MCP server.** `.mcp.json` registers `novelvideo.chat.dramaclaw_mcp` (tools `dramaclaw_get/post/patch/delete`), a thin proxy to the REST API at `DRAMACLAW_API_URL` (default `http://localhost:8780`, CE owner mode). With the API running, you can drive the pipeline endpoints through it instead of hand-written curl.
 
 **Docs.** `docs/` holds design notes (e.g. `episode-asset-planning.md`, `freezone-*.md`); user docs are in `docs/en/`. Frontend i18n and backend i18n each have an allowlist JSON in `scripts/` that the checkers enforce.

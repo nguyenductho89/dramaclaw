@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(uv sync:*)",
+      "Bash(uv lock --check)",
+      "Bash(uv run pytest:*)",
+      "Bash(uv run ruff check:*)",
+      "Bash(uv run python scripts/check_*.py:*)",
+      "Bash(uv run python scripts/lint_*.py:*)",
+      "Bash(python3 scripts/check_*.py:*)",
+      "Bash(python3 scripts/lint_*.py:*)",
+      "Bash(pre-commit run:*)",
+      "Bash(pnpm test:*)",
+      "Bash(pnpm build:ce)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)"
+    ]
+  }
+}

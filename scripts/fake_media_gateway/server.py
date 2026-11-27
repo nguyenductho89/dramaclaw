@@ -130,6 +130,8 @@ def create_app(
     api_key: str | None = None,
     comfy: ComfyClient | None = None,
     billing_dir: str | Path | None = None,
+    text_upstream_url: str | None = None,
+    text_upstream_api_key: str | None = None,
 ) -> FastAPI:
     out = Path(output_dir)
     out.mkdir(parents=True, exist_ok=True)
@@ -176,6 +178,13 @@ def create_app(
 
     app = FastAPI(title="fake media gateway", lifespan=lifespan)
     app.mount("/files", StaticFiles(directory=out), name="files")
+
+    @app.middleware("http")
+    async def _strip_v1_prefix(request: Request, call_next):
+        # CE normalizes every gateway base URL to end in /v1; the routes below are unprefixed.
+        if request.scope["path"].startswith("/v1/"):
+            request.scope["path"] = request.scope["path"][3:]
+        return await call_next(request)
 
     @app.exception_handler(RequestError)
     async def _request_error(_: Request, exc: RequestError) -> JSONResponse:
@@ -263,6 +272,24 @@ def create_app(
             raise RequestError("task not found", 404)
         return JSONResponse({"task_id": task.id, "session_id": None, "status": "unbilled",
                              "gpu_seconds": round(task.gpu_seconds, 3), "usd": None, "context": task.context})
+
+    text_upstream = (text_upstream_url if text_upstream_url is not None else os.environ.get("FAKE_GATEWAY_TEXT_UPSTREAM_URL", "")).strip().rstrip("/")
+    text_upstream_key = text_upstream_api_key if text_upstream_api_key is not None else os.environ.get("FAKE_GATEWAY_TEXT_UPSTREAM_KEY", "")
+
+    if text_upstream:
+        @app.post("/chat/completions", dependencies=[Depends(require_key)])
+        async def chat_completions(request: Request) -> JSONResponse:
+            """Text calls (prompt composers) are not rendered here: pass them to the real LLM gateway."""
+            payload = await request.json()
+            if payload.get("stream"):
+                raise RequestError("stream is not supported by the text passthrough")
+            async with httpx.AsyncClient(timeout=float(os.environ.get("FAKE_GATEWAY_TEXT_TIMEOUT_S", "300"))) as client:
+                resp = await client.post(
+                    f"{text_upstream}/chat/completions",
+                    json=payload,
+                    headers={"Authorization": f"Bearer {text_upstream_key}"},
+                )
+            return JSONResponse(resp.json(), status_code=resp.status_code)
 
     @app.get("/healthz")
     async def healthz() -> JSONResponse:

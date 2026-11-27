@@ -407,3 +407,35 @@ async def test_generator_payload_for_h3_is_accepted_and_billed_by_the_gateway(st
     assert (unified["width"], unified["height"]) == h3_graph.resolution("9:16")
     assert billed["context"] == {"project": "demo", "episode": 1, "beat_num": 3, "task_type": "single_video"}
     assert billed["status"] == "open" and billed["gpu_seconds"] > 0
+
+
+def test_v1_prefix_is_accepted_for_every_route(client, stub):
+    assert client.get("/v1/healthz").status_code == 200
+    assert client.post("/v1/images/generations", json={"prompt": "a cat", "metadata": {"ratio": "1:1"}}).status_code == 200
+
+
+def test_text_passthrough_forwards_chat_to_upstream(stub, tmp_path, monkeypatch):
+    import httpx
+
+    seen = {}
+
+    class _Upstream(httpx.AsyncClient):
+        async def post(self, url, json=None, headers=None, **kwargs):
+            seen.update(url=url, json=json, auth=headers.get("Authorization"))
+            return httpx.Response(200, json={"choices": [{"message": {"content": "ok"}}]})
+
+    monkeypatch.setattr("scripts.fake_media_gateway.server.httpx.AsyncClient", _Upstream)
+    from scripts.fake_media_gateway.server import create_app
+
+    app = create_app(
+        output_dir=tmp_path / "out", api_key="", comfy=stub,
+        text_upstream_url="https://llm.example/v1/", text_upstream_api_key="secret",
+    )
+    with TestClient(app) as c:
+        body = {"model": "deepseek-chat", "messages": [{"role": "user", "content": "hi"}]}
+        resp = c.post("/v1/chat/completions", json=body)
+        no_stream = c.post("/chat/completions", json={**body, "stream": True})
+
+    assert resp.json()["choices"][0]["message"]["content"] == "ok"
+    assert seen == {"url": "https://llm.example/v1/chat/completions", "json": body, "auth": "Bearer secret"}
+    assert no_stream.status_code == 400

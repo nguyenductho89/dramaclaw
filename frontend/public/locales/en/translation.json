@@ -8538,6 +8538,7 @@
           "GLOBAL_VIDEO_OPTIMIZER": "Optimize video prompts from visuals",
           "SEEDANCE2_PROMPT_COMPOSER": "Compose video generation prompts",
           "H3_PROMPT_COMPOSER": "Compose MiniMax H3 prompts",
+          "QWEN_RENDER_PROMPT": "Write Qwen image prompts for sketch-free renders",
           "GLOBAL_VIDEO_IDENTITY_DETECTOR": "Detect character and prop markers in sketches",
           "IDENTITY_PLANNER_CAST": "Plan the episode cast",
           "IDENTITY_PLANNER_ANALYSIS": "Analyze character identities",

@@ -107,6 +107,8 @@ const RENDER_BACKGROUND_ANCHOR_LABEL_KEYS: Record<string, string> = {
   reverse: "episode.workbench.render.backgroundAnchorLabels.reverse",
 };
 const RENDER_REGEN_FEATURE_KEY = "mainline.render_regen";
+// Qwen builds the frame straight from scene/identity/prop refs, so no sketch is needed.
+const SKETCHLESS_RENDER_SELECTION = "newapi_qwen_image21";
 
 function clampCropBox(
   crop: { x: number; y: number; width: number; height: number },
@@ -167,6 +169,7 @@ export function RenderSection({
   const regenerate = useRegenerateRenderBeats(project, episode);
   const renderSettings = useRenderSettings(project);
   const renderImageSelection = renderSettings.data?.data.render_image_selection;
+  const canRenderWithoutSketch = renderImageSelection === SKETCHLESS_RENDER_SELECTION;
   const renderSceneId =
     beat.scene_ref?.scene_id?.trim() || beat.location?.trim() || "";
   const renderVariantId = beat.scene_ref?.variant_id?.trim() || "";
@@ -571,7 +574,11 @@ export function RenderSection({
                   // entry, so starting a second run would repoint its scope/
                   // task id/beat coverage and the in-flight beat would lose its
                   // progress bar and Stop button.
-                  disabled={!hasCurrentSketch || regenerate.isPending || regenTask.started}
+                  disabled={
+                    (!hasCurrentSketch && !canRenderWithoutSketch) ||
+                    regenerate.isPending ||
+                    regenTask.started
+                  }
                   className={MEDIA_PRIMARY_ACTION_BUTTON_CLASS}
                 >
                   {regenerate.isPending ? <Loader2 className="size-3 animate-spin" /> : <RefreshCw className="size-3" />}
@@ -589,7 +596,7 @@ export function RenderSection({
                   />
                 </Button>
               )}
-              {!hasCurrentSketch && (
+              {!hasCurrentSketch && !canRenderWithoutSketch && (
                 <span className="text-xs text-muted-foreground">
                   {t("episode.workbench.render.sketchRequired")}
                 </span>

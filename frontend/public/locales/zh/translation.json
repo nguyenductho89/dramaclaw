@@ -8538,6 +8538,7 @@
           "GLOBAL_VIDEO_OPTIMIZER": "根据画面优化视频提示词",
           "SEEDANCE2_PROMPT_COMPOSER": "组合视频生成提示词",
           "H3_PROMPT_COMPOSER": "组合 MiniMax H3 提示词",
+          "QWEN_RENDER_PROMPT": "编写 Qwen 免草图出图提示词",
           "GLOBAL_VIDEO_IDENTITY_DETECTOR": "识别草图中的角色与道具标记",
           "IDENTITY_PLANNER_CAST": "规划本集出场角色",
           "IDENTITY_PLANNER_ANALYSIS": "分析角色身份",

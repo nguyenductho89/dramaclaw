@@ -8167,6 +8167,7 @@
           "GLOBAL_VIDEO_OPTIMIZER": "Tối ưu prompt video từ hình ảnh",
           "SEEDANCE2_PROMPT_COMPOSER": "Soạn prompt tạo video",
           "H3_PROMPT_COMPOSER": "Soạn prompt MiniMax H3",
+          "QWEN_RENDER_PROMPT": "Soạn prompt Qwen cho ảnh render không cần phác thảo",
           "GLOBAL_VIDEO_IDENTITY_DETECTOR": "Nhận diện dấu hiệu nhân vật và đạo cụ trong phác thảo",
           "IDENTITY_PLANNER_CAST": "Lên kế hoạch dàn nhân vật cho tập phim",
           "IDENTITY_PLANNER_ANALYSIS": "Phân tích tạo hình nhân vật",

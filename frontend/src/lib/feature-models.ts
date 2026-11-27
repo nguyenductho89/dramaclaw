@@ -34,6 +34,7 @@ export const FEATURE_MODEL_GROUPS: readonly FeatureModelGroup[] = [
       },
       { id: "SEEDANCE2_PROMPT_COMPOSER", defaultModel: "DC-seedance2-prompt-composer-LLM" },
       { id: "H3_PROMPT_COMPOSER", defaultModel: "DC-h3-prompt-composer-LLM" },
+      { id: "QWEN_RENDER_PROMPT", defaultModel: "DC-qwen-render-prompt-LLM" },
     ],
   },
   {
@@ -157,6 +158,7 @@ export const FEATURE_MODEL_PRODUCT_GROUPS: readonly FeatureModelGroup[] = [
       productFeature("GLOBAL_VIDEO_OPTIMIZER"),
       productFeature("SEEDANCE2_PROMPT_COMPOSER"),
       productFeature("H3_PROMPT_COMPOSER"),
+      productFeature("QWEN_RENDER_PROMPT"),
       productFeature("GLOBAL_VIDEO_IDENTITY_DETECTOR"),
       productFeature("IDENTITY_PLANNER_CAST"),
       productFeature("IDENTITY_PLANNER_ANALYSIS"),

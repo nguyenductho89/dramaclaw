@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import os
+import re
 import time
 import hashlib
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
@@ -35,6 +37,7 @@ from novelvideo.generators.nanobanana_grid import (
 )
 from novelvideo.egress_context import TrustedEgressContext
 from novelvideo.models import NovelScene, build_scene_effective_prompt
+from novelvideo.utils.source_language import AssetLanguage, detect_asset_language
 
 SceneReferenceKind = Literal["master", "spatial_layout", "reverse_master"]
 
@@ -50,7 +53,87 @@ def _archive_existing(path: Path) -> None:
     path.replace(path.with_name(f"{path.stem}_{ts}{path.suffix}"))
 
 
-def _scene_context(scene: NovelScene, base_scene: NovelScene | None = None) -> str:
+_HEADINGS_EN = {
+    "正面": "FRONT",
+    "左侧": "LEFT",
+    "右侧": "RIGHT",
+    "背面": "BACK",
+    "光源": "LIGHTING",
+    "材质/风格": "MATERIALS/STYLE",
+    "禁止元素": "FORBIDDEN",
+}
+_HEADING_RE = re.compile(
+    r"(^|[\n。；;])([ \t]*)(" + "|".join(re.escape(h) for h in _HEADINGS_EN) + r")[ \t]*[:：][ \t]*"
+)
+
+
+@dataclass(frozen=True)
+class _Terms:
+    """Wording the scene prompt templates share, per output language.
+
+    The environment prompt keeps Chinese headings as structural markers; English projects
+    show the image model English headings (``headings``) and English hints.
+    """
+
+    headings: dict[str, str]
+    mood_short: str
+    front_hint: str
+    front_side: str
+    front_example: str
+    no_swap: str
+    back_labels: str
+    side_labels: str
+    spatial_cues: str
+    rev_labels: str
+    rev_example: str
+    rev_notes: str
+    mood_long: str
+
+    def localize(self, text: str) -> str:
+        if not self.headings:
+            return text
+        return _HEADING_RE.sub(
+            lambda m: f"{m.group(1)}{m.group(2)}{self.headings[m.group(3)]}: ", text
+        )
+
+
+_ZH_TERMS = _Terms(
+    headings={},
+    mood_short="(深夜/昏暗/光晕/街灯/萧瑟/暖色荧光 etc.)",
+    front_hint='the keyword "正面" / "front side" / "主面" / "主入口" / "正前方"',
+    front_side="FRONT side (正面)",
+    front_example='"正面是 X" (e.g. "正面是明档厨房")',
+    no_swap="do not put 正面 content behind the camera and 背面 content in front",
+    back_labels='"背面" / "后面"',
+    side_labels='"左侧" / "右侧"',
+    spatial_cues="(前/后/左/右/back/front/side/通往/出入口/门/窗/玻璃门/街道/巷子/通道/角落)",
+    rev_labels="背面 / back / 后",
+    rev_example='"背面是 X"',
+    rev_notes="背面 / back-side",
+    mood_long="(深夜 / 昏暗 / 光晕 /\n  街灯 / 萧瑟 / 局促 / 暖色荧光 / 营业 etc.)",
+)
+_EN_TERMS = _Terms(
+    headings=_HEADINGS_EN,
+    mood_short="(late night / dim / glow / street lamps / desolate / warm fluorescent etc.)",
+    front_hint='the label "FRONT" (also "front side", "main entrance", "straight ahead")',
+    front_side="FRONT side",
+    front_example='"FRONT: X" (e.g. "FRONT: an open kitchen")',
+    no_swap="do not put FRONT content behind the camera and BACK content in front",
+    back_labels='"BACK" / "rear"',
+    side_labels='"LEFT" / "RIGHT"',
+    spatial_cues="(front / back / left / right / side / leads to / entrance / exit / door / window / glass door / street / alley / passage / corner)",
+    rev_labels="BACK / back / rear",
+    rev_example='"BACK: X"',
+    rev_notes="BACK / back-side",
+    mood_long="(late night / dim / glow /\n  street lamps / desolate / cramped / warm fluorescent / open for business etc.)",
+)
+
+
+def _scene_context(
+    scene: NovelScene,
+    base_scene: NovelScene | None = None,
+    terms: _Terms = _ZH_TERMS,
+) -> str:
     scene_type = str(scene.scene_type or "").strip() or "interior"
     variant_prompt = str(getattr(scene, "variant_prompt", "") or "").strip()
     base_scene_id = str(getattr(scene, "base_scene_id", "") or "").strip()
@@ -72,6 +155,7 @@ def _scene_context(scene: NovelScene, base_scene: NovelScene | None = None) -> s
         description = base_prompt or own_prompt or base_scene_id
     else:
         description = build_scene_effective_prompt(scene, base_scene)
+    description = terms.localize(description)
     structured: list[str] = []
     if base_scene_id:
         structured.append(f"BASE SCENE: {base_scene_id}")
@@ -181,13 +265,14 @@ def _master_prompt(
     style_prompt: str = "",
     avoid_instructions: str = "",
     base_scene: NovelScene | None = None,
+    terms: _Terms = _ZH_TERMS,
 ) -> str:
     style_block = _style_context(
         style_name=style_name,
         style_prompt=style_prompt,
         avoid_instructions=avoid_instructions,
     )
-    scene_block = _scene_context(scene, base_scene)
+    scene_block = _scene_context(scene, base_scene, terms)
     purpose_geometry = """- This image is the primary visual master for the stable default scene workflow:
   storyboard sketch, render, and video first-frame production.
 - It establishes the real environment identity, material language, color palette,
@@ -217,15 +302,15 @@ def _master_prompt(
   - The delta wins over the base reference for every change it explicitly declares, including structural damage.
   - If a base-scene reference image is attached, use it as the before-state and identity anchor; preserve only the architecture, fixtures, materials, and camera orientation that the delta does not change."""
     else:
-        time_instruction = """- IGNORE mood/time-of-day phrases in the text (深夜/昏暗/光晕/街灯/萧瑟/暖色荧光 etc.) when picking lighting;
+        time_instruction = f"""- IGNORE mood/time-of-day phrases in the text {terms.mood_short} when picking lighting;
   use a neutral, eye-level establishing exposure unless the text explicitly says the location IS literally outdoors at night."""
     front_anchor = f"""- ANCHOR THE FRONT WALL FROM THE TEXT:
-  - Read the SCENE DESCRIPTION carefully for the keyword "正面" / "front side" / "主面" / "主入口" / "正前方".
-  - Whatever the text describes as the FRONT side (正面) IS the wall the camera looks at in this image.
-  - If the text says "正面是 X" (e.g. "正面是明档厨房"), then X is the main feature visible across the back of the frame.
-  - Do NOT swap front and back: do not put 正面 content behind the camera and 背面 content in front.
-  - The text labels "背面" / "后面" describe what is BEHIND the camera and must NOT appear in this image at all.
-  - The text labels "左侧" / "右侧" describe side walls/zones visible as partial left/right coverage.
+  - Read the SCENE DESCRIPTION carefully for {terms.front_hint}.
+  - Whatever the text describes as the {terms.front_side} IS the wall the camera looks at in this image.
+  - If the text says {terms.front_example}, then X is the main feature visible across the back of the frame.
+  - Do NOT swap front and back: {terms.no_swap}.
+  - The text labels {terms.back_labels} describe what is BEHIND the camera and must NOT appear in this image at all.
+  - The text labels {terms.side_labels} describe side walls/zones visible as partial left/right coverage.
 {time_instruction}"""
 
     return f"""Generate ONE master reference image for this scene.
@@ -259,9 +344,10 @@ def _spatial_layout_prompt(
     *,
     has_master_reference: bool = False,
     base_scene: NovelScene | None = None,
+    terms: _Terms = _ZH_TERMS,
 ) -> str:
     input_block = (
-        """INPUT IMAGES:
+        f"""INPUT IMAGES:
 - The attached image is the scene's canonical front-facing master establishing view.
 - It depicts the FRONT-FACING HALF: front center plus roughly half of the left side
   and half of the right side.
@@ -272,7 +358,7 @@ INPUT PRIORITIES (this is the geometry contract):
 1. Front half + visible side-half fixtures: take directly from the master image.
 2. Back half + remaining side zones + entrances + windows + exits + off-frame fixtures:
    take from the SCENE CONTEXT text. Read every positional cue
-   (前/后/左/右/back/front/side/通往/出入口/门/窗/玻璃门/街道/巷子/通道/角落).
+   {terms.spatial_cues}.
 3. Style/material is irrelevant for this top-down floorplan — only the master's geometry matters.
 4. On conflict, the master overrides text only for visible front-half regions; for off-frame
    regions, the text is the only ground truth."""
@@ -280,7 +366,7 @@ INPUT PRIORITIES (this is the geometry contract):
         else """INPUT:
 - No master reference was attached. Do not generate a spatial layout without the scene master."""
     )
-    scene_block = _scene_context(scene, base_scene)
+    scene_block = _scene_context(scene, base_scene, terms)
     return f"""Create ONE scene-level empty spatial layout reference map.
 
 {input_block}
@@ -358,6 +444,7 @@ def _reverse_master_prompt(
     avoid_instructions: str = "",
     has_master_reference: bool = False,
     base_scene: NovelScene | None = None,
+    terms: _Terms = _ZH_TERMS,
 ) -> str:
     # 有 master 参考图时不注入 PROJECT STYLE PRESET 文本：master 已经按项目风格生成，
     # reverse 直接 match master 的实际像素（STRICT STYLE LOCK 段）。两个风格通道
@@ -377,7 +464,7 @@ def _reverse_master_prompt(
             style_prompt=style_prompt,
             avoid_instructions=avoid_instructions,
         )
-    scene_block = _scene_context(scene, base_scene)
+    scene_block = _scene_context(scene, base_scene, terms)
 
     scene_type = (getattr(scene, "scene_type", "") or "").strip().lower()
     is_exterior = scene_type in {"exterior", "outdoor", "outside", "nature", "street"}
@@ -419,11 +506,11 @@ COMPOSITION:
 - Eye-level horizon, wide ~160-180° horizontal coverage matching the master coverage model:
   back center plus roughly half of the left side and half of the right side.
 - Camera position = same as REFERENCE 1's camera, facing the {back_word} (the side the
-  SCENE DESCRIPTION labels as 背面 / back / 后).
+  SCENE DESCRIPTION labels as {terms.rev_labels}).
 - The {back_word} is the dominant feature filling the central area of the frame.
 - The front-facing focal subject of REFERENCE 1 is now BEHIND the camera, so it does not
   need to be in this image. Show the back-facing content instead.
-- If the SCENE DESCRIPTION text describes specific items on the back side (e.g. "背面是 X"),
+- If the SCENE DESCRIPTION text describes specific items on the back side (e.g. {terms.rev_example}),
   those items should be the focal content of this image.
 
 REVERSE COVERAGE:
@@ -447,7 +534,7 @@ REQUIRED EDGE OVERLAP (HARD RULE):
 CENTER REGION — NEW CONTENT:
 - The central region of this reverse shows what is BEHIND master's camera (the {back_word}
   and surrounding back-side environment). This content is NOT visible in REFERENCE 1.
-- Fill the center from the SCENE DESCRIPTION's 背面 / back-side notes, while keeping
+- Fill the center from the SCENE DESCRIPTION's {terms.rev_notes} notes, while keeping
   master's exact style / lighting / material vocabulary.
 - Do NOT invent objects absent from both master and the SCENE DESCRIPTION just to "make
   the reverse different". If the back side has nothing notable, show a quiet open
@@ -465,8 +552,7 @@ STRICT STYLE LOCK — REFERENCE 1 IS THE ONLY VISUAL ANCHOR:
 - Do NOT shift the time of day. If REFERENCE 1 looks like day, reverse must look like day.
 
 IGNORE TEXT DESCRIPTORS THAT WOULD BREAK STYLE LOCK:
-- IGNORE any mood / time-of-day descriptors in the SCENE DESCRIPTION (深夜 / 昏暗 / 光晕 /
-  街灯 / 萧瑟 / 局促 / 暖色荧光 / 营业 etc.). These are story notes, not visual ground truth.
+- IGNORE any mood / time-of-day descriptors in the SCENE DESCRIPTION {terms.mood_long}. These are story notes, not visual ground truth.
 - The only visual ground truth for lighting & style is REFERENCE 1's pixels.
 
 CLOSED-WORLD CONSTRAINT:
@@ -488,6 +574,27 @@ HARD REQUIREMENTS:
 """.strip()
 
 
+def scene_prompt_language(scene: NovelScene) -> AssetLanguage:
+    """Language the scene was written in: its own name and description, not the Chinese headings."""
+    return detect_asset_language(
+        "\n".join(
+            str(getattr(scene, attr, "") or "") for attr in ("name", "description", "variant_prompt")
+        )
+    )
+
+
+def _terms_for(scene: NovelScene) -> _Terms:
+    return _EN_TERMS if scene_prompt_language(scene) == "en" else _ZH_TERMS
+
+
+def _english_style_name(style_name: str) -> str:
+    """Drop a localized style label, keeping the id in parentheses: '写实现代 (realistic)' -> 'realistic'."""
+    if not re.search(r"[\u4e00-\u9fff]", style_name):
+        return style_name
+    match = re.search(r"\(([^)]+)\)", style_name)
+    return match.group(1).strip() if match else ""
+
+
 def build_scene_reference_prompt(
     kind: SceneReferenceKind,
     scene: NovelScene,
@@ -498,6 +605,32 @@ def build_scene_reference_prompt(
     has_master_reference: bool = False,
     base_scene: NovelScene | None = None,
 ) -> str:
+    terms = _terms_for(scene)
+    return _build_scene_reference_prompt(
+        kind,
+        scene,
+        style_name=(
+            _english_style_name(style_name) if terms is _EN_TERMS else style_name
+        ),
+        style_prompt=style_prompt,
+        avoid_instructions=avoid_instructions,
+        has_master_reference=has_master_reference,
+        base_scene=base_scene,
+        terms=terms,
+    )
+
+
+def _build_scene_reference_prompt(
+    kind: SceneReferenceKind,
+    scene: NovelScene,
+    *,
+    style_name: str = "",
+    style_prompt: str = "",
+    avoid_instructions: str = "",
+    has_master_reference: bool = False,
+    base_scene: NovelScene | None = None,
+    terms: _Terms = _ZH_TERMS,
+) -> str:
     if kind == "master":
         return _master_prompt(
             scene,
@@ -505,12 +638,14 @@ def build_scene_reference_prompt(
             style_prompt=style_prompt,
             avoid_instructions=avoid_instructions,
             base_scene=base_scene,
+            terms=terms,
         )
     if kind == "spatial_layout":
         return _spatial_layout_prompt(
             scene,
             has_master_reference=has_master_reference,
             base_scene=base_scene,
+            terms=terms,
         )
     if kind == "reverse_master":
         return _reverse_master_prompt(
@@ -520,6 +655,7 @@ def build_scene_reference_prompt(
             avoid_instructions=avoid_instructions,
             has_master_reference=has_master_reference,
             base_scene=base_scene,
+            terms=terms,
         )
     raise ValueError(f"Unsupported scene reference kind: {kind}")
 

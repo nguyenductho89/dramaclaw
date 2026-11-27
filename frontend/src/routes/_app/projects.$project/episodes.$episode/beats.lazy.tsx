@@ -7,6 +7,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import { createPortal } from "react-dom";
@@ -44,6 +45,7 @@ import { TASK_TYPES } from "@/lib/task-types";
 import { useTasks } from "@/lib/queries/tasks";
 import { GLASS_ALERT_DIALOG_CONTENT_CLASS } from "@/lib/dialog-styles";
 import { cn } from "@/lib/utils";
+import { FLOW_ITEM } from "@/lib/page-shell";
 
 import { BatchBar } from "@/components/episode/beat-workbench/batch-bar";
 import {
@@ -648,7 +650,7 @@ export function BeatsTabContent() {
 
   // Main layout
   return (
-    <div ref={scrollHideRef} className="flex h-full flex-col overflow-hidden">
+    <div ref={scrollHideRef} className="flex h-full flex-col overflow-hidden max-lg:h-auto max-lg:overflow-visible">
       {actionsSlot &&
         createPortal(
           <BatchBar
@@ -662,15 +664,15 @@ export function BeatsTabContent() {
           />,
           actionsSlot,
         )}
-      <div className="min-h-0 flex-1 overflow-hidden">
+      <div className={cn("min-h-0 flex-1 overflow-hidden", FLOW_ITEM)}>
         <div
           ref={splitContainerRef}
           data-beats-split
-          className="flex h-full min-h-0 overflow-hidden"
+          className="flex h-full min-h-0 overflow-hidden max-lg:h-auto max-lg:flex-col max-lg:overflow-visible"
         >
           <section
-            style={{ width: `${leftSplitPct}%` }}
-            className="min-w-0 shrink-0 overflow-hidden"
+            style={{ "--beats-left-width": `${leftSplitPct}%` } as CSSProperties}
+            className="min-w-0 shrink-0 overflow-hidden lg:w-[var(--beats-left-width)] max-lg:h-[45dvh] max-lg:w-full max-lg:border-b max-lg:border-white/[0.055]"
           >
             <div className="flex h-full min-h-0 flex-col">
               <ViewToggles
@@ -704,12 +706,12 @@ export function BeatsTabContent() {
             onPointerDown={handleSplitPointerDown}
             onPointerMove={handleSplitPointerMove}
             onPointerUp={handleSplitPointerUp}
-            className="group relative z-10 w-1.5 shrink-0 cursor-col-resize touch-none select-none"
+            className="group relative z-10 w-1.5 shrink-0 cursor-col-resize touch-none select-none max-lg:hidden"
             title={t("episode.workbench.view.dragToResize")}
           >
             <div className="pointer-events-none absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-white/[0.055] transition-colors group-hover:bg-primary/60 group-active:bg-primary/80" />
           </div>
-          <section className="min-w-0 flex-1 overflow-hidden">
+          <section className={cn("min-w-0 flex-1 overflow-hidden", FLOW_ITEM, "max-lg:min-h-[60dvh]")}>
             <div className="flex h-full min-h-0 flex-col">
               <div className="flex min-h-10 shrink-0 items-center justify-between gap-3 border-b border-white/[0.055] px-3 py-2">
                 {detailBeatDisplayNumber !== null ? (
@@ -770,7 +772,7 @@ export function BeatsTabContent() {
                   />
                 </div>
               </div>
-              <div className="min-h-0 flex-1 overflow-hidden">
+              <div className={cn("min-h-0 flex-1 overflow-hidden", FLOW_ITEM)}>
                 <ActionPanel
                   selection={selection}
                   beats={beats}

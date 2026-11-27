@@ -28,7 +28,7 @@ describe("beats workbench v2-storage sketch-studio contract", () => {
     const mainLayout = route.slice(route.indexOf("// Main layout"));
     const beforeSplit = mainLayout.slice(
       0,
-      mainLayout.indexOf('<div className="min-h-0 flex-1 overflow-hidden">'),
+      mainLayout.indexOf("data-beats-split"),
     );
     expect(beforeSplit).not.toContain("<SketchGridGallery");
     expect(beforeSplit).not.toContain("<RenderGridGallery");

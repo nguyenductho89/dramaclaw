@@ -63,6 +63,7 @@ Reference labels:
 - A picture used as a concrete frame (first_frame_label) gets its own line in subject_definitions, e.g. "<Picture 1> is the first frame of [Shot 1], showing ...".
 - Do not force every manifest asset into the prompt; define only what the shot needs. Audio labels you use must start at <Audio 1> and not skip numbers.
 - asset_fallbacks are text-only constraints and never receive picture numbers.
+- Asset roles by manifest key: identity:*, prop:* and scene:* pictures only define a person, prop or environment, so cite them inside the matching <Subject N> definition ("<Subject 1> is the woman in <Picture 2>, ...") and give them no standalone line. When first_frame_label is empty, the picture with key first_frame is the current storyboard render: give it a standalone line "<Picture N> is a storyboard reference for [Shot 1], defining viewpoint, subject placement and shot order." and use it for composition only, never as a first frame. voice:* audio is a timbre reference for that speaker.
 
 Sections:
 - summary starts with a bracketed task type: [keyframe completion + reference generation] when first_frame_label is set, otherwise [reference generation] with " + audio reference" when audio is used. One short paragraph; no new labels.
@@ -226,6 +227,7 @@ def build_h3_prompt_composer_task(
         "- Cut times stay inside duration_seconds, strictly increasing and at least 1.2 seconds apart.\n"
         "- If first_frame_label is set, <Picture 1> is the first frame of [Shot 1].\n"
         "- Spoken dialogue and narration_segment must be kept verbatim inside <d>.\n"
+        "- Follow the asset-role rule: identity/prop/scene pictures live inside <Subject N> definitions; the first_frame picture is a storyboard anchor unless first_frame_label is set.\n"
         "- If user guidance conflicts with the asset manifest or asset_fallbacks, the manifest wins.\n"
         "- Output only the final prompt.\n\n"
         f"{json.dumps(payload, ensure_ascii=False, indent=2, default=str)}"
@@ -348,6 +350,15 @@ def build_h3_prompt_draft(
         if label == first_frame:
             definitions.append(f"{label} is the first frame of [Shot 1], showing {visual or title}.")
             retention.append(f"{label} ([Shot 1] first frame): fully_preserved - the opening composition is kept.")
+            continue
+        if item["key"] == "first_frame":
+            definitions.append(
+                f"{label} is a storyboard reference for [Shot 1], defining viewpoint, "
+                "subject placement and shot order."
+            )
+            retention.append(
+                f"{label} (anchors [Shot 1]): partially_preserved - composition is followed."
+            )
             continue
         subject = f"<Subject {len(subjects) + 1}>"
         subjects.append(subject)

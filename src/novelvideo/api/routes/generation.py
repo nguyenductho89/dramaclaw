@@ -4797,7 +4797,9 @@ async def generate_single_video(
         beat_num,
         use_director_render=bool(body.use_director_render),
     )
-    if not frame_path.exists():
+    # H3 sends every image as a numbered reference and validates them in
+    # prepare_h3_beat_request, so a missing render is not fatal there.
+    if not frame_path.exists() and not is_minimax_h3:
         return {"ok": False, "error": f"Beat {beat_num} 首帧不存在，请先生成预览"}
 
     # 视频模式与提示词

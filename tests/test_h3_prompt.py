@@ -185,6 +185,21 @@ def test_draft_is_structurally_valid_for_both_modes():
     assert "[reference generation + audio reference]" in multi
 
 
+def test_multi_reference_draft_anchors_render_and_cites_pictures_in_subjects():
+    draft = h3_prompt.build_h3_prompt_draft(
+        mode=Seedance2I2VMode.MULTIMODAL_REFERENCE,
+        beat={"visual_description": "Ji-won walks."},
+        assets=[_image(1, "first_frame"), _image(2, "identity:Ji-won"), _image(3, "scene:subway")],
+        text_overlay={},
+    )
+
+    _validate(draft, n_pictures=3)
+    assert "<Picture 1> is a storyboard reference for [Shot 1]" in draft
+    assert "<Picture 1> (anchors [Shot 1]): partially_preserved" in draft
+    assert "<Subject 1> is " in draft and "taken from <Picture 2>" in draft
+    assert "<Picture 2> is" not in draft
+
+
 def test_select_reference_assets_sends_audio_up_to_highest_mentioned():
     assets = [_image(1, "first_frame"), _image(2, "scene:a"), _audio(1), _audio(2), _audio(3)]
 

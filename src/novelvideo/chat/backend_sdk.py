@@ -2600,6 +2600,11 @@ class CodexThread:
                         if remaining <= 0:
                             raise asyncio.TimeoutError
                         kind, payload = await asyncio.wait_for(queue.get(), timeout=remaining)
+                        # On Python 3.11 wait_for swallows a cancellation that arrives
+                        # while an event is already queued; the task still records it.
+                        task = asyncio.current_task()
+                        if task is not None and task.cancelling():
+                            raise asyncio.CancelledError
                 except asyncio.TimeoutError:
                     timed_out = True
                     now = loop.time()

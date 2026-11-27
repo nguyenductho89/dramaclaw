@@ -31,6 +31,8 @@ HOME_UPLOAD_MAX_BYTES = MAX_PROJECT_UPLOAD_BYTES
 _CHUNK_BYTES = 1 << 20
 # ``<first 16 hex of sha256>-<sanitized file name>``; staging files never match.
 _STORED_NAME = re.compile(r"[0-9a-f]{16}-[^/\\]+")
+# Python 3.11 has no built-in type for Markdown; without this the answer depends on the OS MIME tables.
+mimetypes.add_type("text/markdown", ".md")
 
 
 def home_uploads_dir(username: str) -> Path:

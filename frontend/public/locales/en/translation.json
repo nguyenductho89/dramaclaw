@@ -3859,7 +3859,8 @@
       "sketch": "Sketch",
       "render": "Render",
       "audio": "Audio",
-      "video": "Video"
+      "video": "Video",
+      "h3Shots": "H3 Shots"
     },
     "script": {
       "rhythmDuration": "Duration",
@@ -4807,6 +4808,43 @@
     },
     "video": {
       "switchFailed": "Failed to switch video"
+    },
+    "h3Shots": {
+      "listLabel": "H3 shots",
+      "noBeats": "No shots yet. Generate the script first.",
+      "noBackend": "No MiniMax H3 model available",
+      "noBackendHint": "Configure a MiniMax H3 video model in Settings to use this tab.",
+      "assets": "Assets sent to H3",
+      "assetsHint": "Characters, scenes, props and voices only. Sketch and render are not used.",
+      "noAssets": "No assets found for this shot.",
+      "upload": "Add reference",
+      "removeAsset": "Remove asset",
+      "missingAsset": "No image (text only)",
+      "notSent": "Not sent",
+      "unused": "unused in prompt",
+      "prompt": "H3 prompt",
+      "guidance": "Guidance (optional)",
+      "generatePrompt": "Generate prompt",
+      "promptFailed": "Prompt generation failed",
+      "edit": "Edit",
+      "preview": "Preview",
+      "unknownReference": "Unknown reference",
+      "backend": "Model",
+      "duration": "Duration (s)",
+      "ratio": "Ratio",
+      "generateVideo": "Generate video",
+      "stop": "Stop",
+      "videoStarted": "Beat {{n}} video started",
+      "videoFailed": "Video generation failed",
+      "promptReady": "Prompt ready",
+      "promptEmpty": "No prompt",
+      "videoReady": "Video",
+      "promptFallback": "The AI prompt was rejected, so this is the basic rule-based draft. Review it before generating the video.",
+      "issues": {
+        "storyboard_without_render": "The prompt refers to a storyboard image, but no render is sent. Press Generate prompt or edit it.",
+        "unknown_picture": "These pictures are not sent: {{refs}}. Press Generate prompt or edit the prompt.",
+        "unknown_audio": "These audio references are not sent: {{refs}}. Press Generate prompt or edit the prompt."
+      }
     }
   },
   "audioType": {

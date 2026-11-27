@@ -397,6 +397,8 @@ export interface Seedance2BeatStatus {
     text_overlay_enabled: boolean;
     text_overlay: Record<string, unknown>;
     inputs_stale: boolean;
+    /** Reference problems of the saved prompt (H3 Shots only). */
+    issues?: { code: string; refs: string[] }[];
   };
   assets: {
     total: number;
@@ -472,14 +474,18 @@ export function useSeedance2BeatStatus(
   episode: number,
   beatNum: number,
   enabled: boolean,
+  options?: { assetsOnly?: boolean },
 ) {
+  const assetsOnly = options?.assetsOnly === true;
   return useQuery({
-    queryKey: seedance2BeatStatusKey(project, episode, beatNum),
+    queryKey: assetsOnly
+      ? [...seedance2BeatStatusKey(project, episode, beatNum), "assets-only"]
+      : seedance2BeatStatusKey(project, episode, beatNum),
     queryFn: ({ signal }) =>
       api
         .get(
           p`api/v1/projects/${project}/episodes/${episode}/beats/${beatNum}/seedance2-status`,
-          { signal },
+          { signal, ...(assetsOnly ? { searchParams: { assets_only: "true" } } : {}) },
         )
         .json<OkResponse<Seedance2BeatStatus> | ErrorResponse>(),
     enabled: enabled && !!project && !!episode && !!beatNum,
@@ -641,12 +647,14 @@ export function useGenerateSeedance2Prompt(project: string, episode: number) {
       manualPromptReference,
       promptGuidance,
       promptGuidanceTemplateKeys,
+      assetsOnly,
     }: {
       beatNum: number;
       videoBackend?: string;
       manualPromptReference?: string;
       promptGuidance?: string;
       promptGuidanceTemplateKeys?: string[];
+      assetsOnly?: boolean;
     }) =>
       jsonWithBackendError<OkResponse<Seedance2PromptResult> | ErrorResponse>(
         api.post(
@@ -657,6 +665,7 @@ export function useGenerateSeedance2Prompt(project: string, episode: number) {
               manual_prompt_reference: manualPromptReference ?? "",
               prompt_guidance: promptGuidance ?? "",
               prompt_guidance_template_keys: promptGuidanceTemplateKeys ?? [],
+              ...(assetsOnly ? { assets_only: true } : {}),
             },
             throwHttpErrors: false,
           },

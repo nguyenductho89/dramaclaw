@@ -3742,7 +3742,8 @@
       "sketch": "Phác thảo",
       "render": "Render",
       "audio": "Âm thanh",
-      "video": "Video"
+      "video": "Video",
+      "h3Shots": "H3 Shots"
     },
     "script": {
       "rhythmDuration": "Theo thời lượng",
@@ -4690,6 +4691,43 @@
     },
     "video": {
       "switchFailed": "Đổi video thất bại"
+    },
+    "h3Shots": {
+      "listLabel": "Các shot H3",
+      "noBeats": "Chưa có shot nào. Hãy tạo kịch bản trước.",
+      "noBackend": "Không có model MiniMax H3",
+      "noBackendHint": "Cấu hình model video MiniMax H3 trong Cài đặt để dùng tab này.",
+      "assets": "Assets gửi cho H3",
+      "assetsHint": "Chỉ dùng nhân vật, cảnh, đạo cụ và giọng nói. Không dùng sketch và render.",
+      "noAssets": "Shot này chưa có asset nào.",
+      "upload": "Thêm tham chiếu",
+      "removeAsset": "Xoá asset",
+      "missingAsset": "Không có ảnh (chỉ text)",
+      "notSent": "Không gửi",
+      "unused": "prompt không dùng",
+      "prompt": "Prompt H3",
+      "guidance": "Hướng dẫn (tuỳ chọn)",
+      "generatePrompt": "Tạo prompt",
+      "promptFailed": "Tạo prompt thất bại",
+      "edit": "Sửa",
+      "preview": "Xem trước",
+      "unknownReference": "Tham chiếu không tồn tại",
+      "backend": "Model",
+      "duration": "Thời lượng (giây)",
+      "ratio": "Tỉ lệ",
+      "generateVideo": "Tạo video",
+      "stop": "Dừng",
+      "videoStarted": "Đã bắt đầu tạo video beat {{n}}",
+      "videoFailed": "Tạo video thất bại",
+      "promptReady": "Có prompt",
+      "promptEmpty": "Chưa có prompt",
+      "videoReady": "Video",
+      "promptFallback": "Prompt của AI bị loại nên đây là bản nháp cơ bản theo luật. Hãy xem lại trước khi tạo video.",
+      "issues": {
+        "storyboard_without_render": "Prompt đang nhắc tới ảnh storyboard nhưng render không được gửi. Hãy bấm Tạo prompt hoặc tự sửa.",
+        "unknown_picture": "Các ảnh này không được gửi: {{refs}}. Hãy bấm Tạo prompt hoặc sửa prompt.",
+        "unknown_audio": "Các tham chiếu âm thanh này không được gửi: {{refs}}. Hãy bấm Tạo prompt hoặc sửa prompt."
+      }
     }
   },
   "audioType": {

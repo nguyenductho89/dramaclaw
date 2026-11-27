@@ -36,3 +36,24 @@ describe("page shell grows with its content on small screens", () => {
     }
   });
 });
+
+// The episode layout renders <Outlet /> in a plain block, where `flex-1` has no effect. A tab
+// without `h-full` grows to its content and the layout clips it on desktop.
+describe("H3 Shots tab scrolls inside the episode layout", () => {
+  const source = read("src/routes/_app/projects.$project/episodes.$episode/h3-shots.lazy.tsx");
+
+  it("takes the layout height from lg up and its natural height below lg", () => {
+    expect(source).toContain("flex h-full min-h-0 flex-col gap-4 p-4 max-lg:h-auto lg:flex-row");
+  });
+
+  it("collapses the episode header from a root that exists when the hook mounts", () => {
+    const workbench = source.slice(source.indexOf("function H3ShotsWorkbench"), source.indexOf("export function H3ShotsTabContent"));
+
+    expect(workbench).toContain("useHideHeaderOnScroll<HTMLDivElement>()");
+    expect(workbench).toContain("ref={scrollHideRef}");
+  });
+
+  it("keeps the stacked beat list in a short scroll box", () => {
+    expect(source).toContain("overflow-y-auto max-lg:max-h-[45dvh]");
+  });
+});

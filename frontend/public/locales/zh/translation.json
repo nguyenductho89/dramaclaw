@@ -3859,7 +3859,8 @@
       "sketch": "草图",
       "render": "渲染图",
       "audio": "音频",
-      "video": "视频"
+      "video": "视频",
+      "h3Shots": "H3 分镜"
     },
     "script": {
       "rhythmDuration": "时长生成",
@@ -4807,6 +4808,43 @@
     },
     "video": {
       "switchFailed": "切换视频失败"
+    },
+    "h3Shots": {
+      "listLabel": "H3 分镜",
+      "noBeats": "还没有分镜，请先生成剧本。",
+      "noBackend": "没有可用的 MiniMax H3 模型",
+      "noBackendHint": "请先在设置中配置 MiniMax H3 视频模型。",
+      "assets": "发送给 H3 的素材",
+      "assetsHint": "只使用角色、场景、道具和声音，不使用草图和 render。",
+      "noAssets": "此分镜没有可用素材。",
+      "upload": "添加参考",
+      "removeAsset": "移除素材",
+      "missingAsset": "无图（仅文字）",
+      "notSent": "未发送",
+      "unused": "提示词未使用",
+      "prompt": "H3 提示词",
+      "guidance": "提示词指引（可选）",
+      "generatePrompt": "生成提示词",
+      "promptFailed": "提示词生成失败",
+      "edit": "编辑",
+      "preview": "预览",
+      "unknownReference": "未知引用",
+      "backend": "模型",
+      "duration": "时长（秒）",
+      "ratio": "比例",
+      "generateVideo": "生成视频",
+      "stop": "停止",
+      "videoStarted": "Beat {{n}} 视频已开始生成",
+      "videoFailed": "视频生成失败",
+      "promptReady": "提示词就绪",
+      "promptEmpty": "无提示词",
+      "videoReady": "视频",
+      "promptFallback": "AI 提示词未通过校验，当前为规则草稿。生成视频前请先检查。",
+      "issues": {
+        "storyboard_without_render": "提示词引用了分镜图，但本次不会发送 render。请重新生成或修改提示词。",
+        "unknown_picture": "以下图片不会发送：{{refs}}。请重新生成或修改提示词。",
+        "unknown_audio": "以下音频不会发送：{{refs}}。请重新生成或修改提示词。"
+      }
     }
   },
   "audioType": {

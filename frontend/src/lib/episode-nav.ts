@@ -9,6 +9,7 @@ import {
   Pencil,
   ScrollText,
   Video,
+  Layers,
   type LucideIcon,
 } from "lucide-react";
 import type { StageId } from "@/lib/episode-stage-registry";
@@ -22,14 +23,14 @@ import type { StageId } from "@/lib/episode-stage-registry";
  * workbench exposes its 4 sub-tabs.
  */
 
-export type TopTabId = "script" | "beats" | "compose";
+export type TopTabId = "script" | "beats" | "h3shots" | "compose";
 export type BeatSubTabId = "text" | "sketch" | "render" | "audio" | "video";
 
 export interface TopTabDef {
   id: TopTabId;
   labelKey: string;
   icon: LucideIcon;
-  routeSegment: "/script" | "/beats" | "/compose";
+  routeSegment: "/script" | "/beats" | "/h3-shots" | "/compose";
   /**
    * Which legacy stage ids contribute to this tab's health count.
    * `beats` aggregates sketch+audio+video; `script` is itself; `compose`
@@ -67,6 +68,13 @@ export const TOP_TABS: readonly TopTabDef[] = [
     stageIds: ["sketch", "audio", "video"],
   },
   {
+    id: "h3shots",
+    labelKey: "episode.nav.h3Shots",
+    icon: Layers,
+    routeSegment: "/h3-shots",
+    stageIds: ["video"],
+  },
+  {
     id: "compose",
     labelKey: "episode.nav.compose",
     icon: Film,
@@ -88,7 +96,7 @@ const TOP_TAB_PATHS: readonly string[] = TOP_TABS.map((t) => t.routeSegment);
 
 /** Map a URL path to the active top tab id. */
 export function topTabForPathname(pathname: string): TopTabId {
-  const m = pathname.match(/\/episodes\/\d+(\/[a-z-]+)?/);
+  const m = pathname.match(/\/episodes\/\d+(\/[a-z0-9-]+)?/);
   const found = m?.[1] ?? "";
   if (TOP_TAB_PATHS.includes(found)) {
     return TOP_TABS.find((t) => t.routeSegment === found)!.id;

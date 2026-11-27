@@ -103,7 +103,7 @@ function useSelectedEpisodeNum(): number | null {
 
 function useActiveStagePath(): string {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const m = pathname.match(/\/episodes\/\d+(\/[a-z-]+)?/);
+  const m = pathname.match(/\/episodes\/\d+(\/[a-z0-9-]+)?/);
   const found = m?.[1] ?? "";
   return KNOWN_STAGE_PATHS.includes(found) ? found : DEFAULT_STAGE_PATH;
 }

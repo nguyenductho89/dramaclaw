@@ -3859,7 +3859,8 @@
       "sketch": "Esboço",
       "render": "Renderização",
       "audio": "Áudio",
-      "video": "Vídeo"
+      "video": "Vídeo",
+      "h3Shots": "H3 Shots"
     },
     "script": {
       "rhythmDuration": "Duração",
@@ -4807,6 +4808,43 @@
     },
     "video": {
       "switchFailed": "Não foi possível mudar de vídeo"
+    },
+    "h3Shots": {
+      "listLabel": "Shots H3",
+      "noBeats": "Ainda não há shots. Gere o roteiro primeiro.",
+      "noBackend": "Nenhum modelo MiniMax H3 disponível",
+      "noBackendHint": "Configure um modelo de vídeo MiniMax H3 nas Configurações para usar esta aba.",
+      "assets": "Assets enviados ao H3",
+      "assetsHint": "Apenas personagens, cenários, props e vozes. Sketch e render não são usados.",
+      "noAssets": "Nenhum asset para este shot.",
+      "upload": "Adicionar referência",
+      "removeAsset": "Remover asset",
+      "missingAsset": "Sem imagem (só texto)",
+      "notSent": "Não enviado",
+      "unused": "não usado no prompt",
+      "prompt": "Prompt H3",
+      "guidance": "Orientação (opcional)",
+      "generatePrompt": "Gerar prompt",
+      "promptFailed": "Falha ao gerar o prompt",
+      "edit": "Editar",
+      "preview": "Pré-visualizar",
+      "unknownReference": "Referência desconhecida",
+      "backend": "Modelo",
+      "duration": "Duração (s)",
+      "ratio": "Proporção",
+      "generateVideo": "Gerar vídeo",
+      "stop": "Parar",
+      "videoStarted": "Vídeo do beat {{n}} iniciado",
+      "videoFailed": "Falha ao gerar o vídeo",
+      "promptReady": "Prompt pronto",
+      "promptEmpty": "Sem prompt",
+      "videoReady": "Vídeo",
+      "promptFallback": "O prompt da IA foi rejeitado; este é o rascunho básico baseado em regras. Revise antes de gerar o vídeo.",
+      "issues": {
+        "storyboard_without_render": "O prompt cita uma imagem de storyboard, mas nenhum render é enviado. Gere o prompt novamente ou edite-o.",
+        "unknown_picture": "Estas imagens não são enviadas: {{refs}}. Gere o prompt novamente ou edite-o.",
+        "unknown_audio": "Estas referências de áudio não são enviadas: {{refs}}. Gere o prompt novamente ou edite-o."
+      }
     }
   },
   "audioType": {

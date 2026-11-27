@@ -5,6 +5,24 @@ import os
 import pytest
 
 
+def test_keep_existing_env_restores_old_values_and_keeps_new_ones(monkeypatch) -> None:
+    from novelvideo.shared.env_guard import keep_existing_env
+
+    monkeypatch.setenv("DC_ENV_EXISTING", "before")
+    monkeypatch.setenv("DC_ENV_REMOVED", "before")
+    monkeypatch.setenv("DC_ENV_ADDED", "placeholder")
+    monkeypatch.delenv("DC_ENV_ADDED")
+
+    with keep_existing_env():
+        os.environ["DC_ENV_EXISTING"] = "after"
+        del os.environ["DC_ENV_REMOVED"]
+        os.environ["DC_ENV_ADDED"] = "new"
+
+    assert os.environ["DC_ENV_EXISTING"] == "before"
+    assert os.environ["DC_ENV_REMOVED"] == "before"
+    assert os.environ["DC_ENV_ADDED"] == "new"
+
+
 def test_preserve_st_env_restores_changed_and_added_st_keys(monkeypatch) -> None:
     from novelvideo.shared.env_guard import preserve_st_env
 

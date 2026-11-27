@@ -19,3 +19,16 @@ def preserve_st_env() -> Iterator[None]:
                 del os.environ[key]
         for key, value in snapshot.items():
             os.environ[key] = value
+
+
+@contextmanager
+def keep_existing_env() -> Iterator[None]:
+    """Keep the values of variables that were set before a side-effectful block.
+
+    Variables the block adds are left in place.
+    """
+    snapshot = dict(os.environ)
+    try:
+        yield
+    finally:
+        os.environ.update(snapshot)

@@ -149,6 +149,50 @@ def test_cognee_preimport_is_observable_and_later_setup_is_guarded(tmp_path):
     assert result.returncode == 0, result.stderr
 
 
+def test_cognee_import_does_not_override_runtime_env(tmp_path):
+    """Cognee calls load_dotenv(override=True) on import; the process env must still win."""
+    script = textwrap.dedent(
+        """
+        import os
+
+        import dotenv
+
+        real_load_dotenv = dotenv.load_dotenv
+
+        def fake_load_dotenv(*args, **kwargs):
+            if kwargs.get("override"):
+                os.environ["DC_ENV_PROBE"] = "from-dotenv"
+                os.environ["DC_ENV_NEW"] = "from-dotenv"
+                return True
+            return real_load_dotenv(*args, **kwargs)
+
+        dotenv.load_dotenv = fake_load_dotenv
+
+        import novelvideo.cognee  # noqa: F401
+
+        assert os.environ.get("DC_ENV_NEW") == "from-dotenv", "cognee no longer loads dotenv"
+        assert os.environ["DC_ENV_PROBE"] == "from-runtime"
+        """
+    )
+    env = os.environ.copy()
+    env.pop("DC_ENV_NEW", None)
+    env["DC_ENV_PROBE"] = "from-runtime"
+    env["COGNEE_LOGS_DIR"] = str(tmp_path / "cognee-logs")
+    env["ST_EDITION"] = "ce"
+
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        cwd=tmp_path,
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+
+
 def test_project_storage_context_forces_kuzu_over_legacy_neo4j_env(tmp_path, monkeypatch):
     from novelvideo.cognee.config import apply_cognee_project_storage_context
 

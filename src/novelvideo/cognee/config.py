@@ -46,7 +46,7 @@ from novelvideo.shared.billing_errors import (
     find_insufficient_credits_error,
     find_insufficient_credits_stop,
 )
-from novelvideo.shared.env_guard import preserve_st_env
+from novelvideo.shared.env_guard import keep_existing_env, preserve_st_env
 from novelvideo.shared.runtime_env import is_ce_effective, uses_local_ce_runtime
 
 # 抑制 cognee/litellm 内部的 Pydantic 序列化警告
@@ -1284,7 +1284,9 @@ if api_key:
 _apply_cognee_runtime_defaults()
 
 try:
-    with preserve_st_env():
+    # First import of cognee. Its package __init__ calls load_dotenv(override=True), which would
+    # let .env beat the process environment and the values set above.
+    with preserve_st_env(), keep_existing_env():
         cognee = _import_cognee_without_logging_takeover()
 
     cognee_llm_provider = _to_cognee_provider(llm_provider)

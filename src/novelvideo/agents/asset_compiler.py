@@ -30,6 +30,10 @@ from novelvideo.cognee.screenplay_normalizer import (
     normalize_time_of_day,
 )
 from novelvideo.utils.derived_scenes import compose_derived_scene_name
+from novelvideo.utils.source_language import (
+    asset_language_instruction,
+    detect_asset_language,
+)
 from novelvideo.workflows.literal_script_writing import (
     LiteralScriptWritingWorkflow,
     SceneBlock,
@@ -818,7 +822,9 @@ class AssetCompiler:
             output_retries=model_gateway_output_retries(2),
             name="基础场景资产校对员",
         )
-        result = await agent.run(f"""## 已有基础场景
+        result = await agent.run(f"""{asset_language_instruction(detect_asset_language(source_text))}
+
+## 已有基础场景
 {chr(10).join(existing_lines) if existing_lines else "（无）"}
 
 ## 第 {episode.number} 集文本
@@ -1109,7 +1115,9 @@ class AssetCompiler:
             if str(getattr(scene, "name", "") or "").strip()
         }
         excerpt = source_text[:12000]
-        task = f"""请为当前集规划 2.0 场景资产。
+        task = f"""{asset_language_instruction(detect_asset_language(excerpt))}
+
+请为当前集规划 2.0 场景资产。
 
 ## 集数
 第 {getattr(episode, "number", "")} 集 {getattr(episode, "title", "") or ""}
@@ -1195,7 +1203,9 @@ class AssetCompiler:
         block_text = "\n".join(content_lines)
         if not block_text:
             return []
-        task = f"""分析场景 `{scene_name}` 在当前场景块里的视觉状态。
+        task = f"""{asset_language_instruction(detect_asset_language(block_text))}
+
+分析场景 `{scene_name}` 在当前场景块里的视觉状态。
 
 ## 场次头
 {block.header_line or "无"}
@@ -1379,7 +1389,9 @@ class AssetCompiler:
         candidate_section = (
             "\n".join(candidate_lines) if candidate_lines else "（无预筛候选）"
         )
-        task = f"""分析当前场景块中的关键道具。
+        task = f"""{asset_language_instruction(detect_asset_language(chr(10).join(block.lines or [])))}
+
+分析当前场景块中的关键道具。
 
 ## 场次头
 {block.header_line or "无"}

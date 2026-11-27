@@ -66,6 +66,18 @@ def _normalize_age_group_value(v: str) -> str:
     return mapping.get(v, "")
 
 
+def _visual_state_language_rule(language: str) -> str:
+    """Identity labels (visual_state) are not prose; pin their language too."""
+    if language != "en":
+        return ""
+    return (
+        "\nvisual_state is an identity label and must also be written in English "
+        "(e.g. 'Youth', 'Middle-aged', 'Elderly', 'Child', 'Ghost Form'). "
+        "The Chinese labels in the rules above are examples only; never output Chinese labels. "
+        "Never include the character name in visual_state."
+    )
+
+
 def _merge_age_group_values(existing: str, incoming: str) -> str:
     existing_norm = _normalize_age_group_value(existing)
     incoming_norm = _normalize_age_group_value(incoming)
@@ -377,6 +389,14 @@ class IdentityPlanner:
         if any(token in text for token in middle_tokens):
             return "middle"
         if any(token in text for token in elder_tokens):
+            return "elder"
+
+        lowered = text.lower()
+        if "child" in lowered:
+            return "child"
+        if "middle-aged" in lowered or "middle aged" in lowered:
+            return "middle"
+        if "elderly" in lowered:
             return "elder"
         return ""
 
@@ -949,9 +969,10 @@ class IdentityPlanner:
   - 如果只是同龄造型分支，可留空
 """
         try:
+            content_language = detect_asset_language(content_text)
             language_instruction = asset_language_instruction(
-                detect_asset_language(content_text)
-            )
+                content_language
+            ) + _visual_state_language_rule(content_language)
             agent = Agent(
                 self._identity_model(
                     "IDENTITY_PLANNER_ANALYSIS_MODEL",
@@ -1035,9 +1056,10 @@ class IdentityPlanner:
 - 如果没有其他身份需求，返回空列表
 """
         try:
+            content_language = detect_asset_language(content_text)
             language_instruction = asset_language_instruction(
-                detect_asset_language(content_text)
-            )
+                content_language
+            ) + _visual_state_language_rule(content_language)
             agent = Agent(
                 self._identity_model(
                     "IDENTITY_PLANNER_ANALYSIS_MODEL",

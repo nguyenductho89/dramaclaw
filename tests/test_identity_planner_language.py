@@ -98,6 +98,49 @@ async def test_english_identity_analysis_explicitly_requires_english(
 
     prompt_text = "\n".join(value for value, _ in captured if isinstance(value, str))
     assert "Write every user-visible prose field in English" in prompt_text
+    assert "identity label and must also be written in English" in prompt_text
+
+
+@pytest.mark.asyncio
+async def test_chinese_identity_analysis_omits_english_label_rule(monkeypatch):
+    captured = []
+
+    class FakeAgent:
+        def __init__(self, *args, system_prompt="", **kwargs):
+            captured.append(system_prompt)
+
+        async def run(self, task):
+            return SimpleNamespace(output=EpisodeDefaultIdentities(defaults=[]))
+
+    monkeypatch.setattr(identity_planner_module, "Agent", FakeAgent)
+    monkeypatch.setattr(
+        IdentityPlanner,
+        "_identity_model",
+        staticmethod(lambda _env, **_kwargs: None),
+    )
+    planner = IdentityPlanner(_Store())
+
+    await planner._analyze_default_identities(
+        SimpleNamespace(number=1, title="末班车"),
+        cast_names=["韩智媛"],
+        content_text="内景 车站 夜\n韩智媛独自站在月台上。",
+    )
+
+    assert "identity label and must also be written in English" not in "\n".join(captured)
+
+
+@pytest.mark.parametrize(
+    ("label", "expected"),
+    [
+        ("Child", "child"),
+        ("Middle-aged", "middle"),
+        ("Elderly", "elder"),
+        ("Ghost Form", ""),
+        ("中年时期", "middle"),
+    ],
+)
+def test_age_group_is_inferred_from_english_and_chinese_labels(label, expected):
+    assert IdentityPlanner._infer_age_group_from_visual_state(label) == expected
 
 
 @pytest.mark.asyncio

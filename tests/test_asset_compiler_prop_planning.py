@@ -233,3 +233,51 @@ async def test_short_block_reuses_prior_episode_prop_without_ai_reanalysis(monke
         "  道具[1]: 笔记本 [本集局部]",
         "  道具[2]: 笔记本 [本集复用]",
     ]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("lines", "expected", "absent"),
+    [
+        (
+            ["Maya runs down the stairs.", "△ The platform is empty.", "△ A light flickers."],
+            "Write every user-visible prose field in English",
+            "所有面向用户的自由文本字段都使用中文",
+        ),
+        (
+            ["林夏跑下楼梯。", "△ 站台空无一人。", "△ 灯光闪烁。"],
+            "所有面向用户的自由文本字段都使用中文",
+            "Write every user-visible prose field in English",
+        ),
+    ],
+)
+async def test_derived_scene_analysis_follows_source_language(
+    monkeypatch, lines, expected, absent
+):
+    import novelvideo.agents.asset_compiler as asset_compiler
+
+    captured: dict[str, str] = {}
+
+    class FakeAgent:
+        def __init__(self, model, **kwargs):
+            pass
+
+        async def run(self, task: str):
+            captured["task"] = task
+            return SimpleNamespace(output=SimpleNamespace(derived_scenes=[]))
+
+    monkeypatch.setattr(
+        asset_compiler, "get_newapi_text_pydantic_model", lambda *_a, **_k: "m"
+    )
+    monkeypatch.setattr(
+        asset_compiler, "get_newapi_structured_output_model_settings", lambda: {}
+    )
+    monkeypatch.setattr(asset_compiler, "Agent", FakeAgent)
+
+    compiler = asset_compiler.AssetCompiler(_FakeCogneeStore(raw_content=""))
+    block = SimpleNamespace(header_line="1-1 Platform", lines=lines)
+
+    await compiler._analyze_derived_scenes("Platform", block)
+
+    assert expected in captured["task"]
+    assert absent not in captured["task"]

@@ -85,6 +85,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
+import { FLOW_ITEM, PAGE_SHELL_FLOW } from "@/lib/page-shell";
 import type { ProjectConfig, SpineTemplate } from "@/types/project";
 import type { Chapter, ChapterSceneBlock } from "@/types/episode";
 
@@ -1610,7 +1611,7 @@ export function IngestPageContent({ project }: { project: string }) {
         : "";
 
   return (
-    <div className="-m-6 flex h-[calc(100%+3rem)] flex-col overflow-hidden">
+    <div className={cn("-m-6 flex h-[calc(100%+3rem)] flex-col overflow-hidden", PAGE_SHELL_FLOW)}>
       {uploadMutation.isPending && <UploadingOverlay />}
       <input
         ref={replacementFileInputRef}
@@ -1640,7 +1641,7 @@ export function IngestPageContent({ project }: { project: string }) {
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-6 pt-10">
+      <div className={cn("min-h-0 flex-1 overflow-y-auto px-6 pb-6 pt-10", FLOW_ITEM)}>
         <div className="mx-auto w-full max-w-[1080px]">
           {!shouldShowPreview ? (
             <motion.section

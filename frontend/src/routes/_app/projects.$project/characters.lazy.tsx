@@ -69,6 +69,7 @@ import { useProject } from "@/lib/queries/projects";
 import { useGenerationCreditCost } from "@/lib/queries/generation-credit-cost";
 import { isCeRuntime } from "@/lib/runtime-config";
 import { useMediaQuery } from "@/hooks/use-media-query";
+import { PAGE_SHELL_FLOW } from "@/lib/page-shell";
 import { useTaskController } from "@/hooks/use-task-controller";
 import { useTaskStream } from "@/hooks/use-task-stream";
 import { useTaskActivity } from "@/task-center/use-task-activity";
@@ -3143,11 +3144,11 @@ function CharactersSplit({
 
   if (!isDesktop) {
     return (
-      <div className="flex min-h-0 flex-1 flex-col">
+      <div className="flex flex-none flex-col">
         <div className="flex max-h-[45vh] w-full shrink-0 flex-col overflow-hidden border-b border-border">
           {listPane}
         </div>
-        <div className="min-w-0 flex-1">{detailPane}</div>
+        <div className="min-w-0">{detailPane}</div>
       </div>
     );
   }
@@ -3321,7 +3322,7 @@ function CharactersPageContent() {
 
   return (
     <AssetHeaderActionsSlotProvider>
-      <div className="-m-6 flex h-[calc(100%+3rem)] flex-col overflow-hidden">
+      <div className={cn("-m-6 flex h-[calc(100%+3rem)] flex-col overflow-hidden", PAGE_SHELL_FLOW)}>
       <CharactersPageHeader
         onRebuild={() => setRebuildDialogOpen(true)}
         rebuildDisabled={rebuildDisabled}

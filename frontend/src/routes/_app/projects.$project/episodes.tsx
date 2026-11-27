@@ -78,6 +78,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { FLOW_ITEM, PAGE_SHELL_FLOW } from "@/lib/page-shell";
 import { TOP_TABS } from "@/lib/episode-nav";
 import type { Episode } from "@/types/episode";
 
@@ -1021,7 +1022,7 @@ export function EpisodesPage() {
 
   return (
     <HeaderCollapseProvider>
-    <div className="-m-6 flex h-[calc(100%+3rem)] flex-col overflow-hidden">
+    <div className={cn("-m-6 flex h-[calc(100%+3rem)] flex-col overflow-hidden", PAGE_SHELL_FLOW)}>
       {selectedEpisode ? (
         <CollapsibleHeaderRegion>{topBar}</CollapsibleHeaderRegion>
       ) : (
@@ -1039,19 +1040,19 @@ export function EpisodesPage() {
         />
       )}
 
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div className={cn("flex min-h-0 flex-1 flex-col overflow-hidden", FLOW_ITEM)}>
         {selectedEpisode ? (
           <TaskControllerProvider
             project={project}
             episode={selectedEpisode.number}
           >
             <EpisodeActionsSlotProvider>
-              <div className="flex min-h-0 flex-1 flex-col">
+              <div className="flex min-h-0 flex-1 flex-col max-lg:flex-none">
                 <EpisodeHeaderLayout
                   episode={selectedEpisode}
                   project={project}
                 />
-                <div className="min-h-0 flex-1 overflow-hidden">
+                <div className={cn("min-h-0 flex-1 overflow-hidden", FLOW_ITEM)}>
                   <Outlet />
                 </div>
               </div>

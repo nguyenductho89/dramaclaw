@@ -43,6 +43,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { FLOW_ITEM, PAGE_SHELL_FLOW } from "@/lib/page-shell";
 import { SidebarListSkeleton, DetailPaneSkeleton } from "@/components/skeletons";
 import type { Style } from "@/types/style";
 import { stylePreviewUrl } from "@/lib/style-preview-url";
@@ -1084,7 +1085,7 @@ function StylesPage() {
   const isProjectDefault = !!selectedStyle && projectVisualStyle === selectedStyle.id;
 
   return (
-    <div className="-m-6 flex h-[calc(100%+3rem)] flex-col overflow-hidden">
+    <div className={cn("-m-6 flex h-[calc(100%+3rem)] flex-col overflow-hidden", PAGE_SHELL_FLOW)}>
       <TopBar
         onCreate={() => setCreateOpen(true)}
         onRefresh={async () => {
@@ -1096,7 +1097,7 @@ function StylesPage() {
         refreshing={isRefetching}
       />
 
-      <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
+      <div className={cn("flex min-h-0 flex-1 flex-col lg:flex-row", FLOW_ITEM)}>
         {/* LEFT: list */}
         <div className="flex max-h-[45vh] w-full shrink-0 flex-col overflow-hidden border-b border-border/30 lg:max-h-none lg:w-[360px] lg:border-b-0 lg:border-r lg:border-border/30">
           <div className="flex-1 overflow-y-auto p-3">
@@ -1128,7 +1129,7 @@ function StylesPage() {
         </div>
 
         {/* RIGHT: detail */}
-        <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-background">
+        <div className={cn("flex min-w-0 flex-1 flex-col overflow-hidden bg-background", FLOW_ITEM)}>
           {selectedStyle ? (
             <StyleDetailPanel
               key={selectedStyle.id}

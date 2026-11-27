@@ -26,6 +26,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { TaskListSkeleton } from "@/components/skeletons";
 import { cn } from "@/lib/utils";
+import { FLOW_ITEM, PAGE_SHELL_FLOW } from "@/lib/page-shell";
 import { stageForTaskType } from "@/lib/episode-stage-registry";
 import { currentTaskText, taskLogLinesOf } from "@/task-center/derivations";
 import { TASK_TYPES } from "@/lib/task-types";
@@ -339,7 +340,7 @@ function TasksPage() {
   const hasCompleted = tasks.some((tk) => tk.status === "completed");
 
   return (
-    <div className="-m-6 flex h-[calc(100%+3rem)] flex-col overflow-hidden">
+    <div className={cn("-m-6 flex h-[calc(100%+3rem)] flex-col overflow-hidden", PAGE_SHELL_FLOW)}>
       <div className="flex shrink-0 flex-col gap-3 border-b border-border/30 bg-background px-9 py-5 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex min-w-0 items-start gap-3">
           <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground">
@@ -386,7 +387,7 @@ function TasksPage() {
       </div>
 
       {/* Task list */}
-      <div className="min-h-0 flex-1 overflow-y-auto p-6">
+      <div className={cn("min-h-0 flex-1 overflow-y-auto p-6", FLOW_ITEM)}>
         {isLoading ? (
           <TaskListSkeleton label={t("common.loading")} />
         ) : tasks.length === 0 ? (

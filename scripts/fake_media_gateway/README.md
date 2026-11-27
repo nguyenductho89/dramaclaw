@@ -18,6 +18,23 @@ NEWAPI_API_KEY=fake            # must equal FAKE_GATEWAY_API_KEY if that is set
 VIDEO_BACKEND=newapi_MiniMax-H3
 ```
 
+Text calls (prompt composers and other agents) are forwarded when `FAKE_GATEWAY_TEXT_UPSTREAM_URL` and
+`FAKE_GATEWAY_TEXT_UPSTREAM_KEY` are set. If that upstream is a direct provider rather than a real NewAPI gateway,
+also set `FAKE_GATEWAY_TEXT_MODEL` to one of its model names: every `DC-*-LLM` alias is rewritten to it, so
+dramaclaw needs no per-task `*_MODEL` variables. Other model names pass through unchanged. The one replacement
+model also receives the vision aliases, so calls that send images need a model that accepts them.
+
+Keep these test settings out of `.env`: put them in a gitignored `.env.fake` and start the API with it.
+Variables already in the process environment win over `.env`.
+
+```
+uv run --env-file .env.fake novelvideo api --host 127.0.0.1 --port 8780
+```
+
+For H3 Shots, `.env.fake` also needs `MiniMax-H3` in `NEWAPI_VIDEO_MODELS`, plus a media relay the gateway can
+reach (`MEDIA_RELAY_PROVIDER=s3` and the `S3_RELAY_*` variables for a local S3 stand-in).
+`scripts/start-ce.sh` sources `.env` over the shell, so do not use it for this mode.
+
 ComfyUI comes from a rented 4090/5090 pod: bring it up with `ad-with-skills/tools/pod/pod_up.sh HOST PORT "--workflow-v16 --with-qwen"`,
 then `ssh -L 8188:127.0.0.1:8188 ...`. `GET /healthz` checks that ComfyUI answers.
 

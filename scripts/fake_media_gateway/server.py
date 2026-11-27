@@ -30,6 +30,8 @@ from .vast_billing import Ledger
 DEFAULT_IMAGE_RATIO = "1:1"
 DEFAULT_VIDEO_RATIO = "16:9"
 DEFAULT_VIDEO_SECONDS = 5
+# dramaclaw's default text models are opaque aliases that only the real NewAPI gateway resolves.
+TEXT_ALIAS_RE = re.compile(r"DC-.+-LLM")
 
 
 class RequestError(Exception):
@@ -132,6 +134,7 @@ def create_app(
     billing_dir: str | Path | None = None,
     text_upstream_url: str | None = None,
     text_upstream_api_key: str | None = None,
+    text_model: str | None = None,
 ) -> FastAPI:
     out = Path(output_dir)
     out.mkdir(parents=True, exist_ok=True)
@@ -276,6 +279,8 @@ def create_app(
     text_upstream = (text_upstream_url if text_upstream_url is not None else os.environ.get("FAKE_GATEWAY_TEXT_UPSTREAM_URL", "")).strip().rstrip("/")
     text_upstream_key = text_upstream_api_key if text_upstream_api_key is not None else os.environ.get("FAKE_GATEWAY_TEXT_UPSTREAM_KEY", "")
 
+    alias_model = (text_model if text_model is not None else os.environ.get("FAKE_GATEWAY_TEXT_MODEL", "")).strip()
+
     if text_upstream:
         @app.post("/chat/completions", dependencies=[Depends(require_key)])
         async def chat_completions(request: Request) -> JSONResponse:
@@ -283,6 +288,8 @@ def create_app(
             payload = await request.json()
             if payload.get("stream"):
                 raise RequestError("stream is not supported by the text passthrough")
+            if alias_model and TEXT_ALIAS_RE.fullmatch(str(payload.get("model") or "")):
+                payload["model"] = alias_model
             async with httpx.AsyncClient(timeout=float(os.environ.get("FAKE_GATEWAY_TEXT_TIMEOUT_S", "300"))) as client:
                 resp = await client.post(
                     f"{text_upstream}/chat/completions",

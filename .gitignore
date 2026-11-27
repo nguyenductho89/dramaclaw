@@ -4,6 +4,7 @@ __pycache__/
 .DS_Store
 .env
 .env1
+.env.fake
 /.venv/
 /.playwright-mcp
 /.nicegui

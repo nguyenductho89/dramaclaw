@@ -439,3 +439,34 @@ def test_text_passthrough_forwards_chat_to_upstream(stub, tmp_path, monkeypatch)
     assert resp.json()["choices"][0]["message"]["content"] == "ok"
     assert seen == {"url": "https://llm.example/v1/chat/completions", "json": body, "auth": "Bearer secret"}
     assert no_stream.status_code == 400
+
+
+@pytest.mark.parametrize(
+    "text_model, sent, forwarded",
+    [
+        ("real-model", "DC-h3-prompt-composer-LLM", "real-model"),
+        ("real-model", "other-model", "other-model"),
+        ("", "DC-h3-prompt-composer-LLM", "DC-h3-prompt-composer-LLM"),
+    ],
+)
+def test_text_passthrough_rewrites_dc_aliases_only_when_configured(
+    stub, tmp_path, monkeypatch, text_model, sent, forwarded
+):
+    import httpx
+
+    seen = {}
+
+    class _Upstream(httpx.AsyncClient):
+        async def post(self, url, json=None, headers=None, **kwargs):
+            seen.update(model=json["model"])
+            return httpx.Response(200, json={"choices": []})
+
+    monkeypatch.setattr("scripts.fake_media_gateway.server.httpx.AsyncClient", _Upstream)
+    monkeypatch.setenv("FAKE_GATEWAY_TEXT_MODEL", text_model)
+    from scripts.fake_media_gateway.server import create_app
+
+    app = create_app(output_dir=tmp_path / "out", api_key="", comfy=stub, text_upstream_url="https://llm.example/v1")
+    with TestClient(app) as c:
+        c.post("/v1/chat/completions", json={"model": sent, "messages": []})
+
+    assert seen == {"model": forwarded}

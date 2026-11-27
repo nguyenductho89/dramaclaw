@@ -350,9 +350,14 @@ def _prepare(monkeypatch, assets, config: dict, **overrides):
 
     from novelvideo.seedance2_i2v import panel_service
 
-    monkeypatch.setattr(
-        panel_service, "build_seedance2_project_assets", lambda **_kwargs: list(assets)
-    )
+    build_kwargs: dict = {}
+
+    def fake_build(**kwargs):
+        build_kwargs.update(kwargs)
+        return list(assets)
+
+    monkeypatch.setattr(panel_service, "build_seedance2_project_assets", fake_build)
+    _prepare.build_kwargs = build_kwargs
     monkeypatch.setattr(
         panel_service, "_append_seedance2_user_reference_assets", lambda _assets, _config: None
     )
@@ -435,3 +440,99 @@ def test_prepare_uses_legacy_prompt_when_config_has_none(monkeypatch):
 def test_prepare_rejects_unrunnable_requests(monkeypatch, assets, config, message):
     with pytest.raises(ValueError, match=message):
         _prepare(monkeypatch, assets, config)
+
+
+def test_prepare_drops_render_when_h3_assets_only(monkeypatch):
+    base = {"mode": "multimodal_reference", "final_prompt": "p"}
+    _prepare(monkeypatch, [_image(1, "scene:a")], {**base, "h3_assets_only": True})
+    assert _prepare.build_kwargs["include_render"] is False
+
+    _prepare(monkeypatch, [_image(1, "scene:a")], base)
+    assert _prepare.build_kwargs["include_render"] is True
+
+
+def test_composer_task_states_when_no_render_is_sent():
+    def task(assets):
+        return h3_prompt.build_h3_prompt_composer_task(
+            mode=Seedance2I2VMode.MULTIMODAL_REFERENCE,
+            beat={},
+            assets=assets,
+            text_overlay={},
+            prompt_guidance="",
+            draft_prompt="draft",
+        )
+
+    without = task([_image(1, "scene:a")])
+    assert '"has_storyboard_render": false' in without
+    assert "There is no storyboard picture" in without
+
+    with_render = task([_image(1, "first_frame"), _image(2, "scene:a")])
+    assert '"has_storyboard_render": true' in with_render
+    assert "There is no storyboard picture" not in with_render
+
+
+def test_validate_rejects_storyboard_line_without_render():
+    prompt = VALID_PROMPT.replace(
+        "<Picture 1> is the first frame of [Shot 1]",
+        "<Picture 1> is a storyboard reference for [Shot 1]",
+    )
+
+    _validate(prompt)
+    with pytest.raises(ValueError, match="no render is sent"):
+        _validate(prompt, allow_storyboard_line=False)
+
+
+@pytest.mark.parametrize(
+    "keys, stale_reference_kept",
+    [(["scene:a"], False), (["first_frame", "scene:a"], True)],
+)
+async def test_generate_drops_stale_storyboard_reference(keys, stale_reference_kept):
+    stale = "@<Picture 1> is a storyboard reference for [Shot 1]."
+    seen: dict = {}
+
+    async def composer(**kwargs):
+        seen.update(kwargs)
+        return "invalid"
+
+    await h3_prompt.generate_h3_prompt(
+        mode=Seedance2I2VMode.MULTIMODAL_REFERENCE,
+        beat={},
+        assets=[_image(n, key) for n, key in enumerate(keys, 1)],
+        text_overlay={},
+        prompt_guidance="",
+        manual_prompt_reference=stale,
+        composer=composer,
+    )
+
+    assert seen["manual_prompt_reference"] == (stale if stale_reference_kept else "")
+
+
+@pytest.mark.parametrize(
+    "prompt, assets, expected",
+    [
+        ("", [_image(1, "scene:a")], []),
+        ("<Subject 1> is in <Picture 1>.", [_image(1, "scene:a")], []),
+        ("<Picture 1> is a storyboard reference.", [_image(1, "first_frame")], []),
+        (
+            "<Picture 1> is a storyboard reference. <Picture 2> and <Audio 1>.",
+            [_image(1, "scene:a")],
+            [
+                {"code": "storyboard_without_render", "refs": []},
+                {"code": "unknown_picture", "refs": ["<Picture 2>"]},
+                {"code": "unknown_audio", "refs": ["<Audio 1>"]},
+            ],
+        ),
+    ],
+)
+def test_review_reports_reference_problems(prompt, assets, expected):
+    assert h3_prompt.review_h3_prompt(prompt, assets) == expected
+
+
+def test_prepare_rejects_prompt_citing_unsent_render(monkeypatch):
+    config = {
+        "mode": "multimodal_reference",
+        "final_prompt": "<Picture 1> is a storyboard reference for [Shot 1].",
+        "h3_assets_only": True,
+    }
+    with pytest.raises(ValueError, match="不会发送"):
+        _prepare(monkeypatch, [_image(1, "scene:a")], config)

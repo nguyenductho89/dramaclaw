@@ -1389,6 +1389,7 @@ def _seedance2_status_response(
     episode_num: int,
     beat_num: int,
     ctx: dict[str, Any],
+    assets_only: bool = False,
 ) -> dict[str, Any]:
     from novelvideo.seedance2_i2v.panel_service import (
         build_seedance2_video_panel_state,
@@ -1406,6 +1407,7 @@ def _seedance2_status_response(
         prop_menu=ctx["prop_menu"],
         state_dir=Path(ctx["store"].state_dir),
         language=ctx.get("language"),
+        assets_only=assets_only,
     )
     assets = state.assets
     selected_assets = [asset for asset in assets if asset.selected]
@@ -1439,6 +1441,14 @@ def _seedance2_status_response(
     if returned_last_frame is not None:
         asset_items.append(returned_last_frame)
 
+    prompt_issues: list[dict[str, Any]] = []
+    if assets_only:
+        from novelvideo.seedance2_i2v.h3_prompt import review_h3_prompt
+        from novelvideo.seedance2_i2v.models import parse_seedance2_config
+
+        saved = parse_seedance2_config(beat.get("seedance2_config_json") or "{}")
+        prompt_issues = review_h3_prompt(saved.final_prompt, assets)
+
     return {
         "ok": True,
         "data": {
@@ -1460,6 +1470,7 @@ def _seedance2_status_response(
             ),
             "prompt": {
                 "ready": bool(str(state.final_prompt or "").strip()),
+                "issues": prompt_issues,
                 "source": str(state.prompt_source or ""),
                 "status": str(state.prompt_status or ""),
                 "has_guidance": bool(str(state.prompt_guidance or "").strip()),
@@ -1488,6 +1499,7 @@ async def get_seedance2_beat_status(
     project: str,
     episode_num: int,
     beat_num: int,
+    assets_only: bool = False,
     user: dict = Depends(get_api_user),
 ):
     """Return NiceGUI-aligned read-only Seedance 2.0 status for one Beat."""
@@ -1502,6 +1514,7 @@ async def get_seedance2_beat_status(
         episode_num=episode_num,
         beat_num=beat_num,
         ctx=ctx,
+        assets_only=assets_only,
     )
 
 

@@ -910,3 +910,52 @@ async def test_prepare_dialogue_uses_configured_voice_only_when_audio_enabled(tm
             again.seedance2_config_json, reference_images=["https://example.com/frame.png"],
         )
         assert "reference_audios" not in params
+
+
+def test_multimodal_assets_can_drop_render(tmp_path):
+    from novelvideo.seedance2_i2v.assets import (
+        build_seedance2_project_assets,
+        selected_reference_paths,
+    )
+
+    project_dir = tmp_path / "project"
+    frame = project_dir / "frames" / "ep001" / "beat_01.png"
+    identity = project_dir / "assets" / "characters" / "秦" / "identities" / "青年.png"
+    for image_path in (frame, identity):
+        _write_png(image_path)
+
+    kwargs = dict(
+        project_output=project_dir,
+        state_dir=tmp_path / "state" / "alice" / "project",
+        episode=1,
+        beat={"beat_number": 1, "detected_identities": ["秦_青年"]},
+        mode=Seedance2I2VMode.MULTIMODAL_REFERENCE,
+    )
+    kept = build_seedance2_project_assets(**kwargs)
+    assert any(asset.key == "first_frame" for asset in kept)
+
+    assets = build_seedance2_project_assets(**kwargs, include_render=False)
+    assert all(asset.key != "first_frame" for asset in assets)
+    assert selected_reference_paths(assets, "reference_images") == [str(identity)]
+    assert next(a for a in assets if a.key.startswith("identity:")).image_number == 1
+
+
+def test_first_frame_mode_ignores_include_render(tmp_path):
+    from novelvideo.seedance2_i2v.assets import (
+        build_seedance2_project_assets,
+        selected_reference_paths,
+    )
+
+    project_dir = tmp_path / "project"
+    frame = project_dir / "frames" / "ep001" / "beat_02.png"
+    _write_png(frame)
+
+    assets = build_seedance2_project_assets(
+        project_output=project_dir,
+        state_dir=tmp_path / "state" / "alice" / "project",
+        episode=1,
+        beat={"beat_number": 2},
+        mode=Seedance2I2VMode.FIRST_FRAME,
+        include_render=False,
+    )
+    assert selected_reference_paths(assets, "image_url") == [str(frame)]

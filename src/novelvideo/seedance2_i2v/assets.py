@@ -841,8 +841,13 @@ def build_seedance2_project_assets(
     next_beat: dict[str, Any] | None = None,
     characters: list[Any] | None = None,
     prop_menu: list[Any] | None = None,
+    include_render: bool = True,
 ) -> list[Seedance2ResolvedAsset]:
-    """Resolve project assets in the order used for Seedance 2.0 requests."""
+    """Resolve project assets in the order used for Seedance 2.0 requests.
+
+    ``include_render=False`` drops the beat's render from multi-reference mode (H3 Shots builds
+    the shot from identity/scene/prop/audio assets only); first-frame modes ignore it.
+    """
 
     beat_num = int(beat.get("beat_number") or 0)
     next_beat_num = int(next_beat.get("beat_number") or 0) if next_beat else 0
@@ -990,14 +995,15 @@ def build_seedance2_project_assets(
         )
         return assets
 
-    add_image(
-        key="first_frame",
-        label=f"当前 render · Beat {beat_num}",
-        path=first_frame_path,
-        selected=True,
-        request_field="reference_images",
-        note="多参考模式下作为参考图发送，不作为严格首帧。",
-    )
+    if include_render:
+        add_image(
+            key="first_frame",
+            label=f"当前 render · Beat {beat_num}",
+            path=first_frame_path,
+            selected=True,
+            request_field="reference_images",
+            note="多参考模式下作为参考图发送，不作为严格首帧。",
+        )
 
     resolved_characters = (
         list(characters) if characters is not None else _load_sqlite_characters(project_output)

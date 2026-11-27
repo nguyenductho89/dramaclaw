@@ -969,3 +969,49 @@ def test_generate_prompt_for_seedance_backend_does_not_select_h3(monkeypatch, tm
     assert seen["video_backend"] is None
     assert usage_meter.reserve_calls[0]["feature_key"] == "mainline.seedance2_prompt"
     assert usage_meter.reserve_calls[0]["require_price_rule"] is True
+
+
+def test_generate_h3_prompt_assets_only_is_forwarded_and_allows_first_frame_beats(
+    monkeypatch, tmp_path
+):
+    seen: dict = {}
+    _h3_panel_stub(monkeypatch, seen)
+    client, _store = _client(
+        monkeypatch,
+        tmp_path,
+        _beat_with_mode("text_to_video"),
+        ctx=_project_ctx(tmp_path),
+        usage_meter=DummyUsageMeter(),
+    )
+
+    response = client.post(
+        "/projects/demo/episodes/1/beats/1/seedance2-prompt/generate",
+        json={"video_backend": "newapi_MiniMax-H3", "assets_only": True},
+    )
+
+    assert response.json()["ok"] is True
+    assert seen["assets_only"] is True
+    assert seen["video_backend"] == "newapi_MiniMax-H3"
+
+
+def test_generate_prompt_assets_only_requires_h3_backend(monkeypatch, tmp_path):
+    seen: dict = {}
+    _h3_panel_stub(monkeypatch, seen)
+    usage_meter = DummyUsageMeter()
+    client, _store = _client(
+        monkeypatch,
+        tmp_path,
+        _beat_with_mode("multimodal_reference"),
+        ctx=_project_ctx(tmp_path),
+        usage_meter=usage_meter,
+    )
+
+    response = client.post(
+        "/projects/demo/episodes/1/beats/1/seedance2-prompt/generate",
+        json={"video_backend": "newapi_seedance-2.0", "assets_only": True},
+    )
+
+    body = response.json()
+    assert body["ok"] is False and "MiniMax H3" in body["error"]
+    assert seen == {}
+    assert usage_meter.reserve_calls == []

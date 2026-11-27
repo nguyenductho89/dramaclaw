@@ -64,6 +64,7 @@ Reference labels:
 - Do not force every manifest asset into the prompt; define only what the shot needs. Audio labels you use must start at <Audio 1> and not skip numbers.
 - asset_fallbacks are text-only constraints and never receive picture numbers.
 - Asset roles by manifest key: identity:*, prop:* and scene:* pictures only define a person, prop or environment, so cite them inside the matching <Subject N> definition ("<Subject 1> is the woman in <Picture 2>, ...") and give them no standalone line. When first_frame_label is empty, the picture with key first_frame is the current storyboard render: give it a standalone line "<Picture N> is a storyboard reference for [Shot 1], defining viewpoint, subject placement and shot order." and use it for composition only, never as a first frame. voice:* audio is a timbre reference for that speaker.
+- When has_storyboard_render is false there is no storyboard picture: write no storyboard-reference line and give no picture that role, including <Picture 1>. Every picture only defines a Subject; take viewpoint, subject placement, movement and shot order from the beat text and user guidance.
 
 Sections:
 - summary starts with a bracketed task type: [keyframe completion + reference generation] when first_frame_label is set, otherwise [reference generation] with " + audio reference" when audio is used. One short paragraph; no new labels.
@@ -168,6 +169,10 @@ def _first_frame_label(mode: Seedance2I2VMode | str, manifest: list[dict[str, st
     )
 
 
+def _has_storyboard_render(manifest: list[dict[str, str]]) -> bool:
+    return any(item["key"] == "first_frame" for item in manifest)
+
+
 def _require_h3_mode(mode: Seedance2I2VMode | str) -> Seedance2I2VMode:
     resolved = Seedance2I2VMode(mode)
     if resolved not in H3_SUPPORTED_MODES:
@@ -197,6 +202,7 @@ def build_h3_prompt_composer_task(
         "mode": mode.value,
         "duration_seconds": h3_effective_duration(duration),
         "first_frame_label": _first_frame_label(mode, manifest),
+        "has_storyboard_render": _has_storyboard_render(manifest),
         "asset_manifest": manifest,
         "beat": {
             "visual_description": beat.get("visual_description") or "",
@@ -230,7 +236,13 @@ def build_h3_prompt_composer_task(
         "- Cut times stay inside duration_seconds, strictly increasing and at least 1.2 seconds apart.\n"
         "- If first_frame_label is set, <Picture 1> is the first frame of [Shot 1].\n"
         "- Spoken dialogue and narration_segment must be kept verbatim inside <d>.\n"
-        "- Follow the asset-role rule: identity/prop/scene pictures live inside <Subject N> definitions; the first_frame picture is a storyboard anchor unless first_frame_label is set.\n"
+        "- Follow the asset-role rule: identity/prop/scene pictures live inside <Subject N> definitions."
+        + (
+            " The first_frame picture is a storyboard anchor unless first_frame_label is set.\n"
+            if _has_storyboard_render(manifest)
+            else " There is no storyboard picture: cite every picture inside a <Subject N> definition and write no storyboard-reference line.\n"
+        )
+        +
         "- If storyboard_frame_observation is set, it is ground truth for camera position, direction of travel and framing; never contradict it.\n"
         "- If user guidance conflicts with the asset manifest or asset_fallbacks, the manifest wins.\n"
         "- Output only the final prompt.\n\n"
@@ -259,6 +271,9 @@ _SECTION_RE = re.compile(r"(?m)^(" + "|".join(H3_SECTIONS) + r"):")
 _SHOT_RE = re.compile(r"(?m)^\s*\[Shot (\d+)\](?: At (\d{2}):(\d{2})\.(\d{3}))?")
 _PICTURE_RE = re.compile(r"<Picture (\d+)>")
 _AUDIO_RE = re.compile(r"<Audio (\d+)>")
+_STORYBOARD_LINE_RE = re.compile(
+    r"<Picture \d+> is (?:a |the )?(?:current )?storyboard", re.IGNORECASE
+)
 
 
 def _strip_code_fence(prompt: str) -> str:
@@ -276,6 +291,7 @@ def validate_h3_prompt(
     n_audios: int,
     duration: float,
     require_picture_1: bool = False,
+    allow_storyboard_line: bool = True,
 ) -> str:
     """Return the cleaned prompt, or raise ValueError when it breaks the H3 contract."""
 
@@ -300,6 +316,8 @@ def validate_h3_prompt(
         raise ValueError("H3 prompt must not use Seedance reference tokens")
     if require_picture_1 and "<Picture 1>" not in text:
         raise ValueError("first-frame prompt must reference <Picture 1>")
+    if not allow_storyboard_line and _STORYBOARD_LINE_RE.search(text):
+        raise ValueError("H3 prompt cites a storyboard picture but no render is sent")
 
     shots = _SHOT_RE.findall(bodies["detailed_description"])
     if not shots or [int(n) for n, *_ in shots] != list(range(1, len(shots) + 1)):
@@ -319,6 +337,29 @@ def validate_h3_prompt(
             raise ValueError(f"[Shot {index}] cut is outside the {duration:g}s video")
         previous = cut
     return text
+
+
+def review_h3_prompt(prompt: str, assets: list[Any] | None) -> list[dict[str, Any]]:
+    """Reference problems of a saved or hand-edited prompt against the assets that will be sent.
+
+    Only references are checked (not the section layout), so hand-written prompts stay usable.
+    """
+
+    text = normalize_seedance2_editor_prompt(prompt)
+    if not text:
+        return []
+    manifest = build_h3_asset_manifest(assets)
+    sent = {item["h3_label"] for item in manifest}
+    issues: list[dict[str, Any]] = []
+    if not _has_storyboard_render(manifest) and _STORYBOARD_LINE_RE.search(text):
+        issues.append({"code": "storyboard_without_render", "refs": []})
+    for code, pattern in (("unknown_picture", _PICTURE_RE), ("unknown_audio", _AUDIO_RE)):
+        refs = list(
+            dict.fromkeys(m.group(0) for m in pattern.finditer(text) if m.group(0) not in sent)
+        )
+        if refs:
+            issues.append({"code": code, "refs": refs})
+    return issues
 
 
 def _language_tag(beat: dict[str, Any]) -> str:
@@ -484,6 +525,12 @@ async def generate_h3_prompt(
     draft_prompt = build_h3_prompt_draft(
         mode=mode, beat=beat, assets=assets, text_overlay=text_overlay
     )
+    has_render = _has_storyboard_render(manifest)
+    if not has_render and _STORYBOARD_LINE_RE.search(
+        normalize_seedance2_editor_prompt(manual_prompt_reference)
+    ):
+        # Written while the render was still sent: its role line and picture numbers are stale.
+        manual_prompt_reference = ""
     try:
         compose = composer or compose_h3_prompt_with_agent
         prompt = await compose(
@@ -505,6 +552,7 @@ async def generate_h3_prompt(
             n_audios=sum(i["media_type"] == "audio" for i in manifest),
             duration=h3_effective_duration(duration),
             require_picture_1=bool(_first_frame_label(mode, manifest)),
+            allow_storyboard_line=has_render,
         )
         return Seedance2PromptGeneration(
             prompt=prompt, used_ai=True, draft_prompt=draft_prompt, error=""

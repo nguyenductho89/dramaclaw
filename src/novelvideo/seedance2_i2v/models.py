@@ -30,6 +30,8 @@ class Seedance2VideoConfig(BaseModel):
     prompt_guidance_template_keys: list[str] = Field(default_factory=list)
     prompt_source: str = ""
     prompt_inputs_hash: str = ""
+    # Why the AI composer output was dropped for the rule-based draft (H3 only).
+    prompt_fallback_reason: str = ""
     prompt_updated_at: str = ""
     duration: int = 4
     resolution: str = "720p"
@@ -44,12 +46,15 @@ class Seedance2VideoConfig(BaseModel):
     reference_audio_paths: list[str] = Field(default_factory=list)
     text_overlay: dict[str, Any] = Field(default_factory=dict)
     selected_asset_keys: list[str] = Field(default_factory=list)
+    # H3 Shots: references come from project assets only, the beat's render is not sent.
+    h3_assets_only: bool = False
 
     @field_validator(
         "final_prompt",
         "prompt_guidance",
         "prompt_source",
         "prompt_inputs_hash",
+        "prompt_fallback_reason",
         "prompt_updated_at",
         "resolution",
         "ratio",

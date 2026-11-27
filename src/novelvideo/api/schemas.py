@@ -186,6 +186,7 @@ class Seedance2PromptGenerateRequest(BaseModel):
     manual_prompt_reference: Optional[str] = None
     prompt_guidance: Optional[str] = None
     prompt_guidance_template_keys: Optional[list[str]] = None
+    assets_only: bool = False
 
 
 class BeatVideoPromptGenerateRequest(BaseModel):

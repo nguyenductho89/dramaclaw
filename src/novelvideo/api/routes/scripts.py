@@ -614,6 +614,10 @@ async def generate_seedance2_prompt(
     from novelvideo.seedance2_i2v.pipeline import is_minimax_h3_backend
 
     is_h3 = is_minimax_h3_backend(body.video_backend)
+    if body.assets_only and not is_h3:
+        return {"ok": False, "error": "仅使用素材（H3 Shots）需要选择 MiniMax H3 模型"}
+    if body.assets_only:
+        mode = "multimodal_reference"
     if is_h3 and mode not in {"first_frame", "multimodal_reference"}:
         return {
             "ok": False,
@@ -679,6 +683,7 @@ async def generate_seedance2_prompt(
             language=language,
             prop_menu=list(script_data.get("prop_menu") or []),
             video_backend=body.video_backend if is_h3 else None,
+            assets_only=body.assets_only,
         )
     except ValueError as exc:
         if reservation_id:

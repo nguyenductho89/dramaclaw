@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import math
 import re
 from dataclasses import dataclass
@@ -37,6 +38,7 @@ from novelvideo.seedance2_i2v.h3_prompt import (
     H3_SUPPORTED_MODES,
     generate_h3_prompt,
     h3_reference_label,
+    review_h3_prompt,
     select_h3_reference_assets,
 )
 from novelvideo.seedance2_i2v.models import (
@@ -59,6 +61,8 @@ from novelvideo.utils.media_io import (
 )
 from novelvideo.utils.path_resolver import PathResolver
 from novelvideo.utils.source_language import AssetLanguage
+
+logger = logging.getLogger(__name__)
 
 
 SEEDANCE2_PROMPT_GUIDANCE_TEMPLATES: dict[str, str] = {
@@ -303,11 +307,16 @@ async def generate_seedance2_prompt_for_panel(
     language: AssetLanguage | None = None,
     prop_menu: list[Any] | None = None,
     video_backend: str | None = None,
+    assets_only: bool = False,
 ) -> str:
     """Generate and persist a panel prompt; ``video_backend`` selects the H3 composer (None = Seedance 2.0)."""
     config = parse_seedance2_config(beat.get("seedance2_config_json"))
     if prompt_guidance is not None:
         config.prompt_guidance = str(prompt_guidance or "").strip()
+    if video_backend:
+        config.h3_assets_only = assets_only
+        if assets_only:
+            config.mode = Seedance2I2VMode.MULTIMODAL_REFERENCE
     if prompt_guidance_template_keys is not None:
         config.prompt_guidance_template_keys = list(
             dict.fromkeys(
@@ -325,6 +334,7 @@ async def generate_seedance2_prompt_for_panel(
         state_dir=state_dir,
         next_beat=next_beat,
         prop_menu=prop_menu,
+        include_render=not config.h3_assets_only,
     )
     _append_seedance2_user_reference_assets(assets, config)
     initial_prompt = _seedance2_initial_prompt(beat)
@@ -375,6 +385,14 @@ async def generate_seedance2_prompt_for_panel(
         )
     config.final_prompt = mark_seedance2_prompt_references_for_editor(result.prompt)
     config.prompt_source = "generated" if result.used_ai else "fallback"
+    config.prompt_fallback_reason = "" if result.used_ai or not video_backend else result.error
+    if config.prompt_fallback_reason:
+        logger.warning(
+            "H3 prompt fell back to the rule-based draft (episode %s beat %s): %s",
+            episode,
+            beat.get("beat_number"),
+            config.prompt_fallback_reason,
+        )
     config.prompt_inputs_hash = inputs_hash
     config.prompt_updated_at = datetime.now().isoformat(timespec="seconds")
     saved_json = dump_seedance2_config(config)
@@ -420,8 +438,11 @@ def prepare_h3_beat_request(
         state_dir=state_dir,
         next_beat=next_beat,
         prop_menu=prop_menu,
+        include_render=not config.h3_assets_only,
     )
     _append_seedance2_user_reference_assets(assets, config)
+    if review_h3_prompt(final_prompt, assets):
+        raise ValueError("H3 提示词引用了不会发送的参考素材，请重新生成或修改提示词")
     images, audios = select_h3_reference_assets(assets, final_prompt)
     if not images:
         raise ValueError("MiniMax H3 需要至少一张参考图")
@@ -929,6 +950,7 @@ def build_seedance2_video_panel_state(
     characters: list[Any] | None = None,
     prop_menu: list[Any] | None = None,
     language: AssetLanguage | None = None,
+    assets_only: bool = False,
 ) -> Seedance2VideoPanelState:
     config = parse_seedance2_config(beat.get("seedance2_config_json"))
     duration_floor = _seedance2_duration_floor(
@@ -941,11 +963,12 @@ def build_seedance2_video_panel_state(
         project_output=project_dir,
         episode=episode,
         beat=beat,
-        mode=config.mode,
+        mode=Seedance2I2VMode.MULTIMODAL_REFERENCE if assets_only else config.mode,
         next_beat=next_beat,
         characters=characters,
         prop_menu=prop_menu,
         state_dir=state_dir,
+        include_render=not assets_only,
     )
     _append_seedance2_user_reference_assets(assets, config)
     prompt_source = config.prompt_source or "saved"

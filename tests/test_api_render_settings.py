@@ -97,6 +97,7 @@ def test_render_settings_returns_current_selection_and_options(monkeypatch, tmp_
     assert body["data"]["options"] == {
         "newapi_gpt_image2": "LingShan-G2",
         "newapi_nanobanana2": "LingShan-NB-2",
+        "newapi_qwen_image21": "Qwen-Image 2.1",
     }
     assert body["data"]["sketch_aspect_padding"] is True
     assert "force_half_k" not in body["data"]
@@ -175,6 +176,7 @@ def test_sketch_settings_returns_current_selection_and_options(monkeypatch, tmp_
     assert body["data"]["options"] == {
         "newapi_gpt_image2": "LingShan-G2",
         "newapi_nanobanana2": "LingShan-NB-2",
+        "newapi_qwen_image21": "Qwen-Image 2.1",
     }
 
 

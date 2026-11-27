@@ -50,3 +50,23 @@ def test_landscape_force_one_by_one_uses_single_cell_16_9_modes() -> None:
     )
 
     assert [entry.mode_key for entry in plan] == ["1x1_16-9", "1x1_16-9"]
+
+
+@pytest.mark.parametrize(
+    ("aspect_mode", "expected_mode"),
+    [("9:16", "1x1_9-16"), ("16:9", "1x1_16-9"), ("1:1", "1x1_1-1")],
+)
+def test_qwen_selection_plans_one_cell_per_beat(aspect_mode: str, expected_mode: str) -> None:
+    plan = build_regen_plan(
+        selected_beats=[_beat(2), _beat(3), _beat(4)],
+        strategy="location",
+        aspect_mode=aspect_mode,
+        character_map={},
+        image_generation_selection="newapi_qwen_image21",
+    )
+
+    assert [(entry.mode_key, list(entry.beat_numbers)) for entry in plan] == [
+        (expected_mode, [2]),
+        (expected_mode, [3]),
+        (expected_mode, [4]),
+    ]

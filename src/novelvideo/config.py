@@ -804,6 +804,7 @@ INDEXTTS2_RECORD_MODEL = (
 )
 NEWAPI_IMAGE_MODEL = os.environ.get("NEWAPI_IMAGE_MODEL", "LingShan-G2")
 NEWAPI_NANOBANANA2_MODEL = os.environ.get("NEWAPI_NANOBANANA2_MODEL", "LingShan-NB-2")
+NEWAPI_QWEN_IMAGE_MODEL = os.environ.get("NEWAPI_QWEN_IMAGE_MODEL", "Qwen-Image-2.1")
 SCENE_MASTER_IMAGE_PROVIDER = (
     os.environ.get("SCENE_MASTER_IMAGE_PROVIDER", "").strip().lower() or "newapi"
 )
@@ -1265,11 +1266,19 @@ IMAGE_GENERATION_SELECTIONS: dict[str, dict[str, str]] = {
         "provider": "newapi",
         "model": NEWAPI_NANOBANANA2_MODEL,
     },
+    "newapi_qwen_image21": {  # QWEN_IMAGE_GENERATION_SELECTION
+        "label": "Qwen-Image 2.1",
+        "provider": "newapi",
+        "model": NEWAPI_QWEN_IMAGE_MODEL,
+    },
 }
+
+QWEN_IMAGE_GENERATION_SELECTION = "newapi_qwen_image21"
 
 VISIBLE_IMAGE_GENERATION_SELECTION_KEYS = (
     "newapi_gpt_image2",
     "newapi_nanobanana2",
+    "newapi_qwen_image21",
 )
 
 LEGACY_IMAGE_GENERATION_SELECTION_ALIASES = {

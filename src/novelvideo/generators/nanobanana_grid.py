@@ -110,6 +110,11 @@ _HUIMENG_IMAGE_POLL_INTERVAL_SECONDS = 2.0
 _HUIMENG_IMAGE_MAX_POLLS = 290
 HUIMENG_IMAGE2_SINGLE_CELL_SELECTION = "huimeng_gpt_image2"
 HUIMENG_IMAGE2_SINGLE_CELL_REASON = "huimeng-image-2-1k-only"
+QWEN_SINGLE_CELL_REASON = "qwen-per-beat-canvas"
+SINGLE_CELL_REASON_BY_SELECTION = {
+    HUIMENG_IMAGE2_SINGLE_CELL_SELECTION: HUIMENG_IMAGE2_SINGLE_CELL_REASON,
+    "newapi_qwen_image21": QWEN_SINGLE_CELL_REASON,
+}
 SINGLE_CELL_RENDER_MODE_KEY = "1x1_2-3"
 SINGLE_CELL_RENDER_MODE_BY_ASPECT = {
     "1:1": "1x1_1-1",
@@ -361,7 +366,7 @@ def _beat_display_sort_key(beat: dict) -> tuple[int, int]:
 
 def image_generation_selection_forces_single_cell(selection: str | None) -> bool:
     """Whether render planning must split every beat into a 1x1 grid."""
-    return str(selection or "").strip() == HUIMENG_IMAGE2_SINGLE_CELL_SELECTION
+    return str(selection or "").strip() in SINGLE_CELL_REASON_BY_SELECTION
 
 
 class _InlineImagePart:
@@ -2650,7 +2655,9 @@ def build_regen_plan(
     if force_one_by_one:
         single_cell_reason = "force-1x1"
     elif image_generation_selection_forces_single_cell(image_generation_selection):
-        single_cell_reason = HUIMENG_IMAGE2_SINGLE_CELL_REASON
+        single_cell_reason = SINGLE_CELL_REASON_BY_SELECTION[
+            str(image_generation_selection).strip()
+        ]
 
     if single_cell_reason:
         mode_key = _single_cell_render_mode_key(aspect_mode)

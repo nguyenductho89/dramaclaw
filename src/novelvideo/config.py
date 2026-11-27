@@ -974,6 +974,10 @@ COSYVOICE_MODEL = os.environ.get("COSYVOICE_MODEL", "cosyvoice-v3-flash")
 COSYVOICE_VOICE = os.environ.get("COSYVOICE_VOICE", "longxiaoxia_v3")
 DASHSCOPE_API_KEY = os.environ.get("DASHSCOPE_API_KEY")
 
+# Claude vision: reads the storyboard frame for H3 prompts. Haiku only, by design.
+CLAUDE_API_KEY = os.environ.get("CLAUDE_API_KEY", "").strip()
+CLAUDE_VISION_MODEL = "claude-haiku-5-5"
+
 # CosyVoice 语速倍率（范围 [0.5, 2.0]，1.0 为标准速度）
 COSYVOICE_SPEECH_RATE = float(os.environ.get("COSYVOICE_SPEECH_RATE", "1.2"))
 

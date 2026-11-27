@@ -70,6 +70,7 @@ Sections:
 - retention_analysis has one line per label: "<Subject 1> (appears in [Shot 1], [Shot 2]): fully_preserved - ...". Pictures and subjects use fully_preserved, partially_preserved, attribute_transfer, or weak_reference. Audio uses fully_copy, partially_copy, reference, or weak_reference.
 - detailed_description opens with one or two sentences of overall style, then one paragraph per shot, each starting a line: "[Shot 1] ..." (no timestamp) and "[Shot 2] At 00:03.500, the camera cuts to ..." for later shots. Cut times strictly increase, stay below duration_seconds, and are at least 1.2 seconds apart. Describe composition, subject appearance and position, environment and lighting, actions, camera, and sound for every shot, and cite labels where referenced content appears. Target 350-500 words; dialogue-heavy shots may run longer.
 - Camera motion is natural English: type plus amplitude and speed when they matter ("The camera pushes in with small amplitude at slow speed toward ..."). Every framing sentence needs a motion word or "static shot".
+- storyboard_frame_observation, when present, describes <Picture 1> as seen by a vision model. It is ground truth for camera position, direction of travel, framing and screen placement: follow it and never contradict it.
 - Speakers get stable IDs: "<Subject 2> (S1) says, <d>[Chinese] ...</d>". Inside <d> put only the language tag and the spoken words, copied verbatim. For voiceover write "says in an off-screen voiceover" and state the lips remain closed. Visible on-screen text goes in double quotes, verbatim.
 - overall_soundscape: 1-4 sentences of ambience and physical sounds; do not repeat dialogue or sound already described in a shot.
 - non_diegetic_music: 1-3 sentences on instrumentation, tempo, and dynamics, or N/A.
@@ -188,6 +189,7 @@ def build_h3_prompt_composer_task(
     duration: int | float | None = None,
     request_params: dict[str, Any] | None = None,
     manual_prompt_reference: str = "",
+    frame_observation: str = "",
 ) -> str:
     mode = _require_h3_mode(mode)
     manifest = build_h3_asset_manifest(assets)
@@ -210,6 +212,7 @@ def build_h3_prompt_composer_task(
             ),
             "detected_props": real_detected_props(beat.get("detected_props") or []),
         },
+        "storyboard_frame_observation": _text(frame_observation),
         "asset_fallbacks": build_seedance2_asset_fallback_manifest(assets),
         "text_overlay": text_overlay or {},
         "user_prompt_guidance": _text(prompt_guidance),
@@ -228,6 +231,7 @@ def build_h3_prompt_composer_task(
         "- If first_frame_label is set, <Picture 1> is the first frame of [Shot 1].\n"
         "- Spoken dialogue and narration_segment must be kept verbatim inside <d>.\n"
         "- Follow the asset-role rule: identity/prop/scene pictures live inside <Subject N> definitions; the first_frame picture is a storyboard anchor unless first_frame_label is set.\n"
+        "- If storyboard_frame_observation is set, it is ground truth for camera position, direction of travel and framing; never contradict it.\n"
         "- If user guidance conflicts with the asset manifest or asset_fallbacks, the manifest wins.\n"
         "- Output only the final prompt.\n\n"
         f"{json.dumps(payload, ensure_ascii=False, indent=2, default=str)}"
@@ -407,6 +411,28 @@ def build_h3_prompt_draft(
     )
 
 
+async def observe_storyboard_frame(beat: dict[str, Any], assets: list[Any] | None) -> str:
+    """What a vision model sees in the beat's render, or "" when it cannot be read."""
+
+    from novelvideo.generators.claude_vision import describe_frame_layout_or_empty
+
+    frame = next(
+        (
+            asset
+            for asset in assets or []
+            if _text(_asset_value(asset, "key")) == "first_frame"
+            and _asset_value(asset, "exists")
+        ),
+        None,
+    )
+    if frame is None:
+        return ""
+    return await describe_frame_layout_or_empty(
+        _asset_value(frame, "path"),
+        action_text=_text(beat.get("visual_description") or beat.get("synopsis")),
+    )
+
+
 async def compose_h3_prompt_with_agent(
     *,
     mode: Seedance2I2VMode | str,
@@ -420,6 +446,7 @@ async def compose_h3_prompt_with_agent(
     manual_prompt_reference: str = "",
 ) -> str:
     agent = create_h3_prompt_composer_agent()
+    frame_observation = await observe_storyboard_frame(beat, assets)
     result = await agent.run(
         build_h3_prompt_composer_task(
             mode=mode,
@@ -431,6 +458,7 @@ async def compose_h3_prompt_with_agent(
             duration=duration,
             request_params=request_params,
             manual_prompt_reference=manual_prompt_reference,
+            frame_observation=frame_observation,
         )
     )
     return str(result.output or "")

@@ -155,6 +155,11 @@ COMMON_REVERSE_ENV_ALLOWLIST: tuple[tuple[re.Pattern[str], str], ...] = (
 )
 CE_REVERSE_ENV_ALLOWLIST: tuple[tuple[re.Pattern[str], str], ...] = (
     (
+        re.compile(r"^(?:COMFY_URL|FAKE_GATEWAY_.+|RUNPOD_(?:H3|QWEN_IMAGE)_.+|VAST_API_KEY)$"),
+        "Developer-only settings of the test tools under scripts/ (fake media gateway, "
+        "rented GPU box); the product runtime does not read them.",
+    ),
+    (
         re.compile(r"^ST_MEDIA_ARCHIVE_COPY_ENABLED$"),
         "EE-only archive copy switch checked by shared CE delivery code; "
         "CE does not expose it as operator configuration.",

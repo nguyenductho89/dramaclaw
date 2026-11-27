@@ -1054,6 +1054,8 @@ def test_all_agent_and_cognee_newapi_leaves_declare_capability() -> None:
     }
     exceptions = {
         Path("src/novelvideo/agents/content_rewriter.py"): "text.generate",
+        # A prompt composer, like the Seedance 2.0 and H3 composers.
+        Path("src/novelvideo/agents/qwen_image_prompt_builder.py"): "text.generate.workflow",
     }
     for root, default_capability in roots.items():
         for path in root.glob("*.py"):

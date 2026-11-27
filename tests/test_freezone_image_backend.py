@@ -8614,6 +8614,14 @@ async def test_freezone_image_models_returns_selection_keys(
             "api_model": "newapi_nanobanana2",
             "label": "LingShan-NB-2",
         },
+        {
+            "id": "newapi_qwen_image21",
+            "providerId": "newapi",
+            "provider": "newapi",
+            "apiModel": "newapi_qwen_image21",
+            "api_model": "newapi_qwen_image21",
+            "label": "Qwen-Image 2.1",
+        },
     ]
 
 

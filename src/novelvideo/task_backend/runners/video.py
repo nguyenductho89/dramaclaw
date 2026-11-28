@@ -19,6 +19,7 @@ from novelvideo.task_backend.registry import register_project_task_runner
 from novelvideo.task_backend.subprocesses import run_project_subprocess
 from novelvideo.task_identity import project_task_state_key
 from novelvideo.task_state import get_task_manager
+from novelvideo.utils.source_language import project_asset_language
 
 logger = logging.getLogger(__name__)
 
@@ -735,7 +736,7 @@ async def _run_global_optimize_video_async(
     beats = list(payload.get("beats") or [])
     characters = list(payload.get("characters") or [])
     output_dir = str(payload.get("output_dir") or ctx.output_dir)
-    language = str(payload.get("language") or "zh")
+    language = str(payload.get("language") or project_asset_language(ctx.state_dir))
     manager = get_task_manager()
 
     def log(message: str, *, progress: float | None = None) -> None:

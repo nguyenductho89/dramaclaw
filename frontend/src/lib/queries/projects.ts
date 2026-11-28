@@ -11,6 +11,7 @@ import type {
   ProjectRole,
   ProjectStatus,
   ProjectSummary,
+  AssetLanguage,
 } from "@/types/project";
 
 const PROJECT_SUMMARIES_STALE_TIME_MS = 5 * 60_000;
@@ -37,9 +38,9 @@ export function useProject(project: string) {
 export function useCreateProject() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (name: string) =>
+    mutationFn: ({ name, assetLanguage }: { name: string; assetLanguage: AssetLanguage }) =>
       api
-        .post("api/v1/projects", { json: { name } })
+        .post("api/v1/projects", { json: { name, asset_language: assetLanguage } })
         .json<OkResponse<{ id?: string; project_id?: string; name: string }>>(),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.projects() });

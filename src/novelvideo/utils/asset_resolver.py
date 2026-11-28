@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable
 
+from novelvideo.utils.source_language import DEFAULT_ASSET_LANGUAGE, AssetLanguage
 from novelvideo.director_world.paths import safe_name
 from novelvideo.models import (
     build_scene_effective_prompt,
@@ -147,8 +148,10 @@ class AssetResolver:
         director_ref_beat_numbers: Iterable[int] | None = None,
         director_control_frames_dir: str | Path | None = None,
         allow_beat_background_anchor: bool | None = None,
+        asset_language: AssetLanguage = DEFAULT_ASSET_LANGUAGE,
     ):
         self.project_dir = Path(project_dir)
+        self.asset_language = asset_language
         self.episode_number = episode_number
         self.scenes = list(scenes or [])
         self.props = list(props or [])
@@ -456,7 +459,13 @@ class AssetResolver:
 
         if not text_description and not suppress_text_description:
             text_description = _pick_text(
-                build_scene_effective_prompt(scene_obj, base_scene_obj) if scene_obj else "",
+                (
+                    build_scene_effective_prompt(
+                        scene_obj, base_scene_obj, language=self.asset_language
+                    )
+                    if scene_obj
+                    else ""
+                ),
                 variant_description,
                 "，".join(v for v in [lighting, atmosphere] if v),
                 beat.get("time_of_day", "") or "",

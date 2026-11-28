@@ -37,9 +37,9 @@ from novelvideo.utils.bounded_concurrency import (
     map_bounded,
 )
 from novelvideo.utils.source_language import (
+    DEFAULT_ASSET_LANGUAGE,
     AssetLanguage,
     asset_language_instruction,
-    detect_asset_language,
 )
 
 # Titles and kinship terms refer to whoever is on stage at the time. The same
@@ -365,7 +365,7 @@ async def extract_characters_from_chunks(
     on_log: Optional[Callable[[str], None]] = None,
     on_chunk_done: Optional[Callable[[SourceChunk, ChunkCharacterOutput], Any]] = None,
     on_chunk_failed: Optional[Callable[[SourceChunk, BaseException], Any]] = None,
-    output_language: AssetLanguage | None = None,
+    output_language: AssetLanguage = DEFAULT_ASSET_LANGUAGE,
 ) -> tuple[list[MergedCharacter], list[tuple[SourceChunk, BaseException]]]:
     """Extract and merge characters across chunks.
 
@@ -379,15 +379,7 @@ async def extract_characters_from_chunks(
             on_log(message)
 
     replayed = list(cached_outcomes or [])
-    language = output_language or detect_asset_language(
-        source_text
-        or "\n".join(
-            [
-                *(chunk.text for chunk in chunks),
-                *(chunk.text for chunk, _ in replayed),
-            ]
-        )
-    )
+    language = output_language
     if not chunks:
         # Everything was replayed from a previous run; merging still has to run,
         # because merging is what turns per-chunk candidates into characters.
@@ -1092,7 +1084,7 @@ def normalize_age_group(value: str) -> str:
 def character_appearance_cache_key(
     item: "MergedCharacter",
     synopsis: str = "",
-    output_language: AssetLanguage | None = None,
+    output_language: AssetLanguage = DEFAULT_ASSET_LANGUAGE,
 ) -> str:
     """Hash the exact input one character's appearance call is made from.
 
@@ -1103,17 +1095,7 @@ def character_appearance_cache_key(
     every stored appearance — which is right, since that block is what most of
     them were written from.
     """
-    language = output_language or detect_asset_language(
-        "\n".join(
-            [
-                item.name,
-                item.description,
-                *sorted(item.aliases),
-                *_appearance_quotes(item),
-                str(synopsis or ""),
-            ]
-        )
-    )
+    language = output_language
     payload = {
         "v": CHARACTER_APPEARANCE_CACHE_VERSION,
         "language": language,
@@ -1362,7 +1344,7 @@ async def enrich_character_appearances(
     cache: Any = None,
     on_log: Optional[Callable[[str], None]] = None,
     concurrency: Optional[int] = None,
-    output_language: AssetLanguage | None = None,
+    output_language: AssetLanguage = DEFAULT_ASSET_LANGUAGE,
 ) -> dict[str, CharacterAppearance]:
     """Write the creative half of a character: face, role, build, age band.
 
@@ -1383,23 +1365,7 @@ async def enrich_character_appearances(
     if not merged:
         return {}
 
-    language = output_language or detect_asset_language(
-        "\n".join(
-            [
-                str(synopsis or ""),
-                *(
-                    value
-                    for item in merged
-                    for value in [
-                        item.name,
-                        item.description,
-                        *sorted(item.aliases),
-                        *_appearance_quotes(item),
-                    ]
-                ),
-            ]
-        )
-    )
+    language = output_language
     order = [item.name for item in merged]
     keys = {
         item.name: character_appearance_cache_key(item, synopsis, language)

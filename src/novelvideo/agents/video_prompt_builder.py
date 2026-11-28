@@ -15,7 +15,7 @@ from novelvideo.utils.debug_context import (
     create_debug_context,
     validate_episode_consistency,
 )
-from novelvideo.utils.source_language import asset_language_instruction
+from novelvideo.utils.source_language import DEFAULT_ASSET_LANGUAGE, asset_language_instruction
 
 
 VIDEO_PROMPT_BUILDER_INSTRUCTIONS_EN = """# I2V Motion Director (SuperPower)
@@ -73,7 +73,7 @@ Output the motion prompt directly. No explanation. No markdown.
 """
 
 
-def create_video_prompt_builder_agent(language: str = "zh") -> Agent:
+def create_video_prompt_builder_agent(language: str = DEFAULT_ASSET_LANGUAGE) -> Agent:
     """创建视频提示词生成 Agent。"""
     from novelvideo.config import get_superpower_pydantic_model
 
@@ -114,7 +114,7 @@ class VideoPromptBuilder:
         """返回上一次生成视频提示词时使用的上下文。"""
         return self._last_context
 
-    def _get_agent(self, language: str = "zh") -> Agent:
+    def _get_agent(self, language: str = DEFAULT_ASSET_LANGUAGE) -> Agent:
         """获取指定语言的 Agent（懒加载）。"""
         if language not in self._agents:
             self._agents[language] = create_video_prompt_builder_agent(language)
@@ -134,7 +134,7 @@ class VideoPromptBuilder:
         self,
         duration: float = 5.0,
         frame_prompt: str = "",
-        language: str = "zh",
+        language: str = DEFAULT_ASSET_LANGUAGE,
         frame_image_path: Optional[str] = None,
         beat_number: int | None = None,
         episode_number: int | None = None,
@@ -278,7 +278,7 @@ class VideoPromptBuilder:
         narration,
         audio_type,
         dialogue_line,
-        language="zh",
+        language=DEFAULT_ASSET_LANGUAGE,
     ) -> str:
         """构建英文 task 模板 (SuperPower)。"""
         if language == "en":
@@ -379,7 +379,7 @@ Output the motion prompt in {output_label} directly. No explanation.
     def _fallback_build(
         self,
         duration: float,
-        language: str = "zh",
+        language: str = DEFAULT_ASSET_LANGUAGE,
     ) -> str:
         """回退方案：根据规则生成默认运动提示词。"""
         if language == "en":

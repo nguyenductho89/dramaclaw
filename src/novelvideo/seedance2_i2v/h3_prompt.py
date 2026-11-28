@@ -27,10 +27,9 @@ from novelvideo.seedance2_i2v.prompt import (
     build_seedance2_asset_fallback_manifest,
     build_seedance2_asset_manifest,
     build_text_overlay_prompt_fragment,
-    detect_seedance2_prompt_language,
     normalize_seedance2_editor_prompt,
 )
-from novelvideo.utils.source_language import AssetLanguage
+from novelvideo.utils.source_language import DEFAULT_ASSET_LANGUAGE, AssetLanguage
 
 H3_FPS = 24
 H3_MIN_SECONDS = 4
@@ -362,8 +361,7 @@ def review_h3_prompt(prompt: str, assets: list[Any] | None) -> list[dict[str, An
     return issues
 
 
-def _language_tag(beat: dict[str, Any]) -> str:
-    language: AssetLanguage = detect_seedance2_prompt_language(beat)
+def _language_tag(language: AssetLanguage) -> str:
     return "English" if language == "en" else "Chinese"
 
 
@@ -373,6 +371,7 @@ def build_h3_prompt_draft(
     beat: dict[str, Any],
     assets: list[Any] | None,
     text_overlay: dict[str, Any] | None,
+    language: AssetLanguage = DEFAULT_ASSET_LANGUAGE,
 ) -> str:
     """Structurally valid rule-based prompt; beat text is carried over untranslated."""
 
@@ -424,7 +423,7 @@ def build_h3_prompt_draft(
         shot.append(f"Motion: {motion}.")
     shot.append("The camera holds a static shot.")
     if spoken:
-        shot.append(f"The speaker (S1) says, <d>[{_language_tag(beat)}] {spoken}</d>")
+        shot.append(f"The speaker (S1) says, <d>[{_language_tag(language)}] {spoken}</d>")
     if overlay:
         shot.append(overlay)
 
@@ -517,13 +516,14 @@ async def generate_h3_prompt(
     request_params: dict[str, Any] | None = None,
     manual_prompt_reference: str = "",
     composer: Seedance2PromptComposer | None = None,
+    language: AssetLanguage = DEFAULT_ASSET_LANGUAGE,
 ) -> Seedance2PromptGeneration:
     """Generate an H3 prompt, preferring AI and falling back to the rule-based draft."""
 
     mode = _require_h3_mode(mode)
     manifest = build_h3_asset_manifest(assets)
     draft_prompt = build_h3_prompt_draft(
-        mode=mode, beat=beat, assets=assets, text_overlay=text_overlay
+        mode=mode, beat=beat, assets=assets, text_overlay=text_overlay, language=language
     )
     has_render = _has_storyboard_render(manifest)
     if not has_render and _STORYBOARD_LINE_RE.search(

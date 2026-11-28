@@ -2568,6 +2568,12 @@
     "actionsLabel": "Ações do projeto",
     "name": "Nome do projeto",
     "namePlaceholder": "Introduza o nome do seu projeto",
+    "assetLanguage": "Idioma do conteúdo",
+    "assetLanguageHint": "Idioma dos roteiros, recursos e prompts gerados. Não pode ser alterado depois.",
+    "assetLanguageOptions": {
+      "en": "Inglês",
+      "zh": "Chinês"
+    },
     "clearName": "Limpar nome do projeto",
     "nameNoChinese": "O nome do projeto não pode conter caracteres chineses.",
     "nameInvalid": "O nome do projeto só pode conter letras, números e sublinhados.",

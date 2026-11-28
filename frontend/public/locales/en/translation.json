@@ -2568,6 +2568,12 @@
     "actionsLabel": "Project actions",
     "name": "Project Name",
     "namePlaceholder": "Enter your project name",
+    "assetLanguage": "Content language",
+    "assetLanguageHint": "Language of generated scripts, assets and prompts. It cannot be changed later.",
+    "assetLanguageOptions": {
+      "en": "English",
+      "zh": "Chinese"
+    },
     "clearName": "Clear project name",
     "nameNoChinese": "Project name cannot contain Chinese characters.",
     "nameInvalid": "Project name can only contain letters, numbers, and underscores.",

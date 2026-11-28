@@ -472,9 +472,17 @@ def migrate_scene_names_cmd(
     output_dir: str = typer.Option("", "--output-dir", help="assets/scenes 所在项目目录"),
     apply: bool = typer.Option(False, "--apply", help="实际执行迁移；默认只 dry-run"),
     yes: bool = typer.Option(False, "--yes", help="确认执行 apply；必须与 --apply 同时使用"),
+    time_plates_en: bool = typer.Option(
+        False,
+        "--time-plates-en",
+        help="改为把英文项目的时间 plate 名从中文时间词改成英文（X_夜晚 -> X_night）",
+    ),
 ):
     """迁移旧项目中混入时间词的场景名。默认 dry-run，不写入。"""
-    from novelvideo.cognee.scene_name_migration import migrate_scene_names
+    from novelvideo.cognee.scene_name_migration import (
+        migrate_scene_names,
+        migrate_time_plate_names,
+    )
 
     async def do_migrate():
         db_dir, asset_dir, label = await _resolve_scene_migration_dirs(
@@ -492,7 +500,8 @@ def migrate_scene_names_cmd(
         console.print(f"  asset dir:   {asset_dir}")
         console.print(f"  mode:        {'APPLY' if apply else 'DRY-RUN'}")
 
-        report = await migrate_scene_names(
+        migrate = migrate_time_plate_names if time_plates_en else migrate_scene_names
+        report = await migrate(
             db_dir,
             asset_project_dir=asset_dir,
             dry_run=not apply,
@@ -514,6 +523,35 @@ def migrate_scene_names_cmd(
     except typer.BadParameter as exc:
         console.print(f"[red]参数错误: {exc}[/red]")
         raise typer.Exit(1)
+
+
+@app.command("set-asset-language")
+def set_asset_language_cmd(
+    language: str = typer.Argument(..., help="en 或 zh"),
+    project_id: str = typer.Option("", "--project-id", help="control-plane 项目 ID"),
+    user: str = typer.Option("", "--user", help="项目所属用户，例如 admin"),
+    project: str = typer.Option("", "--project", "-p", help="项目名，例如 tayuta"),
+    state_dir: str = typer.Option("", "--state-dir", help="project_config.json 所在目录"),
+):
+    """修正旧项目的资产语言。新项目在创建时选定；缺省值是 en。已生成的内容不会改写。"""
+    from novelvideo.utils.source_language import set_project_asset_language
+
+    async def resolve_dirs():
+        return await _resolve_scene_migration_dirs(
+            project_id=project_id,
+            user=user,
+            project=project,
+            state_dir=state_dir,
+            output_dir="",
+        )
+
+    try:
+        db_dir, _asset_dir, label = asyncio.run(resolve_dirs())
+        set_project_asset_language(db_dir, language)
+    except (typer.BadParameter, ValueError) as exc:
+        console.print(f"[red]参数错误: {exc}[/red]")
+        raise typer.Exit(1)
+    console.print(f"[green]✓ {label}: asset_language = {language}[/green]")
 
 
 @app.command("repair-asset-names")

@@ -38,6 +38,11 @@ from novelvideo.seedance2_i2v.voice_clone import (
     resolve_character_voice,
 )
 from novelvideo.utils.path_resolver import PathResolver
+from novelvideo.utils.source_language import (
+    DEFAULT_ASSET_LANGUAGE,
+    AssetLanguage,
+    project_asset_language,
+)
 from novelvideo.utils.path_resolver import canonical_scene_master_path
 from novelvideo.utils.path_resolver import canonical_prop_reference_path
 
@@ -328,7 +333,64 @@ def _scene_asset_names(project_output: Path) -> set[str]:
     return {path.name for path in scenes_dir.iterdir() if path.is_dir()}
 
 
-def _beat_scene_label(project_output: Path, beat: dict[str, Any]) -> str:
+# Reference names and hints shown on the Shots / H3 Shots tiles and passed to the prompt
+# writer as asset titles, so they follow the project's asset language. ``reference_label``
+# values (图片1 / 音频1) are not here: they are protocol tokens that prompts are parsed for.
+_ASSET_TEXT: dict[str, dict[str, str]] = {
+    "zh": {
+        "unknown_scene": "未识别场景",
+        "audio_trim": "当前 {duration:.1f} 秒，建议裁剪到 3-5 秒。",
+        "voice": "{name}声线",
+        "narrator_voice": "项目解说声线",
+        "note_separator": "；",
+        "first_frame": "首帧 render · Beat {beat}",
+        "last_frame": "尾帧 render · Beat {beat}",
+        "current_frame": "当前 render · Beat {beat}",
+        "first_frame_note": "首帧模式只发送这一张首帧图，不混用参考图。",
+        "current_frame_note": "多参考模式下作为参考图发送，不作为严格首帧。",
+        "identity_note": "有图时作为角色身份图保持一致；无图时使用身份提示词生成造型。",
+        "global_prop": "全局道具",
+        "episode_prop": "剧集道具",
+        "global_prop_note": "全局道具有图时作为参考保持造型、材质和细节一致；无图时使用道具提示词约束。",
+        "episode_prop_note": "剧集道具使用道具提示词约束造型、材质和细节。",
+        "scene": "场景锚点",
+        "scene_note": "用于约束场景结构、材质和空间关系。",
+        "dialogue_voice_note": "Seedance 2.0 多参考模式只发送角色参考声线，不预生成台词音频。",
+        "narration_voice_note": "Seedance 2.0 解说只发送参考声线，不预生成解说音频。",
+    },
+    "en": {
+        "unknown_scene": "Unidentified scene",
+        "audio_trim": "Currently {duration:.1f}s; trimming to 3-5s is recommended.",
+        "voice": "{name} voice",
+        "narrator_voice": "Project narrator voice",
+        "note_separator": "; ",
+        "first_frame": "First frame render · Beat {beat}",
+        "last_frame": "Last frame render · Beat {beat}",
+        "current_frame": "Current render · Beat {beat}",
+        "first_frame_note": "First-frame mode sends only this frame, with no other reference images.",
+        "current_frame_note": "Sent as a reference image in multi-reference mode, not as a strict first frame.",
+        "identity_note": "The identity image keeps the character consistent when present; otherwise the identity prompt defines the look.",
+        "global_prop": "Global prop",
+        "episode_prop": "Episode prop",
+        "global_prop_note": "A global prop image keeps shape, material and detail consistent; without one the prop prompt constrains them.",
+        "episode_prop_note": "The prop prompt constrains the shape, material and detail of an episode prop.",
+        "scene": "Scene anchor",
+        "scene_note": "Constrains the scene's structure, materials and spatial relations.",
+        "dialogue_voice_note": "Seedance 2.0 multi-reference mode sends only the character's reference voice; dialogue audio is not pre-generated.",
+        "narration_voice_note": "Seedance 2.0 narration sends only the reference voice; narration audio is not pre-generated.",
+    },
+}
+
+
+def seedance2_asset_text(key: str, language: AssetLanguage, **values: Any) -> str:
+    return _ASSET_TEXT[language][key].format(**values)
+
+
+def _beat_scene_label(
+    project_output: Path,
+    beat: dict[str, Any],
+    language: AssetLanguage = DEFAULT_ASSET_LANGUAGE,
+) -> str:
     scene_ref = beat_scene_ref(beat)
     if scene_ref:
         scene_name, _time_baked = resolve_scene_plate(
@@ -341,15 +403,20 @@ def _beat_scene_label(project_output: Path, beat: dict[str, Any]) -> str:
     location = _text(beat.get("location"))
     if location:
         return location
-    return _text(beat.get("scene_description")).split("，", 1)[0] or "未识别场景"
+    first_clause = _text(beat.get("scene_description")).split("，", 1)[0]
+    return first_clause or seedance2_asset_text("unknown_scene", language)
 
 
 def _scene_asset_path(project_output: Path, beat: dict[str, Any]) -> Path:
     return _beat_scene_asset(project_output, beat)[1]
 
 
-def _beat_scene_asset(project_output: Path, beat: dict[str, Any]) -> tuple[str, Path]:
-    scene_label = _beat_scene_label(project_output, beat)
+def _beat_scene_asset(
+    project_output: Path,
+    beat: dict[str, Any],
+    language: AssetLanguage = DEFAULT_ASSET_LANGUAGE,
+) -> tuple[str, Path]:
+    scene_label = _beat_scene_label(project_output, beat, language)
     scene_path = canonical_scene_master_path(project_output, scene_label)
     if scene_path.exists():
         return scene_label, scene_path
@@ -426,15 +493,17 @@ def validate_seedance2_reference_image(path: Path) -> str:
     return ""
 
 
-def validate_seedance2_reference_audio(path: Path) -> tuple[str, str]:
+def validate_seedance2_reference_audio(
+    path: Path, language: AssetLanguage = DEFAULT_ASSET_LANGUAGE
+) -> tuple[str, str]:
     try:
         duration = probe_voice_sample_duration_seconds(path)
     except ValueError:
         return "", ""
     if duration < MIN_SEEDANCE2_VOICE_REFERENCE_SECONDS:
-        return "", f"当前 {duration:.1f} 秒，建议裁剪到 3-5 秒。"
+        return "", seedance2_asset_text("audio_trim", language, duration=duration)
     if duration > MAX_SEEDANCE2_VOICE_REFERENCE_SECONDS:
-        return "", f"当前 {duration:.1f} 秒，建议裁剪到 3-5 秒。"
+        return "", seedance2_asset_text("audio_trim", language, duration=duration)
     return "", ""
 
 
@@ -667,12 +736,15 @@ def _identity_for_speaker(speaker: str, character: Any, beat: dict[str, Any]):
     return None
 
 
-def _voice_asset_label(character: Any, identity: Any | None) -> str:
+def _voice_asset_label(
+    character: Any,
+    identity: Any | None,
+    language: AssetLanguage = DEFAULT_ASSET_LANGUAGE,
+) -> str:
     character_name = _text(getattr(character, "name", ""))
     identity_name = _text(getattr(identity, "identity_name", "")) if identity is not None else ""
-    if identity_name:
-        return f"{character_name} · {identity_name}声线"
-    return f"{character_name}声线"
+    name = f"{character_name} · {identity_name}" if identity_name else character_name
+    return seedance2_asset_text("voice", language, name=name)
 
 
 def _voice_asset_key(character: Any, identity: Any | None) -> str:
@@ -741,6 +813,7 @@ def _dialogue_voice_assets(
     project_output: Path,
     beat: dict[str, Any],
     characters: list[Any],
+    language: AssetLanguage = DEFAULT_ASSET_LANGUAGE,
 ) -> list[dict[str, Any]]:
     refs: list[dict[str, Any]] = []
     seen: set[str] = set()
@@ -766,7 +839,7 @@ def _dialogue_voice_assets(
             refs.append(
                 {
                     "key": key,
-                    "label": f"{display_name}声线",
+                    "label": seedance2_asset_text("voice", language, name=display_name),
                     "path": missing_path,
                     "identity_id": _text(speaker) or display_name,
                 }
@@ -782,7 +855,7 @@ def _dialogue_voice_assets(
         refs.append(
             {
                 "key": key,
-                "label": _voice_asset_label(character, identity),
+                "label": _voice_asset_label(character, identity, language),
                 "path": _resolve_voice_path(project_output, character, identity),
                 "identity_id": identity_id,
             }
@@ -796,6 +869,7 @@ def _narration_voice_asset(
     characters: list[Any],
     state_dir: str | Path,
 ) -> dict[str, Any]:
+    language = project_asset_language(state_dir)
     try:
         style = load_effective_narration_style_for_voice_from_state_dir(state_dir)
     except Exception:
@@ -808,7 +882,7 @@ def _narration_voice_asset(
             identity = identities[0] if identities else None
             return {
                 "key": _voice_asset_key(protagonist, identity),
-                "label": _voice_asset_label(protagonist, identity),
+                "label": _voice_asset_label(protagonist, identity, language),
                 "path": _resolve_voice_path(project_output, protagonist, identity),
                 "identity_id": _voice_identity_id(protagonist, identity),
             }
@@ -825,7 +899,7 @@ def _narration_voice_asset(
     )
     return {
         "key": "voice:narrator",
-        "label": "项目解说声线",
+        "label": seedance2_asset_text("narrator_voice", language),
         "path": path,
         "identity_id": NARRATOR_SPEAKER,
     }
@@ -854,6 +928,10 @@ def build_seedance2_project_assets(
     assets: list[Seedance2ResolvedAsset] = []
     next_image_number = 1
     next_audio_number = 1
+    language = project_asset_language(state_dir)
+
+    def text(key: str, **values: Any) -> str:
+        return seedance2_asset_text(key, language, **values)
 
     def add_image(
         *,
@@ -879,7 +957,7 @@ def build_seedance2_project_assets(
             next_image_number += 1
         reference_label = f"图片{image_number}" if image_number else "未发送"
         asset_note = (
-            f"{note}；{validation_error}"
+            f"{note}{text('note_separator')}{validation_error}"
             if validation_error and note
             else (validation_error or note)
         )
@@ -919,13 +997,15 @@ def build_seedance2_project_assets(
         validation_error = ""
         validation_note = ""
         if exists and selected:
-            validation_error, validation_note = validate_seedance2_reference_audio(path)
+            validation_error, validation_note = validate_seedance2_reference_audio(path, language)
         use = selected and exists and not validation_error
         audio_number = next_audio_number if use else None
         if audio_number:
             next_audio_number += 1
         asset_note = (
-            f"{note}；{validation_note}" if validation_note and note else (validation_note or note)
+            f"{note}{text('note_separator')}{validation_note}"
+            if validation_note and note
+            else (validation_note or note)
         )
         assets.append(
             Seedance2ResolvedAsset(
@@ -957,11 +1037,11 @@ def build_seedance2_project_assets(
     if mode == Seedance2I2VMode.FIRST_FRAME:
         add_image(
             key="first_frame",
-            label=f"首帧 render · Beat {beat_num}",
+            label=text("first_frame", beat=beat_num),
             path=first_frame_path,
             selected=True,
             request_field="image_url",
-            note="首帧模式只发送这一张首帧图，不混用参考图。",
+            note=text("first_frame_note"),
             crop_source_path=first_frame_source,
         )
         return assets
@@ -979,7 +1059,7 @@ def build_seedance2_project_assets(
         )
         add_image(
             key="first_frame",
-            label=f"首帧 render · Beat {beat_num}",
+            label=text("first_frame", beat=beat_num),
             path=first_frame_path,
             selected=True,
             request_field="first_frame_image",
@@ -987,7 +1067,7 @@ def build_seedance2_project_assets(
         )
         add_image(
             key="last_frame",
-            label=f"尾帧 render · Beat {next_beat_num or beat_num + 1}",
+            label=text("last_frame", beat=next_beat_num or beat_num + 1),
             path=last_frame_path,
             selected=bool(next_beat_num),
             request_field="last_frame_image",
@@ -998,11 +1078,11 @@ def build_seedance2_project_assets(
     if include_render:
         add_image(
             key="first_frame",
-            label=f"当前 render · Beat {beat_num}",
+            label=text("current_frame", beat=beat_num),
             path=first_frame_path,
             selected=True,
             request_field="reference_images",
-            note="多参考模式下作为参考图发送，不作为严格首帧。",
+            note=text("current_frame_note"),
         )
 
     resolved_characters = (
@@ -1032,7 +1112,7 @@ def build_seedance2_project_assets(
             path=_identity_asset_path(project_output, identity_id),
             selected=True,
             request_field="reference_images",
-            note="有图时作为角色身份图保持一致；无图时使用身份提示词生成造型。",
+            note=text("identity_note"),
             identity_id=identity_id,
             required=False,
             fallback_text=identity_fallback,
@@ -1059,12 +1139,8 @@ def build_seedance2_project_assets(
         )
         prop_scope = "global" if is_global_prop else "episode"
         prop_fallback = _prop_prompt_fallback(prop_id, resolved_props, menu_meta)
-        label_prefix = "全局道具" if prop_scope == "global" else "剧集道具"
-        note = (
-            "全局道具有图时作为参考保持造型、材质和细节一致；无图时使用道具提示词约束。"
-            if prop_scope == "global"
-            else "剧集道具使用道具提示词约束造型、材质和细节。"
-        )
+        label_prefix = text(f"{prop_scope}_prop")
+        note = text(f"{prop_scope}_prop_note")
         add_image(
             key=f"prop:{prop_id}",
             label=f"{label_prefix} · {prop_id}",
@@ -1078,14 +1154,14 @@ def build_seedance2_project_assets(
             fallback_text=prop_fallback,
         )
 
-    location, scene_path = _beat_scene_asset(project_output, beat)
+    location, scene_path = _beat_scene_asset(project_output, beat, language)
     add_image(
         key=f"scene:{location}",
-        label=f"场景锚点 · {location}",
+        label=f"{text('scene')} · {location}",
         path=scene_path,
         selected=True,
         request_field="reference_images",
-        note="用于约束场景结构、材质和空间关系。",
+        note=text("scene_note"),
     )
 
     audio_type = normalize_seedance2_audio_type(beat)
@@ -1094,6 +1170,7 @@ def build_seedance2_project_assets(
             project_output=project_output,
             beat=beat,
             characters=resolved_characters,
+            language=language,
         ):
             add_audio(
                 key=voice_asset["key"],
@@ -1101,7 +1178,7 @@ def build_seedance2_project_assets(
                 path=voice_asset["path"],
                 selected=True,
                 identity_id=voice_asset["identity_id"],
-                note="Seedance 2.0 多参考模式只发送角色参考声线，不预生成台词音频。",
+                note=text("dialogue_voice_note"),
             )
     elif audio_type == "narration":
         voice_asset = _narration_voice_asset(
@@ -1115,7 +1192,7 @@ def build_seedance2_project_assets(
             path=voice_asset["path"],
             selected=True,
             identity_id=voice_asset["identity_id"],
-            note="Seedance 2.0 解说只发送参考声线，不预生成解说音频。",
+            note=text("narration_voice_note"),
         )
 
     return assets

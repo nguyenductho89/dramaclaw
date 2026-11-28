@@ -12,6 +12,7 @@ from novelvideo.model_gateway_runtime import model_gateway_scope_for_runner
 from novelvideo.task_backend.cancel import await_envelope_with_cancel_watch
 from novelvideo.task_backend.registry import register_project_task_runner
 from novelvideo.task_state import get_task_manager
+from novelvideo.utils.source_language import project_asset_language
 
 
 def run_script_writer(
@@ -48,7 +49,7 @@ async def _run_beat_video_prompt(
     episode = int(envelope.get("episode") or payload.get("episode") or 0)
     beat_num = int(envelope.get("beat_num") or payload.get("beat_num") or 0)
     output_dir = str(payload.get("output_dir") or ctx.output_dir)
-    language = str(payload.get("language") or "en")
+    language = str(payload.get("language") or project_asset_language(ctx.state_dir))
     manager = get_task_manager()
 
     def update_progress(progress: float, task: MessageLike) -> None:

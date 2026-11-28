@@ -17,9 +17,9 @@ from novelvideo.models import (
 from novelvideo.seedance2_i2v.models import Seedance2I2VMode
 from novelvideo.seedance2_i2v.spoken_dialogue import speaker_display_name
 from novelvideo.utils.source_language import (
+    DEFAULT_ASSET_LANGUAGE,
     AssetLanguage,
     asset_language_instruction,
-    detect_asset_language,
 )
 
 
@@ -73,24 +73,6 @@ Duration, resolution, aspect ratio, and human-review controls are API parameters
 Output the final prompt directly without explaining the generation process."""
 
 
-def detect_seedance2_prompt_language(beat: dict[str, Any]) -> AssetLanguage:
-    """Detect language from authored script fields, excluding generated prompts."""
-    source = "\n".join(
-        _text(beat.get(field))
-        for field in (
-            "visual_description",
-            "synopsis",
-            "dialogue",
-            "narration_segment",
-            "narration",
-            "scene_description",
-            "props_description",
-        )
-        if _text(beat.get(field))
-    )
-    return detect_asset_language(source)
-
-
 def _text(value: Any) -> str:
     return str(value or "").strip()
 
@@ -109,14 +91,14 @@ def _beat_spoken_text(beat: dict[str, Any]) -> str:
 
 
 def _beat_spoken_label(
-    beat: dict[str, Any], language: AssetLanguage = "zh"
+    beat: dict[str, Any], language: AssetLanguage = DEFAULT_ASSET_LANGUAGE
 ) -> str:
     if _text(beat.get("audio_type")) == "dialogue" or _text(beat.get("dialogue")):
         return "Dialogue" if language == "en" else "台词"
     return "Narration" if language == "en" else "旁白/解说"
 
 
-def _clean_sentence(value: Any, language: AssetLanguage = "zh") -> str:
+def _clean_sentence(value: Any, language: AssetLanguage = DEFAULT_ASSET_LANGUAGE) -> str:
     text = _sentence_text(value)
     if not text:
         return ""
@@ -157,7 +139,7 @@ def _desired_scene_ref_label(beat: dict[str, Any]) -> str:
 def _scene_ref_label(
     beat: dict[str, Any],
     assets: list[Any] | None = None,
-    language: AssetLanguage = "zh",
+    language: AssetLanguage = DEFAULT_ASSET_LANGUAGE,
 ) -> str:
     asset_label = _selected_scene_asset_label(assets)
     desired_label = _desired_scene_ref_label(beat)
@@ -203,10 +185,10 @@ def normalize_seedance2_editor_prompt(prompt: str) -> str:
 def _guidance_matches_language(guidance: str, language: AssetLanguage) -> bool:
     """Keep rule-based fallbacks inside the supported output-language contract."""
 
-    if language == "en":
-        return detect_asset_language(guidance) == "en"
     if re.search(r"[\u3040-\u30ff\uac00-\ud7af]", guidance):
         return False
+    if language == "en":
+        return not re.search(r"[\u3400-\u4dbf\u4e00-\u9fff]", guidance)
     return bool(re.search(r"[\u3400-\u4dbf\u4e00-\u9fff]", guidance))
 
 
@@ -350,7 +332,7 @@ def _prop_prompt_fallbacks(assets: list[Any] | None) -> dict[str, str]:
 def _beat_spoken_prompt_fragment(
     beat: dict[str, Any],
     assets: list[Any] | None,
-    language: AssetLanguage = "zh",
+    language: AssetLanguage = DEFAULT_ASSET_LANGUAGE,
 ) -> str:
     spoken = _beat_spoken_text(beat)
     if not spoken:
@@ -406,7 +388,7 @@ def _beat_spoken_prompt_fragment(
 def _text_with_identity_references(
     text: Any,
     assets: list[Any] | None,
-    language: AssetLanguage = "zh",
+    language: AssetLanguage = DEFAULT_ASSET_LANGUAGE,
 ) -> str:
     identity_labels = _identity_reference_labels(assets)
     identity_fallbacks = _identity_prompt_fallbacks(assets)
@@ -432,7 +414,7 @@ def _text_with_identity_references(
 def _text_with_asset_references(
     text: Any,
     assets: list[Any] | None,
-    language: AssetLanguage = "zh",
+    language: AssetLanguage = DEFAULT_ASSET_LANGUAGE,
 ) -> str:
     prop_labels = _prop_reference_labels(assets)
     prop_fallbacks = _prop_prompt_fallbacks(assets)
@@ -459,7 +441,7 @@ def _reference_sentence_for_assets(
     *,
     mode: Seedance2I2VMode | str,
     assets: list[Any] | None,
-    language: AssetLanguage = "zh",
+    language: AssetLanguage = DEFAULT_ASSET_LANGUAGE,
 ) -> str:
     mode = Seedance2I2VMode(mode)
     image_parts: list[str] = []
@@ -591,7 +573,7 @@ def _reference_sentence_for_assets(
 
 def build_text_overlay_prompt_fragment(
     text_overlay: dict[str, Any] | None,
-    language: AssetLanguage = "zh",
+    language: AssetLanguage = DEFAULT_ASSET_LANGUAGE,
 ) -> str:
     overlay = text_overlay or {}
     if not overlay.get("enabled"):
@@ -645,7 +627,7 @@ def build_seedance2_prompt_draft(
     prompt_guidance: str = "",
     prompt_guidance_template_keys: list[str] | tuple[str, ...] | None = None,
     manual_prompt_reference: str = "",
-    language: AssetLanguage = "zh",
+    language: AssetLanguage = DEFAULT_ASSET_LANGUAGE,
 ) -> str:
     """Build a model-facing draft prompt without API-only video params."""
 
@@ -733,7 +715,7 @@ def compute_seedance2_prompt_inputs_hash(
     text_overlay: dict[str, Any] | None,
     prompt_guidance: str = "",
     prompt_guidance_template_keys: list[str] | tuple[str, ...] | None = None,
-    language: AssetLanguage = "zh",
+    language: AssetLanguage = DEFAULT_ASSET_LANGUAGE,
 ) -> str:
     """Hash only prompt-relevant inputs, excluding request-only video controls."""
 
@@ -776,7 +758,7 @@ def build_seedance2_prompt_composer_task(
     draft_prompt: str,
     request_params: dict[str, Any] | None = None,
     manual_prompt_reference: str = "",
-    language: AssetLanguage = "zh",
+    language: AssetLanguage = DEFAULT_ASSET_LANGUAGE,
 ) -> str:
     payload = {
         "mode": Seedance2I2VMode(mode).value,
@@ -840,7 +822,7 @@ def build_seedance2_prompt_composer_task(
     )
 
 
-def create_seedance2_prompt_composer_agent(language: AssetLanguage = "zh"):
+def create_seedance2_prompt_composer_agent(language: AssetLanguage = DEFAULT_ASSET_LANGUAGE):
     from pydantic_ai import Agent
 
     from novelvideo.config import get_newapi_text_pydantic_model
@@ -870,7 +852,7 @@ async def compose_seedance2_prompt_with_agent(
     draft_prompt: str,
     request_params: dict[str, Any] | None = None,
     manual_prompt_reference: str = "",
-    language: AssetLanguage = "zh",
+    language: AssetLanguage = DEFAULT_ASSET_LANGUAGE,
 ) -> str:
     agent = create_seedance2_prompt_composer_agent(language)
     result = await agent.run(
@@ -903,7 +885,7 @@ async def generate_seedance2_prompt(
     request_params: dict[str, Any] | None = None,
     manual_prompt_reference: str = "",
     composer: Seedance2PromptComposer | None = None,
-    language: AssetLanguage = "zh",
+    language: AssetLanguage = DEFAULT_ASSET_LANGUAGE,
 ) -> Seedance2PromptGeneration:
     """Generate a Seedance 2.0 prompt, preferring AI and falling back to rules."""
 

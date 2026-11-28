@@ -13,7 +13,7 @@ from pydantic_ai import Agent, BinaryContent
 from novelvideo.utils.reference_image import encode_reference_image_file
 
 from novelvideo.brainclaw_contract import BrainClawProfile
-from novelvideo.utils.source_language import asset_language_instruction
+from novelvideo.utils.source_language import DEFAULT_ASSET_LANGUAGE, asset_language_instruction
 
 
 class ReviewResult(BaseModel):
@@ -176,7 +176,7 @@ def create_global_video_reviewer_agent(language: str = "en") -> Agent:
     )
 
 
-def create_global_video_optimizer_agent(language: str = "zh") -> Agent:
+def create_global_video_optimizer_agent(language: str = DEFAULT_ASSET_LANGUAGE) -> Agent:
     """创建全局视频优化 Agent。"""
     from novelvideo.config import get_newapi_text_pydantic_model
 
@@ -208,7 +208,7 @@ class GlobalVideoPromptOptimizer:
         self._agents: dict[str, Agent] = {}
         self._review_agent: Optional[Agent] = None
 
-    def _get_agent(self, language: str = "zh") -> Agent:
+    def _get_agent(self, language: str = DEFAULT_ASSET_LANGUAGE) -> Agent:
         if language not in self._agents:
             self._agents[language] = create_global_video_optimizer_agent(language)
         return self._agents[language]
@@ -245,7 +245,7 @@ class GlobalVideoPromptOptimizer:
         beat: dict,
         sketch_image_path: str,
         character_color_map: dict,
-        language: str = "zh",
+        language: str = DEFAULT_ASSET_LANGUAGE,
         prev_beat: dict | None = None,
         next_beat: dict | None = None,
         prev_prompt: str | None = None,
@@ -407,7 +407,7 @@ Output the {output_label} motion prompt directly. No JSON, explanation, or markd
         sketch_image_paths: list[str],
         character_color_map: dict,
         total_beats: int,
-        language: str = "zh",
+        language: str = DEFAULT_ASSET_LANGUAGE,
         beats: list[dict] | None = None,
         sketches_dir: str | None = None,
         progress_callback=None,

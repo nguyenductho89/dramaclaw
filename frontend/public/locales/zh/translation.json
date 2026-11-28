@@ -2568,6 +2568,12 @@
     "actionsLabel": "项目操作",
     "name": "项目名称",
     "namePlaceholder": "请输入你的项目名称",
+    "assetLanguage": "内容语言",
+    "assetLanguageHint": "生成的剧本、资产和提示词使用的语言。创建后无法修改。",
+    "assetLanguageOptions": {
+      "en": "英文",
+      "zh": "中文"
+    },
     "clearName": "清空项目名称",
     "nameNoChinese": "项目名称不能包含中文字符",
     "nameInvalid": "项目名称只能包含英文字母、数字和下划线",

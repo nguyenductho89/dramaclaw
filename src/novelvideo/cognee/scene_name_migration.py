@@ -10,6 +10,10 @@ import aiosqlite
 from pydantic import BaseModel, Field
 
 from novelvideo.cognee.screenplay_normalizer import clean_scene_name_and_time
+from novelvideo.director_world import stage_manifest
+from novelvideo.time_of_day import CANONICAL_TIME_OF_DAY_VALUES, time_of_day_label
+from novelvideo.utils.derived_scenes import compose_derived_scene_name
+from novelvideo.utils.source_language import project_asset_language
 
 
 class SceneNameMigrationReport(BaseModel):
@@ -97,6 +101,154 @@ async def migrate_scene_names(
             await db.rollback()
             raise
     return report
+
+
+async def migrate_time_plate_names(
+    project_dir: Path | str,
+    *,
+    asset_project_dir: Path | str | None = None,
+    dry_run: bool = True,
+) -> SceneNameMigrationReport:
+    """Rename ``X_夜晚`` plates to ``X_night`` in a project whose asset language is English.
+
+    The stored ``time_of_day`` value stays canonical Chinese; only the name, the beat
+    references to it and its asset folders change. Old folders are kept.
+    """
+    project_path = Path(project_dir)
+    asset_project_path = Path(asset_project_dir) if asset_project_dir is not None else project_path
+    db_path = project_path / "data.db"
+    report = SceneNameMigrationReport(dry_run=dry_run)
+
+    if not db_path.exists():
+        report.warnings.append(f"data.db not found: {db_path}")
+        return report
+    if project_asset_language(project_path) != "en":
+        report.warnings.append("project asset language is not English; plates keep their names")
+        return report
+
+    async with aiosqlite.connect(db_path) as db:
+        db.row_factory = aiosqlite.Row
+        if not await _schema_is_valid(db, report):
+            return report
+        scenes = await _load_scenes(db, report)
+        migrations = _plan_time_plate_renames(scenes, report)
+        await _plan_beat_updates(db, migrations, report)
+
+    _plan_asset_copies(asset_project_path, migrations, report)
+    _plan_director_world_copies(asset_project_path, migrations, report)
+    if not migrations or dry_run:
+        return report
+
+    if not _copy_scene_assets(report):
+        return report
+    _rewrite_copied_manifests(asset_project_path, migrations)
+
+    report.backup_path = str(_backup_database(db_path))
+    async with aiosqlite.connect(db_path) as db:
+        db.row_factory = aiosqlite.Row
+        await db.execute("BEGIN")
+        try:
+            for migration in migrations:
+                scene = migration["old_scene"]
+                await db.execute(
+                    """
+                    UPDATE scenes
+                    SET name = ?, spatial_layout_image = ?, updated_at = datetime('now')
+                    WHERE name = ?
+                    """,
+                    (
+                        migration["canonical"],
+                        _rewrite_scene_asset_path(
+                            scene.get("spatial_layout_image") or "",
+                            migration["old"],
+                            migration["canonical"],
+                        ),
+                        migration["old"],
+                    ),
+                )
+            await _apply_beat_updates(db, migrations)
+            await db.commit()
+        except Exception:
+            await db.rollback()
+            raise
+    return report
+
+
+def _plan_time_plate_renames(
+    scenes: dict[str, dict[str, Any]],
+    report: SceneNameMigrationReport,
+) -> list[dict[str, Any]]:
+    migrations: list[dict[str, Any]] = []
+    for name, scene in sorted(scenes.items()):
+        base_id = str(scene.get("base_scene_id") or "").strip()
+        scene_time = str(scene.get("time_of_day") or "").strip()
+        if not base_id or scene_time not in CANONICAL_TIME_OF_DAY_VALUES:
+            continue
+        stem = base_id
+        variant = str(scene.get("variant_id") or "").strip()
+        if variant:
+            stem = compose_derived_scene_name(stem, variant)
+        if name != compose_derived_scene_name(stem, scene_time):
+            continue
+        if base_id not in scenes:
+            report.warnings.append(f"base scene missing, plate not renamed: {name}")
+            continue
+        target = compose_derived_scene_name(stem, time_of_day_label(scene_time, "en"))
+        if target in scenes:
+            report.warnings.append(f"target scene already exists, not renamed: {name} -> {target}")
+            continue
+        if not _is_safe_scene_name(name) or not _is_safe_scene_name(target):
+            report.warnings.append(f"unsafe scene name skipped: {name}")
+            continue
+        report.scene_renames.append({"old": name, "canonical": target})
+        migrations.append({"old": name, "canonical": target, "old_scene": scene})
+    return migrations
+
+
+def _plan_director_world_copies(
+    project_path: Path,
+    migrations: list[dict[str, Any]],
+    report: SceneNameMigrationReport,
+) -> None:
+    worlds_dir = (project_path / "director_worlds").resolve()
+    for migration in migrations:
+        old_root = stage_manifest.stage_dir(project_path, migration["old"]).parent.resolve()
+        new_root = stage_manifest.stage_dir(project_path, migration["canonical"]).parent.resolve()
+        if not old_root.is_dir() or not _is_within(old_root, worlds_dir):
+            continue
+        for source in sorted(old_root.rglob("*")):
+            resolved_source = source.resolve()
+            if not resolved_source.is_file() or not _is_within(resolved_source, old_root):
+                continue
+            destination = new_root / source.relative_to(old_root)
+            if destination.exists():
+                _record_skipped_asset_copy(
+                    report, resolved_source, destination, "destination exists"
+                )
+                continue
+            report.asset_copies.append(
+                {"source": str(resolved_source), "destination": str(destination)}
+            )
+
+
+def _rewrite_copied_manifests(project_path: Path, migrations: list[dict[str, Any]]) -> None:
+    """Point each copied director-world manifest at the renamed scene."""
+    for migration in migrations:
+        old, new = migration["old"], migration["canonical"]
+        manifest = stage_manifest.load_manifest(project_path, new)
+        if manifest is None:
+            continue
+        old_world = stage_manifest.stage_dir(project_path, old).parent.name
+        new_world = stage_manifest.stage_dir(project_path, new).parent.name
+        raw = json.dumps(manifest, ensure_ascii=False)
+        for old_prefix, new_prefix in (
+            (f"assets/scenes/{old}/", f"assets/scenes/{new}/"),
+            (f"director_worlds/{old_world}/", f"director_worlds/{new_world}/"),
+        ):
+            raw = raw.replace(old_prefix, new_prefix)
+        manifest = json.loads(raw)
+        manifest["scene_id"] = new
+        stage_manifest.save_manifest(project_path, new, manifest)
 
 
 async def _schema_is_valid(

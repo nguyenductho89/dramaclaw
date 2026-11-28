@@ -24,6 +24,7 @@ from novelvideo.seedance2_i2v.models import (
 )
 from novelvideo.seedance2_i2v.spoken_dialogue import required_seedance2_dialogue_texts
 from novelvideo.seedance2_i2v.voice_clone import normalize_seedance2_audio_type
+from novelvideo.utils.source_language import AssetLanguage, project_asset_language
 
 SEEDANCE2_HUIMENG_BACKEND = "huimeng_seedance-2.0-fast"
 SEEDANCE2_NEWAPI_BACKEND = "newapi_seedance-2.0-fast"
@@ -93,6 +94,14 @@ def _references_from_paths(
     for index, path in enumerate(audio_paths, start=1):
         references.append(ShotReference("audio", path, f"音频{index}"))
     return references
+
+
+def _prereq_label(asset: Any, language: AssetLanguage) -> str:
+    if not asset.note:
+        return asset.label
+    if language == "zh":
+        return f"{asset.label}（{asset.note}）"
+    return f"{asset.label} ({asset.note})"
 
 
 def _asset_missing_reason(asset: Seedance2ResolvedAsset) -> str:
@@ -243,7 +252,7 @@ def collect_seedance2_video_prereq_errors(
                 Seedance2VideoPrereqError(
                     beat_number=beat_number,
                     key=asset.key,
-                    label=f"{asset.label}（{asset.note}）" if asset.note else asset.label,
+                    label=_prereq_label(asset, project_asset_language(state_dir)),
                     media_type=asset.media_type,
                     path=str(asset.path),
                     reason=reason,

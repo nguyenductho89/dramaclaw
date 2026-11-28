@@ -131,7 +131,7 @@ async def test_identity_attempts_ignore_hidden_staging_files(tmp_path, monkeypat
 
     async def resolve_project(*_args, **_kwargs):
         return (
-            SimpleNamespace(project_id="proj_demo"),
+            SimpleNamespace(project_id="proj_demo", state_dir="no-project-state"),
             "admin",
             "demo",
             tmp_path,
@@ -166,7 +166,7 @@ async def test_character_image_upload_encodes_off_event_loop(tmp_path, monkeypat
     from novelvideo.api.routes import characters
 
     store = _CharacterStore()
-    ctx = SimpleNamespace(project_id="proj_demo")
+    ctx = SimpleNamespace(project_id="proj_demo", state_dir="no-project-state")
 
     async def resolve_project(*_args, **_kwargs):
         return ctx, "admin", "demo", tmp_path, str(tmp_path), store
@@ -225,7 +225,7 @@ async def test_cancelled_character_image_upload_finishes_required_metadata(
     from novelvideo.api.routes import characters
 
     store = _CharacterStore()
-    ctx = SimpleNamespace(project_id="proj_demo")
+    ctx = SimpleNamespace(project_id="proj_demo", state_dir="no-project-state")
 
     async def resolve_project(*_args, **_kwargs):
         return ctx, "admin", "demo", tmp_path, str(tmp_path), store
@@ -291,7 +291,7 @@ async def test_identity_costume_delete_waits_for_upload_transaction(
     from novelvideo.api.routes import characters
 
     store = _CharacterStore()
-    ctx = SimpleNamespace(project_id="proj_demo")
+    ctx = SimpleNamespace(project_id="proj_demo", state_dir="no-project-state")
 
     async def resolve_project(*_args, **_kwargs):
         return ctx, "admin", "demo", tmp_path, str(tmp_path), store
@@ -353,7 +353,7 @@ async def test_scene_image_upload_encodes_off_event_loop(tmp_path, monkeypatch):
     from novelvideo.api.routes import scenes
 
     store = _SceneStore()
-    ctx = SimpleNamespace(project_id="proj_demo")
+    ctx = SimpleNamespace(project_id="proj_demo", state_dir="no-project-state")
 
     async def resolve_project(*_args, **_kwargs):
         return ctx, "admin", "demo", tmp_path, str(tmp_path), store
@@ -394,7 +394,7 @@ async def test_cancelled_scene_master_finishes_asset_version_metadata(
     from novelvideo.api.routes import scenes
 
     store = _SceneStore()
-    ctx = SimpleNamespace(project_id="proj_demo")
+    ctx = SimpleNamespace(project_id="proj_demo", state_dir="no-project-state")
 
     async def resolve_project(*_args, **_kwargs):
         return ctx, "admin", "demo", tmp_path, str(tmp_path), store
@@ -438,7 +438,7 @@ async def test_scene_master_delete_waits_for_upload_transaction(tmp_path, monkey
     from novelvideo.api.routes import scenes
 
     store = _SceneStore()
-    ctx = SimpleNamespace(project_id="proj_demo")
+    ctx = SimpleNamespace(project_id="proj_demo", state_dir="no-project-state")
 
     async def resolve_project(*_args, **_kwargs):
         return ctx, "admin", "demo", tmp_path, str(tmp_path), store
@@ -487,7 +487,7 @@ async def test_cancelled_scene_pano_keeps_published_manifest(tmp_path, monkeypat
     from novelvideo.director_world import stage_manifest
 
     store = _SceneStore()
-    ctx = SimpleNamespace(project_id="proj_demo")
+    ctx = SimpleNamespace(project_id="proj_demo", state_dir="no-project-state")
 
     async def resolve_project(*_args, **_kwargs):
         return ctx, "admin", "demo", tmp_path, str(tmp_path), store
@@ -540,7 +540,7 @@ async def test_same_scene_pano_and_custom_uploads_serialize_manifest_transaction
     from novelvideo.director_world import stage_manifest
 
     store = _SceneStore()
-    ctx = SimpleNamespace(project_id="proj_demo")
+    ctx = SimpleNamespace(project_id="proj_demo", state_dir="no-project-state")
 
     async def resolve_project(*_args, **_kwargs):
         return ctx, "admin", "demo", tmp_path, str(tmp_path), store
@@ -613,7 +613,7 @@ async def test_different_scene_upload_locks_allow_parallel_pano_work(
     from novelvideo.api.routes import scenes
 
     store = _SceneStore(("Hall", "Yard"))
-    ctx = SimpleNamespace(project_id="proj_demo")
+    ctx = SimpleNamespace(project_id="proj_demo", state_dir="no-project-state")
 
     async def resolve_project(*_args, **_kwargs):
         return ctx, "admin", "demo", tmp_path, str(tmp_path), store
@@ -658,7 +658,7 @@ async def test_cancellation_while_waiting_for_scene_lock_does_not_start_upload(
     from novelvideo.api.routes import scenes
 
     store = _SceneStore()
-    ctx = SimpleNamespace(project_id="proj_demo")
+    ctx = SimpleNamespace(project_id="proj_demo", state_dir="no-project-state")
 
     async def resolve_project(*_args, **_kwargs):
         return ctx, "admin", "demo", tmp_path, str(tmp_path), store
@@ -717,7 +717,7 @@ async def test_scene_delete_waits_for_matching_upload_transaction(
     from novelvideo.director_world import stage_manifest
 
     store = _SceneStore()
-    ctx = SimpleNamespace(project_id="proj_demo")
+    ctx = SimpleNamespace(project_id="proj_demo", state_dir="no-project-state")
 
     async def resolve_project(*_args, **_kwargs):
         return ctx, "admin", "demo", tmp_path, str(tmp_path), store
@@ -812,7 +812,7 @@ async def test_scene_metadata_delete_does_not_wait_for_upload_capacity(
     from novelvideo.api.upload_workers import run_asset_upload_operation
 
     store = _SceneStore()
-    ctx = SimpleNamespace(project_id="proj_demo")
+    ctx = SimpleNamespace(project_id="proj_demo", state_dir="no-project-state")
 
     async def resolve_project(*_args, **_kwargs):
         return ctx, "admin", "demo", tmp_path, str(tmp_path), store
@@ -873,7 +873,7 @@ async def test_cancelled_scene_delete_waiting_for_upload_lock_does_not_delete(
     from novelvideo.director_world import stage_manifest
 
     store = _SceneStore()
-    ctx = SimpleNamespace(project_id="proj_demo")
+    ctx = SimpleNamespace(project_id="proj_demo", state_dir="no-project-state")
 
     async def resolve_project(*_args, **_kwargs):
         return ctx, "admin", "demo", tmp_path, str(tmp_path), store
@@ -929,7 +929,7 @@ async def test_scene_upload_waits_for_matching_delete_transaction(
     from novelvideo.director_world import stage_manifest
 
     store = _SceneStore()
-    ctx = SimpleNamespace(project_id="proj_demo")
+    ctx = SimpleNamespace(project_id="proj_demo", state_dir="no-project-state")
 
     async def resolve_project(*_args, **_kwargs):
         return ctx, "admin", "demo", tmp_path, str(tmp_path), store
@@ -1110,7 +1110,7 @@ async def test_custom_scene_package_staging_and_publish_run_off_event_loop(
     from novelvideo.director_world import stage_manifest
 
     store = _SceneStore()
-    ctx = SimpleNamespace(project_id="proj_demo")
+    ctx = SimpleNamespace(project_id="proj_demo", state_dir="no-project-state")
 
     async def resolve_project(*_args, **_kwargs):
         return ctx, "admin", "demo", tmp_path, str(tmp_path), store
@@ -1156,7 +1156,7 @@ async def test_custom_ply_copy_and_compression_run_in_worker(tmp_path, monkeypat
     from novelvideo.director_world import stage_manifest
 
     store = _SceneStore()
-    ctx = SimpleNamespace(project_id="proj_demo")
+    ctx = SimpleNamespace(project_id="proj_demo", state_dir="no-project-state")
 
     async def resolve_project(*_args, **_kwargs):
         return ctx, "admin", "demo", tmp_path, str(tmp_path), store
@@ -1200,7 +1200,7 @@ async def test_concurrent_ply_uploads_use_single_conversion_slot(tmp_path, monke
     from novelvideo.api.upload_workers import scene_ply_upload_limiter
 
     store = _SceneStore(("Hall", "Yard"))
-    ctx = SimpleNamespace(project_id="proj_demo")
+    ctx = SimpleNamespace(project_id="proj_demo", state_dir="no-project-state")
 
     async def resolve_project(*_args, **_kwargs):
         return ctx, "admin", "demo", tmp_path, str(tmp_path), store
@@ -1264,7 +1264,7 @@ async def test_cancelled_ply_upload_keeps_single_slot_until_worker_finishes(
     from novelvideo.api.upload_workers import scene_ply_upload_limiter
 
     store = _SceneStore(("Hall", "Yard"))
-    ctx = SimpleNamespace(project_id="proj_demo")
+    ctx = SimpleNamespace(project_id="proj_demo", state_dir="no-project-state")
 
     async def resolve_project(*_args, **_kwargs):
         return ctx, "admin", "demo", tmp_path, str(tmp_path), store
@@ -1592,7 +1592,7 @@ async def test_repeated_cancellation_waits_for_worker_then_finishes_route_metada
     from novelvideo.api.upload_workers import asset_upload_limiter
 
     store = _CharacterStore()
-    ctx = SimpleNamespace(project_id="proj_demo")
+    ctx = SimpleNamespace(project_id="proj_demo", state_dir="no-project-state")
 
     async def resolve_project(*_args, **_kwargs):
         return ctx, "admin", "demo", tmp_path, str(tmp_path), store
@@ -1644,7 +1644,7 @@ async def test_repeated_cancellation_waits_for_route_metadata_finalize(
     from novelvideo.api.routes import characters
 
     store = _CharacterStore()
-    ctx = SimpleNamespace(project_id="proj_demo")
+    ctx = SimpleNamespace(project_id="proj_demo", state_dir="no-project-state")
     finalize_started = asyncio.Event()
     finalize_release = asyncio.Event()
 
@@ -1746,7 +1746,7 @@ async def test_custom_scene_route_enforces_stream_limit_without_content_length(
     from novelvideo.utils.upload_safety import UploadTooLargeError
 
     store = _SceneStore()
-    ctx = SimpleNamespace(project_id="proj_demo")
+    ctx = SimpleNamespace(project_id="proj_demo", state_dir="no-project-state")
 
     async def resolve_project(*_args, **_kwargs):
         return ctx, "admin", "demo", tmp_path, str(tmp_path), store

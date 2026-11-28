@@ -13,6 +13,14 @@ from novelvideo.agents.identity_planner import (
 )
 
 
+@pytest.fixture
+def _chinese_project(monkeypatch):
+    """Declare the project Chinese for a test whose fake store has no config file."""
+    monkeypatch.setattr(
+        "novelvideo.utils.source_language.project_asset_language", lambda _state_dir: "zh"
+    )
+
+
 class _Store:
     state_dir = None
 
@@ -101,6 +109,7 @@ async def test_english_identity_analysis_explicitly_requires_english(
     assert "identity label and must also be written in English" in prompt_text
 
 
+@pytest.mark.usefixtures("_chinese_project")
 @pytest.mark.asyncio
 async def test_chinese_identity_analysis_omits_english_label_rule(monkeypatch):
     captured = []

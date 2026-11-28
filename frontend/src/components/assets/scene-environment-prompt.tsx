@@ -14,8 +14,9 @@ import { Textarea } from "@/components/ui/textarea";
  * splits that one string into seven editable inputs (parse) and stitches them
  * back into the same labeled string on save (serialize).
  *
- * The serialized labels MUST stay Chinese (正面 / 背面 / …) regardless of UI
- * language — they are the contract the generator parses, not display text.
+ * The editor serializes Chinese labels (正面 / 背面 / …) regardless of UI
+ * language; the backend stores them in the project's asset language, so parsing
+ * accepts both the Chinese and the English set.
  * Only the four directional headings are strictly required by the backend
  * (`SCENE_ENVIRONMENT_REQUIRED_HEADINGS`); the rest round-trip best-effort.
  */
@@ -33,6 +34,8 @@ interface SceneEnvironmentSection {
   key: SceneEnvironmentSectionKey;
   /** Contract label written into the serialized prompt. Chinese, do not localize. */
   label: string;
+  /** The same heading as stored for English projects; accepted when parsing. */
+  labelEn: string;
   /** i18n key for the input's visible label. */
   i18nKey: string;
 }
@@ -40,19 +43,19 @@ interface SceneEnvironmentSection {
 // label 是写进序列化提示词的契约文字，跟界面语言无关；界面上显示的是 i18nKey。
 // i18n-exempt-start
 export const SCENE_ENVIRONMENT_SECTIONS: readonly SceneEnvironmentSection[] = [
-  { key: "front", label: "正面", i18nKey: "assets.scenes.environment.front" },
-  { key: "left", label: "左侧", i18nKey: "assets.scenes.environment.left" },
-  { key: "right", label: "右侧", i18nKey: "assets.scenes.environment.right" },
-  { key: "back", label: "背面", i18nKey: "assets.scenes.environment.back" },
-  { key: "light", label: "光源", i18nKey: "assets.scenes.environment.light" },
+  { key: "front", label: "正面", labelEn: "FRONT", i18nKey: "assets.scenes.environment.front" },
+  { key: "left", label: "左侧", labelEn: "LEFT", i18nKey: "assets.scenes.environment.left" },
+  { key: "right", label: "右侧", labelEn: "RIGHT", i18nKey: "assets.scenes.environment.right" },
+  { key: "back", label: "背面", labelEn: "BACK", i18nKey: "assets.scenes.environment.back" },
+  { key: "light", label: "光源", labelEn: "LIGHTING", i18nKey: "assets.scenes.environment.light" },
   {
     key: "material",
-    label: "材质/风格",
+    label: "材质/风格", labelEn: "MATERIALS/STYLE",
     i18nKey: "assets.scenes.environment.material",
   },
   {
     key: "forbidden",
-    label: "禁止元素",
+    label: "禁止元素", labelEn: "FORBIDDEN",
     i18nKey: "assets.scenes.environment.forbidden",
   },
 ] as const;
@@ -87,9 +90,9 @@ export function parseEnvironmentPrompt(
   const text = (prompt ?? "").replace(/\r\n/g, "\n").trim();
   if (!text) return result;
 
-  const labels = SCENE_ENVIRONMENT_SECTIONS.map((s) =>
-    escapeRegExp(s.label),
-  ).join("|");
+  const labels = SCENE_ENVIRONMENT_SECTIONS.flatMap((s) => [s.label, s.labelEn])
+    .map(escapeRegExp)
+    .join("|");
   const headingRe = new RegExp(`(?:^|\\n)\\s*(${labels})\\s*[:：]`, "g");
 
   const hits: Array<{
@@ -99,7 +102,9 @@ export function parseEnvironmentPrompt(
   }> = [];
   let match: RegExpExecArray | null;
   while ((match = headingRe.exec(text)) !== null) {
-    const section = SCENE_ENVIRONMENT_SECTIONS.find((s) => s.label === match![1]);
+    const section = SCENE_ENVIRONMENT_SECTIONS.find(
+      (s) => s.label === match![1] || s.labelEn === match![1],
+    );
     if (!section) continue;
     hits.push({
       key: section.key,

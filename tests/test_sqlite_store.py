@@ -43,6 +43,9 @@ async def tmp_project(tmp_path):
 
     project_dir = tmp_path / "testuser" / "testproject"
     project_dir.mkdir(parents=True)
+    (project_dir / "project_config.json").write_text(
+        '{"asset_language": "zh"}', encoding="utf-8"
+    )
 
     store = CogneeStore.__new__(CogneeStore)
     store.project_name = "testuser/testproject"
@@ -251,6 +254,7 @@ async def test_build_scenes_from_graph_repairs_its_own_boilerplate(
         scene_type="interior",
         time_of_day="",
         context_lines=["▲张秉权坐在办公桌后翻看文件。"],
+        output_language="zh",
     )
     assert pipeline.SCENE_FALLBACK_FINGERPRINT in boilerplate
 
@@ -308,6 +312,7 @@ async def test_build_scenes_from_graph_keeps_boilerplate_over_invalid_output(
         scene_type="interior",
         time_of_day="",
         context_lines=["▲张秉权坐在办公桌后翻看文件。"],
+        output_language="zh",
     )
     await tmp_project.sqlite_store.add_scene(
         NovelScene(

@@ -53,7 +53,7 @@ from novelvideo.api.schemas import (
     Seedance2AssetCropRequest,
     Seedance2AssetDeleteRequest,
 )
-from novelvideo.utils.source_language import detect_episode_asset_language
+from novelvideo.utils.source_language import store_asset_language
 from novelvideo.api.viewer_manifests import (
     build_director_stage_manifest,
     build_pano_viewer_manifest,
@@ -1359,15 +1359,7 @@ async def _seedance2_panel_context(
     characters = store.get_all_characters()
     episode_obj = _episode_from_store_or_none(store, episode_num)
     prop_menu = await _runtime_prop_menu_with_global_props(store, episode_obj, beats)
-    language = await detect_episode_asset_language(
-        store,
-        episode_num,
-        fallback_text="\n".join(
-            str(item.get(field) or "")
-            for item in beats
-            for field in ("narration_segment", "dialogue", "visual_description")
-        ),
-    )
+    language = store_asset_language(store)
     return {
         "project_ctx": resolved.ctx,
         "username": username,
@@ -2776,15 +2768,7 @@ async def global_optimize_video(
     if not beats:
         return {"ok": False, "error": f"No beats found for episode {episode_num}"}
 
-    language = await detect_episode_asset_language(
-        store,
-        episode_num,
-        fallback_text="\n".join(
-            str(beat.get(field) or "")
-            for beat in beats
-            for field in ("narration_segment", "dialogue", "visual_description")
-        ),
-    )
+    language = store_asset_language(store)
 
     # 预检和报价必须使用同一统计口径。
     billable_beat_numbers = _global_optimize_billable_beat_numbers(

@@ -12,6 +12,8 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from novelvideo.time_of_day import time_of_day_label
+from novelvideo.utils.source_language import DEFAULT_ASSET_LANGUAGE, AssetLanguage
 from novelvideo.time_of_day import is_time_of_day_token, time_of_day_name_candidates
 from novelvideo.utils.asset_names import coerce_path_safe_asset_name, path_safe_asset_name
 from novelvideo.utils.derived_scenes import compose_derived_scene_name
@@ -1523,7 +1525,20 @@ class NovelScene(BaseModel):
         return self
 
 
-def build_scene_effective_prompt(scene: NovelScene, base_scene: NovelScene | None = None) -> str:
+def _time_plate_lighting_line(time_of_day: str, language: AssetLanguage) -> str:
+    if language == "zh":
+        return f"整体光照为{time_of_day}时段；未声明改变的结构、陈设和材质继承基础场景。"
+    return (
+        f"Overall lighting: {time_of_day_label(time_of_day, language)}. Structures, furnishings and "
+        "materials that are not declared as changed are inherited from the base scene."
+    )
+
+
+def build_scene_effective_prompt(
+    scene: NovelScene,
+    base_scene: NovelScene | None = None,
+    language: AssetLanguage = DEFAULT_ASSET_LANGUAGE,
+) -> str:
     """Build the display/generation fallback prompt for a scene record.
 
     New derived scenes store only sparse deltas in variant_prompt.  Old derived
@@ -1564,7 +1579,7 @@ def build_scene_effective_prompt(scene: NovelScene, base_scene: NovelScene | Non
             [
                 "",
                 "[Time-of-Day Plate]",
-                f"整体光照为{time_of_day}时段；未声明改变的结构、陈设和材质继承基础场景。",
+                _time_plate_lighting_line(time_of_day, language),
             ]
         )
     if own_prompt and own_prompt != base_prompt and not variant_prompt:

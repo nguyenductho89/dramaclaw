@@ -86,8 +86,7 @@ def test_the_fallback_never_quotes_the_rejected_prompt():
         scene_name="主任办公室",
         scene_type="interior",
         time_of_day="",
-        context_lines=["▲张秉权坐在办公桌后翻看文件。"],
-    )
+        context_lines=["▲张秉权坐在办公桌后翻看文件。"], output_language="zh")
     assert SCENE_FALLBACK_FINGERPRINT in generated
     assert rejected not in generated
     # Evidence comes from the script instead.
@@ -100,8 +99,7 @@ def test_the_fallback_still_applies_without_any_usable_text():
         scene_name="主任办公室",
         scene_type="interior",
         time_of_day="",
-        context_lines=[],
-    )
+        context_lines=[], output_language="zh")
     assert SCENE_FALLBACK_FINGERPRINT in generated
 
 

@@ -43,6 +43,8 @@ from novelvideo.utils.path_resolver import (
     compute_identity_portrait_path,
 )
 from novelvideo.utils.static_urls import project_static_url
+from novelvideo.project_config import get_project_config_path
+from novelvideo.utils.source_language import DEFAULT_ASSET_LANGUAGE, project_asset_language
 
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp"}
 VIDEO_EXTS = {".mp4", ".mov", ".webm"}
@@ -807,6 +809,7 @@ def _add_scene_refs(
         "time_of_day": str(scene_info.get("time_of_day") or "").strip(),
         "description": str(scene_info.get("description") or "").strip(),
         "scene_type": str(scene_info.get("scene_type") or "").strip(),
+        "asset_language": str(scene_info.get("asset_language") or "").strip(),
         "style_name": str(scene_info.get("style_name") or "").strip(),
         "style_prompt": str(scene_info.get("style_prompt") or "").strip(),
         "avoid_instructions": str(scene_info.get("avoid_instructions") or "").strip(),
@@ -2077,6 +2080,9 @@ def _project_style_meta(username: str, project: str, project_dir: Path) -> dict[
         label = str(preset.get("label") or style_id).strip()
         style_name = f"{label} ({style_id})" if label and label != style_id else style_id
         return {
+            "asset_language": project_asset_language(
+                get_project_config_path(username, project).parent
+            ),
             "style_name": style_name,
             "style_prompt": str(preset.get("style_instructions") or "").strip(),
             "avoid_instructions": str(preset.get("avoid_instructions") or "").strip(),
@@ -2133,6 +2139,7 @@ def _scene_reference_prompt_content(
         avoid_instructions=str(meta.get("avoid_instructions") or "").strip(),
         has_master_reference=has_master_reference,
         base_scene=_base_scene_from_prompt_meta(meta),
+        language="zh" if meta.get("asset_language") == "zh" else DEFAULT_ASSET_LANGUAGE,
     )
 
 
@@ -3669,6 +3676,7 @@ async def build_asset_preset_context(
             scene_info["effective_environment_prompt"] = build_scene_effective_prompt(
                 scene_model,
                 base_scene_model,
+                language=project_asset_language(get_project_config_path(username, project).parent),
             )
             scene_info["base_environment_prompt"] = str(
                 base_scene_info.get("environment_prompt") or ""

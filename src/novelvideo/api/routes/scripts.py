@@ -30,7 +30,7 @@ from novelvideo.api.schemas import (
 from novelvideo.models import sync_beat_asset_refs
 from novelvideo.ports import get_task_backend, get_usage_meter
 from novelvideo.task_identity import project_task_state_key
-from novelvideo.utils.source_language import detect_episode_asset_language
+from novelvideo.utils.source_language import store_asset_language
 from novelvideo.video_prompt_prerequisite import (
     VideoPromptPrerequisiteError,
     video_prompt_prerequisite_response,
@@ -499,14 +499,7 @@ async def generate_beat_video_prompt(
     except ValueError as exc:
         return {"ok": False, "error": str(exc)}
 
-    language = await detect_episode_asset_language(
-        store,
-        episode_num,
-        fallback_text="\n".join(
-            str(target.get(field) or "")
-            for field in ("narration_segment", "dialogue", "visual_description")
-        ),
-    )
+    language = store_asset_language(store)
 
     if resolved.ctx is not None:
         queued = await get_task_backend().enqueue_project_task(
@@ -596,14 +589,7 @@ async def generate_seedance2_prompt(
         (beat for beat in beats if int(beat.get("beat_number") or 0) == beat_num + 1),
         None,
     )
-    language = await detect_episode_asset_language(
-        store,
-        episode_num,
-        fallback_text="\n".join(
-            str(target.get(field) or "")
-            for field in ("narration_segment", "dialogue", "visual_description")
-        ),
-    )
+    language = store_asset_language(store)
 
     from novelvideo.seedance2_i2v.models import parse_seedance2_config
 

@@ -50,7 +50,6 @@ from novelvideo.seedance2_i2v.models import (
 from novelvideo.seedance2_i2v.prompt import (
     build_seedance2_prompt_draft,
     compute_seedance2_prompt_inputs_hash,
-    detect_seedance2_prompt_language,
     generate_seedance2_prompt,
 )
 from novelvideo.seedance2_i2v.voice_clone import normalize_seedance2_audio_type
@@ -60,7 +59,11 @@ from novelvideo.utils.media_io import (
     get_audio_duration,
 )
 from novelvideo.utils.path_resolver import PathResolver
-from novelvideo.utils.source_language import AssetLanguage
+from novelvideo.utils.source_language import (
+    DEFAULT_ASSET_LANGUAGE,
+    AssetLanguage,
+    project_asset_language,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -344,7 +347,7 @@ async def generate_seedance2_prompt_for_panel(
         else (config.final_prompt or initial_prompt or "")
     ).strip()
     prompt_beat = _beat_with_seedance2_initial_prompt(beat, initial_prompt)
-    output_language = language or detect_seedance2_prompt_language(prompt_beat)
+    output_language = language or project_asset_language(state_dir)
     inputs_hash = _seedance2_prompt_inputs_hash(
         config=config,
         beat=prompt_beat,
@@ -369,6 +372,7 @@ async def generate_seedance2_prompt_for_panel(
             request_params=request_params,
             manual_prompt_reference=reference_prompt,
             composer=composer,
+            language=output_language,
         )
     else:
         result = await generate_seedance2_prompt(
@@ -974,7 +978,7 @@ def build_seedance2_video_panel_state(
     prompt_source = config.prompt_source or "saved"
     final_prompt = config.final_prompt
     initial_prompt = _seedance2_initial_prompt(beat)
-    output_language = language or detect_seedance2_prompt_language(beat)
+    output_language = language or project_asset_language(state_dir)
     if not final_prompt and initial_prompt:
         final_prompt = _seedance2_default_prompt(
             beat=_beat_with_seedance2_initial_prompt(beat, initial_prompt),
@@ -1139,7 +1143,7 @@ def _seedance2_default_prompt(
     config: Any,
     assets: list[Seedance2ResolvedAsset],
     text_overlay: dict[str, Any],
-    language: str = "zh",
+    language: AssetLanguage = DEFAULT_ASSET_LANGUAGE,
 ) -> str:
     return build_seedance2_prompt_draft(
         mode=config.mode,
@@ -1228,7 +1232,7 @@ def _seedance2_prompt_inputs_hash(
     config: Any,
     beat: dict[str, Any],
     assets: list[Seedance2ResolvedAsset],
-    language: str = "zh",
+    language: AssetLanguage = DEFAULT_ASSET_LANGUAGE,
 ) -> str:
     return compute_seedance2_prompt_inputs_hash(
         mode=config.mode,

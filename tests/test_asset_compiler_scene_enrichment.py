@@ -9,6 +9,14 @@ from novelvideo.models import NovelScene
 ENRICHED_ENVIRONMENT_PROMPT = "正面：临街玻璃窗\n左侧：咖啡吧台\n右侧：木质书架\n背面：入口木门"
 
 
+@pytest.fixture
+def _chinese_project(monkeypatch):
+    """Declare the project Chinese for a test whose fake store has no config file."""
+    monkeypatch.setattr(
+        "novelvideo.utils.source_language.project_asset_language", lambda _state_dir: "zh"
+    )
+
+
 async def _return_async(value):
     return value
 
@@ -90,6 +98,7 @@ def _block(location: str = "咖啡馆", time_of_day: str = "夜"):
     )
 
 
+@pytest.mark.usefixtures("_chinese_project")
 @pytest.mark.asyncio
 async def test_drama_scene_planning_uses_screenplay_normalizer_as_primary(monkeypatch):
     import novelvideo.agents.asset_compiler as asset_compiler
@@ -131,6 +140,7 @@ async def test_drama_scene_planning_uses_screenplay_normalizer_as_primary(monkey
                 "time_of_day_hint": "夜",
                 "interior_exterior_hint": "内",
                 "context_lines": ["孙悟空跪坐在蒲团上。"],
+                "output_language": "zh",
             },
         )
     ]
@@ -299,6 +309,7 @@ async def test_compile_episode_scenes_keeps_existing_prompt(monkeypatch):
     assert existing.environment_prompt == "已有完整空间合同"
 
 
+@pytest.mark.usefixtures("_chinese_project")
 @pytest.mark.asyncio
 async def test_compile_episode_scenes_creates_empty_time_plate_slot_for_repeated_time(
     monkeypatch,

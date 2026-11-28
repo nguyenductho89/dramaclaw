@@ -23,6 +23,8 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import type { AssetLanguage } from "@/types/project";
 import {
   Select,
   SelectContent,
@@ -1084,6 +1086,7 @@ function ProjectDashboard() {
   const [sort, setSort] = useState<SortKey>("updated-desc");
   const [createOpen, setCreateOpen] = useState(false);
   const [newName, setNewName] = useState("");
+  const [newAssetLanguage, setNewAssetLanguage] = useState<AssetLanguage>("en");
   const [recentlyCreatedProject, setRecentlyCreatedProject] = useState<
     string | null
   >(() => readRecentlyCreatedProject());
@@ -1190,11 +1193,15 @@ function ProjectDashboard() {
     const name = trimmedNewName;
     if (!name || createNameError) return;
     try {
-      const res = await createProject.mutateAsync(name);
+      const res = await createProject.mutateAsync({
+        name,
+        assetLanguage: newAssetLanguage,
+      });
       const createdName = res.data.name || name;
       setRecentlyCreatedProject(createdName);
       window.localStorage.setItem(RECENTLY_CREATED_PROJECT_KEY, createdName);
       setNewName("");
+      setNewAssetLanguage("en");
       setCreateOpen(false);
     } catch {
       toast.error(t("project.toasts.createFailed"));
@@ -1377,6 +1384,31 @@ function ProjectDashboard() {
                     {createNameError}
                   </p>
                 )}
+                <div className="mt-1 flex items-center justify-between gap-3">
+                  <Label htmlFor="project-asset-language" className="text-sm font-normal">
+                    {t("project.assetLanguage")}
+                  </Label>
+                  <Select
+                    value={newAssetLanguage}
+                    onValueChange={(value) => setNewAssetLanguage(value as AssetLanguage)}
+                  >
+                    <SelectTrigger id="project-asset-language" className="h-9 w-36 rounded-[8px]">
+                      <SelectValue>
+                        {(value: string) => t(`project.assetLanguageOptions.${value}`)}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent alignItemWithTrigger={false}>
+                      {(["en", "zh"] as const).map((value) => (
+                        <SelectItem key={value} value={value}>
+                          {t(`project.assetLanguageOptions.${value}`)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <p className="text-xs leading-5 text-muted-foreground">
+                  {t("project.assetLanguageHint")}
+                </p>
               </div>
               <DialogFooter className="-mx-7 -mb-7 border-t-0 bg-transparent p-7 pt-3 sm:flex-row sm:justify-end">
                 <Button

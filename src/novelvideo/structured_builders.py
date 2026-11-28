@@ -23,7 +23,7 @@ from novelvideo.project_config import load_project_config_file_from_state_dir
 import json
 
 from novelvideo.story_analysis import SourceChunk, chunk_source_text
-from novelvideo.utils.source_language import AssetLanguage, detect_asset_language
+from novelvideo.utils.source_language import AssetLanguage, store_asset_language
 
 PROP_BUILD_DEFERRED_MESSAGE = "道具将在分集规划时按需生成"
 SCENE_BUILD_DEFERRED_MESSAGE = "解说剧场景将在分集规划时按需生成"
@@ -62,7 +62,7 @@ async def build_characters_structured(
 
     novel_text = require_imported_novel(store.project_dir)
     template = spine_template_for(store)
-    output_language = detect_asset_language(novel_text)
+    output_language = store_asset_language(store)
 
     report(0.1, lmsg("tasks.progress.characters.chunking", "切分原文..."))
     chunks = chunk_source_text(novel_text, template)
@@ -493,6 +493,7 @@ async def build_scenes_structured(
         on_progress=lambda progress, task: report(0.1 + progress * 0.7, task),
         on_log=on_log,
         cache=cache,
+        output_language=store_asset_language(store),
     )
     if not scenes:
         log(

@@ -95,7 +95,9 @@ def test_validate_prompt_flattens_and_enforces_tags(tmp_path):
 
 def test_draft_follows_source_language_and_mentions_every_tag(tmp_path):
     refs = collect_qwen_references(_assets(tmp_path))
-    zh = build_qwen_render_draft(beat={"visual_description": "安娜站在大厅中央"}, references=refs)
+    zh = build_qwen_render_draft(
+        beat={"visual_description": "安娜站在大厅中央"}, references=refs, language="zh"
+    )
     en = build_qwen_render_draft(
         beat={"visual_description": "Anna stands in the middle of the hall."}, references=refs
     )
@@ -152,7 +154,7 @@ async def test_generate_beat_render_sends_ordered_refs_and_writes_prompt(monkeyp
         captured.update(kwargs)
         return b"png-bytes", "", ""
 
-    async def fake_compose(*, beat, references, style=""):
+    async def fake_compose(*, beat, references, style="", language="en"):
         return " ".join(ref.tag for ref in references), True
 
     monkeypatch.setattr(qwen_beat_render, "_call_newapi_image_api", fake_call)
@@ -188,7 +190,7 @@ async def test_generate_beat_render_surfaces_gateway_error(monkeypatch, tmp_path
     async def fake_call(**kwargs):
         return None, "", "boom"
 
-    async def fake_compose(*, beat, references, style=""):
+    async def fake_compose(*, beat, references, style="", language="en"):
         return "<image2> <image3> <image4>", False
 
     monkeypatch.setattr(qwen_beat_render, "_call_newapi_image_api", fake_call)

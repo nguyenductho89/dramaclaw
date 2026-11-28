@@ -396,7 +396,7 @@ async def test_extract_scenes_from_script_prefers_ai_normalized_blocks(monkeypat
     from novelvideo.cognee import pipeline
     from novelvideo.models import NovelScene
 
-    async def fake_normalize(_text: str):
+    async def fake_normalize(_text: str, output_language: str):
         return [
             NormalizedSceneBlock(
                 episode_number=1,
@@ -444,7 +444,8 @@ async def test_extract_scenes_from_script_prefers_ai_normalized_blocks(monkeypat
 
     scenes = await pipeline.extract_scenes_from_script(
         "1-1、凤鸣皇城·苏鸾寝殿 深夜 内\n△苏糖醒来。\n"
-        "3-1、凤鸣皇城·苏鸾寝殿 亥时 内\n△刺杀开始。"
+        "3-1、凤鸣皇城·苏鸾寝殿 亥时 内\n△刺杀开始。",
+        output_language="zh",
     )
 
     assert len(scenes) == 1

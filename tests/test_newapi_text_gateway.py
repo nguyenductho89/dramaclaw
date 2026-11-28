@@ -503,6 +503,7 @@ def test_global_video_optimizer_wraps_plain_text_output_locally(monkeypatch, tmp
             beat={"beat_number": 1, "visual_description": "黑衣男子推门"},
             sketch_image_path=str(sketch_path),
             character_color_map={},
+            language="zh",
         )
     )
 

@@ -164,6 +164,7 @@ def _default_project_config() -> dict:
 
     return {
         "spine_template": "drama",
+        "asset_language": "en",
         "aspect_ratio": DEFAULT_ASPECT_RATIO,
         "visual_style": "chinese_period_drama",
         "ethnicity": "Chinese",

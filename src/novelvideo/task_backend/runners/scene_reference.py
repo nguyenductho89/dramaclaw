@@ -15,6 +15,7 @@ from novelvideo.egress_context import (
     TrustedEgressContext,
     TrustedRunnerEnvelope,
 )
+from novelvideo.utils.source_language import project_asset_language
 
 
 def _image_egress_context(envelope: dict[str, Any]) -> TrustedEgressContext | None:
@@ -126,6 +127,7 @@ async def _run_scene_reference_asset(
                 avoid_instructions=avoid_instructions,
                 base_scene=base_scene,
                 egress_context=egress_context,
+                language=project_asset_language(ctx.state_dir),
             )
         if kind == "spatial_layout":
             rel_path = str(Path(output_path).relative_to(output_dir))

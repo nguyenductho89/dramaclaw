@@ -28,7 +28,7 @@ from novelvideo.sqlite_store import load_episode_planning_content
 from novelvideo.utils.source_language import (
     AssetLanguage,
     asset_language_instruction,
-    detect_asset_language,
+    store_asset_language,
 )
 
 if TYPE_CHECKING:
@@ -461,7 +461,7 @@ class IdentityPlanner:
         content_text = await load_episode_planning_content(self.cognee_store, episode)
         if not content_text or not content_text.strip():
             return 0, 0
-        output_language = detect_asset_language(content_text)
+        output_language = store_asset_language(self.cognee_store)
 
         # 预筛出场角色（只调一次，后续复用）
         all_chars = self.cognee_store.get_all_characters()
@@ -969,7 +969,7 @@ class IdentityPlanner:
   - 如果只是同龄造型分支，可留空
 """
         try:
-            content_language = detect_asset_language(content_text)
+            content_language = store_asset_language(self.cognee_store)
             language_instruction = asset_language_instruction(
                 content_language
             ) + _visual_state_language_rule(content_language)
@@ -1056,7 +1056,7 @@ class IdentityPlanner:
 - 如果没有其他身份需求，返回空列表
 """
         try:
-            content_language = detect_asset_language(content_text)
+            content_language = store_asset_language(self.cognee_store)
             language_instruction = asset_language_instruction(
                 content_language
             ) + _visual_state_language_rule(content_language)
@@ -1510,9 +1510,7 @@ class IdentityPlanner:
 """
 
         try:
-            language = output_language or detect_asset_language(
-                "\n".join((character_name, visual_state, reason))
-            )
+            language = output_language or store_asset_language(self.cognee_store)
             language_instruction = asset_language_instruction(language)
             appearance_agent = Agent(
                 self._identity_model("IDENTITY_PLANNER_APPEARANCE_MODEL"),

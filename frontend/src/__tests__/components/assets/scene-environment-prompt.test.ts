@@ -92,3 +92,15 @@ describe("serializeEnvironmentPrompt", () => {
     expect(out).toBe("正面：f");
   });
 });
+
+describe("English headings", () => {
+  it("splits the headings stored for English projects into the same sections", () => {
+    const sections = parseEnvironmentPrompt(
+      "FRONT: An empty street.\nLEFT: Storefronts.\nMATERIALS/STYLE: Matte concrete.",
+    );
+
+    expect(sections.front).toBe("An empty street.");
+    expect(sections.left).toBe("Storefronts.");
+    expect(sections.material).toBe("Matte concrete.");
+  });
+});

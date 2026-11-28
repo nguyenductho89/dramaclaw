@@ -37,7 +37,9 @@ from novelvideo.generators.nanobanana_grid import (
 )
 from novelvideo.egress_context import TrustedEgressContext
 from novelvideo.models import NovelScene, build_scene_effective_prompt
-from novelvideo.utils.source_language import AssetLanguage, detect_asset_language
+from novelvideo.scene_headings import SCENE_HEADINGS_EN, localize_scene_headings
+from novelvideo.time_of_day import CANONICAL_TIME_OF_DAY_VALUES, time_of_day_label
+from novelvideo.utils.source_language import DEFAULT_ASSET_LANGUAGE, AssetLanguage
 
 SceneReferenceKind = Literal["master", "spatial_layout", "reverse_master"]
 
@@ -53,20 +55,6 @@ def _archive_existing(path: Path) -> None:
     path.replace(path.with_name(f"{path.stem}_{ts}{path.suffix}"))
 
 
-_HEADINGS_EN = {
-    "正面": "FRONT",
-    "左侧": "LEFT",
-    "右侧": "RIGHT",
-    "背面": "BACK",
-    "光源": "LIGHTING",
-    "材质/风格": "MATERIALS/STYLE",
-    "禁止元素": "FORBIDDEN",
-}
-_HEADING_RE = re.compile(
-    r"(^|[\n。；;])([ \t]*)(" + "|".join(re.escape(h) for h in _HEADINGS_EN) + r")[ \t]*[:：][ \t]*"
-)
-
-
 @dataclass(frozen=True)
 class _Terms:
     """Wording the scene prompt templates share, per output language.
@@ -75,6 +63,7 @@ class _Terms:
     show the image model English headings (``headings``) and English hints.
     """
 
+    language: AssetLanguage
     headings: dict[str, str]
     mood_short: str
     front_hint: str
@@ -92,12 +81,11 @@ class _Terms:
     def localize(self, text: str) -> str:
         if not self.headings:
             return text
-        return _HEADING_RE.sub(
-            lambda m: f"{m.group(1)}{m.group(2)}{self.headings[m.group(3)]}: ", text
-        )
+        return localize_scene_headings(text, self.language)
 
 
 _ZH_TERMS = _Terms(
+    language="zh",
     headings={},
     mood_short="(深夜/昏暗/光晕/街灯/萧瑟/暖色荧光 etc.)",
     front_hint='the keyword "正面" / "front side" / "主面" / "主入口" / "正前方"',
@@ -113,7 +101,8 @@ _ZH_TERMS = _Terms(
     mood_long="(深夜 / 昏暗 / 光晕 /\n  街灯 / 萧瑟 / 局促 / 暖色荧光 / 营业 etc.)",
 )
 _EN_TERMS = _Terms(
-    headings=_HEADINGS_EN,
+    language="en",
+    headings=SCENE_HEADINGS_EN,
     mood_short="(late night / dim / glow / street lamps / desolate / warm fluorescent etc.)",
     front_hint='the label "FRONT" (also "front side", "main entrance", "straight ahead")',
     front_side="FRONT side",
@@ -138,7 +127,7 @@ def _scene_context(
     variant_prompt = str(getattr(scene, "variant_prompt", "") or "").strip()
     base_scene_id = str(getattr(scene, "base_scene_id", "") or "").strip()
     variant_id = str(getattr(scene, "variant_id", "") or "").strip()
-    time_of_day = str(getattr(scene, "time_of_day", "") or "").strip()
+    time_of_day = time_of_day_label(getattr(scene, "time_of_day", ""), terms.language)
     own_prompt = str(
         getattr(scene, "environment_prompt", "")
         or getattr(scene, "description", "")
@@ -154,7 +143,7 @@ def _scene_context(
     if base_scene_id and (variant_prompt or time_of_day):
         description = base_prompt or own_prompt or base_scene_id
     else:
-        description = build_scene_effective_prompt(scene, base_scene)
+        description = build_scene_effective_prompt(scene, base_scene, language=terms.language)
     description = terms.localize(description)
     structured: list[str] = []
     if base_scene_id:
@@ -172,11 +161,21 @@ def _scene_context(
 - Change only lighting/time atmosphere and the explicitly requested plate state."""
         )
     structured_block = "\n".join(structured).strip()
-    return f"""SCENE NAME: {scene.name}
+    return f"""SCENE NAME: {_display_scene_name(scene, terms)}
 SCENE TYPE: {scene_type}
 {structured_block}
 SCENE DESCRIPTION:
 {description}""".strip()
+
+
+def _display_scene_name(scene: NovelScene, terms: _Terms) -> str:
+    """Scene name as shown to the image model; plates created before English naming
+    carry a Chinese time suffix (``Kitchen_夜晚``). The stored name is untouched."""
+    name = str(scene.name or "")
+    head, separator, tail = name.rpartition("_")
+    if not separator or tail not in CANONICAL_TIME_OF_DAY_VALUES:
+        return name
+    return f"{head}_{time_of_day_label(tail, terms.language)}"
 
 
 def _reference_tuple_from_path(path: Path) -> tuple[str, bytes, str] | None:
@@ -288,7 +287,7 @@ def _master_prompt(
   front center plus visible left-side half and right-side half.
 - The room/street/stage reads as the "default cover shot" a director would pick to introduce this location.
 - Keep enough fixed objects visible to reconstruct the space later from this single image."""
-    time_of_day = str(getattr(scene, "time_of_day", "") or "").strip()
+    time_of_day = time_of_day_label(getattr(scene, "time_of_day", ""), terms.language)
     variant_id = str(getattr(scene, "variant_id", "") or "").strip()
     if time_of_day:
         time_instruction = f"""- STRUCTURED TIME PLATE OVERRIDE:
@@ -574,17 +573,8 @@ HARD REQUIREMENTS:
 """.strip()
 
 
-def scene_prompt_language(scene: NovelScene) -> AssetLanguage:
-    """Language the scene was written in: its own name and description, not the Chinese headings."""
-    return detect_asset_language(
-        "\n".join(
-            str(getattr(scene, attr, "") or "") for attr in ("name", "description", "variant_prompt")
-        )
-    )
-
-
-def _terms_for(scene: NovelScene) -> _Terms:
-    return _EN_TERMS if scene_prompt_language(scene) == "en" else _ZH_TERMS
+def _terms_for(language: AssetLanguage) -> _Terms:
+    return _EN_TERMS if language == "en" else _ZH_TERMS
 
 
 def _english_style_name(style_name: str) -> str:
@@ -604,8 +594,9 @@ def build_scene_reference_prompt(
     avoid_instructions: str = "",
     has_master_reference: bool = False,
     base_scene: NovelScene | None = None,
+    language: AssetLanguage = DEFAULT_ASSET_LANGUAGE,
 ) -> str:
-    terms = _terms_for(scene)
+    terms = _terms_for(language)
     return _build_scene_reference_prompt(
         kind,
         scene,
@@ -750,6 +741,7 @@ async def generate_scene_reference_image(
     avoid_instructions: str = "",
     base_scene: NovelScene | None = None,
     egress_context: TrustedEgressContext | None = None,
+    language: AssetLanguage = DEFAULT_ASSET_LANGUAGE,
 ) -> Path:
     """Generate one canonical scene reference image and return its path."""
 
@@ -794,6 +786,7 @@ async def generate_scene_reference_image(
         avoid_instructions=avoid_instructions,
         has_master_reference=has_master_reference,
         base_scene=base_scene,
+        language=language,
     )
     provider = _scene_image_provider(kind, provider)
     selected_model = _scene_image_model(kind, provider, model)

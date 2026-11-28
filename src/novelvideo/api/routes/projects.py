@@ -82,6 +82,7 @@ from novelvideo.seedance2_i2v.voice_clone import (
     resolve_narrator_source,
 )
 from novelvideo.utils.async_ops import metadata_io_limiter, run_sync_bounded
+from novelvideo.utils.source_language import ASSET_LANGUAGE_KEY, project_asset_language
 
 logger = logging.getLogger("novelvideo.api.projects")
 
@@ -767,6 +768,7 @@ async def create_project(
             config={
                 "user": user["username"],
                 KNOWLEDGE_PIPELINE_KEY: KNOWLEDGE_PIPELINE_STRUCTURED,
+                ASSET_LANGUAGE_KEY: body.asset_language,
             },
         )
     except Exception:
@@ -792,6 +794,7 @@ async def get_project(project: str, user: dict = Depends(get_api_user)):
     """获取项目配置。"""
     ctx = await resolve_project_context(user=user, project_id=project, required_role="viewer")
     require_project_home_node(ctx, operation="read project config")
+    project_asset_language(ctx.state_dir)  # records the default on older projects
     config = load_project_config_from_state_dir(
         ctx.state_dir,
         username=ctx.owner_username,

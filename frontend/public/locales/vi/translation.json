@@ -2451,6 +2451,12 @@
     "actionsLabel": "Thao tác với dự án",
     "name": "Tên dự án",
     "namePlaceholder": "Nhập tên dự án của bạn",
+    "assetLanguage": "Ngôn ngữ nội dung",
+    "assetLanguageHint": "Ngôn ngữ của kịch bản, asset và prompt được sinh ra. Không đổi được sau khi tạo.",
+    "assetLanguageOptions": {
+      "en": "Tiếng Anh",
+      "zh": "Tiếng Trung"
+    },
     "clearName": "Xoá tên dự án",
     "nameNoChinese": "Tên dự án không được chứa ký tự tiếng Trung.",
     "nameTooLong": "Tên dự án dài tối đa 64 ký tự.",

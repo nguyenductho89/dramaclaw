@@ -60,6 +60,11 @@ from novelvideo.scene_prerequisites import (
 from novelvideo.task_identity import project_task_state_key
 from novelvideo.task_state import get_task_manager
 from novelvideo.task_scopes import scene_reference_asset_scope, stage_asset_scope
+from novelvideo.time_of_day import (
+    TIME_OF_DAY_ENGLISH_LABELS,
+    time_of_day_label,
+    time_of_day_name_candidates,
+)
 from novelvideo.utils.asset_names import move_asset_dir, path_safe_asset_name
 from novelvideo.utils.async_ops import metadata_io_limiter
 from novelvideo.utils.derived_scenes import (
@@ -76,6 +81,12 @@ from novelvideo.utils.upload_safety import (
     MAX_PROJECT_UPLOAD_BYTES,
     UploadTooLargeError,
     stream_to_file_with_limit,
+)
+from novelvideo.utils.source_language import (
+    DEFAULT_ASSET_LANGUAGE,
+    AssetLanguage,
+    project_asset_language,
+    store_asset_language,
 )
 
 router = APIRouter()
@@ -108,6 +119,7 @@ _SCENE_TIME_TOKENS = {
     "夜",
     "白天",
     "日",
+    *TIME_OF_DAY_ENGLISH_LABELS.values(),
 }
 
 
@@ -668,7 +680,7 @@ def _scene_payload(
         "environment_prompt": scene.environment_prompt,
         "variant_prompt": getattr(scene, "variant_prompt", ""),
         "effective_environment_prompt": build_scene_effective_prompt(
-            scene, base_scene
+            scene, base_scene, language=project_asset_language(ctx.state_dir)
         ),
         "description": scene.description,
         "derived_from_scene": derived_from_scene,
@@ -712,6 +724,7 @@ def _scene_summary_payload(
     project_dir: Path,
     project_id: str = "",
     base_scene: NovelScene | None = None,
+    asset_language: AssetLanguage = DEFAULT_ASSET_LANGUAGE,
 ) -> dict[str, Any]:
     """Return the SQLite-only fields needed to group/search the scene list.
 
@@ -738,7 +751,9 @@ def _scene_summary_payload(
         "time_of_day": str(getattr(scene, "time_of_day", "") or "").strip(),
         "environment_prompt": scene.environment_prompt,
         "variant_prompt": getattr(scene, "variant_prompt", ""),
-        "effective_environment_prompt": build_scene_effective_prompt(scene, base_scene),
+        "effective_environment_prompt": build_scene_effective_prompt(
+            scene, base_scene, language=asset_language
+        ),
         "description": scene.description,
         "derived_from_scene": base_scene_id,
         "spatial_layout_image": scene.spatial_layout_image,
@@ -847,6 +862,8 @@ def _compose_scene_asset_name(
     base_scene_id: str = "",
     variant_id: str = "",
     time_of_day: str = "",
+    *,
+    time_language: str = DEFAULT_ASSET_LANGUAGE,
 ) -> str:
     base = str(base_scene_id or "").strip()
     variant = str(variant_id or "").strip()
@@ -857,8 +874,31 @@ def _compose_scene_asset_name(
     if variant:
         scene_name = compose_derived_scene_name(scene_name, variant)
     if scene_time:
-        scene_name = compose_derived_scene_name(scene_name, scene_time)
+        scene_name = compose_derived_scene_name(
+            scene_name, time_of_day_label(scene_time, time_language)
+        )
     return scene_name
+
+
+def _time_suffix_language(
+    store: SQLiteStore,
+    scene_name: str = "",
+    current_time_of_day: str = "",
+) -> AssetLanguage:
+    """Language for a time plate's name suffix.
+
+    A scene already named with a time suffix keeps that style, so an unrelated edit
+    never renames it; a new suffix follows the project's asset language.
+    """
+    current = str(current_time_of_day or "").strip()
+    if current:
+        tail = str(scene_name or "").rpartition("_")[2]
+        english = time_of_day_label(current, "en")
+        if english != current and tail == english:
+            return "en"
+        if tail in time_of_day_name_candidates(current):
+            return "zh"
+    return store_asset_language(store)
 
 
 async def _heal_path_unsafe_scene_names(store: SQLiteStore, project_dir: Path) -> dict[str, str]:
@@ -899,6 +939,7 @@ async def list_scenes(
     if requested_names:
         scenes = [scene for scene in scenes if scene.name in requested_names]
     if summary:
+        asset_language = store_asset_language(store)
         return {
             "ok": True,
             "data": [
@@ -910,6 +951,7 @@ async def list_scenes(
                     base_scene=scenes_by_name.get(
                         str(getattr(scene, "base_scene_id", "") or "")
                     ),
+                    asset_language=asset_language,
                 )
                 for scene in scenes
             ],
@@ -1179,12 +1221,14 @@ async def create_scene(
     )
     # 在查重之前消毒：留到 add_scene 再改名的话，两个只差斜杠的名字会双双通过查重，
     # 后写的那个把先写的静默覆盖掉。
+    time_language = _time_suffix_language(store)
     name = path_safe_asset_name(
         _compose_scene_asset_name(
             body.name,
             body.base_scene_id,
             body.variant_id,
             body.time_of_day,
+            time_language=time_language,
         )
     )
     if not name:
@@ -1207,6 +1251,8 @@ async def create_scene(
         notes=body.notes,
     )
     await store.add_scene(scene)
+    # The store labels the section headings in the project's language.
+    scene = await store.get_scene(name) or scene
     return {
         "ok": True,
         "data": _scene_payload(
@@ -1242,8 +1288,15 @@ async def update_scene(
     next_time = str(
         updates.get("time_of_day", getattr(scene, "time_of_day", "")) or ""
     ).strip()
+    time_language = _time_suffix_language(
+        store, scene.name, getattr(scene, "time_of_day", "")
+    )
     structured_name = _compose_scene_asset_name(
-        requested_name or scene.name, next_base, next_variant, next_time
+        requested_name or scene.name,
+        next_base,
+        next_variant,
+        next_time,
+        time_language=time_language,
     )
     if next_base:
         requested_name = structured_name

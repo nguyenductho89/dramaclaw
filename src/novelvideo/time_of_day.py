@@ -18,6 +18,18 @@ CANONICAL_TIME_OF_DAY_VALUES: tuple[str, ...] = (
 )
 TIME_OF_DAY_VALUES_WITH_EMPTY: tuple[str, ...] = ("", *CANONICAL_TIME_OF_DAY_VALUES)
 
+# Display and plate-name wording for English projects. Stored ``time_of_day``
+# values stay canonical Chinese: they are lookup keys everywhere.
+TIME_OF_DAY_ENGLISH_LABELS: dict[str, str] = {
+    "清晨": "dawn",
+    "上午": "morning",
+    "正午": "noon",
+    "午后": "afternoon",
+    "白天": "day",
+    "黄昏": "dusk",
+    "夜晚": "night",
+}
+
 TIME_OF_DAY_ALIASES_BY_CANONICAL: dict[str, tuple[str, ...]] = {
     "清晨": ("清晨", "晨", "早晨", "清早", "拂晓", "黎明", "破晓", "卯时"),
     "上午": ("上午", "早上", "辰时", "巳时"),
@@ -138,11 +150,24 @@ def time_of_day_name_candidates(value: str | None) -> list[str]:
     if canonical not in TIME_OF_DAY_ALIASES_BY_CANONICAL:
         return []
     candidates: list[str] = []
-    for item in (canonical, *TIME_OF_DAY_ALIASES_BY_CANONICAL[canonical]):
+    for item in (
+        canonical,
+        *TIME_OF_DAY_ALIASES_BY_CANONICAL[canonical],
+        TIME_OF_DAY_ENGLISH_LABELS[canonical],
+    ):
         item = str(item or "").strip()
         if item and item not in candidates:
             candidates.append(item)
     return candidates
+
+
+def time_of_day_label(value: str | None, language: str) -> str:
+    """Return ``value`` as it should read in ``language``; unknown tokens pass through."""
+
+    text = str(value or "").strip()
+    if language != "en":
+        return text
+    return TIME_OF_DAY_ENGLISH_LABELS.get(normalize_time_of_day(text), text)
 
 
 def is_time_of_day_token(value: str | None) -> bool:

@@ -17,9 +17,9 @@ from typing import Any
 
 from novelvideo.brainclaw_contract import BrainClawProfile
 from novelvideo.utils.source_language import (
+    DEFAULT_ASSET_LANGUAGE,
     AssetLanguage,
     asset_language_instruction,
-    detect_asset_language,
 )
 
 QWEN_CANVAS_OFFSET = 1
@@ -109,26 +109,15 @@ def collect_qwen_references(assets: list[Any] | None) -> list[QwenReference]:
     ]
 
 
-def _beat_source_text(beat: dict[str, Any]) -> str:
-    return " ".join(
-        str(beat.get(key) or "")
-        for key in ("visual_description", "scene_description", "props_description")
-    )
-
-
-def qwen_prompt_language(beat: dict[str, Any]) -> AssetLanguage:
-    return detect_asset_language(_beat_source_text(beat))
-
-
 def build_qwen_render_draft(
     *,
     beat: dict[str, Any],
     references: list[QwenReference],
     style: str = "",
+    language: AssetLanguage = DEFAULT_ASSET_LANGUAGE,
 ) -> str:
     """Rule-based single-paragraph prompt used when the model output is invalid."""
 
-    language = qwen_prompt_language(beat)
     roles = _ROLE_TEXT[language]
     visual = re.sub(
         r"\{\{([^}]+)\}\}", r"\1", str(beat.get("visual_description") or "")
@@ -198,8 +187,8 @@ def build_qwen_render_task(
     references: list[QwenReference],
     style: str,
     draft_prompt: str,
+    language: AssetLanguage = DEFAULT_ASSET_LANGUAGE,
 ) -> str:
-    language = qwen_prompt_language(beat)
     payload = {
         "language_rule": asset_language_instruction(language),
         "style": style,
@@ -250,15 +239,22 @@ async def compose_qwen_render_prompt(
     beat: dict[str, Any],
     references: list[QwenReference],
     style: str = "",
+    language: AssetLanguage = DEFAULT_ASSET_LANGUAGE,
 ) -> tuple[str, bool]:
     """Return ``(prompt, used_ai)``; invalid or failed AI output yields the draft."""
 
-    draft = build_qwen_render_draft(beat=beat, references=references, style=style)
+    draft = build_qwen_render_draft(
+        beat=beat, references=references, style=style, language=language
+    )
     try:
         agent = create_qwen_render_prompt_agent()
         result = await agent.run(
             build_qwen_render_task(
-                beat=beat, references=references, style=style, draft_prompt=draft
+                beat=beat,
+                references=references,
+                style=style,
+                draft_prompt=draft,
+                language=language,
             )
         )
         return validate_qwen_render_prompt(str(result.output or ""), references), True

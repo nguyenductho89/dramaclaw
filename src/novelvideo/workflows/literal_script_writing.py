@@ -34,9 +34,10 @@ from novelvideo.utils.screenplay_scene_parser import (
     split_screenplay_lines,
 )
 from novelvideo.utils.source_language import (
+    DEFAULT_ASSET_LANGUAGE,
     AssetLanguage,
     asset_language_instruction,
-    detect_asset_language,
+    store_asset_language,
 )
 
 DIALOGUE_RE = re.compile(r"^(?P<speaker>[^：:]{1,24})[：:](?P<speech>.+)$")
@@ -408,7 +409,7 @@ class LiteralScriptWritingWorkflow:
         self._identity_section = ""
         self._scene_section = ""
         self._prop_section = ""
-        self._output_language: AssetLanguage = "zh"
+        self._output_language: AssetLanguage = DEFAULT_ASSET_LANGUAGE
         self.last_review_passed = True
         self.last_review_summary = "逐行剧本模式"
         self.last_degraded_lines: list[int] = []
@@ -482,7 +483,7 @@ class LiteralScriptWritingWorkflow:
             )
         if not source_text.strip():
             raise ValueError("当前集原文为空，无法逐行生成脚本")
-        self._output_language = detect_asset_language(source_text)
+        self._output_language = store_asset_language(self.cognee_store)
         source_text_sha256 = sha256(source_text.encode("utf-8")).hexdigest()
 
         # Every script entry point shares this workflow. Prepare the episode

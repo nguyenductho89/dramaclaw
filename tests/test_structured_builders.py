@@ -1825,7 +1825,7 @@ async def _drama_project(tmp_path, script):
     (state / "project_config.json").write_text(
         json.dumps(
             {KNOWLEDGE_PIPELINE_KEY: KNOWLEDGE_PIPELINE_STRUCTURED,
-             "spine_template": "drama"}
+             "spine_template": "drama", "asset_language": "zh"}
         ),
         encoding="utf-8",
     )

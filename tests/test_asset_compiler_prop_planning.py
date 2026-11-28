@@ -237,14 +237,16 @@ async def test_short_block_reuses_prior_episode_prop_without_ai_reanalysis(monke
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    ("lines", "expected", "absent"),
+    ("language", "lines", "expected", "absent"),
     [
         (
+            "en",
             ["Maya runs down the stairs.", "△ The platform is empty.", "△ A light flickers."],
             "Write every user-visible prose field in English",
             "所有面向用户的自由文本字段都使用中文",
         ),
         (
+            "zh",
             ["林夏跑下楼梯。", "△ 站台空无一人。", "△ 灯光闪烁。"],
             "所有面向用户的自由文本字段都使用中文",
             "Write every user-visible prose field in English",
@@ -252,10 +254,13 @@ async def test_short_block_reuses_prior_episode_prop_without_ai_reanalysis(monke
     ],
 )
 async def test_derived_scene_analysis_follows_source_language(
-    monkeypatch, lines, expected, absent
+    monkeypatch, language, lines, expected, absent
 ):
     import novelvideo.agents.asset_compiler as asset_compiler
 
+    monkeypatch.setattr(
+        "novelvideo.utils.source_language.project_asset_language", lambda _state_dir: language
+    )
     captured: dict[str, str] = {}
 
     class FakeAgent:

@@ -48,6 +48,7 @@ def test_scene_reference_prompt_keeps_variant_delta_out_of_scene_description():
         "master",
         variant_scene,
         base_scene=base_scene,
+        language="zh",
     )
 
     assert "VARIANT DELTA PROMPT:\n下着小雨" in prompt

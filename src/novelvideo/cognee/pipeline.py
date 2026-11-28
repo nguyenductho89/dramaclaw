@@ -14,17 +14,24 @@ import re
 from typing import Any, Awaitable, Callable, Dict, List, Literal, Optional, Protocol, TypeVar
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from novelvideo.scene_headings import (
+    SCENE_HEADING_MARKER_RE,
+    SCENE_HEADING_RE,
+    scene_heading_key,
+)
 from novelvideo.i18n_message import MessageLike, lmsg
 from novelvideo.shared.env_guard import preserve_st_env
 from novelvideo.config import get_newapi_structured_output_litellm_kwargs
+from novelvideo.time_of_day import time_of_day_label
 from novelvideo.utils.bounded_concurrency import (
     default_llm_concurrency,
     map_bounded,
 )
 from novelvideo.utils.source_language import (
+    DEFAULT_ASSET_LANGUAGE,
     AssetLanguage,
     asset_language_instruction,
-    detect_asset_language,
+    project_asset_language,
 )
 from novelvideo.models import (
     CharacterIdentity,
@@ -667,17 +674,42 @@ environment_prompt 规则：
 5. description: 场景叙述性描述（使用本次指定的输出语言，简短，不超过约 50 字）"""
 
 
-# Every heading the contract may carry, in the order they must appear.
-SCENE_ENVIRONMENT_ALL_HEADINGS = (
-    "正面", "左侧", "右侧", "背面", "光源", "材质/风格", "禁止元素",
-)
+# English projects get the whole brief in English: a Chinese brief with one language
+# line appended is not enough to keep the bodies in English. The seven Chinese
+# headings stay because they are the markers the contract parser reads.
+SCENE_ENRICHMENT_SYSTEM_PROMPT_EN = """You are a scene environment design expert.
+From the scene name and the script excerpts, describe the scene's visual environment.
 
-# A heading may open the text or follow a newline or a sentence break. Models
-# routinely emit the whole contract on one line, and rejecting that discards a
-# perfectly good description in favour of boilerplate.
-_SCENE_HEADING_RE = re.compile(
-    r"(?:^|[\n。；;])\s*(" + "|".join(re.escape(h) for h in SCENE_ENVIRONMENT_ALL_HEADINGS) + r")\s*[:：]"
-)
+Produce:
+1. name: the supplied scene name, returned unchanged
+2. aliases: empty list
+3. scene_type: interior/exterior/nature, judged from the scene
+4. environment_prompt: a complete 360-degree spatial contract using exactly these fixed
+   section markers, each on its own line; never omit, rename, translate, or merge them:
+   正面：
+   左侧：
+   右侧：
+   背面：
+   光源：
+   材质/风格：
+   禁止元素：
+
+environment_prompt rules:
+- The markers are machine-readable labels and mean, in order: front, left, right, back,
+  lighting, materials/style, forbidden elements. Everything after a marker is English;
+  write no other Chinese.
+- Front, left, right, and back each describe that direction's fixed space, walls or
+  boundaries, doors, windows, entrances, fixed furnishings, or exterior extent.
+- Front is the main direction of the master image; back is what the reverse image shows;
+  the two sides must join continuously at their edges.
+- Where the script says nothing about a direction, complete it plausibly from the scene
+  type and the source evidence. Never leave it empty or say it is not mentioned.
+- Describe the neutral default state; temporary story action, weather, and character
+  emotion are not fixed environment.
+- No people, no temporary story props, no camera direction.
+- About 150-220 words in total, enough to keep all four directions complete.
+5. description: a short narrative description in English, at most about 30 words"""
+
 
 # The first line of the generated fallback. Distinctive enough to recognise a
 # prompt the system wrote when it could not use the model's.
@@ -687,6 +719,18 @@ SCENE_FALLBACK_FINGERPRINTS = (
     SCENE_FALLBACK_FINGERPRINT,
     SCENE_FALLBACK_FINGERPRINT_EN,
 )
+
+
+_HAN_RUN_RE = re.compile(r"[\u3400-\u4dbf\u4e00-\u9fff]+")
+
+
+def foreign_han_runs(text: str, supplied_text: str) -> list[str]:
+    """Chinese in an English answer that is neither a contract marker nor copied input.
+
+    ``supplied_text`` is what the model was given: names must come back verbatim.
+    """
+    body = SCENE_HEADING_MARKER_RE.sub(" ", str(text or ""))
+    return [run for run in _HAN_RUN_RE.findall(body) if run not in supplied_text]
 
 
 def parse_scene_environment_sections(prompt: str) -> list[tuple[str, str]]:
@@ -699,7 +743,7 @@ def parse_scene_environment_sections(prompt: str) -> list[tuple[str, str]]:
     if not text:
         return []
 
-    matches = list(_SCENE_HEADING_RE.finditer(text))
+    matches = list(SCENE_HEADING_RE.finditer(text))
     if not matches:
         return []
 
@@ -707,7 +751,7 @@ def parse_scene_environment_sections(prompt: str) -> list[tuple[str, str]]:
     for index, match in enumerate(matches):
         end = matches[index + 1].start() if index + 1 < len(matches) else len(text)
         body = text[match.end() : end].strip().strip("。；;")
-        sections.append((match.group(1), body))
+        sections.append((scene_heading_key(match.group("marker")), body))
     return sections
 
 
@@ -779,6 +823,13 @@ def _compact_scene_context(
     return raw[:limit].rstrip()
 
 
+def _scene_synopsis_section(synopsis: str, language: AssetLanguage) -> str:
+    if not synopsis:
+        return ""
+    title = "Story synopsis and characters:" if language == "en" else "【故事梗概与人物设定】"
+    return f"\n\n{title}\n{synopsis}"
+
+
 def _ensure_directional_environment_prompt(
     *,
     prompt: str,
@@ -786,7 +837,7 @@ def _ensure_directional_environment_prompt(
     scene_type: str,
     time_of_day: str,
     context_lines: list[str],
-    output_language: AssetLanguage = "zh",
+    output_language: AssetLanguage = DEFAULT_ASSET_LANGUAGE,
 ) -> str:
     """Ensure graph-built scene prompts are usable as a 360 spatial contract."""
     text = str(prompt or "").strip()
@@ -829,7 +880,13 @@ def _ensure_directional_environment_prompt(
 
 
 
-def _create_scene_build_agent(system_prompt: str, output_type: Any, name: str):
+def _create_scene_build_agent(
+    system_prompt: str,
+    output_type: Any,
+    name: str,
+    *,
+    output_retries: int | None = None,
+):
     """Create the scene-build business LLM agent.
 
     This intentionally does not use Cognee's LLMGateway: scene construction uses
@@ -852,7 +909,48 @@ def _create_scene_build_agent(system_prompt: str, output_type: Any, name: str):
         model_settings=get_newapi_structured_output_model_settings(),
         output_type=output_type,
         name=name,
+        **({} if output_retries is None else {"output_retries": output_retries}),
     )
+
+
+def _require_english_scene_enrichment(ctx: Any, output: SceneEnrichmentList):
+    from pydantic_ai import ModelRetry
+
+    supplied = str(ctx.prompt or "")
+    leaked = sorted(
+        {
+            run
+            for scene in output.scenes
+            for text in (scene.environment_prompt, scene.description)
+            for run in foreign_han_runs(text, supplied)
+        }
+    )
+    if leaked:
+        raise ModelRetry(
+            "environment_prompt and description must be written in English. Keep only "
+            "the seven section markers in Chinese and rewrite this text in English: "
+            + ", ".join(leaked[:20])
+        )
+    return output
+
+
+def _create_scene_enrichment_agent(language: AssetLanguage):
+    if language != "en":
+        return _create_scene_build_agent(
+            SCENE_ENRICHMENT_SYSTEM_PROMPT,
+            SceneEnrichmentList,
+            "Scene Build Enricher",
+        )
+    from novelvideo.model_gateway_runtime import model_gateway_output_retries
+
+    agent = _create_scene_build_agent(
+        SCENE_ENRICHMENT_SYSTEM_PROMPT_EN,
+        SceneEnrichmentList,
+        "Scene Build Enricher",
+        output_retries=model_gateway_output_retries(2),
+    )
+    agent.output_validator(_require_english_scene_enrichment)
+    return agent
 
 
 async def enrich_scene_environment_from_context(
@@ -867,7 +965,7 @@ async def enrich_scene_environment_from_context(
     aliases: list[str] | None = None,
     synopsis: str = "",
     enrichment_agent: Any | None = None,
-    output_language: AssetLanguage | None = None,
+    output_language: AssetLanguage = DEFAULT_ASSET_LANGUAGE,
 ) -> NovelScene:
     """Generate the canonical 360 environment prompt for one scene.
 
@@ -884,18 +982,24 @@ async def enrich_scene_environment_from_context(
     scene_type = str(
         scene_type or ("interior" if interior else "exterior") or "interior"
     )
-    language = output_language or detect_asset_language(
-        "\n".join([scene_name, *context_lines, synopsis])
-    )
+    language = output_language
 
-    agent = enrichment_agent or _create_scene_build_agent(
-        SCENE_ENRICHMENT_SYSTEM_PROMPT,
-        SceneEnrichmentList,
-        "Scene Build Enricher",
-    )
+    agent = enrichment_agent or _create_scene_enrichment_agent(language)
     context = "\n".join(context_lines[:50])
-    synopsis_section = f"\n\n【故事梗概与人物设定】\n{synopsis}" if synopsis else ""
-    user_text = f"""{asset_language_instruction(language)}
+    synopsis_section = _scene_synopsis_section(synopsis, language)
+    if language == "en":
+        user_text = f"""{asset_language_instruction(language)}
+
+Scene name: {scene_name}
+Time-of-day clue: {time_of_day_label(time_of_day, language) or "none"} (only tells when the story visits; do not bake day, night, dusk, or moonlight lighting into the base scene)
+Interior/exterior: {"interior" if interior else "exterior"}
+Episodes: {episodes}
+Characters present: {", ".join(characters) if characters else "none"}
+
+Script excerpts for this scene:
+{context}{synopsis_section}"""
+    else:
+        user_text = f"""{asset_language_instruction(language)}
 
 场景名称：{scene_name}
 出现时间线索：{time_of_day or "无"}（只用于理解剧情出现时段，不要把白天、夜晚、黄昏、月光等时段光照烘焙进基础场景）
@@ -990,7 +1094,7 @@ _ENRICHMENT_BATCH_SIZE = 5
 # Bump whenever the enrichment prompt, the contract validator, or the way a
 # model answer is turned into a NovelScene changes.  It is part of every cache
 # key, so a bump retires every stored result rather than mixing contracts.
-SCENE_ENRICHMENT_CACHE_VERSION = 2
+SCENE_ENRICHMENT_CACHE_VERSION = 3
 
 SCENE_ENRICHMENT_CACHE_TYPE = "scene_environment"
 
@@ -1001,7 +1105,11 @@ SCENE_BLOCKS_CACHE_VERSION = 2
 SCENE_BLOCKS_CACHE_TYPE = "scene_blocks"
 
 
-def scene_enrichment_cache_key(candidate: dict[str, Any], synopsis: str = "") -> str:
+def scene_enrichment_cache_key(
+    candidate: dict[str, Any],
+    synopsis: str = "",
+    output_language: AssetLanguage = DEFAULT_ASSET_LANGUAGE,
+) -> str:
     """Hash the exact input one scene's enrichment call is made from.
 
     Every field the model sees, plus every field used to build the NovelScene
@@ -1034,6 +1142,7 @@ def scene_enrichment_cache_key(candidate: dict[str, Any], synopsis: str = "") ->
             str(line) for line in (candidate.get("context_lines") or [])[:50]
         ],
         "synopsis": str(synopsis or ""),
+        "language": output_language,
     }
     canonical = json.dumps(payload, ensure_ascii=False, sort_keys=True)
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
@@ -1098,7 +1207,7 @@ async def enrich_scene_environments_batched(
     enrichment_agent: Any | None = None,
     on_scene: Optional[Any] = None,
     cache: Optional[SceneBuildCache] = None,
-    output_language: AssetLanguage | None = None,
+    output_language: AssetLanguage = DEFAULT_ASSET_LANGUAGE,
 ) -> list[NovelScene]:
     """Generate environment prompts for several scenes per request.
 
@@ -1116,24 +1225,10 @@ async def enrich_scene_environments_batched(
     """
     if not candidates:
         return []
-    language = output_language or detect_asset_language(
-        "\n".join(
-            [
-                synopsis,
-                *(
-                    str(value)
-                    for candidate in candidates
-                    for value in [
-                        candidate.get("name") or "",
-                        *(candidate.get("context_lines") or []),
-                    ]
-                ),
-            ]
-        )
-    )
+    language = output_language
 
     keys = {
-        id(candidate): scene_enrichment_cache_key(candidate, synopsis)
+        id(candidate): scene_enrichment_cache_key(candidate, synopsis, language)
         for candidate in candidates
     }
     hits: dict[int, NovelScene] = {}
@@ -1154,18 +1249,21 @@ async def enrich_scene_environments_batched(
             if scene is not None:
                 on_scene(candidate, scene)
 
-    agent = enrichment_agent or _create_scene_build_agent(
-        SCENE_ENRICHMENT_SYSTEM_PROMPT,
-        SceneEnrichmentList,
-        "Scene Build Enricher",
-    )
-    synopsis_section = f"\n\n【故事梗概与人物设定】\n{synopsis}" if synopsis else ""
+    agent = enrichment_agent or _create_scene_enrichment_agent(language)
+    synopsis_section = _scene_synopsis_section(synopsis, language)
 
     def describe(candidate: dict[str, Any]) -> str:
         context = "\n".join(
             str(line) for line in (candidate.get("context_lines") or [])[:24]
         )
         interior = bool(candidate.get("interior", True))
+        if language == "en":
+            return (
+                f"### Scene: {candidate['name']}\n"
+                f"Interior/exterior: {'interior' if interior else 'exterior'}\n"
+                f"Characters present: {', '.join(candidate.get('characters') or []) or 'none'}\n"
+                f"Script excerpts:\n{context}"
+            )
         return (
             f"### 场景：{candidate['name']}\n"
             f"室内外：{'内' if interior else '外'}\n"
@@ -1174,10 +1272,16 @@ async def enrich_scene_environments_batched(
         )
 
     async def run_batch(batch: list[dict[str, Any]]) -> list[NovelScene]:
+        request = (
+            "Write a separate environment_prompt for each scene below. Each name must "
+            "match the supplied scene name exactly; do not merge or skip scenes:"
+            if language == "en"
+            else "请为下面每一个场景分别生成 environment_prompt，"
+            "name 必须与给出的场景名完全一致，不要合并或遗漏："
+        )
         prompt = (
             asset_language_instruction(language)
-            + "\n\n请为下面每一个场景分别生成 environment_prompt，"
-            "name 必须与给出的场景名完全一致，不要合并或遗漏：\n\n"
+            + f"\n\n{request}\n\n"
             + "\n\n".join(describe(candidate) for candidate in batch)
             + synopsis_section
         )
@@ -1371,6 +1475,7 @@ async def extract_scenes_from_graph(
     Project-level scene discovery must mirror character/prop discovery. Script
     normalization belongs to per-episode drama planning, not this graph path.
     """
+    output_language = project_asset_language(state_dir)
     with preserve_st_env():
         import cognee
         from cognee.api.v1.search import SearchType
@@ -1501,6 +1606,7 @@ async def extract_scenes_from_graph(
             interior=scene_type == "interior",
             context_lines=list(candidate.evidence_lines),
             enrichment_agent=enrichment_agent,
+            output_language=output_language,
         )
         scene.notes = _append_scene_note(scene.notes, "由 Cognee 图谱提取的基础场景")
         scenes.append(scene)
@@ -1512,7 +1618,9 @@ async def extract_scenes_from_graph(
 
 
 async def _normalized_scene_blocks_cached(
-    novel_text: str, cache: Optional[SceneBuildCache]
+    novel_text: str,
+    cache: Optional[SceneBuildCache],
+    output_language: AssetLanguage = DEFAULT_ASSET_LANGUAGE,
 ) -> list[dict[str, Any]]:
     """Run the screenplay normalizer once per source text, then reuse it.
 
@@ -1524,7 +1632,11 @@ async def _normalized_scene_blocks_cached(
     """
     key = hashlib.sha256(
         json.dumps(
-            {"v": SCENE_BLOCKS_CACHE_VERSION, "source": novel_text},
+            {
+                "v": SCENE_BLOCKS_CACHE_VERSION,
+                "source": novel_text,
+                "language": output_language,
+            },
             ensure_ascii=False,
             sort_keys=True,
         ).encode("utf-8")
@@ -1540,7 +1652,7 @@ async def _normalized_scene_blocks_cached(
             if isinstance(restored, list) and restored:
                 return restored
 
-    blocks = await normalize_screenplay_scenes(novel_text)
+    blocks = await normalize_screenplay_scenes(novel_text, output_language=output_language)
     candidates = _scene_candidates_from_normalized_blocks(blocks)
     if cache is not None and candidates:
         await cache.save(
@@ -1642,6 +1754,7 @@ async def extract_scenes_from_script(
     on_progress: Optional[Any] = None,
     on_log: Optional[Any] = None,
     cache: Optional[SceneBuildCache] = None,
+    output_language: AssetLanguage = DEFAULT_ASSET_LANGUAGE,
 ) -> List[NovelScene]:
     """从格式化剧本提取场景（AI normalizer first + parser fallback + LLM enrichment）。
 
@@ -1661,7 +1774,6 @@ async def extract_scenes_from_script(
         print(f"[extract_scenes] {message}")
 
     synopsis = extract_synopsis(novel_text)
-    output_language = detect_asset_language(novel_text)
     if synopsis:
         log(f"提取梗概+人物设定: {len(synopsis)} 字符")
 
@@ -1685,7 +1797,8 @@ async def extract_scenes_from_script(
     )
     try:
         normalized_scene_candidates = await _normalized_scene_blocks_cached(
-            novel_text, cache
+            novel_text, cache,
+            output_language=output_language,
         )
         covered, gap = _scene_recall_is_covered(
             normalized_scene_candidates, legacy_candidates
@@ -1837,6 +1950,7 @@ async def extract_scenes_from_script(
                 characters=candidate.get("characters") or [],
                 context_lines=candidate.get("context_lines") or [],
                 synopsis=synopsis,
+                output_language=output_language,
             )
             note_progress(candidate, scene)
             scenes.append(scene)

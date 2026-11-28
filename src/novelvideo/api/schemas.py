@@ -46,6 +46,8 @@ class ErrorResponse(BaseModel):
 
 class ProjectCreate(BaseModel):
     name: str = Field(max_length=64)
+    # Language of every generated asset text. Chosen once, here.
+    asset_language: Literal["zh", "en"] = "en"
 
 
 class ProjectSummary(BaseModel):
@@ -190,7 +192,8 @@ class Seedance2PromptGenerateRequest(BaseModel):
 
 
 class BeatVideoPromptGenerateRequest(BaseModel):
-    language: str = "zh"
+    # Accepted from older clients and ignored: the project's asset language applies.
+    language: Optional[str] = None
 
 
 class Seedance2AssetDeleteRequest(BaseModel):

@@ -43,8 +43,7 @@ FALLBACK_PROMPT = _ensure_directional_environment_prompt(
     scene_name="场景0",
     scene_type="interior",
     time_of_day="",
-    context_lines=["▲场景0里灯亮着。"],
-)
+    context_lines=["▲场景0里灯亮着。"], output_language="zh")
 
 
 def _candidate(name: str, **overrides) -> dict:
@@ -250,8 +249,7 @@ async def test_a_cold_cache_calls_the_model_for_every_scene():
     agent = FakeAgent()
 
     scenes = await enrich_scene_environments_batched(
-        candidates, enrichment_agent=agent, cache=cache
-    )
+        candidates, enrichment_agent=agent, cache=cache, output_language="zh")
 
     assert [scene.name for scene in scenes] == [c["name"] for c in candidates]
     assert _scenes_named(agent.prompts) == {c["name"] for c in candidates}
@@ -267,8 +265,7 @@ async def test_english_scene_batches_request_english_user_visible_prose():
     agent = FakeAgent()
 
     scenes = await enrich_scene_environments_batched(
-        [candidate], enrichment_agent=agent
-    )
+        [candidate], enrichment_agent=agent, output_language="en")
 
     assert [scene.name for scene in scenes] == ["Central Library"]
     assert "Write every user-visible prose field in English" in agent.prompts[0]
@@ -293,13 +290,11 @@ async def test_a_second_run_over_unchanged_input_calls_no_model_at_all():
     candidates = [_candidate(f"场景{i}") for i in range(7)]
     cache = DictCache()
     await enrich_scene_environments_batched(
-        candidates, enrichment_agent=FakeAgent(), cache=cache
-    )
+        candidates, enrichment_agent=FakeAgent(), cache=cache, output_language="zh")
 
     second = FakeAgent()
     scenes = await enrich_scene_environments_batched(
-        candidates, enrichment_agent=second, cache=cache
-    )
+        candidates, enrichment_agent=second, cache=cache, output_language="zh")
 
     assert second.prompts == []
     assert [scene.name for scene in scenes] == [c["name"] for c in candidates]
@@ -323,8 +318,7 @@ async def test_a_retry_only_pays_for_the_scenes_that_are_missing():
                 scene_name=kwargs["scene_name"],
                 scene_type="interior",
                 time_of_day="",
-                context_lines=list(kwargs.get("context_lines") or []),
-            ),
+                context_lines=list(kwargs.get("context_lines") or []), output_language="zh"),
         )
 
     from novelvideo.cognee import pipeline
@@ -333,8 +327,7 @@ async def test_a_retry_only_pays_for_the_scenes_that_are_missing():
     pipeline.enrich_scene_environment_from_context = failing_per_scene
     try:
         await enrich_scene_environments_batched(
-            candidates, enrichment_agent=FakeAgent(fail_on={"场景5"}), cache=cache
-        )
+            candidates, enrichment_agent=FakeAgent(fail_on={"场景5"}), cache=cache, output_language="zh")
     finally:
         pipeline.enrich_scene_environment_from_context = original
 
@@ -344,8 +337,7 @@ async def test_a_retry_only_pays_for_the_scenes_that_are_missing():
 
     retry = FakeAgent()
     scenes = await enrich_scene_environments_batched(
-        candidates, enrichment_agent=retry, cache=cache
-    )
+        candidates, enrichment_agent=retry, cache=cache, output_language="zh")
 
     assert _scenes_named(retry.prompts) == {"场景5", "场景6"}
     assert [scene.name for scene in scenes] == [c["name"] for c in candidates]
@@ -358,8 +350,7 @@ async def test_results_are_written_per_batch_not_once_at_the_end():
     cache = DictCache()
 
     await enrich_scene_environments_batched(
-        candidates, enrichment_agent=FakeAgent(), cache=cache
-    )
+        candidates, enrichment_agent=FakeAgent(), cache=cache, output_language="zh")
 
     assert cache.saves > 1
 
@@ -379,8 +370,7 @@ async def test_a_failed_scene_is_never_cached():
                 scene_name=kwargs["scene_name"],
                 scene_type="interior",
                 time_of_day="",
-                context_lines=list(kwargs.get("context_lines") or []),
-            ),
+                context_lines=list(kwargs.get("context_lines") or []), output_language="zh"),
         )
 
     from novelvideo.cognee import pipeline
@@ -389,8 +379,7 @@ async def test_a_failed_scene_is_never_cached():
     pipeline.enrich_scene_environment_from_context = failing_per_scene
     try:
         await enrich_scene_environments_batched(
-            candidates, enrichment_agent=FakeAgent(fail_on={"场景0"}), cache=cache
-        )
+            candidates, enrichment_agent=FakeAgent(fail_on={"场景0"}), cache=cache, output_language="zh")
     finally:
         pipeline.enrich_scene_environment_from_context = original
 
@@ -402,16 +391,14 @@ async def test_cached_scenes_are_reported_as_progress():
     candidates = [_candidate(f"场景{i}") for i in range(4)]
     cache = DictCache()
     await enrich_scene_environments_batched(
-        candidates, enrichment_agent=FakeAgent(), cache=cache
-    )
+        candidates, enrichment_agent=FakeAgent(), cache=cache, output_language="zh")
 
     seen: list[str] = []
     await enrich_scene_environments_batched(
         candidates,
         enrichment_agent=FakeAgent(),
         cache=cache,
-        on_scene=lambda candidate, scene: seen.append(candidate["name"]),
-    )
+        on_scene=lambda candidate, scene: seen.append(candidate["name"]), output_language="zh")
     assert seen == [c["name"] for c in candidates]
 
 
@@ -419,7 +406,7 @@ async def test_without_a_cache_nothing_changes():
     """The cache is optional; the legacy call path passes none."""
     candidates = [_candidate(f"场景{i}") for i in range(3)]
     agent = FakeAgent()
-    scenes = await enrich_scene_environments_batched(candidates, enrichment_agent=agent)
+    scenes = await enrich_scene_environments_batched(candidates, enrichment_agent=agent, output_language="zh")
     assert [scene.name for scene in scenes] == [c["name"] for c in candidates]
     assert _scenes_named(agent.prompts) == {c["name"] for c in candidates}
 
@@ -540,7 +527,9 @@ async def test_build_scenes_structured_passes_the_projects_own_cache(
 
     seen: dict = {}
 
-    async def fake_extract(novel_text, on_progress=None, on_log=None, cache=None):
+    async def fake_extract(
+        novel_text, on_progress=None, on_log=None, cache=None, output_language="en"
+    ):
         seen["cache"] = cache
         return [
             NovelScene(
@@ -708,7 +697,7 @@ async def test_the_normalizer_runs_once_per_source_text(monkeypatch):
 
     calls = {"n": 0}
 
-    async def fake_normalize(_text):
+    async def fake_normalize(_text, output_language):
         calls["n"] += 1
         return ["block"]
 
@@ -720,8 +709,8 @@ async def test_the_normalizer_runs_once_per_source_text(monkeypatch):
     )
 
     cache = DictCache()
-    first = await pipeline._normalized_scene_blocks_cached("剧本正文", cache)
-    second = await pipeline._normalized_scene_blocks_cached("剧本正文", cache)
+    first = await pipeline._normalized_scene_blocks_cached("剧本正文", cache, output_language="zh")
+    second = await pipeline._normalized_scene_blocks_cached("剧本正文", cache, output_language="zh")
 
     assert calls["n"] == 1
     assert first == second
@@ -732,7 +721,7 @@ async def test_changed_source_text_runs_the_normalizer_again(monkeypatch):
 
     calls = {"n": 0}
 
-    async def fake_normalize(_text):
+    async def fake_normalize(_text, output_language):
         calls["n"] += 1
         return ["block"]
 
@@ -744,8 +733,8 @@ async def test_changed_source_text_runs_the_normalizer_again(monkeypatch):
     )
 
     cache = DictCache()
-    await pipeline._normalized_scene_blocks_cached("剧本正文", cache)
-    await pipeline._normalized_scene_blocks_cached("改过的剧本正文", cache)
+    await pipeline._normalized_scene_blocks_cached("剧本正文", cache, output_language="zh")
+    await pipeline._normalized_scene_blocks_cached("改过的剧本正文", cache, output_language="zh")
     assert calls["n"] == 2
 
 
@@ -755,7 +744,7 @@ async def test_an_empty_normalization_is_not_cached(monkeypatch):
 
     calls = {"n": 0}
 
-    async def fake_normalize(_text):
+    async def fake_normalize(_text, output_language):
         calls["n"] += 1
         return []
 
@@ -765,6 +754,6 @@ async def test_an_empty_normalization_is_not_cached(monkeypatch):
     )
 
     cache = DictCache()
-    await pipeline._normalized_scene_blocks_cached("剧本正文", cache)
-    await pipeline._normalized_scene_blocks_cached("剧本正文", cache)
+    await pipeline._normalized_scene_blocks_cached("剧本正文", cache, output_language="zh")
+    await pipeline._normalized_scene_blocks_cached("剧本正文", cache, output_language="zh")
     assert calls["n"] == 2

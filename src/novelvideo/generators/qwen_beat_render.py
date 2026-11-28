@@ -17,6 +17,7 @@ from novelvideo.generators.scene_reference_images import _reference_tuple_from_p
 from novelvideo.seedance2_i2v.assets import build_seedance2_project_assets
 from novelvideo.seedance2_i2v.models import Seedance2I2VMode
 from novelvideo.shared.failure_signals import with_upstream_status
+from novelvideo.utils.source_language import project_asset_language
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +60,10 @@ async def generate_qwen_beat_render(
         reference_images.append(item)
 
     prompt, used_ai = await compose_qwen_render_prompt(
-        beat=beat, references=references, style=style
+        beat=beat,
+        references=references,
+        style=style,
+        language=project_asset_language(state_dir),
     )
     if generator_config.get("provider") != "newapi":
         raise RuntimeError("Qwen 免草图 Render 只支持 newapi 网关")

@@ -16,6 +16,14 @@ from novelvideo.workflows.literal_script_writing import (
 from novelvideo.workflows.script_writing import create_script_writing_workflow
 
 
+@pytest.fixture
+def _chinese_project(monkeypatch):
+    """Declare the project Chinese for a test whose fake store has no config file."""
+    monkeypatch.setattr(
+        "novelvideo.utils.source_language.project_asset_language", lambda _state_dir: "zh"
+    )
+
+
 def _payload(audio_type: str | None = None) -> dict:
     payload = {
         "speaker": "",
@@ -490,6 +498,7 @@ async def test_literal_workflow_retries_one_line_with_a_fresh_model_call(monkeyp
     assert any("正在重新调用模型" in message for message in logs)
 
 
+@pytest.mark.usefixtures("_chinese_project")
 @pytest.mark.asyncio
 async def test_literal_workflow_falls_back_per_line_and_continues(monkeypatch):
     store = _LiteralRunStore()
@@ -527,6 +536,7 @@ async def test_literal_workflow_falls_back_per_line_and_continues(monkeypatch):
     assert any("后续行继续处理" in message for message in logs)
 
 
+@pytest.mark.usefixtures("_chinese_project")
 @pytest.mark.asyncio
 async def test_literal_workflow_does_not_retry_content_filter_and_uses_placeholder(
     monkeypatch,
@@ -570,6 +580,7 @@ async def test_literal_workflow_does_not_retry_content_filter_and_uses_placehold
     assert any("未重试" in message for message in logs)
 
 
+@pytest.mark.usefixtures("_chinese_project")
 @pytest.mark.asyncio
 async def test_literal_workflow_does_not_send_unprocessed_next_line(monkeypatch):
     store = _LiteralRunStore()

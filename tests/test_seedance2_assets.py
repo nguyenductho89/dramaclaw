@@ -1,3 +1,4 @@
+import json
 import struct
 from pathlib import Path
 
@@ -8,6 +9,15 @@ from novelvideo.seedance2_i2v.models import Seedance2I2VMode
 
 
 pytestmark = pytest.mark.m09
+
+
+def _chinese_state_dir(tmp_path: Path) -> Path:
+    state_dir = tmp_path / "state" / "alice" / "project"
+    state_dir.mkdir(parents=True, exist_ok=True)
+    config = state_dir / "project_config.json"
+    stored = json.loads(config.read_text(encoding="utf-8")) if config.exists() else {}
+    config.write_text(json.dumps({**stored, "asset_language": "zh"}), encoding="utf-8")
+    return state_dir
 
 
 def _write_png(path: Path, *, width: int = 512, height: int = 768) -> None:
@@ -81,7 +91,7 @@ def test_multimodal_assets_resolve_scene_variant_to_derived_scene_master(tmp_pat
 
     assets = build_seedance2_project_assets(
         project_output=project_dir,
-        state_dir=tmp_path / "state" / "alice" / "project",
+        state_dir=_chinese_state_dir(tmp_path),
         episode=1,
         beat={
             "beat_number": 1,
@@ -114,7 +124,7 @@ def test_multimodal_assets_resolve_time_of_day_to_time_plate(tmp_path):
 
     assets = build_seedance2_project_assets(
         project_output=project_dir,
-        state_dir=tmp_path / "state" / "alice" / "project",
+        state_dir=_chinese_state_dir(tmp_path),
         episode=1,
         beat={
             "beat_number": 1,
@@ -150,7 +160,7 @@ def test_multimodal_assets_resolve_variant_time_to_variant_time_plate(tmp_path):
 
     assets = build_seedance2_project_assets(
         project_output=project_dir,
-        state_dir=tmp_path / "state" / "alice" / "project",
+        state_dir=_chinese_state_dir(tmp_path),
         episode=1,
         beat={
             "beat_number": 1,
@@ -187,7 +197,7 @@ def test_multimodal_assets_fall_back_to_base_scene_master_when_variant_image_mis
 
     assets = build_seedance2_project_assets(
         project_output=project_dir,
-        state_dir=tmp_path / "state" / "alice" / "project",
+        state_dir=_chinese_state_dir(tmp_path),
         episode=1,
         beat={
             "beat_number": 1,
@@ -296,7 +306,7 @@ def test_multimodal_dialogue_assets_use_character_voice_reference_not_beat_audio
 
     assets = build_seedance2_project_assets(
         project_output=project_dir,
-        state_dir=tmp_path / "state" / "alice" / "project",
+        state_dir=_chinese_state_dir(tmp_path),
         episode=1,
         beat={
             "beat_number": 1,
@@ -395,7 +405,7 @@ def test_multimodal_narration_assets_use_project_narrator_voice_not_beat_audio(
 
     assets = build_seedance2_project_assets(
         project_output=project_dir,
-        state_dir=tmp_path / "state" / "alice" / "project",
+        state_dir=_chinese_state_dir(tmp_path),
         episode=1,
         beat={
             "beat_number": 1,
@@ -440,7 +450,7 @@ def test_multimodal_narration_keeps_project_narrator_mentionable_when_duration_n
 
     assets = build_seedance2_project_assets(
         project_output=project_dir,
-        state_dir=tmp_path / "state" / "alice" / "project",
+        state_dir=_chinese_state_dir(tmp_path),
         episode=1,
         beat={
             "beat_number": 1,
@@ -547,7 +557,7 @@ def test_drama_narration_assets_ignore_first_person_protagonist_voice(tmp_path, 
 
     assets = build_seedance2_project_assets(
         project_output=project_dir,
-        state_dir=tmp_path / "state" / "alice" / "project",
+        state_dir=_chinese_state_dir(tmp_path),
         episode=1,
         beat={
             "beat_number": 1,

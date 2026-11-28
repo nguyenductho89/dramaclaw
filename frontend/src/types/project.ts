@@ -2,7 +2,11 @@
 // Copyright (c) 2026 ClaymoreLab
 export type SpineTemplate = "drama" | "narrated";
 
+/** Language of every generated asset text. Chosen when the project is created. */
+export type AssetLanguage = "en" | "zh";
+
 export interface ProjectConfig {
+  readonly asset_language?: AssetLanguage;
   spine_template?: SpineTemplate;
   aspect_ratio?: "2:3" | "9:16" | "16:9";
   visual_style?: string;

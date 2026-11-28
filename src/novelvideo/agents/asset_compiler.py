@@ -29,10 +29,13 @@ from novelvideo.cognee.screenplay_normalizer import (
     normalize_screenplay_scene_header,
     normalize_time_of_day,
 )
+from novelvideo.time_of_day import time_of_day_label
 from novelvideo.utils.derived_scenes import compose_derived_scene_name
 from novelvideo.utils.source_language import (
+    DEFAULT_ASSET_LANGUAGE,
+    AssetLanguage,
     asset_language_instruction,
-    detect_asset_language,
+    store_asset_language,
 )
 from novelvideo.workflows.literal_script_writing import (
     LiteralScriptWritingWorkflow,
@@ -720,6 +723,7 @@ class AssetCompiler:
                     time_of_day_hint=block.time_of_day,
                     interior_exterior_hint=block.interior_exterior,
                     context_lines=block.lines,
+                    output_language=store_asset_language(self.store),
                 )
             except Exception as exc:
                 log(f"  第 {index} 个场景头 AI 规范化失败: {exc}")
@@ -822,7 +826,7 @@ class AssetCompiler:
             output_retries=model_gateway_output_retries(2),
             name="基础场景资产校对员",
         )
-        result = await agent.run(f"""{asset_language_instruction(detect_asset_language(source_text))}
+        result = await agent.run(f"""{asset_language_instruction(store_asset_language(self.store))}
 
 ## 已有基础场景
 {chr(10).join(existing_lines) if existing_lines else "（无）"}
@@ -866,6 +870,7 @@ class AssetCompiler:
                 scene_name=scene_name,
                 scene_type=decision.scene_type,
                 context_lines=evidence_lines,
+                output_language=store_asset_language(self.store),
             )
             scene.aliases = list(
                 dict.fromkeys(
@@ -942,6 +947,7 @@ class AssetCompiler:
         pending_scenes: list[NovelScene] = []
         pending_scene_map: dict[str, NovelScene] = {}
         time_plate_counts = self._time_plate_counts(scene_blocks)
+        language = store_asset_language(self.store)
 
         for block in scene_blocks:
             location = str(block.location or "").strip()
@@ -973,11 +979,15 @@ class AssetCompiler:
             ):
                 if count < 2:
                     continue
-                time_plate = self._build_time_plate_scene(existing, scene_time, episode)
-                existing_time_plate = pending_scene_map.get(
-                    time_plate.name
-                ) or await self.store.get_scene(time_plate.name)
-                if not existing_time_plate:
+                time_plate = self._build_time_plate_scene(
+                    existing, scene_time, episode, language
+                )
+                existing_time_plate = await self._find_time_plate(
+                    existing.name, scene_time, pending_scene_map
+                )
+                if existing_time_plate:
+                    time_plate = existing_time_plate
+                else:
                     pending_scene_map[time_plate.name] = time_plate
                     pending_scenes.append(time_plate)
                 self._add_to_scene_menu(
@@ -1091,6 +1101,7 @@ class AssetCompiler:
                 episodes=[int(getattr(episode, "number", 1) or 1)],
                 context_lines=context_lines,
                 synopsis=str(getattr(episode, "content_summary", "") or ""),
+                output_language=store_asset_language(self.store),
             )
             if not str(enriched.description or "").strip():
                 enriched.description = str(req.description or "").strip()
@@ -1115,7 +1126,7 @@ class AssetCompiler:
             if str(getattr(scene, "name", "") or "").strip()
         }
         excerpt = source_text[:12000]
-        task = f"""{asset_language_instruction(detect_asset_language(excerpt))}
+        task = f"""{asset_language_instruction(store_asset_language(self.store))}
 
 请为当前集规划 2.0 场景资产。
 
@@ -1172,6 +1183,7 @@ class AssetCompiler:
             episodes=[int(getattr(episode, "number", 1) or 1)],
             characters=list(getattr(block, "characters", []) or []),
             context_lines=list(getattr(block, "lines", []) or []),
+            output_language=store_asset_language(self.store),
         )
         scene.scene_type = enriched.scene_type or scene.scene_type
         scene.environment_prompt = enriched.environment_prompt
@@ -1203,7 +1215,7 @@ class AssetCompiler:
         block_text = "\n".join(content_lines)
         if not block_text:
             return []
-        task = f"""{asset_language_instruction(detect_asset_language(block_text))}
+        task = f"""{asset_language_instruction(store_asset_language(self.store))}
 
 分析场景 `{scene_name}` 在当前场景块里的视觉状态。
 
@@ -1389,7 +1401,7 @@ class AssetCompiler:
         candidate_section = (
             "\n".join(candidate_lines) if candidate_lines else "（无预筛候选）"
         )
-        task = f"""{asset_language_instruction(detect_asset_language(chr(10).join(block.lines or [])))}
+        task = f"""{asset_language_instruction(store_asset_language(self.store))}
 
 分析当前场景块中的关键道具。
 
@@ -1687,14 +1699,32 @@ class AssetCompiler:
             counts[location][scene_time] = counts[location].get(scene_time, 0) + 1
         return counts
 
+    async def _find_time_plate(
+        self,
+        parent_name: str,
+        scene_time: str,
+        pending_scene_map: dict[str, NovelScene],
+    ) -> NovelScene | None:
+        """Existing plate for this time under either naming, so a recompile never
+        adds ``X_night`` next to an older ``X_夜晚``."""
+        for suffix in (time_of_day_label(scene_time, "en"), scene_time):
+            name = compose_derived_scene_name(parent_name, suffix)
+            found = pending_scene_map.get(name) or await self.store.get_scene(name)
+            if found:
+                return found
+        return None
+
     @staticmethod
     def _build_time_plate_scene(
         parent_scene: NovelScene,
         time_of_day: str,
         episode: Any,
+        language: AssetLanguage = DEFAULT_ASSET_LANGUAGE,
     ) -> NovelScene:
         scene_time = normalize_time_of_day(time_of_day)
-        plate_name = compose_derived_scene_name(parent_scene.name, scene_time)
+        plate_name = compose_derived_scene_name(
+            parent_scene.name, time_of_day_label(scene_time, language)
+        )
         return NovelScene(
             name=plate_name,
             aliases=[parent_scene.name],

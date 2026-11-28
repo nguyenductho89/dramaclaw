@@ -12,8 +12,9 @@ from novelvideo.utils.bounded_concurrency import (
 )
 from novelvideo.utils.screenplay_scene_parser import TIME_TOKEN_RE, parse_scene_blocks
 from novelvideo.utils.source_language import (
+    DEFAULT_ASSET_LANGUAGE,
+    AssetLanguage,
     asset_language_instruction,
-    detect_asset_language,
 )
 
 SceneType = Literal["interior", "exterior", "nature"]
@@ -319,6 +320,7 @@ async def normalize_screenplay_scene_header(
     scene_no_hint: str = "",
     context_lines: list[str] | None = None,
     agent=None,
+    output_language: AssetLanguage = DEFAULT_ASSET_LANGUAGE,
 ) -> NormalizedSceneHeader | None:
     """Normalize one scene using only its header and same-scene context."""
 
@@ -332,10 +334,7 @@ async def normalize_screenplay_scene_header(
     )
 
     runner = agent or _create_screenplay_normalizer_agent()
-    language = detect_asset_language(
-        "\n".join([header, str(location_hint or ""), context])
-    )
-    prompt = f"""{asset_language_instruction(language)}
+    prompt = f"""{asset_language_instruction(output_language)}
 
 请按系统规则规范化下面这一个场景块的场景元数据。
 
@@ -372,6 +371,7 @@ async def normalize_screenplay_scenes(
     text: str,
     *,
     agent=None,
+    output_language: AssetLanguage = DEFAULT_ASSET_LANGUAGE,
 ) -> list[NormalizedSceneBlock]:
     """Split locally, then normalize each scene header independently.
 
@@ -382,7 +382,7 @@ async def normalize_screenplay_scenes(
     source = str(text or "").strip()
     if not source:
         return []
-    language_instruction = asset_language_instruction(detect_asset_language(source))
+    language_instruction = asset_language_instruction(output_language)
 
     blocks = [block for block in parse_scene_blocks(source) if block.header_line]
     if not blocks:

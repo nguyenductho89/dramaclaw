@@ -18,6 +18,14 @@ from novelvideo.api.schemas import (
 from novelvideo.models import NovelEpisode, NovelProp, NovelScene, NovelVisualBeat
 
 
+@pytest.fixture
+def _chinese_project(monkeypatch):
+    """Declare the project Chinese for a test whose fake store has no config file."""
+    monkeypatch.setattr(
+        "novelvideo.utils.source_language.project_asset_language", lambda _state_dir: "zh"
+    )
+
+
 class _SceneStore:
     def __init__(self, scenes: list[NovelScene]):
         self.scenes = {scene.name: scene for scene in scenes}
@@ -152,6 +160,8 @@ def _patch_project(
     module,
     project_dir: Path,
     store=None,
+    *,
+    with_context: bool = False,
 ) -> None:
     if hasattr(module, "_resolve_scene_project"):
 
@@ -159,7 +169,7 @@ def _patch_project(
             project: str, user: dict, *, required_role: str = "editor"
         ):
             return (
-                None,
+                _ctx(project_dir) if with_context else None,
                 "admin",
                 "demo",
                 project_dir,
@@ -417,7 +427,7 @@ async def test_list_scenes_marks_derived_scene_base(tmp_path, monkeypatch):
             NovelScene(name="故宫_下雪", base_scene_id="故宫", variant_id="下雪"),
         ]
     )
-    _patch_project(monkeypatch, scenes, tmp_path, store)
+    _patch_project(monkeypatch, scenes, tmp_path, store, with_context=True)
 
     res = await scenes.list_scenes(
         project="demo",
@@ -439,7 +449,7 @@ async def test_list_scenes_does_not_infer_derived_base_from_underscore_name(
     from novelvideo.api.routes import scenes
 
     store = _SceneStore([NovelScene(name="地下"), NovelScene(name="地下_主控室")])
-    _patch_project(monkeypatch, scenes, tmp_path, store)
+    _patch_project(monkeypatch, scenes, tmp_path, store, with_context=True)
 
     res = await scenes.list_scenes(
         project="demo",
@@ -472,6 +482,7 @@ async def test_derived_scene_guard_uses_structured_base_scene_id(tmp_path):
     ]
 
 
+@pytest.mark.usefixtures("_chinese_project")
 @pytest.mark.asyncio
 async def test_create_scene_composes_structured_variant_and_time_name(
     tmp_path, monkeypatch
@@ -480,7 +491,7 @@ async def test_create_scene_composes_structured_variant_and_time_name(
     from novelvideo.api.schemas import SceneCreate
 
     store = _SceneStore([NovelScene(name="卫生间")])
-    _patch_project(monkeypatch, scenes, tmp_path, store)
+    _patch_project(monkeypatch, scenes, tmp_path, store, with_context=True)
 
     res = await scenes.create_scene(
         project="demo",
@@ -1396,7 +1407,7 @@ async def test_upload_scene_pano_validates_ratio_and_updates_manifest(
     from novelvideo.director_world import stage_manifest
 
     scene = NovelScene(name="Hall")
-    _patch_project(monkeypatch, scenes, tmp_path, _SceneStore([scene]))
+    _patch_project(monkeypatch, scenes, tmp_path, _SceneStore([scene]), with_context=True)
     upload = UploadFile(file=io.BytesIO(_png_bytes((4, 2))), filename="pano.png")
 
     res = await scenes.upload_scene_pano(
@@ -1422,7 +1433,7 @@ async def test_upload_scene_custom_package_updates_custom_manifest_slot(
     from novelvideo.director_world import stage_manifest
 
     scene = NovelScene(name="Hall")
-    _patch_project(monkeypatch, scenes, tmp_path, _SceneStore([scene]))
+    _patch_project(monkeypatch, scenes, tmp_path, _SceneStore([scene]), with_context=True)
     upload = UploadFile(file=io.BytesIO(b"sog package"), filename="scene.sog")
 
     res = await scenes.upload_scene_custom_package(
@@ -1454,7 +1465,7 @@ async def test_upload_scene_custom_package_streams_sog_without_full_read(
     from novelvideo.director_world import stage_manifest
 
     scene = NovelScene(name="Hall")
-    _patch_project(monkeypatch, scenes, tmp_path, _SceneStore([scene]))
+    _patch_project(monkeypatch, scenes, tmp_path, _SceneStore([scene]), with_context=True)
     upload = UploadFile(file=io.BytesIO(b"sog package"), filename="scene.sog")
 
     async def fail_full_read():
@@ -1572,7 +1583,7 @@ async def test_update_scene_renames_record_and_asset_directories(tmp_path, monke
     (stage_dir / "pano_360.png").write_bytes(b"pano")
     stage_manifest.update_manifest(tmp_path, "Hall", pano_path="pano_360.png")
     store = _SceneStore([scene])
-    _patch_project(monkeypatch, scenes, tmp_path, store)
+    _patch_project(monkeypatch, scenes, tmp_path, store, with_context=True)
 
     res = await scenes.update_scene(
         project="demo",

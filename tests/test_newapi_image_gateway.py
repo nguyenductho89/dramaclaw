@@ -1382,6 +1382,7 @@ def test_newapi_scene_time_plate_master_injects_time_and_base_reference(monkeypa
             project_dir=tmp_path,
             scene=scene,
             kind="master",
+            language="zh",
         )
     )
 

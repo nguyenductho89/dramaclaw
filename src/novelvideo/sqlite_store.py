@@ -20,6 +20,8 @@ from typing import Any, Callable, Dict, Iterable, List, Optional
 import aiosqlite
 from rich.console import Console
 
+from novelvideo.scene_headings import localize_scene_headings
+from novelvideo.utils.source_language import project_asset_language
 from novelvideo.freezone.workflow_drafts import WORKFLOW_DRAFT_SCHEMA_SQL
 from novelvideo.freezone.workflow_runs import WORKFLOW_RUN_SCHEMA_SQL
 from novelvideo.i18n_message import MessageLike, lmsg
@@ -534,6 +536,7 @@ class SQLiteStore:
                             state_dir=Path(self.state_dir),
                             connection=connection,
                         )
+                        await self._relabel_scene_headings(connection)
                         if self._closing or self._closed:
                             raise StoreClosedError(self.project_dir)
                     except BaseException:
@@ -1342,6 +1345,31 @@ class SQLiteStore:
         """统一别名查找键，降低空格/大小写差异导致的失配。"""
         return " ".join((value or "").replace("\u3000", " ").strip().lower().split())
 
+    def _localized_scene_headings(self, environment_prompt: str) -> str:
+        """Scene section headings are stored in the project's asset language."""
+        return localize_scene_headings(environment_prompt, project_asset_language(self.state_dir))
+
+    async def _relabel_scene_headings(self, db: aiosqlite.Connection) -> None:
+        """Bring scenes saved before the project had a language onto its headings.
+
+        Only the markers change, so ``updated_at`` stays and no asset looks stale.
+        """
+        cursor = await db.execute(
+            "SELECT name, environment_prompt FROM scenes WHERE environment_prompt != ''"
+        )
+        rows = await cursor.fetchall()
+        changed = [
+            (localized, row["name"])
+            for row in rows
+            if (localized := self._localized_scene_headings(row["environment_prompt"]))
+            != row["environment_prompt"]
+        ]
+        if changed:
+            await db.executemany(
+                "UPDATE scenes SET environment_prompt = ? WHERE name = ?", changed
+            )
+            await db.commit()
+
     async def add_scene(self, scene: NovelScene) -> None:
         """添加或更新场景。"""
         db = await self._ensure_db()
@@ -1369,7 +1397,7 @@ class SQLiteStore:
                 scene.base_scene_id,
                 scene.variant_id,
                 scene.time_of_day,
-                scene.environment_prompt,
+                self._localized_scene_headings(scene.environment_prompt),
                 scene.variant_prompt,
                 scene.description,
                 scene.spatial_layout_image,
@@ -1425,6 +1453,8 @@ class SQLiteStore:
                 set_parts.append("aliases_json = ?")
                 values.append(json.dumps(value, ensure_ascii=False))
             else:
+                if key == "environment_prompt":
+                    value = self._localized_scene_headings(value)
                 set_parts.append(f"{key} = ?")
                 values.append(value)
         if not set_parts:

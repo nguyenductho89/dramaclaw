@@ -12,7 +12,7 @@ from novelvideo.utils.reference_image import encode_reference_image_file
 
 from novelvideo.brainclaw_contract import BrainClawProfile
 from novelvideo.utils.logging import log_agent_start, log_agent_end
-from novelvideo.utils.source_language import asset_language_instruction
+from novelvideo.utils.source_language import DEFAULT_ASSET_LANGUAGE, asset_language_instruction
 
 # 首尾帧过渡提示词生成器指令（英文版 SuperPower）
 KEYFRAME_PROMPT_BUILDER_INSTRUCTIONS_EN = """# Cinematic Transition Director (SuperPower)
@@ -64,7 +64,7 @@ Output ONLY the transition prompt in the requested language.
 """
 
 
-def create_keyframe_prompt_builder_agent(language: str = "zh") -> Agent:
+def create_keyframe_prompt_builder_agent(language: str = DEFAULT_ASSET_LANGUAGE) -> Agent:
     """创建首尾帧过渡提示词生成 Agent。"""
     from novelvideo.config import get_newapi_text_pydantic_model
     model = get_newapi_text_pydantic_model(
@@ -107,7 +107,7 @@ class KeyframePromptBuilder:
         """返回上一次生成提示词时使用的上下文。"""
         return self._last_context
 
-    def _get_agent(self, language: str = "zh") -> Agent:
+    def _get_agent(self, language: str = DEFAULT_ASSET_LANGUAGE) -> Agent:
         """获取指定语言的 Agent（懒加载）。"""
         if language not in self._agents:
             self._agents[language] = create_keyframe_prompt_builder_agent(language)
@@ -129,7 +129,7 @@ class KeyframePromptBuilder:
         last_frame_path: str,
         narration: str,
         next_narration: str = "",
-        language: str = "zh",
+        language: str = DEFAULT_ASSET_LANGUAGE,
         color_map_text: str = "",
         visual_description: str = "",
         next_visual_description: str = "",
@@ -282,7 +282,7 @@ Output the transition prompt in {output_label} directly."""
 
     def _fallback_build(
         self,
-        language: str = "zh",
+        language: str = DEFAULT_ASSET_LANGUAGE,
     ) -> str:
         """回退方案：生成默认过渡提示词。"""
         if language == "en":

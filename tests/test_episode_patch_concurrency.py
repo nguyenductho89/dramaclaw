@@ -230,7 +230,7 @@ async def test_new_projects_are_structured_and_carry_no_embedding_binding(
     )
 
     response = await projects.create_project(
-        body=SimpleNamespace(name="fresh"),
+        body=SimpleNamespace(name="fresh", asset_language="en"),
         user={"username": "someone"},
     )
     assert response["ok"] is True

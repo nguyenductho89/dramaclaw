@@ -25,6 +25,13 @@ from novelvideo.freezone.presets import (
 from novelvideo.generators.nanobanana_prop import build_prop_reference_prompt
 
 
+@pytest.fixture
+def _chinese_presets(monkeypatch):
+    monkeypatch.setattr(
+        "novelvideo.freezone.presets.project_asset_language", lambda _state_dir: "zh"
+    )
+
+
 def test_preset_file_refs_include_media_type_for_beat_video_and_audio(tmp_path: Path) -> None:
     project_dir = tmp_path / "project"
     video_path = project_dir / "videos" / "beats" / "ep001" / "beat_02.mp4"
@@ -452,6 +459,7 @@ def test_scene_asset_preset_creates_missing_ply_workflow_nodes() -> None:
     assert skill_output_edges[0]["sourceHandle"] == "scene_360_candidate"
 
 
+@pytest.mark.usefixtures("_chinese_presets")
 def test_scene_asset_preset_prompt_nodes_show_final_style_prompt() -> None:
     context = {
         "scope": "asset",
@@ -470,6 +478,7 @@ def test_scene_asset_preset_prompt_nodes_show_final_style_prompt() -> None:
                     "scene_id": "lanzhou",
                     "scene_type": "interior",
                     "environment_prompt": "拉面馆正面，旧木桌，暖黄色灯光",
+                    "asset_language": "zh",
                     "style_name": "电影写实 (cinematic)",
                     "style_prompt": "cinematic realism, natural skin texture, grounded lighting",
                     "avoid_instructions": "no cartoon rendering, no plastic surfaces",
@@ -487,6 +496,7 @@ def test_scene_asset_preset_prompt_nodes_show_final_style_prompt() -> None:
                     "scene_id": "lanzhou",
                     "scene_type": "interior",
                     "environment_prompt": "拉面馆反面，收银台和厨房门",
+                    "asset_language": "zh",
                     "style_name": "电影写实 (cinematic)",
                     "style_prompt": "cinematic realism, natural skin texture, grounded lighting",
                     "avoid_instructions": "no cartoon rendering, no plastic surfaces",
@@ -504,6 +514,7 @@ def test_scene_asset_preset_prompt_nodes_show_final_style_prompt() -> None:
                     "scene_id": "lanzhou",
                     "scene_type": "interior",
                     "environment_prompt": "拉面馆完整空间",
+                    "asset_language": "zh",
                     "style_name": "电影写实 (cinematic)",
                     "style_prompt": "cinematic realism, natural skin texture, grounded lighting",
                     "avoid_instructions": "no cartoon rendering, no plastic surfaces",
@@ -2529,6 +2540,7 @@ def test_scene_preset_default_push_targets_use_requested_scene_kind() -> None:
         ) == {"kind": asset_kind, "scene_id": "小区"}
 
 
+@pytest.mark.usefixtures("_chinese_presets")
 @pytest.mark.asyncio
 async def test_scene_asset_preset_context_preserves_project_style_in_prompts(
     tmp_path: Path,
@@ -2546,6 +2558,7 @@ async def test_scene_asset_preset_context_preserves_project_style_in_prompts(
         freezone_presets,
         "_project_style_meta",
         lambda _username, _project, _project_dir: {
+            "asset_language": "zh",
             "style_name": "电影写实 (cinematic)",
             "style_prompt": "cinematic realism, controlled highlights, subtle film grain",
             "avoid_instructions": "no cartoon rendering, no plastic surfaces",
@@ -2576,6 +2589,7 @@ async def test_scene_asset_preset_context_preserves_project_style_in_prompts(
         assert "no cartoon rendering, no plastic surfaces" in content
 
 
+@pytest.mark.usefixtures("_chinese_presets")
 @pytest.mark.asyncio
 async def test_scene_asset_preset_projects_derived_scene_effective_prompt(
     tmp_path: Path,

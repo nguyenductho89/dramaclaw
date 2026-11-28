@@ -54,6 +54,7 @@ def test_seedance2_prompt_draft_keeps_request_params_out_of_prompt():
             "style": "干净易读",
         },
         prompt_guidance="动作克制，像官方多图参考示例。",
+        language="zh",
     )
 
     assert "生成4秒" not in prompt
@@ -81,6 +82,7 @@ def test_seedance2_prompt_draft_includes_dialogue_text():
         assets=[],
         text_overlay={},
         prompt_guidance="",
+        language="zh",
     )
 
     assert "别回头，跟我走" in prompt
@@ -113,6 +115,7 @@ def test_seedance2_prompt_draft_keeps_desired_scene_state_when_asset_falls_back_
         ],
         text_overlay={},
         prompt_guidance="",
+        language="zh",
     )
 
     assert "环境为客厅" in prompt
@@ -146,6 +149,7 @@ def test_seedance2_prompt_draft_keeps_desired_scene_time_when_asset_falls_back_t
         ],
         text_overlay={},
         prompt_guidance="",
+        language="zh",
     )
 
     assert "环境为客厅" in prompt
@@ -197,6 +201,7 @@ def test_seedance2_prompt_draft_binds_multi_speaker_dialogue_to_audio_labels():
         ],
         text_overlay={},
         prompt_guidance="",
+        language="zh",
     )
 
     assert "面馆男青年" in prompt
@@ -239,6 +244,7 @@ def test_seedance2_dialogue_draft_delegates_ambiguous_prose_to_ai():
         assets=assets,
         text_overlay={},
         prompt_guidance="",
+        language="zh",
     )
 
     assert "请语义区分动作说明和实际说出的台词" in prompt
@@ -441,6 +447,7 @@ def test_seedance2_prompt_uses_identity_text_when_reference_image_is_missing():
         },
         assets=assets,
         text_overlay=None,
+        language="zh",
     )
 
     assert "面馆男青年造型按提示词生成：男性，二十岁出头，黑色短发，炭灰色围裙，健壮清爽" in prompt
@@ -488,6 +495,7 @@ def test_seedance2_prompt_binds_prop_marker_to_reference_image():
         ],
         text_overlay={},
         prompt_guidance="",
+        language="zh",
     )
 
     assert "图片2中的TOKEN道具" in prompt
@@ -522,6 +530,7 @@ def test_seedance2_prompt_uses_prop_fallback_when_reference_image_is_missing():
         ],
         text_overlay={},
         prompt_guidance="",
+        language="zh",
     )
 
     assert "易拉罐道具按提示词生成：红色铝制饮料罐，表面有细小水珠和拉环结构" in prompt
@@ -626,6 +635,7 @@ def test_seedance2_prompt_composer_task_includes_scene_ref_and_dialogue_text():
         text_overlay={},
         prompt_guidance="",
         draft_prompt="草稿。",
+        language="zh",
     )
 
     assert '"scene_ref": {' in task
@@ -774,6 +784,7 @@ async def test_seedance2_prompt_composer_accepts_plain_text_output(monkeypatch):
         text_overlay={},
         prompt_guidance="",
         draft_prompt="人物转身。",
+        language="zh",
     )
 
     assert result == "根据图片1生成一段电影感视频。"
@@ -811,29 +822,6 @@ def test_seedance2_english_draft_uses_english_prose_and_keeps_reference_tokens()
     assert "The scene shows Ji-won walks through the subway corridor." in prompt
     assert "The environment is Seoul Subway Station." in prompt
     assert "画面呈现" not in prompt
-
-
-@pytest.mark.parametrize(
-    ("beat", "expected"),
-    [
-        (
-            {
-                "visual_description": "Ji-won walks through the subway corridor.",
-                "narration_segment": "She raises her phone.",
-                "video_prompt": "遗留的中文视频提示词不应改变语言。",
-            },
-            "en",
-        ),
-        ({"visual_description": "知薇穿过长廊。"}, "zh"),
-        ({"visual_description": "美咲は廊下を歩く。"}, "zh"),
-    ],
-)
-def test_seedance2_language_uses_script_fields_and_ignores_generated_prompt(
-    beat, expected
-):
-    import novelvideo.seedance2_i2v.prompt as prompt_module
-
-    assert prompt_module.detect_seedance2_prompt_language(beat) == expected
 
 
 async def test_seedance2_english_generation_keeps_english_fallback():
